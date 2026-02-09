@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScanGrade Project Board</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #1d1d1f;
+    }
+    .board {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 20px;
+    }
+    .column {
+      min-width: 300px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .column-header {
+      font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6e6e73;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .count {
+      background: #e8e8ed;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    .task {
+      background: #fff;
+      border: 1px solid #e8e8ed;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      cursor: grab;
+      transition: all 0.2s;
+    }
+    .task:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .task-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1d1d1f;
+      margin-bottom: 4px;
+    }
+    .task-meta {
+      font-size: 12px;
+      color: #6e6e73;
+    }
+    .priority-high { border-left: 3px solid #dc2626; }
+    .priority-med { border-left: 3px solid #f59e0b; }
+    .priority-low { border-left: 3px solid #10b981; }
+    .add-task {
+      width: 100%;
+      padding: 8px;
+      border: 2px dashed #e8e8ed;
+      border-radius: 8px;
+      background: transparent;
+      color: #6e6e73;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .add-task:hover {
+      border-color: #007aff;
+      color: #007aff;
+    }
+    @media (max-width: 768px) {
+      .column { min-width: 280px; }
+      h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🐯 ScanGrade Board</h1>
+  
+  <div class="board">
+    <div class="column" data-status="backlog">
+      <div class="column-header">
+        <span>Backlog</span>
+        <span class="count">3</span>
+      </div>
+      <div class="task priority-high">
+        <div class="task-title">ONNX digit classifier</div>
+        <div class="task-meta">~200KB model • V1</div>
+      </div>
+      <div class="task priority-med">
+        <div class="task-title">Red pen annotation layer</div>
+        <div class="task-meta">Canvas + Patrick Hand • V1</div>
+      </div>
+      <div class="task priority-low">
+        <div class="task-title">CSV/JSON export</div>
+        <div class="task-meta">Post-MVP feature</div>
+      </div>
+      <button class="add-task" onclick="addTask('backlog')">+ Add task</button>
+    </div>
+
+    <div class="column" data-status="todo">
+      <div class="column-header">
+        <span>To Do</span>
+        <span class="count">3</span>
+      </div>
+      <div class="task priority-high">
+        <div class="task-title">Camera capture + fallback</div>
+        <div class="task-meta">Safari MediaDevices API • V1</div>
+      </div>
+      <div class="task priority-high">
+        <div class="task-title">QR generator pipeline</div>
+        <div class="task-meta">JSON → base64 → QR • V1</div>
+      </div>
+      <div class="task priority-med">
+        <div class="task-title">Worksheet SVG template</div>
+        <div class="task-meta">Digit boxes + borders • V1</div>
+      </div>
+      <button class="add-task" onclick="addTask('todo')">+ Add task</button>
+    </div>
+
+    <div class="column" data-status="inprogress">
+      <div class="column-header">
+        <span>In Progress</span>
+        <span class="count">1</span>
+      </div>
+      <div class="task priority-high">
+        <div class="task-title">Vite + Vue scaffold</div>
+        <div class="task-meta">Project structure • Foundation</div>
+      </div>
+      <button class="add-task" onclick="addTask('inprogress')">+ Add task</button>
+    </div>
+
+    <div class="column" data-status="review">
+      <div class="column-header">
+        <span>Review</span>
+        <span class="count">0</span>
+      </div>
+      <button class="add-task" onclick="addTask('review')">+ Add task</button>
+    </div>
+
+    <div class="column" data-status="done">
+      <div class="column-header">
+        <span>Done</span>
+        <span class="count">1</span>
+      </div>
+      <div class="task priority-high">
+        <div class="task-title">Blueprint + V1 roadmap</div>
+        <div class="task-meta">Specs locked • Foundation</div>
+      </div>
+      <button class="add-task" onclick="addTask('done')">+ Add task</button>
+    </div>
+  </div>
+
+  <script>
+    // Simple drag and drop
+    let draggedTask = null;
+    
+    document.querySelectorAll('.task').forEach(task => {
+      task.draggable = true;
+      task.addEventListener('dragstart', (e) => {
+        draggedTask = task;
+        task.style.opacity = '0.5';
+      });
+      task.addEventListener('dragend', () => {
+        task.style.opacity = '1';
+        draggedTask = null;
+      });
+    });
+    
+    document.querySelectorAll('.column').forEach(column => {
+      column.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+      column.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (draggedTask) {
+          column.insertBefore(draggedTask, column.querySelector('.add-task'));
+          updateCounts();
+        }
+      });
+    });
+    
+    function updateCounts() {
+      document.querySelectorAll('.column').forEach(col => {
+        const count = col.querySelectorAll('.task').length;
+        col.querySelector('.count').textContent = count;
+      });
+    }
+    
+    function addTask(column) {
+      const title = prompt('Task name:');
+      if (title) {
+        const col = document.querySelector(`[data-status="${column}"]`);
+        const task = document.createElement('div');
+        task.className = 'task priority-med';
+        task.draggable = true;
+        task.innerHTML = `
+          <div class="task-title">${title}</div>
+          <div class="task-meta">New task</div>
+        `;
+        task.addEventListener('dragstart', (e) => {
+          draggedTask = task;
+          task.style.opacity = '0.5';
+        });
+        task.addEventListener('dragend', () => {
+          task.style.opacity = '1';
+          draggedTask = null;
+        });
+        col.insertBefore(task, col.querySelector('.add-task'));
+        updateCounts();
+      }
+    }
+  </script>
+</body>
+</html>
