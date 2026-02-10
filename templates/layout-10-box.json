@@ -1,0 +1,39 @@
+{
+  "layout_id": "sg-10-box-v1",
+  "description": "2x5 grid of 22mm digit boxes for single-digit answers",
+  "page": {
+    "width_mm": 215.9,
+    "height_mm": 279.4,
+    "aspect_ratio": 0.773,
+    "units": "mm"
+  },
+  "safe_margin_mm": 12.7,
+  "boxes": [
+    {"id": 0, "question_num": 1,  "x": 33,  "y": 71,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 1, "question_num": 2,  "x": 71,  "y": 71,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 2, "question_num": 3,  "x": 109, "y": 71,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 3, "question_num": 4,  "x": 147, "y": 71,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 4, "question_num": 5,  "x": 185, "y": 71,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 5, "question_num": 6,  "x": 33,  "y": 141, "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 6, "question_num": 7,  "x": 71,  "y": 141, "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 7, "question_num": 8,  "x": 109, "y": 141, "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 8, "question_num": 9,  "x": 147, "y": 141, "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 9, "question_num": 10, "x": 185, "y": 141, "width": 22, "height": 22, "expected_type": "digit"}
+  ],
+  "homography": {
+    "marker_size_mm": 17.3,
+    "anchors": [
+      {"id": "tl", "x_mm": 10.8, "y_mm": 10.8,  "x_norm": 0.05, "y_norm": 0.05},
+      {"id": "tr", "x_mm": 187.8, "y_mm": 10.8, "x_norm": 0.95, "y_norm": 0.05},
+      {"id": "br", "x_mm": 187.8, "y_mm": 251.3, "x_norm": 0.95, "y_norm": 0.95},
+      {"id": "bl", "x_mm": 10.8, "y_mm": 251.3, "x_norm": 0.05, "y_norm": 0.95}
+    ]
+  },
+  "metadata": {
+    "total_questions": 10,
+    "questions_per_row": 5,
+    "row_count": 2,
+    "box_spacing_horizontal_mm": 38,
+    "box_spacing_vertical_mm": 70
+  }
+}

@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ScanGrade Worksheet Template v1
+  Specifications:
+  - Page: U.S. Letter (8.5" x 11" = 215.9mm x 279.4mm)
+  - Safe margin: 0.5" (12.7mm) all around
+  - Answer boxes: 22mm x 22mm, 2.5px stroke
+  - Layout: 2 rows x 5 columns = 10 boxes
+  - Corner markers: 17.3mm squares at tl/tr/br/bl (per QR-SPEC v1)
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 215.9 279.4"
+     width="8.5in" height="11in"
+     preserveAspectRatio="xMidYMid meet">
+
+  <defs>
+    <!-- Styles -->
+    <style>
+      .page {
+        fill: white;
+        stroke: none;
+      }
+      .safe-margin {
+        fill: none;
+        stroke: #e8e8ed;
+        stroke-width: 0.2;
+        stroke-dasharray: 2,2;
+      }
+      .corner-marker {
+        fill: #1a1a1a;
+        stroke: none;
+      }
+      .corner-label {
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 3mm;
+        fill: #a0a0a0;
+        font-weight: 500;
+      }
+      .digit-box {
+        fill: none;
+        stroke: #1a1a1a;
+        stroke-width: 0.75; /* ~2.8px at 96 DPI */
+        stroke-linecap: square;
+      }
+      .digit-label {
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 10pt;
+        fill: #666;
+        font-weight: 500;
+      }
+      .header-text {
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 14pt;
+        fill: #1a1a1a;
+        font-weight: 600;
+      }
+      .sub-text {
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 9pt;
+        fill: #666;
+      }
+      .qr-region {
+        fill: none;
+        stroke: #ccc;
+        stroke-width: 0.3;
+        stroke-dasharray: 1,1;
+      }
+    </style>
+
+    <!--
+      Homography anchor markers
+      Size: 8% of page width = ~17.3mm
+      Positioned at 5% from corners inside safe margin
+    -->
+    <rect id="corner-marker" width="17.3" height="17.3" />
+  </defs>
+
+  <!-- Background -->
+  <rect class="page" width="215.9" height="279.4" />
+
+  <!-- Safe margin guide (faint, for reference) -->
+  <rect class="safe-margin"
+        x="12.7" y="12.7"
+        width="190.5" height="254" />
+
+  <!-- Header -->
+  <text class="header-text" x="107.95" y="25" text-anchor="middle">ScanGrade Worksheet</text>
+  <text class="sub-text" x="107.95" y="32" text-anchor="middle">Single Digit Practice • 10 Questions</text>
+
+  <!--
+    CORNER MARKERS FOR HOMOGRAPHY
+    These are the 4 anchors defined in QR-SPEC v1
+    Coordinates in mm, normalized = pos / 215.9 (width) or 279.4 (height)
+  -->
+
+  <!-- Top-Left marker (tl) at 5%, 5% -->
+  <use href="#corner-marker" class="corner-marker" x="10.8" y="10.8" />
+  <text class="corner-label" x="19.45" y="19.45" text-anchor="middle" dominant-baseline="middle">TL</text>
+
+  <!-- Top-Right marker (tr) at 95%, 5% -->
+  <use href="#corner-marker" class="corner-marker" x="187.8" y="10.8" />
+  <text class="corner-label" x="196.45" y="19.45" text-anchor="middle" dominant-baseline="middle">TR</text>
+
+  <!-- Bottom-Right marker (br) at 95%, 95% -->
+  <use href="#corner-marker" class="corner-marker" x="187.8" y="251.3" />
+  <text class="corner-label" x="196.45" y="260" text-anchor="middle" dominant-baseline="middle">BR</text>
+
+  <!-- Bottom-Left marker (bl) at 5%, 95% -->
+  <use href="#corner-marker" class="corner-marker" x="10.8" y="251.3" />
+  <text class="corner-label" x="19.45" y="260" text-anchor="middle" dominant-baseline="middle">BL</text>
+
+  <!--
+    QR CODE POSITION
+    Upper right corner, just inside safe margin
+    Reserved 30mm x 30mm region
+  -->
+  <rect class="qr-region" x="175.9" y="15" width="30" height="30" />
+  <text class="sub-text" x="190.9" y="30" text-anchor="middle" font-size="7pt" fill="#999">QR</text>
+
+  <!--
+    DIGIT BOXES
+    Layout: 2 rows × 5 columns = 10 boxes
+    Box size: 22mm × 22mm
+    Spacing: ~26mm horizontal, ~40mm vertical
+    Starting Y: ~60mm (below header and clear of top markers)
+  -->
+  <g id="answer-boxes">
+    <!-- Row 1: Questions 1-5 -->
+    <g transform="translate(0, 60)">
+      <!-- Q1 -->
+      <rect class="digit-box" x="22" y="0" width="22" height="22" />
+      <text class="digit-label" x="33" y="-3" text-anchor="middle">1</text>
+
+      <!-- Q2 -->
+      <rect class="digit-box" x="60" y="0" width="22" height="22" />
+      <text class="digit-label" x="71" y="-3" text-anchor="middle">2</text>
+
+      <!-- Q3 -->
+      <rect class="digit-box" x="98" y="0" width="22" height="22" />
+      <text class="digit-label" x="109" y="-3" text-anchor="middle">3</text>
+
+      <!-- Q4 -->
+      <rect class="digit-box" x="136" y="0" width="22" height="22" />
+      <text class="digit-label" x="147" y="-3" text-anchor="middle">4</text>
+
+      <!-- Q5 -->
+      <rect class="digit-box" x="174" y="0" width="22" height="22" />
+      <text class="digit-label" x="185" y="-3" text-anchor="middle">5</text>
+    </g>
+
+    <!-- Row 2: Questions 6-10 -->
+    <g transform="translate(0, 130)">
+      <!-- Q6 -->
+      <rect class="digit-box" x="22" y="0" width="22" height="22" />
+      <text class="digit-label" x="33" y="-3" text-anchor="middle">6</text>
+
+      <!-- Q7 -->
+      <rect class="digit-box" x="60" y="0" width="22" height="22" />
+      <text class="digit-label" x="71" y="-3" text-anchor="middle">7</text>
+
+      <!-- Q8 -->
+      <rect class="digit-box" x="98" y="0" width="22" height="22" />
+      <text class="digit-label" x="109" y="-3" text-anchor="middle">8</text>
+
+      <!-- Q9 -->
+      <rect class="digit-box" x="136" y="0" width="22" height="22" />
+      <text class="digit-label" x="147" y="-3" text-anchor="middle">9</text>
+
+      <!-- Q10 -->
+      <rect class="digit-box" x="174" y="0" width="22" height="22" />
+      <text class="digit-label" x="185" y="-3" text-anchor="middle">10</text>
+    </g>
+  </g>
+
+  <!-- Footer info -->
+  <text class="sub-text" x="107.95" y="270" text-anchor="middle" font-size="7pt">
+    Point • Scan • Grade — No app required
+  </text>
+
+  <!--
+    NORMALIZED COORDINATE REFERENCE (for QR-SPEC layout)
+    Box centers in normalized coordinates (0-1 range):
+    Q1:  (0.152, 0.280)  Q2:  (0.328, 0.280)  Q3:  (0.504, 0.280)  Q4:  (0.680, 0.280)  Q5:  (0.856, 0.280)
+    Q6:  (0.152, 0.530)  Q7:  (0.328, 0.530)  Q8:  (0.504, 0.530)  Q9:  (0.680, 0.530)  Q10: (0.856, 0.530)
+    Box dimensions normalized: 0.102 x 0.079
+    Homography anchors (corners):
+    TL: (0.050, 0.050)  TR: (0.950, 0.050)  BR: (0.950, 0.950)  BL: (0.050, 0.950)
+    Marker size: 0.080 (8% of page width)
+  -->
+</svg>
