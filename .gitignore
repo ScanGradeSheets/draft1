@@ -18,3 +18,6 @@ logs/
 # Env
 .env
 .env.*
+
+# tooling outputs
+logs/
