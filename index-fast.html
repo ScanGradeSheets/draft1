@@ -64,7 +64,7 @@
   
   <script>
     // Expose to global
-    window.ort = window.ort || ort;
+    window.ort = window.ort || (typeof ort !== 'undefined' ? ort : undefined);
     
     // Fast load: 1 second then show app
     setTimeout(() => {
