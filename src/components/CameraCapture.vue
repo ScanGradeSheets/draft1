@@ -102,6 +102,10 @@ const error = ref(null)
 const processing = ref(false)
 const ocrResult = ref(null)
 
+defineExpose({
+  capturedImage
+})
+
 const hasLowConfidence = computed(() => 
   ocrResult.value?.confidences.some(c => c < 0.8)
 )
