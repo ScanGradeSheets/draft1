@@ -21,3 +21,6 @@ logs/
 
 # tooling outputs
 logs/
+
+# local runtime state
+.state/
