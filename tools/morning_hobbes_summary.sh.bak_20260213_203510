@@ -117,6 +117,7 @@ else:
     text_to_tony = (
         "Morning — quick ScanGrade update:\n"
         f"• Main thing: {short}\n\n"
+        "Want the technical details? Reply: DETAILS\n"
         "Reply: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL"
     )
 
@@ -153,10 +154,10 @@ echo "DEBUG: SEND_IMESSAGE=${SEND_IMESSAGE:-}"
 
 # Send the generated TEXT_TO_TONY as a raw iMessage
 if [ "${SEND_IMESSAGE:-0}" = "1" ]; then
-    openclaw message send --channel imessage \
-      --target "$IMESSAGE_TO" \
-      --message "$(cat "$TEXT_OUT")" >/dev/null || true
-    echo "✅ iMessage queued (or ignored; channel disabled)."
+  openclaw message send --channel imessage \
+    --target "$IMESSAGE_TO" \
+    --message "$(cat "$TEXT_OUT")" >/dev/null
+  echo "✅ iMessage queued."
 else
   echo "ℹ️ SEND_IMESSAGE=0 (not sending)."
 fi
