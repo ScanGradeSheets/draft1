@@ -8,9 +8,6 @@ cd "$REPO"
 STATEDIR="$REPO/.state"
 mkdir -p "$STATEDIR"
 RESULT="$STATEDIR/last_safe_result.txt"
-TODAY="$(date +%Y-%m-%d)"
-LAST_DAY_FILE="$STATEDIR/last_safe_commit_day.txt"
-LAST_DAY="$(cat "$LAST_DAY_FILE" 2>/dev/null || true)"
 
 # Recipient (reuse your conf file)
 TO=""
@@ -36,18 +33,15 @@ case "$OUT" in
     # stay quiet
     exit 0
     ;;
-SAFE_OK_COMMITTED*)
-    # Only text the first commit of the day (prevents spam)
-    if [ "$LAST_DAY" = "$TODAY" ]; then
-      exit 0
-    fi
-    echo "$TODAY" > "$LAST_DAY_FILE"
-
-    MSG="✅ ScanGrade SAFE update (first change today).
+  SAFE_OK_COMMITTED*)
+    MSG="✅ ScanGrade SAFE applied.
 $OUT
 
-Reply: DETAILS"
+If you want details: reply DETAILS"
     ;;
+  SAFE_BLOCKED_FORBIDDEN_PATHS*)
+    MSG="⛔️ ScanGrade SAFE blocked (unsafe paths touched).
+$OUT
 
 Reply with: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL"
     ;;
