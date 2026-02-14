@@ -53,4 +53,4 @@ Reply with: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL"
     ;;
 esac
 
-openclaw message send --channel imessage --target "$TO" --message "$MSG" >/dev/null
+# DISABLED_FOR_NOW openclaw message send --channel imessage --target "$TO" --message "$MSG" >/dev/null

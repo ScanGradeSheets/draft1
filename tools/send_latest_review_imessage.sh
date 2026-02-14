@@ -30,6 +30,12 @@ redact () {
 }
 
 # Keep message short enough for iMessage sanity
-MSG="$(tail -n 220 "$LATEST" | redact | sed -e 's/[[:cntrl:]]//g' | head -c 3500)"
+MSG="20 20 12 61 79 80 81 398 399 701 33 98 100 204 250 395 400 702tail -n 220 "" | redact | sed -e 's/[[:cntrl:]]//g' | head -c 1800)"
 
-openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "$MSG" >/dev/null
+# Block sending if it looks like a diff/patch
+if printf "%s" "" | grep -qE "diff --git|UNSTAGED DIFF|STAGED DIFF|\+\+\+|--- "; then
+  exit 0
+fi
+
+# DISABLED_FOR_NOW openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "$MSG" >/dev/null
+exit 0

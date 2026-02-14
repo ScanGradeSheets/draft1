@@ -30,13 +30,16 @@ Read the nightly review below and output EXACTLY two blocks with the exact tags.
 RULES:
 - Output MUST contain the exact tags below.
 - Output NOTHING outside the tags.
+- If you output anything outside the tags, you failed.
 - Do NOT output JSON.
 - Do NOT call tools.
-- TEXT_TO_TONY must be under 900 characters.
-- End TEXT_TO_TONY with: Reply with: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL
+- TEXT_TO_TONY should feel like a quick text from a very smart friend: plain language, warm, confident, zero corporate tone.
+- No file paths, no code, no logs.
+- Keep TEXT_TO_TONY to ~5-8 short lines max.
+- End TEXT_TO_TONY with exactly: Reply: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL
 
 ===TEXT_TO_TONY===
-<one friendly iMessage to Tony summarizing the 2–4 most important points and what to do today>
+<short text to Tony: 2–4 key points max, 1 clear next action. No code, no quoting commands, no markdown. If anything is technical, do NOT include it here—just say “Reply DETAILS” and put the technical stuff in HOBBES_PLAN>
 ===END_TEXT_TO_TONY===
 
 ===HOBBES_PLAN===
@@ -85,13 +88,29 @@ m_plan = re.search(r"===HOBBES_PLAN===\n(.*?)\n===END_HOBBES_PLAN===", text, re.
 if m_text and m_plan:
     text_to_tony = m_text.group(1).strip()
     hobbes_plan  = m_plan.group(1).strip()
+
 else:
-    # Fallback: treat entire output as plan, generate a safe minimal text
     hobbes_plan = text.strip()
+
+    # Extract numbered issue titles only
+    issues = re.findall(r"\d+\.\s+\*\*(.*?)\*\*", text)
+
+    if issues:
+        short = "; ".join(issue.strip() for issue in issues[:3])
+    else:
+        # If no bold titles found, extract plain numbered lines
+        plain = re.findall(r"\d+\.\s+([A-Za-z0-9 ,\-]+)", text)
+        short = "; ".join(p.strip() for p in plain[:3]) if plain else "A few cleanup items from last night."
+
+        short = re.sub(r"[`]", "", short)                 # remove backticks
+        short = re.sub(r"\s+", " ", short).strip()
+        short = short[:150].rsplit(" ", 1)[0]             # trim without cutting mid-word
+
     text_to_tony = (
-        "Morning — I generated the review summary, but the formatting tags failed today.\n\n"
-        "Here’s the key output (saved as Hobbes plan). If you want me to retry the formatted version, reply: DETAILS.\n\n"
-        "Reply with: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL"
+        "Morning — quick ScanGrade update:\n"
+        f"• Main thing: {short}\n\n"
+        "Want the technical details? Reply: DETAILS\n"
+        "Reply: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL"
     )
 
 plan_path.write_text(hobbes_plan + "\n", encoding="utf-8")
@@ -123,12 +142,27 @@ if [ -z "${IMESSAGE_TO:-}" ]; then
   exit 0
 fi
 
-# Send the generated TEXT_TO_TONY as a raw iMessage (no agent turn, no session routing).
-if [ "$SEND_IMESSAGE" = "1" ]; then
-  openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "$(cat "$TEXT_OUT")" >/dev/null
+echo "DEBUG: SEND_IMESSAGE=${SEND_IMESSAGE:-}"
+
+# Send the generated TEXT_TO_TONY as a raw iMessage
+if [ "${SEND_IMESSAGE:-0}" = "1" ]; then
+  openclaw message send --channel imessage \
+    --target "$IMESSAGE_TO" \
+    --message "$(cat "$TEXT_OUT")" >/dev/null
+  echo "✅ iMessage queued."
+else
+  echo "ℹ️ SEND_IMESSAGE=0 (not sending)."
 fi
 
-echo "✅ Sent via iMessage to $IMESSAGE_TO"
+echo "DEBUG: SEND_IMESSAGE=${SEND_IMESSAGE:-}"
+
+# Send the generated TEXT_TO_TONY as a raw iMessage
+if [ "${SEND_IMESSAGE:-0}" = "1" ]; then
+  echo "✅ iMessage queued."
+else
+  echo "ℹ️ SEND_IMESSAGE=0 (not sending)."
+fi
+
 echo ""
 echo "Saved:"
 echo "  Text: $TEXT_OUT"

@@ -28,7 +28,7 @@ echo "[$TS] inbound text='${CMD:-<empty>}'" >> "$LOG"
 CMD_UP="$(printf "%s" "$CMD" | tr '[:lower:]' '[:upper:]')"
 
 send_msg () {
-  openclaw message send --channel imessage --target "$ALLOWED" --message "$1" >/dev/null
+  # DISABLED_FOR_NOW openclaw message send --channel imessage --target "$ALLOWED" --message "$1" >/dev/null
 }
 
 if [ "$CMD_UP" = "DETAILS" ]; then

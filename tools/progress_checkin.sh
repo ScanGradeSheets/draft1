@@ -47,6 +47,6 @@ ${STATUS_SUMMARY:-<none shown>}
 
 If you want details: reply DETAILS"
 
-openclaw message send --channel imessage --target "$TO" --message "$MSG" >/dev/null
+# DISABLED_FOR_NOW openclaw message send --channel imessage --target "$TO" --message "$MSG" >/dev/null
 
 echo "$NOW_EPOCH" > "$STATE"

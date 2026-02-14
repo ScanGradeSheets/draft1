@@ -38,7 +38,7 @@ if ! openclaw agent --agent main --message "$PROMPT" --timeout 900 --json > "$JS
   echo "[auto-safe] agent failed" | tee -a "$RUNLOG"
   rm -f "$JSON"
   if [ -n "${IMESSAGE_TO:-}" ]; then
-    openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "⚠️ ScanGrade SAFE auto-run: agent call failed. Check $RUNLOG" >/dev/null || true
+    # DISABLED_FOR_NOW openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "⚠️ ScanGrade SAFE auto-run: agent call failed. Check $RUNLOG" >/dev/null || true
   fi
   exit 0
 fi
@@ -48,7 +48,7 @@ rm -f "$JSON"
 if ! tools/verify_safe.sh 2>&1 | tee -a "$RUNLOG"; then
   echo "[auto-safe] VERIFY FAILED" | tee -a "$RUNLOG"
   if [ -n "${IMESSAGE_TO:-}" ]; then
-    openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "⚠️ ScanGrade SAFE auto-run failed verification. See $RUNLOG (and logs/verify_safe_*.log). Reply DETAILS if you want me to summarize the logs." >/dev/null || true
+    # DISABLED_FOR_NOW openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "⚠️ ScanGrade SAFE auto-run failed verification. See $RUNLOG (and logs/verify_safe_*.log). Reply DETAILS if you want me to summarize the logs." >/dev/null || true
   fi
   exit 0
 fi

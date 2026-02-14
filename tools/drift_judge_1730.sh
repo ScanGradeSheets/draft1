@@ -77,14 +77,40 @@ if [ -z "${OUT:-}" ]; then
   exit 0
 fi
 
+# If the agent didn't follow the "3 lines" format, fall back to a safe summary
+if ! printf "%s\n" "$OUT" | grep -q '^STATUS:'; then
+  echo "[$TS] WARN: drift output not in STATUS/WHY/NEXT format" >> "$LOG"
+  OUT="STATUS: DRIFTING
+WHY: Drift output format failed (agent returned extra text).
+NEXT: Tighten drift prompt + add strict format enforcement. Reply DETAILS."
+fi
+
 printf "\n-----\n[%s] OUT:\n%s\n-----\n" "$TS" "$OUT" >> "$LOG"
 
-MSG="ScanGrade 5:30 drift check ($TS)
+# Make a short text: STATUS/WHY/NEXT only
+STATUS="$(printf "%s\n" "$OUT" | sed -n 's/^STATUS:[[:space:]]*//p' | head -n 1)"
+WHY="$(printf "%s\n" "$OUT" | sed -n 's/^WHY:[[:space:]]*//p' | head -n 1)"
+NEXT="$(printf "%s\n" "$OUT" | sed -n 's/^NEXT:[[:space:]]*//p' | head -n 1)"
 
-$OUT"
+# Fallback if parsing fails
+if [ -z "${STATUS:-}" ]; then STATUS="(no status)"; fi
+if [ -z "${WHY:-}" ]; then WHY="(no why)"; fi
+if [ -z "${NEXT:-}" ]; then NEXT="(no next)"; fi
 
-if [ "$SEND_IMESSAGE" = "1" ] && [ -n "${IMESSAGE_TO:-}" ]; then
-  openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "$MSG" >/dev/null || true
+MSG="ScanGrade 5:30 check ($TS)
+Status: $STATUS
+Why: $WHY
+Next: $NEXT
+
+Reply: DETAILS"
+
+if [ "${SEND_IMESSAGE:-0}" = "1" ]; then
+  if [ -n "${IMESSAGE_TO:-}" ]; then
+    openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "$MSG" >/dev/null || true
+    :
+  else
+    echo "[$TS] IMESSAGE_TO missing; not sending" >> "$LOG"
+  fi
 fi
 
 echo "[$TS] sent drift check" >> "$LOG"
