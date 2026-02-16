@@ -64,7 +64,7 @@ JSON_FILE="$(mktemp)"
 JSON_DEBUG="$LOGDIR/morning_hobbes_summary_debug_$STAMP.json"
 
 # Get structured output from agent (hard timeout so it can't hang forever)
-if ! openclaw agent --agent main --message "$PROMPT" --timeout 300 --json > "$JSON_FILE"; then
+if ! openclaw agent --agent main --message "$PROMPT" --timeout 300 --json > "$JSON_FILE" 2>>"$LOGDIR/morning_agent.stderr.log"; then
   echo "Agent call failed."
   exit 1
 fi
