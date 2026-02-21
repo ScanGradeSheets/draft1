@@ -1,0 +1,9 @@
+STAMP_UTC=2026-02-21T00:22:00Z
+BRAIN=STUB
+SHORT_PLAN=Replace with Gemini output
+EXACT_COMMANDS=Replace with Gemini output
+DONE_CRITERIA=Replace with Gemini output
+READ_URL=https://hobbes-mac-mini.tail9a3379.ts.net/board_state.json
+READ_SHA=2d5e2f6d41664ca5f514545b005b4f801375e0f3276d649a6947acfd35959dfe
+UPDATED_AT=2026-02-19T03:45:49Z
+RECEIPT=KANBAN_CANONICAL_FETCH_V1

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-PATH="/Users/openclaw/.openclaw/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 set -euo pipefail
 umask 077
 
@@ -77,7 +76,7 @@ PY
 )"
 
 JSON="$(mktemp)"
-if ! /opt/homebrew/bin/openclaw agent --agent main --message "$PROMPT" --timeout 180 --json > "$JSON"; then
+if ! openclaw agent --agent main --message "$PROMPT" --timeout 180 --json > "$JSON"; then
   echo "[$TS] agent failed" >> "$LOG"
   rm -f "$JSON"
   exit 0
@@ -140,7 +139,7 @@ Reply: DETAILS"
 
 if [ "${SEND_IMESSAGE:-0}" = "1" ]; then
   if [ -n "${IMESSAGE_TO:-}" ]; then
-    /opt/homebrew/bin/openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "$MSG" >/dev/null || true
+    openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "$MSG" >/dev/null || true
     :
   else
     echo "[$TS] IMESSAGE_TO missing; not sending" >> "$LOG"

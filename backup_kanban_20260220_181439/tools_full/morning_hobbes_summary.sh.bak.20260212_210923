@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO="/Users/openclaw/.openclaw/workspace/scan-grade"
+LOGDIR="$REPO/logs"
+PLANDIR="$REPO/logs/hobbes_plans"
+mkdir -p "$PLANDIR"
+
+LATEST="$(ls -1t "$LOGDIR"/nightly_codex_review_*.txt 2>/dev/null | head -n 1 || true)"
+[ -n "${LATEST:-}" ] || { echo "No nightly_codex_review_*.txt found. Exiting."; exit 0; }
+[ -r "$LATEST" ] || { echo "Latest log not readable: $LATEST"; exit 0; }
+
+STAMP="$(date +"%Y-%m-%d_%H-%M")"
+PLAN_OUT="$PLANDIR/hobbes_plan_$STAMP.txt"
+TEXT_OUT="/tmp/scangrade_text_to_tony.txt"
+
+REPORT_HEAD="$(basename "$LATEST")"
+REPORT_TXT="$(cat "$LATEST")"
+
+PROMPT=$'You are Hobbes.\n\nContext: This is the latest NIGHTLY CODEX REVIEW for ScanGrade.\nYour job now:\n\n(1) Write ONE conversational morning text to Tony (friendly tone, plain English, minimal bullets).\n- Explain what matters + what to do today.\n- If there is nothing Tony needs to approve, say so.\n- ALWAYS end with keywords on one line exactly like:\n  Reply with: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL\n\n(2) Separately, write an INTERNAL action plan for Hobbes to follow today (concrete steps + file targets).\n\nOutput format must be EXACTLY:\n\n===TEXT_TO_TONY===\n<text message>\n===END_TEXT_TO_TONY===\n\n===HOBBES_PLAN===\n<internal plan>\n===END_HOBBES_PLAN===\n\nHere is the Codex review:\n\nFILE: '"$REPORT_HEAD"$'\n\n'"$REPORT_TXT"
+
+JSON_FILE="$(mktemp)"
+JSON_DEBUG="$LOGDIR/morning_hobbes_summary_debug_$STAMP.json"
+
+# Get structured output from agent
+if ! openclaw agent --agent main --message "$PROMPT" --timeout 300 --json > "$JSON_FILE"; then
+  echo "Agent call failed."
+  exit 1
+fi
+
+# Keep a copy for debugging if parsing fails
+cp "$JSON_FILE" "$JSON_DEBUG" 2>/dev/null || true
+
+python3 - "$JSON_FILE" "$PLAN_OUT" "$TEXT_OUT" <<'PY'
+import json, re, sys, pathlib
+
+json_path = pathlib.Path(sys.argv[1])
+plan_path = pathlib.Path(sys.argv[2])
+text_out  = pathlib.Path(sys.argv[3])
+
+data = json.loads(json_path.read_text(encoding="utf-8"))
+payloads = data.get("result", {}).get("payloads", [])
+
+if not payloads:
+    raise SystemExit("No payloads returned from agent (debug JSON saved).")
+
+text = payloads[0].get("text", "")
+if not text.strip():
+    raise SystemExit("Payload text is empty (debug JSON saved).")
+
+m_text = re.search(r"===TEXT_TO_TONY===\n(.*?)\n===END_TEXT_TO_TONY===", text, re.S)
+m_plan = re.search(r"===HOBBES_PLAN===\n(.*?)\n===END_HOBBES_PLAN===", text, re.S)
+
+if not m_text:
+    raise SystemExit("Could not parse TEXT_TO_TONY block (debug JSON saved).")
+if not m_plan:
+    raise SystemExit("Could not parse HOBBES_PLAN block (debug JSON saved).")
+
+text_to_tony = m_text.group(1).strip()
+hobbes_plan  = m_plan.group(1).strip()
+
+plan_path.write_text(hobbes_plan + "\n", encoding="utf-8")
+text_out.write_text(text_to_tony + "\n", encoding="utf-8")
+
+print(text_to_tony)
+PY
+
+rm -f "$JSON_FILE"
+
+echo ""
+echo "----- DEBUG: attempting iMessage delivery -----"
+echo ""
+
+if [ -z "${IMESSAGE_TO:-}" ]; then
+  echo "IMESSAGE_TO is not set. Skipping delivery."
+  echo "Set it like: export IMESSAGE_TO=\"+1647XXXXXXX\""
+  echo "Saved:"
+  echo "  Text: $TEXT_OUT"
+  echo "  Plan: $PLAN_OUT"
+  exit 0
+fi
+
+# Send via the iMessage channel directly (NOT via --agent main --deliver)
+# Hard timeout so it can’t hang forever.
+if command -v timeout >/dev/null 2>&1; then
+  timeout 25s openclaw agent --channel imessage --to "$IMESSAGE_TO" --deliver --message "$(cat "$TEXT_OUT")" || true
+else
+  # macOS sometimes doesn't have GNU timeout; fall back to a short timeout flag if supported
+  openclaw agent --channel imessage --to "$IMESSAGE_TO" --deliver --message "$(cat "$TEXT_OUT")" --timeout 25 || true
+fi
+
+echo ""
+echo "Saved:"
+echo "  Text: $TEXT_OUT"
+echo "  Plan: $PLAN_OUT"
+echo "  Debug JSON: $JSON_DEBUG"

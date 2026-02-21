@@ -1,0 +1,37 @@
+{
+  "columns": [
+    {
+      "name": "Backlog",
+      "cards": [
+        {
+          "title": "TEST CARD",
+          "notes": "This is a test to generate board_state.json"
+        },
+        {
+          "title": "test gateway live",
+          "notes": "From text: add a card to test gateway live",
+          "created_at_utc": "2026-02-19T03:45:49Z",
+          "created_by": "hobbes"
+        },
+        {
+          "title": "Tailnet card",
+          "notes": "from iMessage"
+        }
+      ]
+    },
+    {
+      "name": "InProgress",
+      "cards": []
+    },
+    {
+      "name": "Review",
+      "cards": []
+    },
+    {
+      "name": "Done",
+      "cards": []
+    }
+  ],
+  "current_mission": "Ship ScanGrade MVP: one clean worksheet + scoring pipeline that works end-to-end.",
+  "updated_at": "2026-02-19T03:45:49Z"
+}

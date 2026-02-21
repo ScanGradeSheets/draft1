@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-PATH="/Users/openclaw/.openclaw/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 set -euo pipefail
 umask 077
 
@@ -61,12 +60,6 @@ You must judge drift against the ScanGrade Constitution + TPT rules.
 {activity}
 ===END TODAY_ACTIVITY===
 
-RULES:
-- Output plain text only. No code. No markdown. No backticks. No quotes. No bullet points.
-- Do NOT mention tools, sessions, memory, or file paths.
-- Output MUST be exactly 3 lines. Nothing before, nothing after.
-- If you are about to output anything other than the 3 lines, STOP and output the 3 lines anyway.
-
 Output EXACTLY 3 lines:
 STATUS: ON_TRACK or DRIFTING
 WHY: <one sentence>
@@ -77,33 +70,13 @@ PY
 )"
 
 JSON="$(mktemp)"
-if ! /opt/homebrew/bin/openclaw agent --agent main --message "$PROMPT" --timeout 180 --json > "$JSON"; then
+if ! openclaw agent --agent main --message "$PROMPT" --timeout 180 --json > "$JSON"; then
   echo "[$TS] agent failed" >> "$LOG"
   rm -f "$JSON"
   exit 0
 fi
 
-OUT="$(python3 - "$JSON" <<'PY'
-import json, sys, re
-p=sys.argv[1]
-d=json.load(open(p,'r',encoding='utf-8'))
-payloads=d.get("result",{}).get("payloads",[])
-text=(payloads[0].get("text","") if payloads else "").strip()
-
-def pick(prefix):
-    m=re.search(rf"^{prefix}:\s*(.+)$", text, re.M)
-    return (m.group(1).strip() if m else "")
-
-status=pick("STATUS") or "DRIFTING"
-why=pick("WHY") or "Drift output format failed (agent returned extra text)."
-nxt=pick("NEXT") or "Tighten drift prompt + add strict format enforcement."
-
-print(f"STATUS: {status}")
-print(f"WHY: {why}")
-print(f"NEXT: {nxt}")
-PY
-)"
-
+OUT="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1],'r',encoding='utf-8')); p=d.get('result',{}).get('payloads',[]); print(((p[0].get('text','') if p else '').strip()))" "$JSON")"
 rm -f "$JSON"
 
 if [ -z "${OUT:-}" ]; then
@@ -140,7 +113,7 @@ Reply: DETAILS"
 
 if [ "${SEND_IMESSAGE:-0}" = "1" ]; then
   if [ -n "${IMESSAGE_TO:-}" ]; then
-    /opt/homebrew/bin/openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "$MSG" >/dev/null || true
+    openclaw message send --channel imessage --target "$IMESSAGE_TO" --message "$MSG" >/dev/null || true
     :
   else
     echo "[$TS] IMESSAGE_TO missing; not sending" >> "$LOG"

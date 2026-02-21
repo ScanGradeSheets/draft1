@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+READ_URL="https://hobbes-mac-mini.tail9a3379.ts.net/board_state.json"
+WRITE_URL="https://hobbes-mac-mini.tail9a3379.ts.net/api/board_state"
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  read)
+    curl -sk "$READ_URL"
+    ;;
+
+  mission-set)
+    NEW="${1:-}"
+    if [[ -z "$NEW" ]]; then
+      echo "usage: board_cli.sh mission-set \"text\"" >&2
+      exit 2
+    fi
+
+    python3 - "$READ_URL" "$WRITE_URL" "$NEW" <<'PY2'
+import json, urllib.request, datetime, sys
+read_url, write_url, new_mission = sys.argv[1], sys.argv[2], sys.argv[3]
+j = json.loads(urllib.request.urlopen(read_url).read().decode("utf-8"))
+j["current_mission"] = new_mission
+j["updated_at"] = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+data = json.dumps(j).encode("utf-8")
+req = urllib.request.Request(write_url, data=data, headers={"Content-Type":"application/json"}, method="POST")
+with urllib.request.urlopen(req, timeout=10) as r:
+    print("WRITE_STATUS", r.status)
+print("OK")
+PY2
+    ;;
+
+  card-add)
+    COL="${1:-}"
+    TITLE="${2:-}"
+    NOTES="${3:-}"
+    if [[ -z "$COL" || -z "$TITLE" ]]; then
+      echo "usage: board_cli.sh card-add \"Column Name\" \"Title\" \"Notes(optional)\"" >&2
+      exit 2
+    fi
+
+    python3 - "$READ_URL" "$WRITE_URL" "$COL" "$TITLE" "${NOTES:-}" <<'PY2'
+import json, urllib.request, datetime, sys
+read_url, write_url = sys.argv[1], sys.argv[2]
+col_name, title = sys.argv[3], sys.argv[4]
+notes = sys.argv[5] if len(sys.argv) > 5 else ""
+
+j = json.loads(urllib.request.urlopen(read_url).read().decode("utf-8"))
+cols = j.get("columns", [])
+target = None
+for c in cols:
+    if c.get("name") == col_name:
+        target = c
+        break
+if target is None:
+    raise SystemExit("NO_SUCH_COLUMN:" + col_name)
+
+cards = target.get("cards") or []
+cards.append({"title": title, "notes": notes})
+target["cards"] = cards
+
+j["updated_at"] = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+data = json.dumps(j).encode("utf-8")
+req = urllib.request.Request(write_url, data=data, headers={"Content-Type":"application/json"}, method="POST")
+with urllib.request.urlopen(req, timeout=10) as r:
+    print("WRITE_STATUS", r.status)
+print("OK")
+PY2
+    ;;
+
+  rebuild-mvp)
+    # Rebuild board to MVP structure WITHOUT changing canonical column schema.
+    # Keeps existing columns (including Ready/Blocked) to avoid server-side 409 conflicts.
+    python3 - "$READ_URL" "$WRITE_URL" <<'PY2'
+import json, urllib.request, datetime, sys
+
+read_url, write_url = sys.argv[1], sys.argv[2]
+j = json.loads(urllib.request.urlopen(read_url).read().decode("utf-8"))
+
+j["current_mission"] = "Ship ScanGrade MVP: one clean worksheet + scoring pipeline that WORKS end-to-end."
+j["updated_at"] = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+
+cols = j.get("columns") or []
+# Wipe cards everywhere, keep columns as-is (names/ids)
+for c in cols:
+    if isinstance(c, dict):
+        c["cards"] = []
+
+def add(col_name, title, notes=""):
+    for c in cols:
+        if c.get("name") == col_name:
+            c.setdefault("cards", []).append({"title": title, "notes": notes})
+            return
+    raise SystemExit("NO_SUCH_COLUMN:" + col_name)
+
+# Backlog
+add("Backlog", "Finalize worksheet spec (layout + QR placement)")
+add("Backlog", "Lock scoring schema (digits-only normalization)")
+add("Backlog", "Define end-to-end MVP success criteria")
+
+# InProgress
+add("InProgress", "Verify canonical board read/write stability")
+
+# Review
+add("Review", "UI render vs canonical sync audit")
+
+# Done
+add("Done", "CLI read/write proof (board_cli.sh)")
+
+# Drain Ready into Backlog (safety guard)
+ready_col = None
+backlog_col = None
+for c in cols:
+    if c["name"] == "Ready":
+        ready_col = c
+    if c["name"] == "Backlog":
+        backlog_col = c
+
+if ready_col and backlog_col:
+    moved = ready_col.get("cards", [])
+    if moved:
+        for card in moved:
+            card["notes"] = (card.get("notes","") + " | Auto-moved from Ready").strip()
+        backlog_col["cards"].extend(moved)
+        ready_col["cards"] = []
+
+j["columns"] = cols
+
+data = json.dumps(j).encode("utf-8")
+req = urllib.request.Request(write_url, data=data, headers={"Content-Type":"application/json"}, method="POST")
+with urllib.request.urlopen(req, timeout=10) as r:
+    print("WRITE_STATUS", r.status)
+print("OK")
+PY2
+    ;;
+
+  *)
+    echo "commands:"
+    echo "  read"
+    echo "  mission-set \"text\""
+    echo "  card-add \"Column Name\" \"Title\" \"Notes\""
+    exit 2
+    ;;
+esac

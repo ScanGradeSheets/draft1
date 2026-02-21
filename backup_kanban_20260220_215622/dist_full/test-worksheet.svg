@@ -1,0 +1,42 @@
+<svg width="400" height="550" xmlns="http://www.w3.org/2000/svg">
+  <!-- White background -->
+  <rect width="400" height="550" fill="white"/>
+  
+  <!-- 4 Black corner markers (the homography anchors) -->
+  <!-- Top-left -->
+  <rect x="15" y="15" width="35" height="35" fill="black"/>
+  <!-- Top-right -->
+  <rect x="350" y="15" width="35" height="35" fill="black"/>
+  <!-- Bottom-right -->
+  <rect x="350" y="500" width="35" height="35" fill="black"/>
+  <!-- Bottom-left -->
+  <rect x="15" y="500" width="35" height="35" fill="black"/>
+  
+  <!-- 10 answer boxes (2 rows x 5 columns) -->
+  <!-- Row 1 -->
+  <rect x="60" y="100" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="125" y="100" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="190" y="100" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="255" y="100" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="320" y="100" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  
+  <!-- Row 2 -->
+  <rect x="60" y="200" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="125" y="200" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="190" y="200" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="255" y="200" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="320" y="200" width="50" height="50" fill="none" stroke="black" stroke-width="2"/>
+  
+  <!-- Question numbers -->
+  <text x="85" y="90" font-family="Arial" font-size="14" text-anchor="middle">1</text>
+  <text x="150" y="90" font-family="Arial" font-size="14" text-anchor="middle">2</text>
+  <text x="215" y="90" font-family="Arial" font-size="14" text-anchor="middle">3</text>
+  <text x="280" y="90" font-family="Arial" font-size="14" text-anchor="middle">4</text>
+  <text x="345" y="90" font-family="Arial" font-size="14" text-anchor="middle">5</text>
+  
+  <text x="85" y="190" font-family="Arial" font-size="14" text-anchor="middle">6</text>
+  <text x="150" y="190" font-family="Arial" font-size="14" text-anchor="middle">7</text>
+  <text x="215" y="190" font-family="Arial" font-size="14" text-anchor="middle">8</text>
+  <text x="280" y="190" font-family="Arial" font-size="14" text-anchor="middle">9</text>
+  <text x="345" y="190" font-family="Arial" font-size="14" text-anchor="middle">10</text>
+</svg>

@@ -6,7 +6,7 @@ umask 077
 REPO="/Users/openclaw/.openclaw/workspace/scan-grade"
 LOGDIR="$REPO/logs"
 PLANDIR="$REPO/logs/hobbes_plans"
-mkdir -p "$PLANDIR" "$REPO/.state"
+mkdir -p "$PLANDIR"
 
 LATEST="$(ls -1t "$LOGDIR"/nightly_codex_review_*.txt 2>/dev/null | head -n 1 || true)"
 [ -n "${LATEST:-}" ] || { echo "No nightly_codex_review_*.txt found. Exiting."; exit 0; }
@@ -38,13 +38,13 @@ Read the nightly review below and output EXACTLY two blocks with the exact tags.
 RULES:
 - Output MUST contain the exact tags below.
 - Output NOTHING outside the tags.
+- If you output anything outside the tags, you failed.
 - Do NOT output JSON.
 - Do NOT call tools.
 - TEXT_TO_TONY should feel like a quick text from a very smart friend: plain language, warm, confident, zero corporate tone.
 - No file paths, no code, no logs.
 - Keep TEXT_TO_TONY to ~5-8 short lines max.
-- Always end TEXT_TO_TONY with a reply hint line:
-  Reply: DETAILS | BUILD SAFE | BUILD CRITICAL | PAUSE
+- End TEXT_TO_TONY with exactly: Reply: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL
 
 ===TEXT_TO_TONY===
 <short text to Tony: 2–4 key points max, 1 clear next action. No code, no quoting commands, no markdown. If anything is technical, do NOT include it here—just say “Reply DETAILS” and put the technical stuff in HOBBES_PLAN>
@@ -89,44 +89,36 @@ text = payloads[0].get("text", "")
 if not text.strip():
     raise SystemExit("Payload text is empty (debug JSON saved).")
 
-# Try to parse strict tagged format
+# Preferred strict format
 m_text = re.search(r"===TEXT_TO_TONY===\n(.*?)\n===END_TEXT_TO_TONY===", text, re.S)
 m_plan = re.search(r"===HOBBES_PLAN===\n(.*?)\n===END_HOBBES_PLAN===", text, re.S)
 
 if m_text and m_plan:
     text_to_tony = m_text.group(1).strip()
     hobbes_plan  = m_plan.group(1).strip()
+
 else:
-    # Fallback: use raw text, extract a short summary for Tony
     hobbes_plan = text.strip()
 
-    # Look for numbered bold issues like "1. **Title**"
+    # Extract numbered issue titles only
     issues = re.findall(r"\d+\.\s+\*\*(.*?)\*\*", text)
 
     if issues:
         short = "; ".join(issue.strip() for issue in issues[:3])
     else:
-        # Fallback to plain numbered lines
+        # If no bold titles found, extract plain numbered lines
         plain = re.findall(r"\d+\.\s+([A-Za-z0-9 ,\-]+)", text)
-        if plain:
-            short = "; ".join(p.strip() for p in plain[:3])
-        else:
-            short = "A few cleanup items from last night."
+        short = "; ".join(p.strip() for p in plain[:3]) if plain else "A few cleanup items from last night."
 
-    # Clean and gently trim if needed
-    short = re.sub(r"[`]", "", short)
-    short = re.sub(r"\s+", " ", short).strip()
-    if len(short) > 200:
-        short = short[:200].rsplit(" ", 1)[0]
+        short = re.sub(r"[`]", "", short)                 # remove backticks
+        short = re.sub(r"\s+", " ", short).strip()
+        short = short[:150].rsplit(" ", 1)[0]             # trim without cutting mid-word
 
     text_to_tony = (
         "Morning — quick ScanGrade update:\n"
-        f"• Main thing: {short}"
+        f"• Main thing: {short}\n\n"
+        "Reply: DETAILS | BUILD: APPLY SAFE | BUILD: CRITICAL"
     )
-
-# Always append reply hint so Tony remembers the commands
-reply_hint = "Reply: DETAILS | BUILD SAFE | BUILD CRITICAL | PAUSE"
-text_to_tony = text_to_tony.rstrip() + "\n\n" + reply_hint
 
 plan_path.write_text(hobbes_plan + "\n", encoding="utf-8")
 text_out.write_text(text_to_tony + "\n", encoding="utf-8")

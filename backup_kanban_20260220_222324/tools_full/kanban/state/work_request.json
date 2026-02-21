@@ -1,0 +1,18 @@
+{
+  "version": "WORK_REQUEST_V1",
+  "status": "done",
+  "created_at_utc": "2026-02-21T02:55:01Z",
+  "read_url": "https://hobbes-mac-mini.tail9a3379.ts.net/board_state.json",
+  "read_sha": "91ad708964a378ee3e7fe76767814cd2ff23bfd5c9018bb9587573ce469dabca",
+  "updated_at": "2026-02-21T02:43:20.145Z",
+  "receipt": "KANBAN_CANONICAL_FETCH_V1",
+  "instructions": [
+    "Always re-fetch canonical board via read_url before any summary or plan.",
+    "Never summarize without including read_url, updated_at, read_sha, receipt.",
+    "Work only on dev/hobbes-YYYYMMDD-* branch.",
+    "Never merge to main."
+  ],
+  "mission_text": "Ship ScanGrade MVP: one clean worksheet + scoring pipeline that works end-to-end.",
+  "claimed_at_utc": "2026-02-21T02:56:00Z",
+  "done_at_utc": "2026-02-21T02:57:01Z"
+}

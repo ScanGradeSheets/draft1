@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScanGrade Project Board</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 24px;
+      color: #1d1d1f;
+    }
+
+    .save-banner {
+      font-size: 12px;
+      color: #4b5563;
+      margin-bottom: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .save-banner.visible {
+      opacity: 1;
+    }
+    .save-banner.error {
+      color: #b91c1c;
+    }
+
+    .hobbes-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+    .hobbes-pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #9ca3af;
+    }
+    .hobbes-pill-idle {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .hobbes-pill-idle .hobbes-pill-dot {
+      background: #9ca3af;
+    }
+    .hobbes-pill-busy {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .hobbes-pill-busy .hobbes-pill-dot {
+      background: #f97316;
+    }
+
+    .subtitle {
+      color: #6e6e73;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .mission-panel {
+      background: #fffbe6;
+      border: 1px solid #f1c40f;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .board {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+    }
+
+    .column {
+      min-width: 280px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* Column colours */
+    .column-backlog   { background: #fefce8; }  /* soft yellow */
+    .column-todo      { background: #ecfeff; }  /* soft cyan   */
+    .column-inprogress{ background: #eef2ff; }  /* soft indigo */
+    .column-blocked   { background: #fef2f2; }  /* soft red    */
+    .column-review    { background: #f5f3ff; }  /* soft violet */
+    .column-done      { background: #ecfdf3; }  /* soft green  */
+
+    .column-header {
+      font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #4b5563;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .count {
+      background: #e8e8ed;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .task {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .task:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+      border-color: #007aff;
+    }
+
+    /* Card accent matched to column */
+    .column-backlog   .task { border-left: 3px solid #facc15; }
+    .column-todo      .task { border-left: 3px solid #06b6d4; }
+    .column-inprogress.task,
+    .column-inprogress .task { border-left: 3px solid #6366f1; }
+    .column-blocked   .task { border-left: 3px solid #ef4444; }
+    .column-review    .task { border-left: 3px solid #a855f7; }
+    .column-done      .task { border-left: 3px solid #22c55e; }
+
+    .task-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+    .task-meta {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .tag-row {
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .tag-pill {
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .needs-attention-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      background: #f97316;
+      color: #fff;
+      margin-left: 4px;
+    }
+
+    .add-task {
+      width: 100%;
+      padding: 8px;
+      border: 2px dashed #e8e8ed;
+      border-radius: 8px;
+      background: transparent;
+      color: #6e6e73;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .add-task:hover {
+      border-color: #007aff;
+      color: #007aff;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #e8e8ed;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .close-btn {
+      background: #e8e8ed;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .section-content {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1f2933;
+    }
+    .file-path {
+      background: #f5f5f7;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 12px;
+      color: #007aff;
+      margin-bottom: 12px;
+      word-break: break-all;
+    }
+    .code-preview {
+      background: #111827;
+      color: #f5f5f7;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre;
+    }
+    .feedback-box {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px;
+      border: 1px solid #e8e8ed;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+    }
+    .action-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn-primary {
+      background: #007aff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .btn-secondary {
+      background: #e8e8ed;
+      color: #1d1d1f;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .saved-feedback {
+      background: #f0fdf4;
+      border: 1px solid #10b981;
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .saved-feedback h4 {
+      font-size: 12px;
+      color: #10b981;
+      margin-bottom: 4px;
+    }
+    .saved-feedback p {
+      font-size: 13px;
+      color: #1d1d1f;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-left: 8px;
+    }
+    .status-needsoverseer { background: #fef3c7; color: #92400e; }
+    .status-approved      { background: #d1fae5; color: #065f46; }
+    .status-inprogress    { background: #dbeafe; color: #1e40af; }
+
+    .field-label {
+      display: block;
+      font-size: 12px;
+      color: #4b5563;
+      margin-bottom: 4px;
+    }
+    select, .tag-input {
+      font-size: 13px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      width: 100%;
+    }
+    .tag-edit-row {
+      margin-top: 8px;
+    }
+
+    .status-panel {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #f9fafb;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      font-size: 12px;
+      color: #374151;
+    }
+    .status-panel-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .status-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    .status-metrics span {
+      white-space: nowrap;
+    }
+    .status-label {
+      font-weight: 500;
+    }
+
+    @media (max-width: 768px) {
+      .column { min-width: 260px; }
+      h1 { font-size: 20px; }
+      .modal { max-height: 95vh; }
+      .header-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="save-banner" id="save-banner"></div>
+
+  <div class="header-row">
+    <h1>🐯 ScanGrade Board</h1>
+    <div class="hobbes-pill hobbes-pill-idle" id="hobbes-status-pill">
+      <span class="hobbes-pill-dot"></span>
+      <span id="hobbes-status-text">Hobbes status: Unknown</span>
+    </div>
+  </div>
+
+  <div class="mission-panel" contenteditable="true" id="current-mission">
+    <strong>Current Mission:</strong> Ship ScanGrade MVP: one clean worksheet + scoring pipeline that WORKS end-to-end.
+  </div>
+
+  <p class="subtitle">Click any task to review files, leave direction for Hobbes, or adjust status/tags.</p>
+
+  <div class="board" id="board"></div>
+
+  <div class="status-panel">
+    <div class="status-panel-title">Board overview</div>
+    <div>Mission: <span class="status-label" id="status-mission-text">(not loaded)</span></div>
+    <div class="status-metrics">
+      <span>Backlog: <strong id="metric-backlog-count">0</strong></span>
+      <span>To Do: <strong id="metric-todo-count">0</strong></span>
+      <span>In Progress: <strong id="metric-inprogress-count">0</strong></span>
+      <span>Blocked: <strong id="metric-blocked-count">0</strong></span>
+      <span>Review: <strong id="metric-review-count">0</strong></span>
+      <span>Done: <strong id="metric-done-count">0</strong></span>
+      <span>Last updated: <strong id="metric-updated-at">–</strong></span>
+    </div>
+  </div>
+
+  <!-- Task Detail Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="modal-title">Task Title</h2>
+          <span id="modal-status" class="status-badge"></span>
+        </div>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="section">
+          <div class="section-title">What This Is</div>
+          <div class="section-content" id="modal-description"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">File Location</div>
+          <div class="file-path" id="modal-filepath"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Code Preview</div>
+          <div class="code-preview" id="modal-code"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Status & Tags</div>
+          <div class="section-content">
+            <label class="field-label" for="status-select">Status</label>
+            <select id="status-select">
+              <option value="">(no status)</option>
+              <option value="needsoverseer">Needs overseer</option>
+              <option value="inprogress">In progress</option>
+              <option value="approved">Approved</option>
+            </select>
+
+            <div class="tag-edit-row">
+              <label class="field-label" for="tag-input">Tags (comma-separated)</label>
+              <input
+                type="text"
+                id="tag-input"
+                class="tag-input"
+                placeholder="app-dev, web-dev, worksheet, infra, meta, promo, shop, spec"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Your Feedback / Direction for Hobbes</div>
+          <textarea
+            class="feedback-box"
+            id="feedback-text"
+            placeholder="Tell Hobbes what to change, what's unclear, or your next priority..."
+          ></textarea>
+          <div class="action-btns">
+            <button class="btn-primary" onclick="saveTaskAndBoard()">Save Task + Board</button>
+            <button class="btn-secondary" onclick="markComplete()">Move to Done (UI only)</button>
+            <button class="btn-danger" onclick="deleteCurrentTask()">Delete Card</button>
+          </div>
+          <div id="saved-feedback-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Constants ---
+
+    const BOARD_API_URL =
+      window.location.hostname === 'hobbes-mac-mini.tail9a3379.ts.net'
+        ? '/api/board_state'   // same-origin when using Tailnet URL
+        : 'https://hobbes-mac-mini.tail9a3379.ts.net/api/board_state'; // when viewing via 127.0.0.1:9001
+
+    const STATUS_LABELS = {
+      needsoverseer: 'Needs overseer',
+      inprogress: 'In progress',
+      approved: 'Approved'
+    };
+
+    // internal task model used by the UI
+    let tasks = {
+      backlog: [],
+      todo: [],
+      inprogress: [],
+      review: [],
+      done: [],
+      blocked: []
+    };
+
+    let boardSnapshot = null;
+    let currentTask = null;
+
+    function mapBoardStateToTasks(board) {
+      const nameToKey = {
+        'Backlog': 'backlog',
+        'To Do': 'todo',
+        'Todo': 'todo',
+        'In Progress': 'inprogress',
+        'InProgress': 'inprogress',
+        'Review': 'review',
+        'Done': 'done',
+        'Blocked': 'blocked'
+      };
+
+      const mapped = {
+        backlog: [],
+        todo: [],
+        inprogress: [],
+        review: [],
+        done: [],
+        blocked: []
+      };
+
+      const columns = board && Array.isArray(board.columns) ? board.columns : [];
+
+      columns.forEach((col) => {
+        const key = nameToKey[col.name] || null;
+        if (!key) return;
+        const cards = Array.isArray(col.cards) ? col.cards : [];
+        cards.forEach((card, index) => {
+          mapped[key].push({
+            id: `${key}-${index}`,
+            title: card.title || '(Untitled)',
+            priority: card.priority || 'med',
+            status: card.status || '',
+            description: card.notes || card.description || '',
+            filepath: card.filepath || '',
+            code: card.code || '',
+            feedback: card.feedback || '',
+            tags: Array.isArray(card.tags) ? card.tags : []
+          });
+        });
+      });
+
+      return mapped;
+    }
+
+    async function loadBoard() {
+      try {
+        const res = await fetch('/board_state.json');
+        if (!res.ok) throw new Error('Failed to fetch board_state.json');
+        const board = await res.json();
+        boardSnapshot = board;
+        tasks = mapBoardStateToTasks(board);
+        updateDashboard(board);
+        initMissionPanel(board);
+        renderBoard();
+      } catch (e) {
+        console.error('Failed to load board_state.json; using empty board', e);
+        boardSnapshot = boardSnapshot || { columns: [], current_mission: '', updated_at: null };
+        updateDashboard(boardSnapshot);
+        initMissionPanel(boardSnapshot);
+        renderBoard();
+      }
+    }
+
+    function updateDashboard(board) {
+      const missionText = (board && board.current_mission) || '';
+
+      // Mission in mission panel
+      const missionPanel = document.getElementById('current-mission');
+      if (missionPanel) {
+        missionPanel.innerHTML =
+          '<strong>Current Mission:</strong> ' +
+          (missionText || 'Set a clear mission for Hobbes.');
+      }
+
+      // Mission in status panel
+      const missionStatus = document.getElementById('status-mission-text');
+      if (missionStatus) {
+        missionStatus.textContent = missionText || '(none set yet)';
+      }
+
+      const counts = {
+        backlog: (tasks.backlog || []).length,
+        todo: (tasks.todo || []).length,
+        inprogress: (tasks.inprogress || []).length,
+        blocked: (tasks.blocked || []).length,
+        review: (tasks.review || []).length,
+        done: (tasks.done || []).length
+      };
+
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      };
+
+      setText('metric-backlog-count', counts.backlog);
+      setText('metric-todo-count', counts.todo);
+      setText('metric-inprogress-count', counts.inprogress);
+      setText('metric-blocked-count', counts.blocked);
+      setText('metric-review-count', counts.review);
+      setText('metric-done-count', counts.done);
+
+      const updatedAtEl = document.getElementById('metric-updated-at');
+      if (updatedAtEl) {
+        if (board && board.updated_at) {
+          updatedAtEl.textContent = board.updated_at;
+        } else {
+          updatedAtEl.textContent = '–';
+        }
+      }
+
+      const hobbesPill = document.getElementById('hobbes-status-pill');
+      const hobbesText = document.getElementById('hobbes-status-text');
+      if (hobbesPill && hobbesText) {
+        const busy = counts.inprogress > 0 || counts.blocked > 0;
+        hobbesPill.classList.remove('hobbes-pill-idle', 'hobbes-pill-busy');
+        hobbesPill.classList.add(busy ? 'hobbes-pill-busy' : 'hobbes-pill-idle');
+        hobbesText.textContent = busy
+          ? 'Hobbes status: Working'
+          : 'Hobbes status: Idle';
+      }
+    }
+
+    function initMissionPanel(initialBoard) {
+      const missionPanel = document.getElementById('current-mission');
+      if (!missionPanel) return;
+
+      let debounceTimer = null;
+
+      missionPanel.addEventListener('input', () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+          const raw = missionPanel.innerText || '';
+          const cleaned = raw.replace(/^Current Mission:\s*/i, '').trim();
+
+          try {
+            const res = await fetch(BOARD_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ current_mission: cleaned })
+            });
+            if (!res.ok) throw new Error('Mission save failed');
+            if (!boardSnapshot) boardSnapshot = {};
+            boardSnapshot.current_mission = cleaned;
+            updateDashboard(boardSnapshot);
+          } catch (e) {
+            console.error('Failed to save mission', e);
+          }
+        }, 600);
+      });
+    }
+
+    function renderBoard() {
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+
+      const columns = [
+        { id: 'backlog',    name: 'Backlog' },
+        { id: 'todo',       name: 'To Do' },
+        { id: 'inprogress', name: 'In Progress' },
+        { id: 'blocked',    name: 'Blocked' },
+        { id: 'review',     name: 'Review' },
+        { id: 'done',       name: 'Done' }
+      ];
+
+      columns.forEach(col => {
+        const colTasks = tasks[col.id] || [];
+        const colDiv = document.createElement('div');
+        colDiv.className = 'column column-' + col.id;
+
+        const cardsHtml = colTasks.map(task => {
+          const statusLabel = task.status ? (STATUS_LABELS[task.status] || task.status) : '';
+          const tagsHtml = task.tags && task.tags.length
+            ? '<div class="tag-row">' +
+              task.tags.map(tag => '<span class="tag-pill">' + tag + '</span>').join('') +
+              '</div>'
+            : '';
+          const needsAttention = task.status === 'needsoverseer';
+
+          return (
+            '<div class="task" onclick="openTask(\'' + col.id + '\', \'' + task.id + '\')">' +
+              '<div class="task-title">' + task.title + '</div>' +
+              '<div class="task-meta">' +
+                (statusLabel ? statusLabel : 'No status') +
+                (needsAttention ? '<span class="needs-attention-badge">Needs eyes</span>' : '') +
+              '</div>' +
+              tagsHtml +
+            '</div>'
+          );
+        }).join('');
+
+        colDiv.innerHTML = '' +
+          '<div class="column-header">' +
+            '<span>' + col.name + '</span>' +
+            '<span class="count">' + colTasks.length + '</span>' +
+          '</div>' +
+          cardsHtml +
+          '<button class="add-task" onclick="addTask(\'' + col.id + '\')">+ Add task</button>';
+
+        boardEl.appendChild(colDiv);
+      });
+    }
+
+    function openTask(columnId, taskId) {
+      const colTasks = tasks[columnId] || [];
+      const task = colTasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      currentTask = { columnId, taskId, task };
+
+      document.getElementById('modal-title').textContent = task.title;
+      document.getElementById('modal-description').textContent = task.description || '';
+      document.getElementById('modal-filepath').textContent = task.filepath || '';
+      document.getElementById('modal-code').textContent = task.code || '';
+
+      const statusBadge = document.getElementById('modal-status');
+      const label = task.status ? (STATUS_LABELS[task.status] || task.status) : 'No status';
+      statusBadge.textContent = label;
+      statusBadge.className = 'status-badge';
+      if (task.status) {
+        statusBadge.classList.add('status-' + task.status);
+      }
+
+      const statusSelect = document.getElementById('status-select');
+      if (statusSelect) {
+        statusSelect.value = task.status || '';
+      }
+
+      const tagInput = document.getElementById('tag-input');
+      if (tagInput) {
+        tagInput.value = (task.tags || []).join(', ');
+      }
+
+      document.getElementById('feedback-text').value = task.feedback || '';
+      document.getElementById('saved-feedback-container').innerHTML = '';
+
+      document.getElementById('modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+      currentTask = null;
+    }
+
+    function saveFeedbackUIOnly(message) {
+      const container = document.getElementById('saved-feedback-container');
+      if (!container) return;
+      container.innerHTML =
+        '<div class="saved-feedback">' +
+          '<h4>✓ ' + (message || 'Saved (UI updated)') + '</h4>' +
+          '<p>' + (document.getElementById('feedback-text').value || '(No text entered)') + '</p>' +
+        '</div>';
+    }
+
+    function serializeTasksToColumns() {
+      const keyToName = {
+        backlog: 'Backlog',
+        todo: 'To Do',
+        inprogress: 'In Progress',
+        blocked: 'Blocked',
+        review: 'Review',
+        done: 'Done'
+      };
+      const order = ['backlog', 'todo', 'inprogress', 'blocked', 'review', 'done'];
+
+      const columns = [];
+
+      order.forEach(key => {
+        const name = keyToName[key];
+        const colTasks = tasks[key] || [];
+        const cards = colTasks.map(t => {
+          const card = {
+            title: t.title || '',
+            notes: t.description || ''
+          };
+          if (t.status)   card.status = t.status;
+          if (t.priority) card.priority = t.priority;
+          if (Array.isArray(t.tags) && t.tags.length) card.tags = t.tags;
+          if (t.filepath) card.filepath = t.filepath;
+          if (t.code)     card.code = t.code;
+          if (t.feedback) card.feedback = t.feedback;
+          return card;
+        });
+        columns.push({ name, cards });
+      });
+
+      return columns;
+    }
+
+    async function saveBoardColumns(reason) {
+      const banner = document.getElementById('save-banner');
+      try {
+        const columns = serializeTasksToColumns();
+        const payload = {
+          columns,
+          updated_at: new Date().toISOString()
+        };
+
+        if (banner) {
+          banner.classList.remove('error');
+          banner.textContent = 'Saving…';
+          banner.classList.add('visible');
+        }
+
+        const res = await fetch(BOARD_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error('Save failed with status ' + res.status);
+        }
+
+        if (!boardSnapshot) boardSnapshot = {};
+        boardSnapshot.columns = columns;
+        boardSnapshot.updated_at = payload.updated_at;
+        updateDashboard(boardSnapshot);
+
+        if (banner) {
+          banner.textContent = 'Saved';
+          setTimeout(() => {
+            banner.classList.remove('visible');
+          }, 1500);
+        }
+      } catch (e) {
+        console.error('Failed to save board_state via', BOARD_API_URL, e);
+        if (banner) {
+          banner.textContent = 'Not saved – check Tailnet / board API';
+          banner.classList.add('visible', 'error');
+        }
+      }
+    }
+
+    function saveTaskAndBoard() {
+      if (!currentTask) return;
+
+      const statusSelect = document.getElementById('status-select');
+      const tagInput     = document.getElementById('tag-input');
+      const feedbackEl   = document.getElementById('feedback-text');
+
+      const newStatus = statusSelect ? statusSelect.value : '';
+      const rawTags   = tagInput ? tagInput.value : '';
+      const feedback  = feedbackEl ? feedbackEl.value : '';
+
+      currentTask.task.status = newStatus;
+      currentTask.task.feedback = feedback;
+
+      const tags = rawTags
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+      currentTask.task.tags = tags;
+
+      const statusBadge = document.getElementById('modal-status');
+      const label = newStatus ? (STATUS_LABELS[newStatus] || newStatus) : 'No status';
+      statusBadge.textContent = label;
+      statusBadge.className = 'status-badge';
+      if (newStatus) {
+        statusBadge.classList.add('status-' + newStatus);
+      }
+
+      saveFeedbackUIOnly('Task updated (saved to board)');
+      renderBoard();
+      saveBoardColumns('task-edit');
+    }
+
+    function markComplete() {
+      if (!currentTask) return;
+
+      const colTasks = tasks[currentTask.columnId] || [];
+      const idx = colTasks.findIndex(t => t.id === currentTask.taskId);
+      if (idx > -1) {
+        const [task] = colTasks.splice(idx, 1);
+        tasks.done.push(task);
+        renderBoard();
+        saveBoardColumns('mark-complete');
+        saveFeedbackUIOnly('Moved to Done (board saved)');
+      }
+    }
+
+    function deleteCurrentTask() {
+      if (!currentTask) return;
+      if (!confirm('Delete this card from the board?')) return;
+
+      const colTasks = tasks[currentTask.columnId] || [];
+      const idx = colTasks.findIndex(t => t.id === currentTask.taskId);
+      if (idx > -1) {
+        colTasks.splice(idx, 1);
+        tasks[currentTask.columnId] = colTasks;
+      }
+      renderBoard();
+      saveBoardColumns('delete-card');
+      closeModal();
+    }
+
+    function addTask(columnId) {
+      const title = prompt('Task name:');
+      if (!title) return;
+      const colTasks = tasks[columnId] || [];
+      const id = columnId + '-' + Date.now();
+      colTasks.push({
+        id,
+        title,
+        priority: 'med',
+        status: '',
+        description: '',
+        filepath: '',
+        code: '',
+        feedback: '',
+        tags: []
+      });
+      tasks[columnId] = colTasks;
+      renderBoard();
+      saveBoardColumns('add-card');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadBoard();
+    });
+  </script>
+</body>
+</html>

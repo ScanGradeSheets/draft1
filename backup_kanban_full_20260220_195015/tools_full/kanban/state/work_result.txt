@@ -1,0 +1,3 @@
+STAMP_UTC=2026-02-19T01:38:26Z
+RESULT=WORKER_STUB_OK
+NOTE=Replace this with Gemini execution later.

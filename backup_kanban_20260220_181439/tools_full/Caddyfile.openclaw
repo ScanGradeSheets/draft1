@@ -1,0 +1,17 @@
+{
+  auto_https off
+}
+
+:18790 {
+  # This server exists only to make /claw work by stripping the prefix.
+  # Tailscale Serve will proxy /claw -> http://127.0.0.1:18790
+
+  handle_path /claw* {
+    reverse_proxy 127.0.0.1:18789
+  }
+
+  # Safety: if hit without /claw prefix, still proxy.
+  handle {
+    reverse_proxy 127.0.0.1:18789
+  }
+}

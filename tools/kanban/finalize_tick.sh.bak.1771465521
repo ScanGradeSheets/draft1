@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TOOLS="/Users/openclaw/.openclaw/workspace/scan-grade/tools/kanban"
+STATE="$TOOLS/state"
+WR="$STATE/work_request.json"
+MS="$STATE/mission_state.json"
+OUT="$STATE/brain_output.txt"
+
+[ -f "$WR" ] || exit 0
+[ -f "$OUT" ] || exit 0
+
+STATUS="$(python3 -c 'import json; print((json.load(open("'"$WR"'","r",encoding="utf-8")).get("status") or "").strip())' 2>/dev/null || true)"
+[ "$STATUS" = "claimed" ] || exit 0
+
+# If brain output contains a BLOCKED line, treat as blocked.
+BLOCKED_LINE="$(grep -m1 '^BLOCKED:' "$OUT" 2>/dev/null || true)"
+
+STAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+if [ -n "$BLOCKED_LINE" ]; then
+  # mission -> Blocked
+  python3 - <<PY
+import json
+p="$MS"
+try: j=json.load(open(p,"r",encoding="utf-8"))
+except Exception: j={}
+j["mission_status"]="Blocked"
+j["mission_blocked_on"]="${BLOCKED_LINE#BLOCKED: }"
+j.setdefault("mission_done_note","")
+open(p,"w",encoding="utf-8").write(json.dumps(j, ensure_ascii=False, indent=2)+"\n")
+print("MISSION_STATUS_SET=Blocked")
+PY
+
+  # request -> blocked
+  python3 - <<PY
+import json
+p="$WR"
+j=json.load(open(p,"r",encoding="utf-8"))
+j["status"]="blocked"
+j["blocked_at_utc"]="$STAMP"
+open(p,"w",encoding="utf-8").write(json.dumps(j, ensure_ascii=False, indent=2)+"\n")
+print("WORK_REQUEST=blocked")
+PY
+
+  echo "FINALIZE_OK blocked"
+  exit 0
+fi
+
+# Otherwise mark Done (for now). Later we’ll make this require receipt fields.
+python3 - <<PY
+import json
+p="$MS"
+try: j=json.load(open(p,"r",encoding="utf-8"))
+except Exception: j={}
+j["mission_status"]="Done"
+j["mission_blocked_on"]=""
+j["mission_done_note"]="Completed. See brain_output.txt for details."
+open(p,"w",encoding="utf-8").write(json.dumps(j, ensure_ascii=False, indent=2)+"\n")
+print("MISSION_STATUS_SET=Done")
+PY
+
+python3 - <<PY
+import json
+p="$WR"
+j=json.load(open(p,"r",encoding="utf-8"))
+j["status"]="done"
+j["done_at_utc"]="$STAMP"
+open(p,"w",encoding="utf-8").write(json.dumps(j, ensure_ascii=False, indent=2)+"\n")
+print("WORK_REQUEST=done")
+PY
+
+echo "FINALIZE_OK done"

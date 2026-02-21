@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScanGrade Project Board</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 12px;
+      color: #1d1d1f;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hobbes-status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-weight: 500;
+      border: 1px solid transparent;
+    }
+    .hobbes-working {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #16a34a;
+    }
+    .hobbes-idle {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-color: #2563eb;
+    }
+    .hobbes-problem {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #ef4444;
+    }
+
+    .subtitle {
+      color: #6e6e73;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .board-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mission-panel {
+      background: #ffffff;           /* changed from yellow to white */
+      border: 1px solid #000000;     /* black border now */
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .board {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 20px;
+    }
+
+    .column {
+      min-width: 300px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-top: 4px solid transparent;
+    }
+
+    .column-backlog    { border-top-color: #a855f7; }
+    .column-todo       { border-top-color: #0ea5e9; }
+    .column-inprogress { border-top-color: #f97316; }
+    .column-blocked    { border-top-color: #ef4444; }
+    .column-review     { border-top-color: #eab308; }
+    .column-done       { border-top-color: #22c55e; }
+
+    .column-header {
+      font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6e6e73;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .count {
+      background: #e8e8ed;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .task {
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px 10px 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid transparent;
+    }
+
+    .task-backlog    { border-left-color: #a855f7; }
+    .task-todo       { border-left-color: #0ea5e9; }
+    .task-inprogress { border-left-color: #f97316; }
+    .task-blocked    { border-left-color: #ef4444; }
+    .task-review     { border-left-color: #eab308; }
+    .task-done       { border-left-color: #22c55e; }
+
+    .task:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+      border-color: #007aff;
+    }
+    .task-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1d1d1f;
+      margin-bottom: 4px;
+    }
+
+    .task-meta {
+      font-size: 11px;
+      color: #6e6e73;
+    }
+
+    .tag-row {
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .tag-pill {
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .add-task {
+      width: 100%;
+      padding: 8px;
+      border: 2px dashed #e8e8ed;
+      border-radius: 8px;
+      background: transparent;
+      color: #6e6e73;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .add-task:hover {
+      border-color: #007aff;
+      color: #007aff;
+    }
+
+    /* Save banner */
+    .save-banner {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      background: #111827;
+      color: #f9fafb;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      z-index: 1500;
+    }
+    .save-banner.visible { display: inline-flex; }
+    .save-banner.error {
+      background: #b91c1c;
+      color: #fef2f2;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #e8e8ed;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .close-btn {
+      background: #e8e8ed;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .section {
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .section-content {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1d1d1f;
+    }
+    .file-path {
+      background: #f5f5f7;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 12px;
+      color: #007aff;
+      margin-bottom: 8px;
+      word-break: break-all;
+    }
+    .code-preview {
+      background: #1d1d1f;
+      color: #f5f5f7;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      max-height: 260px;
+      overflow-y: auto;
+      white-space: pre;
+    }
+    .feedback-box {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px;
+      border: 1px solid #e8e8ed;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+    }
+    .action-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn-primary {
+      background: #007aff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13px;
+    }
+    .btn-secondary {
+      background: #e8e8ed;
+      color: #1d1d1f;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13px;
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13px;
+    }
+    .saved-feedback {
+      background: #f0fdf4;
+      border: 1px solid #10b981;
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    .saved-feedback h4 {
+      font-size: 12px;
+      color: #10b981;
+      margin-bottom: 4px;
+    }
+    .saved-feedback p {
+      font-size: 14px;
+      color: #1d1d1f;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-left: 8px;
+    }
+    .status-needsoverseer { background: #fef3c7; color: #92400e; }
+    .status-inprogress    { background: #dbeafe; color: #1e40af; }
+    .status-blocked       { background: #fee2e2; color: #b91c1c; }
+    .status-done          { background: #dcfce7; color: #166534; }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+    .status-row select {
+      padding: 4px 6px;
+      font-size: 12px;
+    }
+    .tag-select-row {
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .tag-select-row label {
+      font-size: 12px;
+      color: #4b5563;
+    }
+    .tag-select-row select {
+      padding: 4px 6px;
+      font-size: 12px;
+    }
+
+    /* Dashboard */
+    .dashboard {
+      margin-top: 12px;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px;
+      font-size: 12px;
+    }
+    .dash-section-title {
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+    .dash-metric {
+      font-size: 13px;
+      color: #111827;
+    }
+    .dash-label {
+      color: #6b7280;
+      font-size: 11px;
+    }
+    .dash-tag-pill {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      font-size: 11px;
+      margin: 1px 2px 1px 0;
+    }
+
+    @media (max-width: 768px) {
+      .column { min-width: 260px; }
+      h1 { font-size: 20px; }
+      .modal { max-height: 95vh; }
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    🐯 ScanGrade Board
+    <span id="hobbes-status" class="hobbes-status hobbes-idle">Idle</span>
+  </h1>
+
+  <div class="board-wrapper">
+    <div class="mission-panel" contenteditable="true" id="current-mission">
+      <strong>Current Mission:</strong> Ship ScanGrade MVP: one clean worksheet + scoring pipeline that WORKS end-to-end.
+    </div>
+
+    <p class="subtitle">
+      Click any task to review files, adjust tags / status, and give direction. Hobbes reads from this board.
+    </p>
+
+    <div class="board" id="board"></div>
+
+    <!-- Dashboard -->
+    <div class="dashboard">
+      <div>
+        <div class="dash-section-title">Columns</div>
+        <div class="dash-metric">
+          Backlog: <span id="dash-backlog-count">0</span> •
+          To Do: <span id="dash-todo-count">0</span> •
+          In Progress: <span id="dash-inprogress-count">0</span> •
+          Blocked: <span id="dash-blocked-count">0</span> •
+          Review: <span id="dash-review-count">0</span> •
+          Done: <span id="dash-done-count">0</span>
+        </div>
+      </div>
+      <div>
+        <div class="dash-section-title">Board State</div>
+        <div class="dash-metric">
+          <span class="dash-label">Last updated:</span>
+          <span id="dash-updated-at">–</span>
+        </div>
+        <div class="dash-metric">
+          <span class="dash-label">Tailnet API:</span>
+          <span id="dash-api-status">Unknown</span>
+        </div>
+      </div>
+      <div>
+        <div class="dash-section-title">Tag Mix (this board)</div>
+        <div id="dash-tags"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Detail Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="modal-title">Task Title</h2>
+          <span id="modal-status" class="status-badge"></span>
+        </div>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="section">
+          <div class="section-title">Status & Tags</div>
+          <div class="status-row">
+            <label for="status-select" style="font-size:12px;color:#4b5563;">Status:</label>
+            <select id="status-select">
+              <option value="none">(no status)</option>
+              <option value="needsoverseer">Needs Overseer</option>
+              <option value="inprogress">In Progress</option>
+              <option value="blocked">Blocked</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <div class="tag-select-row">
+            <label>Tags:</label>
+            <select id="tag-select-main">
+              <option value="">– add tag –</option>
+              <option value="web-dev">Web Dev</option>
+              <option value="app-dev">App Dev</option>
+              <option value="infra">Infra</option>
+              <option value="worksheet">Worksheet</option>
+              <option value="spec">Spec</option>
+              <option value="meta">Meta</option>
+              <option value="promo">Promo</option>
+              <option value="shop">Shop</option>
+            </select>
+            <div id="current-tags"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">What This Is</div>
+          <div class="section-content" id="modal-description"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">File Location</div>
+          <div class="file-path" id="modal-filepath"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Code Preview</div>
+          <div class="code-preview" id="modal-code"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Your Feedback / Direction for Hobbes</div>
+          <textarea class="feedback-box" id="feedback-text" placeholder="Tell Hobbes what to change, what’s unclear, or your next priority..."></textarea>
+          <div class="action-btns">
+            <button class="btn-primary" onclick="saveFeedback()">Save Feedback</button>
+            <button class="btn-secondary" onclick="moveToColumn('done')">Mark Done</button>
+            <button class="btn-secondary" onclick="moveToColumn('blocked')">Move to Blocked</button>
+            <button class="btn-danger" onclick="deleteTask()">Delete Task</button>
+          </div>
+          <div id="saved-feedback-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save banner -->
+  <div id="save-banner" class="save-banner">
+    <span id="save-banner-text">Saving…</span>
+  </div>
+
+  <script>
+    // ---- CONFIG ----
+    // If served via Tailnet (hobbes-mac-mini.tail...), /api/board_state will be proxied correctly.
+    // If you ever serve this from localhost only, you can switch this to 'http://127.0.0.1:9002/api/board_state'.
+    const BOARD_API_URL = '/api/board_state';
+
+    // Internal task model used by the UI
+    let tasks = {
+      backlog: [],
+      todo: [],
+      inprogress: [],
+      blocked: [],
+      review: [],
+      done: []
+    };
+
+    let currentTask = null;      // { columnId, idx }
+    let boardSnapshot = null;    // last server version
+    let lastSaveError = false;
+
+    const COLUMN_DEFS = [
+      { id: 'backlog',    name: 'Backlog' },
+      { id: 'todo',       name: 'To Do' },
+      { id: 'inprogress', name: 'In Progress' },
+      { id: 'blocked',    name: 'Blocked' },
+      { id: 'review',     name: 'Review' },
+      { id: 'done',       name: 'Done' }
+    ];
+
+    const NAME_TO_KEY = {
+      'Backlog': 'backlog',
+      'To Do': 'todo',
+      'Todo': 'todo',
+      'In Progress': 'inprogress',
+      'InProgress': 'inprogress',
+      'Blocked': 'blocked',
+      'Review': 'review',
+      'Done': 'done'
+    };
+
+    const STATUS_LABELS = {
+      needsoverseer: 'Needs Overseer',
+      inprogress: 'In Progress',
+      blocked: 'Blocked',
+      done: 'Done'
+    };
+
+    const HOBBES_STATUS = {
+      WORKING: 'working',
+      IDLE: 'idle',
+      PROBLEM: 'problem'
+    };
+
+    function setHobbesStatus(status) {
+      const el = document.getElementById('hobbes-status');
+      if (!el) return;
+      el.classList.remove('hobbes-working', 'hobbes-idle', 'hobbes-problem');
+      if (status === HOBBES_STATUS.WORKING) {
+        el.classList.add('hobbes-working');
+        el.textContent = 'Working';
+      } else if (status === HOBBES_STATUS.PROBLEM) {
+        el.classList.add('hobbes-problem');
+        el.textContent = 'Problem';
+      } else {
+        el.classList.add('hobbes-idle');
+        el.textContent = 'Idle';
+      }
+    }
+
+    function mapBoardStateToTasks(board) {
+      const mapped = {
+        backlog: [],
+        todo: [],
+        inprogress: [],
+        blocked: [],
+        review: [],
+        done: []
+      };
+
+      const columns = board && Array.isArray(board.columns) ? board.columns : [];
+      columns.forEach((col) => {
+        const key = NAME_TO_KEY[col.name] || null;
+        if (!key) return;
+        const cards = Array.isArray(col.cards) ? col.cards : [];
+        cards.forEach((card) => {
+          mapped[key].push({
+            title: card.title || '(Untitled)',
+            priority: card.priority || 'med',
+            status: card.status || 'none',
+            description: card.notes || card.description || '',
+            filepath: card.filepath || '',
+            code: card.code || '',
+            feedback: card.feedback || '',
+            tags: Array.isArray(card.tags) ? card.tags : []
+          });
+        });
+      });
+
+      return mapped;
+    }
+
+    function serializeTasksToColumns() {
+      const cols = [];
+      COLUMN_DEFS.forEach(def => {
+        const colTasks = tasks[def.id] || [];
+        cols.push({
+          name: def.name,
+          cards: colTasks.map(t => ({
+            title: t.title,
+            priority: t.priority || 'med',
+            status: t.status || 'none',
+            notes: t.description || '',
+            filepath: t.filepath || '',
+            code: t.code || '',
+            feedback: t.feedback || '',
+            tags: Array.isArray(t.tags) ? t.tags : []
+          }))
+        });
+      });
+      return cols;
+    }
+
+    async function loadBoard() {
+      try {
+        const res = await fetch('/board_state.json');
+        if (!res.ok) throw new Error('Failed to fetch board_state.json');
+        const board = await res.json();
+        boardSnapshot = board;
+        tasks = mapBoardStateToTasks(board);
+
+        // Set mission from JSON if present
+        if (board.current_mission) {
+          const missionEl = document.getElementById('current-mission');
+          if (missionEl) {
+            missionEl.innerHTML = '<strong>Current Mission:</strong> ' + board.current_mission;
+          }
+        }
+
+        updateDashboard(board);
+        renderBoard();
+        setHobbesStatus(HOBBES_STATUS.IDLE);
+      } catch (e) {
+        console.error('Failed to load board_state.json; using empty board', e);
+        boardSnapshot = { columns: [], updated_at: null };
+        updateDashboard(boardSnapshot);
+        renderBoard();
+        setHobbesStatus(HOBBES_STATUS.PROBLEM);
+      }
+    }
+
+    function renderBoard() {
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+
+      COLUMN_DEFS.forEach(col => {
+        const colTasks = tasks[col.id] || [];
+        const colDiv = document.createElement('div');
+        colDiv.className = `column column-${col.id}`;
+        const cardsHtml = colTasks.map((task, index) => {
+          const hasStatus = task.status && task.status !== 'none';
+          const statusLabel = hasStatus ? (STATUS_LABELS[task.status] || task.status.replace(/-/g, ' ')) : '';
+          const primaryTag = (task.tags && task.tags.length > 0) ? task.tags[0] : '';
+          const secondaryTags = (task.tags || []).slice(1);
+
+          return `
+            <div class="task task-${col.id}" onclick="openTask('${col.id}', ${index})">
+              <div class="task-title">${task.title}</div>
+              ${hasStatus ? `<div class="task-meta">${statusLabel}</div>` : ''}
+              ${(task.tags && task.tags.length > 0) ? `
+                <div class="tag-row">
+                  ${task.tags.map(t => `<span class="tag-pill">${t}</span>`).join('')}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+
+        colDiv.innerHTML = `
+          <div class="column-header">
+            <span>${col.name}</span>
+            <span class="count">${colTasks.length}</span>
+          </div>
+          ${cardsHtml}
+          <button class="add-task" onclick="addTask('${col.id}')">+ Add task</button>
+        `;
+        boardEl.appendChild(colDiv);
+      });
+    }
+
+    function refreshTagDisplay(task) {
+      const tagsContainer = document.getElementById('current-tags');
+      if (!tagsContainer) return;
+      tagsContainer.innerHTML = '';
+      (task.tags || []).forEach((tag, idx) => {
+        const span = document.createElement('span');
+        span.className = 'dash-tag-pill';
+        span.textContent = tag;
+        span.style.cursor = 'pointer';
+        span.title = 'Click to remove tag';
+        span.onclick = () => {
+          task.tags.splice(idx, 1);
+          refreshTagDisplay(task);
+        };
+        tagsContainer.appendChild(span);
+      });
+    }
+
+    function openTask(columnId, index) {
+      const colTasks = tasks[columnId] || [];
+      const task = colTasks[index];
+      if (!task) return;
+
+      currentTask = { columnId, index };
+
+      document.getElementById('modal-title').textContent = task.title;
+      document.getElementById('modal-description').textContent = task.description || '';
+      document.getElementById('modal-filepath').textContent = task.filepath || '';
+      document.getElementById('modal-code').textContent = task.code || '';
+
+      const statusBadge = document.getElementById('modal-status');
+      const hasStatus = task.status && task.status !== 'none';
+      if (hasStatus) {
+        statusBadge.style.display = 'inline-block';
+        statusBadge.textContent = STATUS_LABELS[task.status] || task.status.replace(/-/g, ' ');
+        statusBadge.className = `status-badge status-${task.status}`;
+      } else {
+        statusBadge.style.display = 'none';
+      }
+
+      const statusSelect = document.getElementById('status-select');
+      statusSelect.value = task.status || 'none';
+
+      const feedbackBox = document.getElementById('feedback-text');
+      feedbackBox.value = task.feedback || '';
+
+      document.getElementById('saved-feedback-container').innerHTML = '';
+
+      refreshTagDisplay(task);
+
+      const tagSelect = document.getElementById('tag-select-main');
+      tagSelect.value = '';
+
+      document.getElementById('modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+      currentTask = null;
+    }
+
+    function getCurrentTaskRef() {
+      if (!currentTask) return null;
+      const colTasks = tasks[currentTask.columnId] || [];
+      const task = colTasks[currentTask.index];
+      if (!task) return null;
+      return { colTasks, task };
+    }
+
+    async function saveFeedback() {
+      const ref = getCurrentTaskRef();
+      if (!ref) return;
+      const { task } = ref;
+
+      const feedback = document.getElementById('feedback-text').value;
+      task.feedback = feedback;
+
+      const container = document.getElementById('saved-feedback-container');
+      container.innerHTML = `
+        <div class="saved-feedback">
+          <h4>✓ Feedback Saved (to board_state.json)</h4>
+          <p>${feedback || '(No text entered)'}</p>
+        </div>
+      `;
+
+      await persistBoard();
+    }
+
+    async function moveToColumn(targetKey) {
+      const ref = getCurrentTaskRef();
+      if (!ref) return;
+
+      const { colTasks, task } = ref;
+      // remove
+      colTasks.splice(currentTask.index, 1);
+      // push
+      const dest = tasks[targetKey] || [];
+      dest.push(task);
+      tasks[targetKey] = dest;
+
+      closeModal();
+      renderBoard();
+      await persistBoard();
+    }
+
+    async function deleteTask() {
+      if (!currentTask) return;
+      if (!confirm('Delete this task?')) return;
+
+      const colTasks = tasks[currentTask.columnId] || [];
+      if (currentTask.index >= 0 && currentTask.index < colTasks.length) {
+        colTasks.splice(currentTask.index, 1);
+        tasks[currentTask.columnId] = colTasks;
+      }
+
+      closeModal();
+      renderBoard();
+      await persistBoard();
+    }
+
+    async function addTask(columnId) {
+      const title = prompt('Task name:');
+      if (!title) return;
+      const colTasks = tasks[columnId] || [];
+      colTasks.push({
+        title,
+        priority: 'med',
+        status: 'none',
+        description: '',
+        filepath: '',
+        code: '',
+        feedback: '',
+        tags: []
+      });
+      tasks[columnId] = colTasks;
+      renderBoard();
+      await persistBoard();
+    }
+
+    async function persistBoard() {
+      const banner = document.getElementById('save-banner');
+      const bannerText = document.getElementById('save-banner-text');
+      try {
+        const columns = serializeTasksToColumns();
+        const payload = {
+          columns,
+          updated_at: new Date().toISOString()
+        };
+
+        if (banner) {
+          banner.classList.remove('error');
+          bannerText.textContent = 'Saving…';
+          banner.classList.add('visible');
+        }
+
+        setHobbesStatus(HOBBES_STATUS.WORKING);
+
+        const res = await fetch(BOARD_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error('Save failed with status ' + res.status);
+        }
+
+        if (!boardSnapshot) boardSnapshot = {};
+        boardSnapshot.columns = columns;
+        boardSnapshot.updated_at = payload.updated_at;
+
+        updateDashboard(boardSnapshot);
+        lastSaveError = false;
+
+        if (banner) {
+          bannerText.textContent = 'Saved';
+          setTimeout(() => {
+            banner.classList.remove('visible');
+          }, 1500);
+        }
+        setHobbesStatus(HOBBES_STATUS.IDLE);
+      } catch (e) {
+        console.error('Error saving board:', e);
+        lastSaveError = true;
+        if (banner) {
+          banner.classList.add('error', 'visible');
+          bannerText.textContent = 'Not saved – check Tailnet / board API';
+        }
+        setHobbesStatus(HOBBES_STATUS.PROBLEM);
+      }
+    }
+
+    function updateDashboard(snapshot) {
+      const cols = snapshot && Array.isArray(snapshot.columns) ? snapshot.columns : [];
+
+      const counts = {
+        Backlog: 0,
+        'To Do': 0,
+        'In Progress': 0,
+        Blocked: 0,
+        Review: 0,
+        Done: 0
+      };
+
+      const tagCounts = {};
+
+      cols.forEach(col => {
+        const cards = Array.isArray(col.cards) ? col.cards : [];
+        if (counts[col.name] !== undefined) {
+          counts[col.name] = cards.length;
+        }
+        cards.forEach(card => {
+          const tags = Array.isArray(card.tags) ? card.tags : [];
+          tags.forEach(t => {
+            tagCounts[t] = (tagCounts[t] || 0) + 1;
+          });
+        });
+      });
+
+      document.getElementById('dash-backlog-count').textContent = counts['Backlog'];
+      document.getElementById('dash-todo-count').textContent = counts['To Do'];
+      document.getElementById('dash-inprogress-count').textContent = counts['In Progress'];
+      document.getElementById('dash-blocked-count').textContent = counts['Blocked'];
+      document.getElementById('dash-review-count').textContent = counts['Review'];
+      document.getElementById('dash-done-count').textContent = counts['Done'];
+
+      const updatedEl = document.getElementById('dash-updated-at');
+      updatedEl.textContent = snapshot && snapshot.updated_at ? snapshot.updated_at : '–';
+
+      const apiEl = document.getElementById('dash-api-status');
+      if (lastSaveError) {
+        apiEl.textContent = 'Problem';
+        apiEl.style.color = '#b91c1c';
+      } else {
+        apiEl.textContent = 'OK';
+        apiEl.style.color = '#166534';
+      }
+
+      const tagsEl = document.getElementById('dash-tags');
+      tagsEl.innerHTML = '';
+      const entries = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+      if (entries.length === 0) {
+        tagsEl.textContent = 'No tags yet.';
+      } else {
+        entries.forEach(([tag, count]) => {
+          const span = document.createElement('span');
+          span.className = 'dash-tag-pill';
+          span.textContent = `${tag} (${count})`;
+          tagsEl.appendChild(span);
+        });
+      }
+    }
+
+    async function saveMissionPatch(newMission) {
+      try {
+        await fetch(BOARD_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_mission: newMission, updated_at: new Date().toISOString() })
+        });
+      } catch (e) {
+        console.error('Failed to patch mission:', e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Mission autosave
+      const missionPanel = document.getElementById('current-mission');
+      if (missionPanel) {
+        let timeout;
+        missionPanel.addEventListener('input', () => {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            const text = missionPanel.innerText || '';
+            const cleaned = text.replace(/^Current Mission:\s*/i, '').trim();
+            saveMissionPatch(cleaned);
+          }, 600);
+        });
+      }
+
+      // Status select change
+      const statusSelect = document.getElementById('status-select');
+      statusSelect.addEventListener('change', async () => {
+        const ref = getCurrentTaskRef();
+        if (!ref) return;
+        const { task } = ref;
+        task.status = statusSelect.value || 'none';
+
+        const hasStatus = task.status && task.status !== 'none';
+        const statusBadge = document.getElementById('modal-status');
+        if (hasStatus) {
+          statusBadge.style.display = 'inline-block';
+          statusBadge.textContent = STATUS_LABELS[task.status] || task.status.replace(/-/g, ' ');
+          statusBadge.className = `status-badge status-${task.status}`;
+        } else {
+          statusBadge.style.display = 'none';
+        }
+
+        renderBoard();
+        await persistBoard();
+      });
+
+      // Tag selector add
+      const tagSelect = document.getElementById('tag-select-main');
+      tagSelect.addEventListener('change', async () => {
+        if (!tagSelect.value) return;
+        const ref = getCurrentTaskRef();
+        if (!ref) {
+          tagSelect.value = '';
+          return;
+        }
+        const { task } = ref;
+        if (!Array.isArray(task.tags)) task.tags = [];
+        if (!task.tags.includes(tagSelect.value)) {
+          task.tags.push(tagSelect.value);
+        }
+        tagSelect.value = '';
+        refreshTagDisplay(task);
+        renderBoard();
+        await persistBoard();
+      });
+
+      loadBoard();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MSG="${1:-}"
+[ -n "$MSG" ] || exit 0
+
+TOOLS="/Users/openclaw/.openclaw/workspace/scan-grade/tools/kanban"
+
+TITLE="$("$TOOLS/parse_add_card.py" "$MSG" | tr -d '\r')"
+[ -n "${TITLE:-}" ] || exit 0
+
+# Always add to Backlog (safe). Notes include the raw message.
+"$TOOLS/board_add_card.py" "$TITLE" "Backlog" "From text: $MSG"
+
+# Only confirm if message contains a "please confirm" vibe
+LOWER="$(printf "%s" "$MSG" | tr '[:upper:]' '[:lower:]')"
+if echo "$LOWER" | grep -qE 'confirm|did you add|reply ok|let me know'; then
+  openclaw message send --channel imessage --target "${IMESSAGE_TO:-}" --message "Added to Backlog: $TITLE" >/dev/null 2>&1 || true
+fi
+
+echo "ADD_CARD_OK title=$TITLE"

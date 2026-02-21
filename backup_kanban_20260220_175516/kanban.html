@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScanGrade Project Board</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #1d1d1f;
+    }
+    .subtitle {
+      color: #6e6e73;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .board {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 20px;
+    }
+    .column {
+      min-width: 300px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .column-header {
+      font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6e6e73;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .count {
+      background: #e8e8ed;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    .task {
+      background: #fff;
+      border: 1px solid #e8e8ed;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .task:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+      border-color: #007aff;
+    }
+    .task-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1d1d1f;
+      margin-bottom: 4px;
+    }
+    .task-meta {
+      font-size: 12px;
+      color: #6e6e73;
+    }
+    .priority-high { border-left: 3px solid #dc2626; }
+    .priority-med  { border-left: 3px solid #f59e0b; }
+    .priority-low  { border-left: 3px solid #10b981; }
+    .add-task {
+      width: 100%;
+      padding: 8px;
+      border: 2px dashed #e8e8ed;
+      border-radius: 8px;
+      background: transparent;
+      color: #6e6e73;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .add-task:hover {
+      border-color: #007aff;
+      color: #007aff;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #e8e8ed;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .close-btn {
+      background: #e8e8ed;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .section {
+      margin-bottom: 24px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .section-content {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1d1d1f;
+    }
+    .file-path {
+      background: #f5f5f7;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 12px;
+      color: #007aff;
+      margin-bottom: 12px;
+    }
+    .code-preview {
+      background: #1d1d1f;
+      color: #f5f5f7;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .feedback-box {
+      width: 100%;
+      min-height: 100px;
+      padding: 12px;
+      border: 1px solid #e8e8ed;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+    }
+    .action-btns {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .btn-primary {
+      background: #007aff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn-secondary {
+      background: #e8e8ed;
+      color: #1d1d1f;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .saved-feedback {
+      background: #f0fdf4;
+      border: 1px solid #10b981;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .saved-feedback h4 {
+      font-size: 12px;
+      color: #10b981;
+      margin-bottom: 4px;
+    }
+    .saved-feedback p {
+      font-size: 14px;
+      color: #1d1d1f;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-left: 8px;
+    }
+    .status-needsoverseer { background: #fef3c7; color: #92400e; }
+    .status-approved      { background: #d1fae5; color: #065f46; }
+    .status-inprogress    { background: #dbeafe; color: #1e40af; }
+
+    .mission-panel {
+      background: #fffbe6;
+      border: 1px solid #f1c40f;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .column { min-width: 280px; }
+      h1 { font-size: 20px; }
+      .modal { max-height: 95vh; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🐯 ScanGrade Board</h1>
+
+  <div class="mission-panel" contenteditable="true" id="current-mission">
+    <strong>Current Mission:</strong> Ship ScanGrade MVP: one clean worksheet + scoring pipeline that WORKS end-to-end.
+  </div>
+
+  <p class="subtitle">Click any task to review files, read explanations, and leave feedback for Hobbes</p>
+
+  <div class="board" id="board"></div>
+
+  <!-- Task Detail Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="modal-title">Task Title</h2>
+          <span id="modal-status" class="status-badge"></span>
+        </div>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="section">
+          <div class="section-title">What This Is</div>
+          <div class="section-content" id="modal-description"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">File Location</div>
+          <div class="file-path" id="modal-filepath"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Code Preview</div>
+          <div class="code-preview" id="modal-code"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Your Feedback / Direction for Hobbes</div>
+          <textarea class="feedback-box" id="feedback-text" placeholder="Tell me what to change, what's unclear, or your next priority..."></textarea>
+          <div class="action-btns">
+            <button class="btn-primary" onclick="saveFeedback()">Save Feedback</button>
+            <button class="btn-secondary" onclick="markComplete()">Mark Complete</button>
+          </div>
+          <div id="saved-feedback-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Task data
+    const tasks = {
+      backlog: [
+        {
+          id: 'b1',
+          title: 'ONNX digit classifier',
+          priority: 'high',
+          status: 'needsoverseer',
+          description: 'A ~200KB machine learning model that identifies handwritten digits (0-9) from worksheet boxes. This runs entirely in the browser using ONNX Runtime Web — no server needed.',
+          filepath: 'public/model.onnx (not yet created)',
+          code: '// Pseudo-code for ONNX inference\\nconst session = await ort.InferenceSession.create(\"model.onnx\");',
+          feedback: ''
+        },
+        {
+          id: 'b2',
+          title: 'Red pen annotation layer',
+          priority: 'med',
+          status: 'needsoverseer',
+          description: 'HTML5 Canvas overlay that draws teacher-style red pen markings: checkmarks, X marks, circles, and correct digit above.',
+          filepath: 'src/annotate.js (not yet created)',
+          code: '// Draw red circle around wrong answer\\nctx.strokeStyle = \"rgba(220, 38, 38, 0.85)\";',
+          feedback: ''
+        },
+        {
+          id: 'b3',
+          title: 'CSV/JSON export',
+          priority: 'low',
+          status: 'approved',
+          description: 'Export graded results in structured formats for gradebooks or analytics.',
+          filepath: 'src/export.js (not yet created)',
+          code: '// Generate CSV...',
+          feedback: ''
+        }
+      ],
+      todo: [
+        {
+          id: 't1',
+          title: 'Camera capture + fallback',
+          priority: 'high',
+          status: 'inprogress',
+          description: 'Live camera feed using Safari MediaDevices API with environment-facing camera preference, plus file upload fallback.',
+          filepath: 'src/components/CameraCapture.vue',
+          code: '// Start camera with environment facing...',
+          feedback: ''
+        },
+        {
+          id: 't2',
+          title: 'QR generator pipeline',
+          priority: 'high',
+          status: 'needsoverseer',
+          description: 'Creates QR codes embedded in worksheet corners with ID, version, and answer key array.',
+          filepath: 'templates/qr-generator.js (not yet created)',
+          code: '// QR payload format...',
+          feedback: ''
+        },
+        {
+          id: 't3',
+          title: 'Worksheet SVG template',
+          priority: 'med',
+          status: 'needsoverseer',
+          description: 'Printable worksheet template with digit boxes and QR code in the corner.',
+          filepath: 'templates/worksheet.svg',
+          code: '<svg viewBox=\"0 0 612 792\">...</svg>',
+          feedback: ''
+        }
+      ],
+      inprogress: [
+        {
+          id: 'p1',
+          title: 'Vite + Vue scaffold',
+          priority: 'high',
+          status: 'approved',
+          description: 'Project foundation using Vite and Vue 3.',
+          filepath: 'Full scan-grade/ directory',
+          code: '// vite.config.js ...',
+          feedback: ''
+        }
+      ],
+      review: [],
+      done: [
+        {
+          id: 'd1',
+          title: 'Blueprint + V1 roadmap',
+          priority: 'high',
+          status: 'approved',
+          description: 'Master spec defining ScanGrade\'s purpose, V1 feature set, tech stack, and marketing strategy.',
+          filepath: 'Your message history (not a file)',
+          code: '// Core specs locked...',
+          feedback: ''
+        }
+      ]
+    };
+
+    let currentTask = null;
+
+    function renderBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+
+      const columns = [
+        { id: 'backlog',   name: 'Backlog' },
+        { id: 'todo',      name: 'To Do' },
+        { id: 'inprogress',name: 'In Progress' },
+        { id: 'review',    name: 'Review' },
+        { id: 'done',      name: 'Done' }
+      ];
+
+      columns.forEach(col => {
+        const colDiv = document.createElement('div');
+        colDiv.className = 'column';
+        colDiv.innerHTML = `
+          <div class="column-header">
+            <span>${col.name}</span>
+            <span class="count">${tasks[col.id].length}</span>
+          </div>
+          ${tasks[col.id].map(task => `
+            <div class="task priority-${task.priority}" onclick="openTask('${col.id}', '${task.id}')">
+              <div class="task-title">${task.title}</div>
+              <div class="task-meta">${task.status.replace(/-/g, ' ')} • Click for details</div>
+            </div>
+          `).join('')}
+          <button class="add-task" onclick="addTask('${col.id}')">+ Add task</button>
+        `;
+        board.appendChild(colDiv);
+      });
+    }
+
+    function openTask(columnId, taskId) {
+      const task = tasks[columnId].find(t => t.id === taskId);
+      if (!task) return;
+
+      currentTask = { columnId, taskId, task };
+
+      document.getElementById('modal-title').textContent = task.title;
+      document.getElementById('modal-description').textContent = task.description;
+      document.getElementById('modal-filepath').textContent = task.filepath;
+      document.getElementById('modal-code').textContent = task.code;
+
+      const statusBadge = document.getElementById('modal-status');
+      statusBadge.textContent = task.status.replace(/-/g, ' ');
+      statusBadge.className = `status-badge status-${task.status}`;
+
+      document.getElementById('feedback-text').value = task.feedback || '';
+      document.getElementById('saved-feedback-container').innerHTML = '';
+
+      document.getElementById('modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+      currentTask = null;
+    }
+
+    function saveFeedback() {
+      if (!currentTask) return;
+
+      const feedback = document.getElementById('feedback-text').value;
+      currentTask.task.feedback = feedback;
+
+      const container = document.getElementById('saved-feedback-container');
+      container.innerHTML = `
+        <div class="saved-feedback">
+          <h4>✓ Feedback Saved</h4>
+          <p>${feedback || '(No text entered)'}</p>
+        </div>
+      `;
+
+      console.log('Feedback saved for', currentTask.task.title, ':', feedback);
+    }
+
+    function markComplete() {
+      if (!currentTask) return;
+
+      const taskIndex = tasks[currentTask.columnId].findIndex(t => t.id === currentTask.taskId);
+      if (taskIndex > -1) {
+        const task = tasks[currentTask.columnId].splice(taskIndex, 1)[0];
+        tasks.done.push(task);
+        renderBoard();
+        closeModal();
+      }
+    }
+
+    function addTask(columnId) {
+      const title = prompt('Task name:');
+      if (!title) return;
+
+      const newTask = {
+        id: `new-${Date.now()}`,
+        title,
+        priority: 'low',
+        status: 'needsoverseer',
+        description: '',
+        filepath: '',
+        code: '',
+        feedback: ''
+      };
+
+      tasks[columnId].push(newTask);
+      renderBoard();
+    }
+
+    // Initial render
+    document.addEventListener('DOMContentLoaded', renderBoard);
+  </script>
+
+  <script>
+  // Load current mission from board_state.json and save edits back via /api/board_state
+  document.addEventListener("DOMContentLoaded", async () => {
+    const missionPanel = document.getElementById("current-mission");
+    if (!missionPanel) return;
+
+    // Load current mission
+    try {
+      const res = await fetch("/board_state.json");
+      if (res.ok) {
+        const board = await res.json();
+        if (board.current_mission) {
+          missionPanel.innerHTML =
+            "<strong>Current Mission:</strong> " + board.current_mission;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load current mission", e);
+    }
+
+    // Save mission on edit (debounced)
+    let timeout;
+    missionPanel.addEventListener("input", () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(async () => {
+        const text = missionPanel.innerText.replace("Current Mission:", "").trim();
+        try {
+          await fetch("/api/board_state", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ current_mission: text })
+          });
+          console.log("Mission saved:", text);
+        } catch (e) {
+          console.error("Mission save failed", e);
+        }
+      }, 400);
+    });
+  });
+  </script>
+</body>
+</html>
