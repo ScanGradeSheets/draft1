@@ -51,9 +51,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import CameraCapture from './components/CameraCapture.vue'
 import { processWorksheet } from './homography.js'
+import { initDigitModel, recognizeDigits } from './ocr-pipeline.js'
 
 const LAYOUT = {
   "layout_id": "sg-10-box-v1",
@@ -107,12 +108,82 @@ let runtimeStatus = {
   ortSanity: false
 }
 
-const handleImageCaptured = (imageData) => {
+const handleImageCaptured = async (imageData) => {
   console.log('Image captured:', imageData)
-}
-
-const handleOCRComplete = (result) => {
-  ocrResult.value = result
+  
+  // Initialize ONNX model
+  try {
+    await initDigitModel()
+    console.log('✅ ONNX model ready')
+  } catch (err) {
+    log(`❌ Model load failed: ${err.message}`, 'fail')
+    return
+  }
+  
+  // Run full pipeline
+  try {
+    log('Running full OCR pipeline...', 'info')
+    const start = performance.now()
+    
+    // Load image into OpenCV
+    const img = new Image()
+    img.src = imageData
+    await new Promise((resolve, reject) => {
+      img.onload = resolve
+      img.onerror = reject
+    })
+    
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    
+    const src = cv.imread(canvas)
+    
+    // Run homography + crops
+    const result = processWorksheet(src, LAYOUT)
+    
+    if (!result) {
+      log('❌ Corner marker detection failed', 'fail')
+      src.delete()
+      return
+    }
+    
+    const { warpedImage, processedTensors } = result
+    
+    // Run OCR on each digit
+    const predictions = []
+    for (const proc of processedTensors) {
+      const tensor = new ort.Tensor('float32', proc.tensor, [1, 1, 28, 28])
+      const digitResult = await recognizeDigits(tensor)
+      predictions.push({
+        questionNum: proc.questionNum,
+        digit: digitResult[0].digit,
+        confidence: digitResult[0].confidence
+      })
+    }
+    
+    const totalTime = (performance.now() - start).toFixed(2)
+    
+    log(`✅ OCR complete: ${predictions.length} digits in ${totalTime}ms`, 'success')
+    
+    // Display results
+    ocrResult.value = {
+      digits: predictions.map(p => p.digit),
+      confidences: predictions.map(p => p.confidence),
+      predictions: predictions,
+      totalTime: totalTime
+    }
+    
+    // Cleanup
+    src.delete()
+    warpedImage.delete()
+    
+  } catch (err) {
+    log(`❌ Pipeline error: ${err.message}`, 'fail')
+    console.error(err)
+  }
 }
 
 const log = (message, type = 'info') => {

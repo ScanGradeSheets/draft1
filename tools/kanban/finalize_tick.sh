@@ -24,8 +24,9 @@ print(cid)
 PY
 )
 
-echo "Finalizing card_id=$CARD_ID (move to Review, mark mission Idle)"
+echo "Finalizing card_id=$CARD_ID (non-destructive: logging only, no column moves)"
 
+: << 'NO_BOARD_MUTATION'
 # 2) Fetch latest canonical board
 curl -sk "https://hobbes-mac-mini.tail9a3379.ts.net/board_state.json" \
   > "$STATE/current_board_for_finalize.json"
@@ -75,6 +76,7 @@ PY
 curl -s -X POST -H "Content-Type: application/json" \
   --data @"$STATE/updated_board_finalize.json" \
   http://127.0.0.1:9002/api/board_state > /dev/null
+NO_BOARD_MUTATION
 
 # 5) Mark work_request as done so worker_tick won't keep re-claiming it
 python3 - "$REQ" << 'PY'

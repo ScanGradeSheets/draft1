@@ -1,0 +1,17 @@
+# HOBBES EXECUTION PROTOCOL (v2.0)
+
+1. SILENCE POLICY: 
+   - No reasoning. No planning. No "Thinking Process".
+   - If you need to speak, use max 1 sentence before the code block.
+
+2. TOOL CONSTRAINTS:
+   - Use standard BASH only (cat, mkdir, touch, sed).
+   - DO NOT use "read_file" or "write_file" - these do not exist.
+   - Use "python3 -c" for complex JSON manipulation.
+
+3. STATE MANAGEMENT:
+   - Run 'cat dist/board_state.json' at the start of every turn.
+   - If a task is already in REVIEW, move to the next ID immediately.
+
+4. CODE STANDARD:
+   - ES MODULES ONLY (export function). No module.exports.

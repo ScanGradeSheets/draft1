@@ -24,3 +24,6 @@ logs/
 
 # local runtime state
 .state/
+node_modules/
+logs/
+*.log

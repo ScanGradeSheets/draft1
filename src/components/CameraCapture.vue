@@ -65,11 +65,11 @@
     
     <div v-if="processing" class="processing">
       <div class="spinner"></div>
-      <p>Processing with fake OCR...</p>
+      <p>Processing with real OCR...</p>
     </div>
     
     <div v-if="ocrResult" class="ocr-result">
-      <h3>🎯 Fake OCR Result</h3>
+      <h3>🎯 Real OCR Result</h3>
       <div class="digits">
         <div 
           v-for="(digit, i) in ocrResult.digits" 
@@ -90,6 +90,43 @@
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
+import { processWorksheet } from '../homography.js'
+import { initDigitModel, recognizeDigits } from '../ocr-pipeline.js'
+
+const LAYOUT = {
+  "layout_id": "sg-10-box-v1",
+  "version": 1,
+  "debug": false,
+  "description": "2x5 grid of 22mm digit boxes for single-digit answers",
+  "page": {
+    "width_mm": 215.9,
+    "height_mm": 279.4,
+    "aspect_ratio": 0.773,
+    "units": "mm"
+  },
+  "safe_margin_mm": 12.7,
+  "boxes": [
+    {"id": 0, "question_num": 1,  "x": 33,  "y": 71,  "cx": 44, "cy": 82,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 1, "question_num": 2,  "x": 71,  "y": 71,  "cx": 82, "cy": 82,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 2, "question_num": 3,  "x": 109, "y": 71,  "cx": 120, "cy": 82,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 3, "question_num": 4,  "x": 147, "y": 71,  "cx": 158, "cy": 82,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 4, "question_num": 5,  "x": 185, "y": 71,  "cx": 196, "cy": 82,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 5, "question_num": 6,  "x": 33,  "y": 141, "cx": 44, "cy": 152,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 6, "question_num": 7,  "x": 71,  "y": 141, "cx": 82, "cy": 152,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 7, "question_num": 8,  "x": 109, "y": 141, "cx": 120, "cy": 152,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 8, "question_num": 9,  "x": 147, "y": 141, "cx": 158, "cy": 152,  "width": 22, "height": 22, "expected_type": "digit"},
+    {"id": 9, "question_num": 10, "x": 185, "y": 141, "cx": 196, "cy": 152,  "width": 22, "height": 22, "expected_type": "digit"}
+  ],
+  "homography": {
+    "marker_size_mm": 17.3,
+    "anchors": [
+      {"id": "tl", "x_mm": 10.8, "y_mm": 10.8,  "x_norm": 0.05, "y_norm": 0.05},
+      {"id": "tr", "x_mm": 187.8, "y_mm": 10.8, "x_norm": 0.95, "y_norm": 0.05},
+      {"id": "br", "x_mm": 187.8, "y_mm": 251.3, "x_norm": 0.95, "y_norm": 0.95},
+      {"id": "bl", "x_mm": 10.8, "y_mm": 251.3, "x_norm": 0.05, "y_norm": 0.95}
+    ]
+  }
+}
 
 const emit = defineEmits(['image-captured', 'ocr-complete'])
 
@@ -158,7 +195,7 @@ const capturePhoto = () => {
   stopStream()
   
   emit('image-captured', capturedImage.value)
-  runFakeOCR()
+  runRealOCR()
 }
 
 const handleFileSelect = (e) => {
@@ -171,24 +208,78 @@ const handleFileSelect = (e) => {
     stopStream()
     streamActive.value = false
     emit('image-captured', capturedImage.value)
-    runFakeOCR()
+    runRealOCR()
   }
   reader.readAsDataURL(file)
 }
 
-const runFakeOCR = () => {
+const runRealOCR = async () => {
   processing.value = true
   ocrResult.value = null
   
-  // Simulate OCR processing delay
-  setTimeout(() => {
-    ocrResult.value = {
-      digits: [7, 2, 9, 5, 1],
-      confidences: [0.95, 0.88, 0.62, 0.91, 0.79]
+  try {
+    // Load image
+    const img = new Image()
+    img.src = capturedImage.value
+    await new Promise((resolve, reject) => {
+      img.onload = resolve
+      img.onerror = reject
+    })
+    
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    
+    const src = cv.imread(canvas)
+    
+    // Initialize model
+    await initDigitModel()
+    
+    // Run homography + crops
+    const result = processWorksheet(src, LAYOUT)
+    
+    if (!result) {
+      throw new Error('Corner marker detection failed. Ensure 4 black square markers are visible.')
     }
+    
+    const { warpedImage, processedTensors } = result
+    
+    // Run OCR on each digit
+    const predictions = []
+    for (const proc of processedTensors) {
+      const tensor = new ort.Tensor('float32', proc.tensor, [1, 1, 28, 28])
+      const digitResult = await recognizeDigits(tensor)
+      predictions.push({
+        questionNum: proc.questionNum,
+        digit: digitResult[0].digit,
+        confidence: digitResult[0].confidence
+      })
+    }
+    
+    // Display results
+    ocrResult.value = {
+      digits: predictions.map(p => p.digit),
+      confidences: predictions.map(p => p.confidence),
+      predictions: predictions
+    }
+    
+    // Cleanup
+    src.delete()
+    warpedImage.delete()
+    
+  } catch (err) {
+    console.error('OCR Error:', err)
+    ocrResult.value = {
+      digits: [],
+      confidences: [],
+      error: err.message
+    }
+  } finally {
     processing.value = false
     emit('ocr-complete', ocrResult.value)
-  }, 1500)
+  }
 }
 
 const retake = () => {
