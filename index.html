@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="icon" type="image/png" href="/draft1/scangrade-logo.png">
+  <title>ScanGrade</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    #app { width: 100%; min-height: 100vh; }
+    
+    #loading {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #f5f5f7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.3s;
+      padding: 20px;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    #loading .loading-logo {
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+      margin-bottom: 14px;
+    }
+    #loading h2 { margin-bottom: 12px; color: #1d1d1f; }
+    #loading .status { color: #6e6e73; font-size: 14px; text-align: center; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #e8e8ed;
+      border-top-color: #007aff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+  <script type="module" crossorigin src="/draft1/assets/index-B05u-lrg.js"></script>
+  <link rel="stylesheet" crossorigin href="/draft1/assets/index-CtZXfsJ9.css">
+</head>
+<body>
+  <div id="loading">
+    <img src="/draft1/scangrade-logo.png" alt="ScanGrade logo" class="loading-logo">
+    <div class="spinner"></div>
+    <h2>ScanGrade</h2>
+    <p class="status" id="loading-status">Loading...</p>
+  </div>
+
+  <div id="app"></div>
+
+  <!-- ONNX Runtime -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
+  
+  <!-- OpenCV (async, non-blocking) served locally to avoid CDN challenge failures -->
+  <script async src="/draft1/opencv.js"></script>
+  
+  <script>
+    // Expose to global
+    window.ort = window.ort || (typeof ort !== 'undefined' ? ort : undefined);
+    
+    // Fast load: 1 second then show app
+    setTimeout(() => {
+      document.getElementById('loading').classList.add('hidden');
+      console.log('[FastLoad] App visible');
+      console.log('[FastLoad] Library status:', {
+        ort: !!window.ort,
+        cv: !!window.cv,
+        cvMat: !!(window.cv && window.cv.Mat)
+      });
+    }, 1000);
+  </script>
+  
+</body>
+</html>
