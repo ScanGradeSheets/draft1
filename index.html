@@ -54,8 +54,8 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
-  <script type="module" crossorigin src="/draft1/assets/index-DcJWnn0D.js"></script>
-  <link rel="stylesheet" crossorigin href="/draft1/assets/index-BgrVljMs.css">
+  <script type="module" crossorigin src="/draft1/assets/index-1qTkCWaS.js"></script>
+  <link rel="stylesheet" crossorigin href="/draft1/assets/index-B7hyEMSA.css">
 </head>
 <body>
   <div id="loading">
@@ -77,10 +77,10 @@
     // Expose to global
     window.ort = window.ort || (typeof ort !== 'undefined' ? ort : undefined);
     
-    // Fast load: 1 second then show app
+    // Fallback: if the app fails before mounting, avoid leaving a hard blocker.
     setTimeout(() => {
-      document.getElementById('loading').classList.add('hidden');
-      console.log('[FastLoad] App visible');
+      const loading = document.getElementById('loading');
+      if (loading) loading.classList.add('hidden');
       console.log('[FastLoad] Library status:', {
         ort: !!window.ort,
         cv: !!window.cv,
