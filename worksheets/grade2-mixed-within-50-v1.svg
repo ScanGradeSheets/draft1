@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 215.9 279.4"
+     width="8.5in" height="11in"
+     preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <style>
+
+      @font-face {
+        font-family: "Legend";
+        src: url("../fonts/Legend-Regular.woff2") format("woff2");
+        font-style: normal;
+        font-weight: 400;
+      }
+
+      @font-face {
+        font-family: "Legend";
+        src: url("../fonts/Legend-Medium.woff2") format("woff2");
+        font-style: normal;
+        font-weight: 500;
+      }
+      .page { fill: #fff; }
+      .corner-marker { fill: #111; }
+      .name-label, .brand-main, .sheet-title, .sheet-subtitle, .problem-text, .footer, .qr-label {
+        font-family: "Legend", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        fill: #222;
+      }
+      .name-label { font-size: 4.2px; font-weight: 500; }
+      .name-line { stroke: #444; stroke-width: 0.45; }
+      .brand-main { font-size: 4.25px; font-weight: 500; }
+      .brand-logo-page { fill: #111; }
+      .brand-logo-check, .brand-logo-corner { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .brand-logo-check { stroke: #fff; stroke-width: 1.05; }
+      .brand-logo-corner { stroke: #111; stroke-width: 0.85; }
+      .sheet-title { font-size: 4.85px; font-weight: 500; fill: #333; }
+      .sheet-subtitle { font-size: 3.35px; font-weight: 400; fill: #555; }
+      .problem-text { font-size: 6.4px; font-weight: 500; }
+      .answer-box { fill: none; stroke: #111; stroke-width: 0.58; shape-rendering: crispEdges; }
+      .digit-seam { stroke: #9a9a9a; stroke-width: 0.18; stroke-dasharray: 0.55 1.15; stroke-linecap: round; }
+      .footer { font-size: 3.4px; fill: #555; }
+      .qr-label { font-size: 2.2px; fill: #777; }
+      .qr-sheet-code { font-size: 2.7px; fill: #555; font-weight: 500; }
+      .qr-code { image-rendering: pixelated; }
+    </style>
+  </defs>
+
+  <rect class="page" width="215.9" height="279.4" />
+
+  <rect class="corner-marker" x="9.8" y="9.8" width="11.4" height="11.4" />
+  <rect class="corner-marker" x="194.7" y="9.8" width="11.4" height="11.4" />
+  <rect class="corner-marker" x="194.7" y="258.2" width="11.4" height="11.4" />
+  <rect class="corner-marker" x="9.8" y="258.2" width="11.4" height="11.4" />
+
+  <g class="wordmark" transform="translate(87.15 10.600000000000001)">
+    <g class="brand-logo">
+      <rect class="brand-logo-page" x="1.9" y="1.5" width="4.9" height="5.4" rx="0.7" />
+      <path class="brand-logo-check" d="M2.9 4.45 L4.1 5.75 L6.25 3.1" />
+      <path class="brand-logo-corner" d="M0.75 2.05 V0.95 H1.85" />
+      <path class="brand-logo-corner" d="M0.75 6.1 V7.2 H1.85" />
+      <path class="brand-logo-corner" d="M7.35 6.1 V7.2 H6.25" />
+    </g>
+    <text class="brand-main" x="11.6" y="7.25" textLength="30" lengthAdjust="spacing">ScanGrade.io</text>
+  </g>
+  <text class="sheet-title" x="107.95" y="30.8" text-anchor="middle">Grade 2 Math - Worksheet C: Mixed Within 50 - 10 Questions</text>
+  <text class="name-label" x="64.95" y="45.6">Name:</text>
+  <line class="name-line" x1="80.95" y1="46.4" x2="150.95" y2="46.4" />
+
+  <g id="questions">
+
+    <g class="question" data-question="1">
+      <text class="problem-text" x="56.6" y="68.3" text-anchor="end">A) 23 + 14 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="0,1" x="62" y="58" width="31.15" height="15" />
+      <line class="digit-seam" x1="77.575" y1="59.6" x2="77.575" y2="71.4" />
+    </g>
+
+    <g class="question" data-question="2">
+      <text class="problem-text" x="56.6" y="99.3" text-anchor="end">B) 48 - 19 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="2,3" x="62" y="89" width="31.15" height="15" />
+      <line class="digit-seam" x1="77.575" y1="90.6" x2="77.575" y2="102.4" />
+    </g>
+
+    <g class="question" data-question="3">
+      <text class="problem-text" x="56.6" y="130.3" text-anchor="end">C) 16 + 27 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="4,5" x="62" y="120" width="31.15" height="15" />
+      <line class="digit-seam" x1="77.575" y1="121.6" x2="77.575" y2="133.4" />
+    </g>
+
+    <g class="question" data-question="4">
+      <text class="problem-text" x="56.6" y="161.3" text-anchor="end">D) 50 - 22 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="6,7" x="62" y="151" width="31.15" height="15" />
+      <line class="digit-seam" x1="77.575" y1="152.6" x2="77.575" y2="164.4" />
+    </g>
+
+    <g class="question" data-question="5">
+      <text class="problem-text" x="56.6" y="192.3" text-anchor="end">E) 34 + 8 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="8,9" x="62" y="182" width="31.15" height="15" />
+      <line class="digit-seam" x1="77.575" y1="183.6" x2="77.575" y2="195.4" />
+    </g>
+
+    <g class="question" data-question="6">
+      <text class="problem-text" x="153.6" y="68.3" text-anchor="end">F) 41 - 16 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="10,11" x="159" y="58" width="31.15" height="15" />
+      <line class="digit-seam" x1="174.575" y1="59.6" x2="174.575" y2="71.4" />
+    </g>
+
+    <g class="question" data-question="7">
+      <text class="problem-text" x="153.6" y="99.3" text-anchor="end">G) 19 + 18 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="12,13" x="159" y="89" width="31.15" height="15" />
+      <line class="digit-seam" x1="174.575" y1="90.6" x2="174.575" y2="102.4" />
+    </g>
+
+    <g class="question" data-question="8">
+      <text class="problem-text" x="153.6" y="130.3" text-anchor="end">H) 45 - 7 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="14,15" x="159" y="120" width="31.15" height="15" />
+      <line class="digit-seam" x1="174.575" y1="121.6" x2="174.575" y2="133.4" />
+    </g>
+
+    <g class="question" data-question="9">
+      <text class="problem-text" x="153.6" y="161.3" text-anchor="end">I) 26 + 15 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="16,17" x="159" y="151" width="31.15" height="15" />
+      <line class="digit-seam" x1="174.575" y1="152.6" x2="174.575" y2="164.4" />
+    </g>
+
+    <g class="question" data-question="10">
+      <text class="problem-text" x="153.6" y="192.3" text-anchor="end">J) 39 - 24 =</text>
+      <rect class="answer-box answer-box-wide" data-question-boxes="18,19" x="159" y="182" width="31.15" height="15" />
+      <line class="digit-seam" x1="174.575" y1="183.6" x2="174.575" y2="195.4" />
+    </g>
+  </g>
+
+  <image class="qr-code" href="data:image/png;base64,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" x="97.95" y="253.89999999999998" width="20" height="20" />
+  <text class="qr-label" x="107.95" y="251.49999999999997" text-anchor="middle">ScanGrade.io</text>
+  <text class="qr-sheet-code" x="107.95" y="277.5" text-anchor="middle">Sheet ID: SG-G2-C-001</text>
+
+  <metadata>SG1:g2-mixed-within-50-v1:1:f4ccdad5079b</metadata>
+</svg>
