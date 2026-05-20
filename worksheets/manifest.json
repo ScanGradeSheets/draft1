@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-05-19T12:08:28.826Z",
+  "generated_at": "2026-05-20T01:56:58.463Z",
   "templates": [
     {
       "template_id": "g2-add-within-20-v1",
       "layout_id": "g2-add-within-20-v1",
       "human_code": "SG-G2-A-001",
-      "title": "Worksheet A: Addition Within 20",
+      "title": "Addition Within 20",
       "worksheet_url": "worksheets/grade2-addition-within-20-v1.svg",
       "layout_url": "layouts/g2-add-within-20-v1.json",
       "qr_payload": {
@@ -23,7 +23,7 @@
       "template_id": "g2-sub-within-20-v1",
       "layout_id": "g2-sub-within-20-v1",
       "human_code": "SG-G2-B-001",
-      "title": "Worksheet B: Subtraction Within 20",
+      "title": "Subtraction Within 20",
       "worksheet_url": "worksheets/grade2-subtraction-within-20-v1.svg",
       "layout_url": "layouts/g2-sub-within-20-v1.json",
       "qr_payload": {
@@ -41,7 +41,7 @@
       "template_id": "g2-mixed-within-50-v1",
       "layout_id": "g2-mixed-within-50-v1",
       "human_code": "SG-G2-C-001",
-      "title": "Worksheet C: Mixed Within 50",
+      "title": "Mixed Within 50",
       "worksheet_url": "worksheets/grade2-mixed-within-50-v1.svg",
       "layout_url": "layouts/g2-mixed-within-50-v1.json",
       "qr_payload": {
