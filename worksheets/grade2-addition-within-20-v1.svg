@@ -14,7 +14,7 @@
       }
       .page { fill: #fff; }
       .corner-marker { fill: #111; }
-      .name-label, .sheet-title, .sheet-subtitle, .problem-text, .footer, .qr-label {
+      .name-label, .sheet-title, .sheet-subtitle, .problem-text, .scantron-letter, .footer, .qr-label {
         font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         fill: #222;
       }
@@ -27,6 +27,8 @@
       .sheet-title { font-size: 7px; font-weight: 600; fill: #222; }
       .sheet-subtitle { font-size: 4px; font-weight: 400; fill: #555; }
       .problem-text { font-size: 6.75px; font-weight: 500; }
+      .scantron-bubble { fill: none; stroke: #86a89f; stroke-width: 0.42; }
+      .scantron-letter { font-size: 4.55px; font-weight: 650; fill: #365048; }
       .answer-box { fill: none; stroke: #111; stroke-width: 0.58; shape-rendering: crispEdges; }
       .digit-seam { stroke: #c8c8c8; stroke-width: 0.16; stroke-dasharray: 0.65 1.25; stroke-linecap: round; }
       .footer { font-size: 3.4px; fill: #555; }
@@ -54,61 +56,101 @@
   <g id="questions">
 
     <g class="question" data-question="1">
-      <text class="problem-text" x="60.2" y="79.7" text-anchor="end">A) 8 + 7 =</text>
+      <g class="scantron-question-label" transform="translate(22.5 77.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">A</text>
+      </g>
+      <text class="problem-text" x="60.2" y="79.7" text-anchor="end">8 + 7 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="0,1" x="64" y="68" width="32.75" height="17.2" />
       <line class="digit-seam" x1="80.375" y1="69.9" x2="80.375" y2="83.3" />
     </g>
 
     <g class="question" data-question="2">
-      <text class="problem-text" x="60.2" y="110.7" text-anchor="end">B) 9 + 6 =</text>
+      <g class="scantron-question-label" transform="translate(22.5 108.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">B</text>
+      </g>
+      <text class="problem-text" x="60.2" y="110.7" text-anchor="end">9 + 6 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="2,3" x="64" y="99" width="32.75" height="17.2" />
       <line class="digit-seam" x1="80.375" y1="100.9" x2="80.375" y2="114.3" />
     </g>
 
     <g class="question" data-question="3">
-      <text class="problem-text" x="60.2" y="141.7" text-anchor="end">C) 12 + 5 =</text>
+      <g class="scantron-question-label" transform="translate(22.5 139.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">C</text>
+      </g>
+      <text class="problem-text" x="60.2" y="141.7" text-anchor="end">12 + 5 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="4,5" x="64" y="130" width="32.75" height="17.2" />
       <line class="digit-seam" x1="80.375" y1="131.9" x2="80.375" y2="145.29999999999998" />
     </g>
 
     <g class="question" data-question="4">
-      <text class="problem-text" x="60.2" y="172.7" text-anchor="end">D) 4 + 9 =</text>
+      <g class="scantron-question-label" transform="translate(22.5 170.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">D</text>
+      </g>
+      <text class="problem-text" x="60.2" y="172.7" text-anchor="end">4 + 9 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="6,7" x="64" y="161" width="32.75" height="17.2" />
       <line class="digit-seam" x1="80.375" y1="162.9" x2="80.375" y2="176.29999999999998" />
     </g>
 
     <g class="question" data-question="5">
-      <text class="problem-text" x="60.2" y="203.7" text-anchor="end">E) 11 + 8 =</text>
+      <g class="scantron-question-label" transform="translate(22.5 201.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">E</text>
+      </g>
+      <text class="problem-text" x="60.2" y="203.7" text-anchor="end">11 + 8 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="8,9" x="64" y="192" width="32.75" height="17.2" />
       <line class="digit-seam" x1="80.375" y1="193.9" x2="80.375" y2="207.29999999999998" />
     </g>
 
     <g class="question" data-question="6">
-      <text class="problem-text" x="156.2" y="79.7" text-anchor="end">F) 7 + 4 =</text>
+      <g class="scantron-question-label" transform="translate(118.5 77.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">F</text>
+      </g>
+      <text class="problem-text" x="156.2" y="79.7" text-anchor="end">7 + 4 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="10,11" x="160" y="68" width="32.75" height="17.2" />
       <line class="digit-seam" x1="176.375" y1="69.9" x2="176.375" y2="83.3" />
     </g>
 
     <g class="question" data-question="7">
-      <text class="problem-text" x="156.2" y="110.7" text-anchor="end">G) 6 + 6 =</text>
+      <g class="scantron-question-label" transform="translate(118.5 108.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">G</text>
+      </g>
+      <text class="problem-text" x="156.2" y="110.7" text-anchor="end">6 + 6 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="12,13" x="160" y="99" width="32.75" height="17.2" />
       <line class="digit-seam" x1="176.375" y1="100.9" x2="176.375" y2="114.3" />
     </g>
 
     <g class="question" data-question="8">
-      <text class="problem-text" x="156.2" y="141.7" text-anchor="end">H) 13 + 4 =</text>
+      <g class="scantron-question-label" transform="translate(118.5 139.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">H</text>
+      </g>
+      <text class="problem-text" x="156.2" y="141.7" text-anchor="end">13 + 4 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="14,15" x="160" y="130" width="32.75" height="17.2" />
       <line class="digit-seam" x1="176.375" y1="131.9" x2="176.375" y2="145.29999999999998" />
     </g>
 
     <g class="question" data-question="9">
-      <text class="problem-text" x="156.2" y="172.7" text-anchor="end">I) 5 + 8 =</text>
+      <g class="scantron-question-label" transform="translate(118.5 170.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">I</text>
+      </g>
+      <text class="problem-text" x="156.2" y="172.7" text-anchor="end">5 + 8 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="16,17" x="160" y="161" width="32.75" height="17.2" />
       <line class="digit-seam" x1="176.375" y1="162.9" x2="176.375" y2="176.29999999999998" />
     </g>
 
     <g class="question" data-question="10">
-      <text class="problem-text" x="156.2" y="203.7" text-anchor="end">J) 10 + 9 =</text>
+      <g class="scantron-question-label" transform="translate(118.5 201.35)">
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">J</text>
+      </g>
+      <text class="problem-text" x="156.2" y="203.7" text-anchor="end">10 + 9 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="18,19" x="160" y="192" width="32.75" height="17.2" />
       <line class="digit-seam" x1="176.375" y1="193.9" x2="176.375" y2="207.29999999999998" />
     </g>
@@ -116,7 +158,7 @@
 
   <image class="qr-code" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISCAYAAACZPSa/AAAAAklEQVR4AewaftIAABSpSURBVO3BQa5FuYErSFLI/W+Z7bkngvp83FfpiOj+IwAAD04AAB6dAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8OgEAePRPPtY2/Ldt+VLb8G5bbrTNl7blRtvc2JYbbfOXbcuNtrmxLTfa5kvb8qW2ubEt/wZtc2NbbrQN/21bvnQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8OgEAeHQCAPDon/zItvwbtM0vbMuX2ubGtnypbX6hbW5sy422udE2X2qbX9iWL7XNv0Hb3NiWX2gb/tu2/Bu0zS+cAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8+id/XNv8wrb8Qtv8wrbcaJtf2Ja/bFt+oW1+oW2+tC032uZG2/DftuVG29zYlhtt82/QNr+wLX/ZCQDAoxMAgEcnAACPTgAAHp0AADw6AQB4dAIA8OgEAODRCQDAo3/C/0nbcqNtbrTNL2zLL7TNl7blRtt8aVtutM2NbbnRNr+wLV9qmy9tyy+0zZe25Re2hf97TgAAHp0AADw6AQB4dAIA8OgEAODRCQDAoxMAgEcnAACPTgAAHv0T/pRt+cu25Ubb3GibG9tyo21ubMtfti032uZLbfMLbXNjW260zZe25UbbfGlbfqFtbmzLjW3h3+sEAODRCQDAoxMAgEcnAACPTgAAHp0AADw6AQB4dAIA8OgEAODRP/njtoW/o22+tC2/0DZf2pa/bFt+oW1ubMuNtrmxLTfa5kbb3NiWX2ibL23Ljba5sS3/BtvCfzsBAHh0AgDw6AQA4NEJAMCjEwCARycAAI9OAAAenQAAPDoBAHj0T36kbfhvbXNjW760LTfa5sa23GibG9vypW250Tb/S9rmxrb8L9mWG21zY1tutM2NbbnRNn9Z29zYli+1De9OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjEwCARycAAI9OAAAedf8R/s9pm3+DbfmFtvnStvxC29zYll9om1/Yli+1zY1tudE2N7blRtv8ZdvCv9cJAMCjEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCj7j/yL9A2X9qWG23zpW35N2ibL23Ljba5sS1fapsvbcuNtuG/bcuNtvmFbbnRNje25UbbfGlbbrTNjW35N2ibL23LX3YCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8OgEAeHQCAPCo+498qG2+tC1fapsvbQv/77XNjW250TY3tuVLbXNjW77UNje25Ubb3NiWG21zY1tutM0vbMuX2uYXtuVG29zYlhttc2NbbrTNjW35Utt8aVv+shMAgEcnAACPTgAAHp0AADw6AQB4dAIA8OgEAODRCQDAoxMAgEf/5GPbcqNtvtQ2X9qWG21zY1u+1DZ/2bb8Zdtyo234v2dbvtQ2N9rmxrb8G2zLL7TNjW250TY3tuXGtvxC29zYli+dAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA86v4jH2qbX9gW/lvb/GXbcqNtvrQtN9rm32BbbrTNjW35Utv8G2zLjbb5hW250TY3tuVG29zYli+1zY1t+YW2+YVt+dIJAMCjEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjf/LHbcuNtuG/bcuX2uZLbfMLbXNjW77UNje25Utt86W2+YVtudE2N7blRtt8aVtutM2NbbnRNje25Ubb/ELb3NiWL7XNjW25sS1faptfOAEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8OgEAeNT9R/6wtrmxLTfa5kvbcqNt/g225S9rmy9ty422+YVtudE2X9qWG23zpW35hba5sS3/Bm3zpW35hba5sS1faptf2JZfOAEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8OgEAePRPPtY2N7blxrb8wrbcaJtf2JYbbXNjW77UNje25Uvb8qW2ubEtN9rmF7bl36BtbmzLjba5sS032ubGtnypbb60LTfa5kbb3NiWG21zY1tutM2NbfnStnypbW5sy5dOAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjEwCARycAAI9OAAAe/ZM/rm1ubMuX2ubGtvxC2/xC23ypbb60Lbxrm79sW760LTfa5sa23GibG9tyY1u+1DY3tuUXtuVG29zYlr+sbW5syy+cAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8+ic/0jY3tuUXtuVG2/zCtvwv2ZYvtc1fti032uZL2/KltrmxLb/QNl9qmy+1zS9sC/+tbX5hW260zY1t+dIJAMCjEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjf/KxbbnRNr+wLTfa5sa23GibL7XNl7blL2ubG9vypW250Ta/sC032uZLbfOXtc2XtuVG23xpW77UNjfa5kvbcqNtfqFtbmzLL7TNjW35hRMAgEcnAACPTgAAHp0AADw6AQB4dAIA8OgEAODRCQDAoxMAgEf/5GNtc2NbbrTNjW35hbb50rbwd7TNl7blL2ubX2ibG9vyC21zY1tutM2NtuG/bcuNtrmxLTfa5he25Ubb3NiWL50AADw6AQB4dAIA8OgEAODRCQDAoxMAgEcnAACPTgAAHp0AADzq/iM/0DY3tuVG2/zCttxom1/Yli+1zY1t+YW2+YVtudE2v7AtX2qbG9tyo23+l2wL/++1zY1t+VLb3NiWf4MTAIBHJwAAj04AAB6dAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBH/+SPa5sb23Kjbb7UNr+wLTfa5sa23NiWG23zl23LX7Ytf9m2/GXbcqNtbmzLL7TNL2zLjbb50rb8G2zLL7TNjW350gkAwKMTAIBHJwAAj04AAB6dAAA8OgEAeHQCAPDoBADg0QkAwKN/8rG2+YW2+dK2fKltvtQ2/0u25Ubb3GibG9vyl7XNjW35Utvc2JYb2/KXtc1fti032uYva5u/rG1ubMuNtrmxLTe25RdOAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjEwCARycAAI9OAAAe/ZN/iW250TY32uZ/Sdv8L9mWG21zY1tubMsvtM0vtM2NbbnRNje25ca2/ELb/Btsy5fa5hfa5he25Uttc2NbvnQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8OgEAeHQCAPDon/xx2/IL2/ILbXNjW260zb9B29zYlhtt8wttc2NbvrQtv9A2f1nbfGlb/rJtudE2f9m2/ELb3GibX9iWXzgBAHh0AgDw6AQA4NEJAMCjEwCARycAAI9OAAAenQAAPDoBAHj0T35kW260zV/WNje25S/bli+1zY1t+Tdomy+1zS+0zY1t+VLb3NiWv6xtbmzLL7TNjW35Utv8Qtvc2JZf2JYvtc2NbfnSCQDAoxMAgEcnAACPTgAAHp0AADw6AQB4dAIA8OgEAODRCQDAo3/ysW250TY3tuVLbfOlbfnLtuVG29zYlhvbcqNtbmzLjbb5hW35Utv8wrb8wrb8Zdtyo21+oW1ubMuX2ubGttxomy9tyy9sy/+SEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjEwCAR//kj2ubG9vypbb5y9rmxrbc2JYvtc2NbbnRNl/ali+1zZe25Ubb3Gib/yVtc2NbbrTNjW3h/722+Tdomxvb8pedAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB6dAAA86v4jf1jbfGlbfqFtbmzLl9rmxrbcaJsb2/KltvnStvxC2/zCtnypbW5sC/+tbW5syy+0zY1tudE2v7AtN9rmS9tyo21ubMtfdgIA8OgEAODRCQDAoxMAgEcnAACPTgAAHp0AADw6AQB4dAIA8Oif/I9pm1/Yli+1zS9sy5fa5sa23Gibf4NtudE2X2qbG9vypba5sS032uYv25ZfaJsvtc2XtuUXtuVG29xomy+1zZe25UsnAACPTgAAHp0AADw6AQB4dAIA8OgEAODRCQDAoxMAgEcnAACPuv/Ih9rmS9vyb9A2X9qWG23zC9tyo21ubMuNtvmFbfmFtvnStnypbW5sy5fa5kvbcqNtfmFbvtQ2N7blRtv8wrbcaJsvbcuX2ubGtvzCCQDAoxMAgEcnAACPTgAAHp0AADw6AQB4dAIA8OgEAODRCQDAo3/ysW35Utv8wrbcaJsb23Kjbf4N2ubGttxom/8lbfOlbfmFbbnRNje25d9gW77UNv8G2/KltvnSttxom19omxvb8qUTAIBHJwAAj04AAB6dAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBH/+RjbXNjW760LV9qmxvbcqNt/rJtudE2N7blL9uWL7XNjW35y9rmxrZ8aVu+tC032uZG2/xl23KjbW5sy7/Btvxl23Kjbf6yEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjEwCAR91/5Afa5sa2fKltfmFb/pe0zZe25Utt85dty422+TfYlhttc2NbfqFtbmzLl9rmxrb8Qtvc2JYvtc1fti1fapsb2/KlEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjEwCAR//kX6JtbmzLL7TNL2zLjba5sS2/0Da/sC1fapsbbfML2/ILbXNjW260zZe25ca23GibL23Ll9rmL2ubv2xbbrTNl7blF04AAB6dAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj04AAB79kx/Zli9ty5fa5kvb8qW2+dK23GibL23Ll9rmxrb8wrbcaJt/g7b5hW250TY32ubGtnxpW/6ybbnRNl/alhtt82+wLTfa5sa2fOkEAODRCQDAoxMAgEcnAACPTgAAHp0AADw6AQB4dAIA8OgEAODRP/lY23xpW77UNl/alhtt85e1zZe25Utt8wtt8wvb8gtt85e1zZe25Ubb3GibG9vypba5sS03tuVG2/xC29zYll9om/8lJwAAj04AAB6dAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj/4J/7+0zS9sy422+YW2ubEtN7blRtt8aVtutM2NbbnRNje25Ubb/MK2fKltvtQ2v9A2X9qWG21zY1v+sm35Utvc2JZfaJsb2/ILJwAAj04AAB6dAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj7r/yA+0zV+2LV9qm79sW260zY1tudE2f9m2/GVtc2NbbrTNL2zLjba5sS2/0DZf2pa/rG1ubMuX2uZL23KjbW5syy+0zY1t+dIJAMCjEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjf/LHbcsvtM0vbMuNtvlS23ypbW5sy5fa5kttc2Nb/g225Rfa5sa2/GXbcqNtfqFt/g225UbbfGlbvtQ2/wYnAACPTgAAHp0AADw6AQB4dAIA8OgEAODRCQDAoxMAgEcnAACP/skf1zZf2pYb2/KltvnStnypbX6hbX5hW260zY22ubEtN9qGv6NtbmzLjW250TZf2pYvtc2NtvmFbflfsi2/cAIA8OgEAODRCQDAoxMAgEcnAACPTgAAHp0AADw6AQB4dAIA8Kj7j3yobX5hW36hbX5hW77UNje25Ubb/MK23GibG9tyo21ubMuNtuHdtvxC29zYli+1DX/Htnypbb60LV86AQB4dAIA8OgEAODRCQDAoxMAgEcnAACPTgAAHp0AADw6AQB49E8+ti3/S7blS23zpbb5hW250Ta/sC032ubfYFt+oW3+DdrmxrZ8qW2+tC2/0DZf2pZfaJsbbfOlbfnLTgAAHp0AADw6AQB4dAIA8OgEAODRCQDAoxMAgEcnAACPTgAAHv2Tj7UN/21bfmFbvtQ2N7blS9vyl23Ll7blRtt8qW1ubMsvbMuNtvmFtrmxLV/alhttc2NbbrTNjW250TZfapsb2/Jv0DY3tuVLJwAAj04AAB6dAAA8OgEAeHQCAPDoBADg0QkAwKMTAIBHJwAAj/7Jj2zLv0HbfGlbvtQ2v9A2X2qbG9tyo22+1DY3tuUv25b/Jdtyo21ubMuNtvmFbfnStvxl2/KXbcuNtrmxLb9wAgDw6AQA4NEJAMCjEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6J/8cW3zC9vyC21zY1u+tC032uZL23KjbW60zZe25Utt8wtt85dty422ubEtN9rmxrb8wrbcaJsvbcuNtvmFtvnLtuUX2ubGtnzpBADg0QkAwKMTAIBHJwAAj04AAB6dAAA8OgEAeHQCAPDoBADg0T/h/6S2ubEtN9rmxrbcaJsbbfOlbflS2/zCttxomxvbcqNtbmzLjbb50rbcaJsvtc2NbflS2/xC23xpW260zY1tudE2X9qWG23zpW250Ta/cAIA8OgEAODRCQDAoxMAgEcnAACPTgAAHp0AADw6AQB4dAIA8Oif8Kdsy422udE2v7AtN9rmS21zY1u+tC2/sC1f2pYbbfOltrmxLV/alhttc6Nt/pdsyy+0zZe25UbbfGlb/g1OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjEwCARycAAI9OAAAe/ZM/blv4b9vyv2RbbrTNL7TNv8G23NiWL7XNv8G23GibG9vyv2RbvtQ2N9rmxrbcaJsbbfNvcAIA8OgEAODRCQDAoxMAgEcnAACPTgAAHp0AADw6AQB4dAIA8Kj7j3yobfhv2/KXtc2XtuV/Sdvw77UtN9rmxrbcaJtf2Ja/rG1ubMuX2uZL2/KltrmxLV86AQB4dAIA8OgEAODRCQDAoxMAgEcnAACPTgAAHp0AADw6AQB41P1HAAAenAAAPDoBAHh0AgDw6AQA4NEJAMCjEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6AQA4NEJAMCjEwCARycAAI9OAAAenQAAPDoBAHh0AgDw6P8DElOHm7eColkAAAAASUVORK5CYII=" x="96.2" y="249.75" width="23.5" height="23.5" />
   <text class="qr-label" x="107.95" y="246.55" text-anchor="middle">ScanGrade.io</text>
-  <text class="qr-sheet-code" x="107.95" y="276.6" text-anchor="middle">Sheet ID: SG-G2-A-001</text>
+  <text class="qr-sheet-code" x="107.95" y="276.6" text-anchor="middle">SG-G2-A-001</text>
 
   <metadata>https://scangrade.io/s?sg=SG1%3Ag2-add-within-20-v1%3A1%3Af0ce9bfe8e6b</metadata>
 </svg>
