@@ -27,6 +27,7 @@
       .sheet-title { font-size: 7px; font-weight: 600; fill: #222; }
       .sheet-subtitle { font-size: 4px; font-weight: 400; fill: #555; }
       .problem-text { font-size: 6.75px; font-weight: 430; }
+      .problem-text-compact { font-size: 6.35px; }
       .scantron-bubble { fill: none; stroke: #b8bdc3; stroke-width: 0.42; }
       .scantron-letter { font-size: 4.55px; font-weight: 600; fill: #4f575f; }
       .answer-box { fill: none; stroke: #111; stroke-width: 0.58; shape-rendering: crispEdges; }
