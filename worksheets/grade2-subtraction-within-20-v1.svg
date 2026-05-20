@@ -31,7 +31,7 @@
       .scantron-bubble { fill: none; stroke: #b8bdc3; stroke-width: 0.42; }
       .scantron-letter { font-size: 4.55px; font-weight: 600; fill: #4f575f; }
       .answer-box { fill: none; stroke: #111; stroke-width: 0.58; shape-rendering: crispEdges; }
-      .digit-seam { stroke: #c8c8c8; stroke-width: 0.16; stroke-dasharray: 0.65 1.25; stroke-linecap: round; }
+      .digit-seam { stroke: #eeeeee; stroke-width: 0.1; stroke-dasharray: 0.45 1.8; stroke-linecap: round; }
       .footer { font-size: 3.4px; fill: #555; }
       .qr-label { font-size: 3.2px; fill: #555; font-weight: 500; }
       .qr-sheet-code { font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-size: 3.05px; fill: #555; font-weight: 400; }
