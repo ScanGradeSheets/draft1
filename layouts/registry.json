@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-21T10:38:26.809Z",
+  "generated_at": "2026-05-21T11:22:13.173Z",
   "templates": [
     {
       "template_id": "g2-add-within-20-v1",
@@ -16,6 +16,7 @@
         "layout_id": "g2-add-within-20-v1",
         "answer_key_checksum": "f0ce9bfe8e6b"
       },
+      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Ag2-add-within-20-v1%3A1%3Af0ce9bfe8e6b",
       "total_questions": 10,
       "answer_box_count": 20
     },
@@ -34,6 +35,7 @@
         "layout_id": "g2-sub-within-20-v1",
         "answer_key_checksum": "09042d877797"
       },
+      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Ag2-sub-within-20-v1%3A1%3A09042d877797",
       "total_questions": 10,
       "answer_box_count": 20
     },
@@ -52,6 +54,7 @@
         "layout_id": "g2-mixed-within-50-v1",
         "answer_key_checksum": "f4ccdad5079b"
       },
+      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Ag2-mixed-within-50-v1%3A1%3Af4ccdad5079b",
       "total_questions": 10,
       "answer_box_count": 20
     }

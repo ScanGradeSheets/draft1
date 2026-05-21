@@ -21,6 +21,7 @@ const worksheetFonts = [
   }
 ]
 const worksheetFontStack = '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'
+const qrAppBaseUrl = process.env.SG_QR_APP_URL || 'https://scangradesheets.github.io/draft1/'
 const marker = {
   size: 11.4,
   margin: 12.2
@@ -154,6 +155,12 @@ function answerKeyChecksum(answerKey) {
     .update(answerKey.map((digit) => digit == null ? '_' : String(digit)).join(','))
     .digest('hex')
     .slice(0, 12)
+}
+
+function qrUrlForPayload(scanGradePayload) {
+  const url = new URL(qrAppBaseUrl)
+  url.searchParams.set('sg', scanGradePayload)
+  return url.toString()
 }
 
 function questionLetter(index) {
@@ -582,7 +589,7 @@ for (const sheet of sheets) {
     answer_key_checksum: checksum
   }
   const scanGradePayload = `SG1:${sheet.id}:1:${checksum}`
-  const payloadString = `https://scangrade.io/s?sg=${encodeURIComponent(scanGradePayload)}`
+  const payloadString = qrUrlForPayload(scanGradePayload)
   const qrPng = await qrPngForPayload(sheet.id, payloadString)
   const svg = buildSvg(sheet, layout, qrPng.base64, payloadString)
 
@@ -598,6 +605,7 @@ for (const sheet of sheets) {
     worksheet_url: `worksheets/${sheet.filename}`,
     layout_url: `layouts/${sheet.id}.json`,
     qr_payload: payload,
+    qr_payload_url: payloadString,
     total_questions: 10,
     answer_box_count: layout.boxes.length
   })
