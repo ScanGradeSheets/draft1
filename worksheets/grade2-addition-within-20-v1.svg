@@ -31,7 +31,6 @@
       .scantron-bubble { fill: none; stroke: #b8bdc3; stroke-width: 0.42; }
       .scantron-letter { font-size: 4.55px; font-weight: 600; fill: #4f575f; }
       .answer-box { fill: none; stroke: #111; stroke-width: 0.58; shape-rendering: crispEdges; }
-      .digit-seam { stroke: #eeeeee; stroke-width: 0.1; stroke-dasharray: 0.45 1.8; stroke-linecap: round; }
       .footer { font-size: 3.4px; fill: #555; }
       .qr-label { font-size: 3.2px; fill: #555; font-weight: 500; }
       .qr-sheet-code { font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-size: 3.05px; fill: #555; font-weight: 400; }
@@ -63,7 +62,6 @@
       </g>
       <text class="problem-text" x="60.2" y="79.7" text-anchor="end">8 + 7 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="0,1" x="64" y="68" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="80.375" y1="69.9" x2="80.375" y2="83.3" />
     </g>
 
     <g class="question" data-question="2">
@@ -73,7 +71,6 @@
       </g>
       <text class="problem-text" x="60.2" y="110.7" text-anchor="end">9 + 6 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="2,3" x="64" y="99" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="80.375" y1="100.9" x2="80.375" y2="114.3" />
     </g>
 
     <g class="question" data-question="3">
@@ -83,7 +80,6 @@
       </g>
       <text class="problem-text" x="60.2" y="141.7" text-anchor="end">12 + 5 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="4,5" x="64" y="130" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="80.375" y1="131.9" x2="80.375" y2="145.29999999999998" />
     </g>
 
     <g class="question" data-question="4">
@@ -93,7 +89,6 @@
       </g>
       <text class="problem-text" x="60.2" y="172.7" text-anchor="end">4 + 9 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="6,7" x="64" y="161" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="80.375" y1="162.9" x2="80.375" y2="176.29999999999998" />
     </g>
 
     <g class="question" data-question="5">
@@ -103,7 +98,6 @@
       </g>
       <text class="problem-text" x="60.2" y="203.7" text-anchor="end">11 + 8 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="8,9" x="64" y="192" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="80.375" y1="193.9" x2="80.375" y2="207.29999999999998" />
     </g>
 
     <g class="question" data-question="6">
@@ -113,7 +107,6 @@
       </g>
       <text class="problem-text" x="156.2" y="79.7" text-anchor="end">7 + 4 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="10,11" x="160" y="68" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="176.375" y1="69.9" x2="176.375" y2="83.3" />
     </g>
 
     <g class="question" data-question="7">
@@ -123,7 +116,6 @@
       </g>
       <text class="problem-text" x="156.2" y="110.7" text-anchor="end">6 + 6 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="12,13" x="160" y="99" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="176.375" y1="100.9" x2="176.375" y2="114.3" />
     </g>
 
     <g class="question" data-question="8">
@@ -133,7 +125,6 @@
       </g>
       <text class="problem-text" x="156.2" y="141.7" text-anchor="end">13 + 4 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="14,15" x="160" y="130" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="176.375" y1="131.9" x2="176.375" y2="145.29999999999998" />
     </g>
 
     <g class="question" data-question="9">
@@ -143,7 +134,6 @@
       </g>
       <text class="problem-text" x="156.2" y="172.7" text-anchor="end">5 + 8 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="16,17" x="160" y="161" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="176.375" y1="162.9" x2="176.375" y2="176.29999999999998" />
     </g>
 
     <g class="question" data-question="10">
@@ -153,7 +143,6 @@
       </g>
       <text class="problem-text" x="156.2" y="203.7" text-anchor="end">10 + 9 =</text>
       <rect class="answer-box answer-box-wide" data-question-boxes="18,19" x="160" y="192" width="32.75" height="17.2" />
-      <line class="digit-seam" x1="176.375" y1="193.9" x2="176.375" y2="207.29999999999998" />
     </g>
   </g>
 
