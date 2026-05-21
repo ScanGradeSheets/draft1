@@ -282,6 +282,13 @@
         3,
         7
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.3723,
+        "y1": 0.2527,
+        "y2": 0.2956,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "37",
@@ -305,6 +312,13 @@
         2,
         9
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.3723,
+        "y1": 0.3636,
+        "y2": 0.4066,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "29",
@@ -328,6 +342,13 @@
         4,
         3
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.3723,
+        "y1": 0.4746,
+        "y2": 0.5175,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "43",
@@ -351,6 +372,13 @@
         2,
         8
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.3723,
+        "y1": 0.5855,
+        "y2": 0.6285,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "28",
@@ -374,6 +402,13 @@
         4,
         2
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.3723,
+        "y1": 0.6965,
+        "y2": 0.7394,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "42",
@@ -397,6 +432,13 @@
         2,
         5
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.8169,
+        "y1": 0.2527,
+        "y2": 0.2956,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "25",
@@ -420,6 +462,13 @@
         3,
         7
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.8169,
+        "y1": 0.3636,
+        "y2": 0.4066,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "37",
@@ -443,6 +492,13 @@
         3,
         8
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.8169,
+        "y1": 0.4746,
+        "y2": 0.5175,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "38",
@@ -466,6 +522,13 @@
         4,
         1
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.8169,
+        "y1": 0.5855,
+        "y2": 0.6285,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "41",
@@ -489,6 +552,13 @@
         1,
         5
       ],
+      "guide_line": {
+        "type": "vertical_digit_split",
+        "x": 0.8169,
+        "y1": 0.6965,
+        "y2": 0.7394,
+        "printed": true
+      },
       "accepted_digit_responses": [
         {
           "label": "15",
@@ -541,6 +611,7 @@
     "marker_size_mm": 11.4,
     "grading_policy": {
       "answer_slots_per_question": 2,
+      "printed_digit_split_guide": "vertical dashed center line",
       "blank_digit_value": null,
       "single_digit_two_slot_accepts": [
         "_d",
@@ -553,7 +624,7 @@
     },
     "qr_position": {
       "x": 0.4403,
-      "y": 0.8812,
+      "y": 0.8715,
       "width": 0.1195,
       "height": 0.0923
     }

@@ -40,10 +40,15 @@ const answerFrame = {
   width: box.width * 2 + box.gap,
   height: box.height
 }
+const digitGuide = {
+  insetY: 2.6,
+  stroke: 0.34,
+  dash: '1.05 1.25'
+}
 const qrSize = 25.8
 const qr = {
   x: (page.width - qrSize) / 2,
-  y: marker.cyBottom - qrSize / 2 - 2.4,
+  y: marker.cyBottom - qrSize / 2 - 5.1,
   size: qrSize
 }
 const headerLogo = {
@@ -324,6 +329,13 @@ function buildLayout(sheet) {
       answer,
       digit_box_ids: digitBoxIds,
       canonical_digits: digits,
+      guide_line: {
+        type: 'vertical_digit_split',
+        x: normalizeX(geometry.seamX),
+        y1: normalizeY(geometry.top + digitGuide.insetY),
+        y2: normalizeY(geometry.top + box.height - digitGuide.insetY),
+        printed: true
+      },
       accepted_digit_responses: acceptedResponses
     })
   })
@@ -360,6 +372,7 @@ function buildLayout(sheet) {
       marker_size_mm: marker.size,
       grading_policy: {
         answer_slots_per_question: 2,
+        printed_digit_split_guide: 'vertical dashed center line',
         blank_digit_value: null,
         single_digit_two_slot_accepts: ['_d', 'd_', '0d'],
         single_digit_two_slot_rejects: ['d0']
@@ -382,7 +395,8 @@ function buildSvg(sheet, layout, qrBase64, payloadString) {
     const questionLabel = questionLetter(i)
     const problemText = `${problem} =`
     const problemClass = needsCompactProblemText(problem) ? 'problem-text problem-text-compact' : 'problem-text'
-    const rects = `<rect class="answer-box answer-box-wide" data-question-boxes="${layout.question_groups[i].digit_box_ids.join(',')}" x="${geometry.answerX}" y="${geometry.top}" width="${answerFrame.width}" height="${answerFrame.height}" />`
+    const rects = `<rect class="answer-box answer-box-wide" data-question-boxes="${layout.question_groups[i].digit_box_ids.join(',')}" x="${geometry.answerX}" y="${geometry.top}" width="${answerFrame.width}" height="${answerFrame.height}" />
+      <line class="digit-guide" x1="${geometry.seamX}" y1="${geometry.top + digitGuide.insetY}" x2="${geometry.seamX}" y2="${geometry.top + box.height - digitGuide.insetY}" />`
     rows.push(`
     <g class="question" data-question="${i + 1}">
       <g class="scantron-question-label" transform="translate(${geometry.labelX} ${geometry.labelCenterY})">
@@ -433,6 +447,7 @@ ${worksheetFontCss()}
       .scantron-bubble { fill: none; stroke: #b8bdc3; stroke-width: 0.42; }
       .scantron-letter { font-size: 4.55px; font-weight: 600; fill: #4f575f; }
       .answer-box { fill: none; stroke: #111; stroke-width: ${box.stroke}; shape-rendering: crispEdges; }
+      .digit-guide { fill: none; stroke: #c7ccd2; stroke-width: ${digitGuide.stroke}; stroke-linecap: round; stroke-dasharray: ${digitGuide.dash}; }
       .footer { font-size: 3.4px; fill: #555; }
       .qr-label { font-size: 3.2px; fill: #555; font-weight: 500; }
       .qr-sheet-code { font-family: ${worksheetFontStack}; font-size: 3.05px; fill: #555; font-weight: 400; }

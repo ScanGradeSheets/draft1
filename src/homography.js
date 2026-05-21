@@ -906,6 +906,35 @@ function unionRects(rects) {
   };
 }
 
+function clampNumber(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(max, value));
+}
+
+function guideLineRelX(group, expectedFrame) {
+  const guideX = group?.guide_line?.x;
+  if (!Number.isFinite(guideX) || !expectedFrame?.w) return 0.5;
+  const guidePx = guideX >= 0 && guideX <= 1 ? guideX * WARP_WIDTH : guideX;
+  return clampNumber((guidePx - expectedFrame.x) / expectedFrame.w, 0.38, 0.62);
+}
+
+function splitFrameByPrintedDigitGuide(refinedFrame, expectedFrame, digitRects, group) {
+  if (!refinedFrame || !expectedFrame || !Array.isArray(digitRects) || digitRects.length !== 2) return null;
+  const sorted = digitRects.slice().sort((a, b) => a.x - b.x);
+  const expectedGap = Math.max(0, sorted[1].x - (sorted[0].x + sorted[0].w));
+  const expectedGapRel = expectedFrame.w > 0 ? expectedGap / expectedFrame.w : 0.035;
+  const halfGuideGap = refinedFrame.w * clampNumber(expectedGapRel / 2, 0.010, 0.030);
+  const splitX = refinedFrame.x + guideLineRelX(group, expectedFrame) * refinedFrame.w;
+  const leftW = Math.max(1, splitX - halfGuideGap - refinedFrame.x);
+  const rightX = Math.min(refinedFrame.x + refinedFrame.w - 1, splitX + halfGuideGap);
+  const rightW = Math.max(1, refinedFrame.x + refinedFrame.w - rightX);
+
+  return new Map([
+    [sorted[0].id, { x: refinedFrame.x, y: refinedFrame.y, w: leftW, h: refinedFrame.h }],
+    [sorted[1].id, { x: rightX, y: refinedFrame.y, w: rightW, h: refinedFrame.h }]
+  ]);
+}
+
 function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
   const frameRects = [];
   const expectedById = new Map(expectedRects.map((rect) => [rect.id, rect]));
@@ -922,7 +951,8 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
       id: `question-${group.question_num}`,
       questionNum: group.question_num,
       digitIds: ids,
-      digitRects
+      digitRects,
+      guide_line: group.guide_line
     });
   }
 
@@ -937,6 +967,15 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
     const refinedFrame = answerRectLooksLocal(refinedFrameCandidate, expectedFrame)
       ? refinedFrameCandidate
       : expectedFrame;
+
+    const guidedSplit = splitFrameByPrintedDigitGuide(refinedFrame, expectedFrame, expectedFrame.digitRects, expectedFrame);
+    if (guidedSplit) {
+      for (const digitRect of expectedFrame.digitRects) {
+        const guidedRect = guidedSplit.get(digitRect.id);
+        if (guidedRect) assignments.set(digitRect.id, guidedRect);
+      }
+      continue;
+    }
 
     for (const digitRect of expectedFrame.digitRects) {
       const relX = expectedFrame.w > 0 ? (digitRect.x - expectedFrame.x) / expectedFrame.w : 0;
