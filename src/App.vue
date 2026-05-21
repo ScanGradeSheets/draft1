@@ -1,23 +1,84 @@
 <template>
-  <div class="scan-grade">
+  <div class="scan-grade" :class="{ 'scan-grade--student': isStudentMode }">
     <header class="header">
-      <h1>🐯 ScanGrade</h1>
-      <p class="subtitle">Point. Scan. Grade.</p>
+      <img :src="publicUrl('scangrade-logo-transparent.png')" alt="ScanGrade logo" class="brand-logo" />
+      <h1>ScanGrade .io</h1>
     </header>
 
-    <main class="main">
-      <!-- Runtime Self-Test Section -->
-      <div class="test-section">
+    <main class="main" :class="{ 'main--student': isStudentMode }">
+      <section v-if="isStudentMode && studentView === 'landing'" class="student-home">
+        <div class="student-home-actions">
+          <button type="button" class="btn btn-primary student-home-btn" @click="beginGuestScan">
+            Start Scan
+          </button>
+          <button type="button" class="btn btn-secondary student-home-btn" @click="beginStudentSignIn">
+            Sign In
+          </button>
+          <a class="btn btn-worksheet student-home-btn" :href="publicUrl('worksheets/')">
+            Get Worksheets
+          </a>
+        </div>
+        <button type="button" class="teacher-link-btn" @click="enterTeacherMode">
+          Teacher Review
+        </button>
+      </section>
+
+      <section v-else-if="isStudentMode && studentView === 'identity'" class="student-roster">
+        <h2 class="student-roster-title">Who are you?</h2>
+        <p v-if="selectedStudentName" class="student-selected-label">
+          Scanning as <strong>{{ selectedStudentName }}</strong>
+        </p>
+        <p v-else class="student-roster-help">Choose your name or continue as guest.</p>
+        <p v-if="!classRoster.length" class="student-roster-empty">
+          No class list yet. You can still continue as guest.
+        </p>
+        <div v-if="classRoster.length" class="student-roster-grid">
+          <button
+            v-for="name in classRoster"
+            :key="name"
+            type="button"
+            class="student-name-chip"
+            :class="{ 'student-name-chip--active': selectedStudentName === name }"
+            @click="selectedStudentName = name"
+          >
+            {{ name }}
+          </button>
+        </div>
+        <div class="student-identity-actions">
+          <button
+            v-if="classRoster.length"
+            type="button"
+            class="btn btn-primary student-home-btn"
+            :disabled="!selectedStudentName"
+            @click="startNamedScan"
+          >
+            Scan as {{ selectedStudentName || 'Student' }}
+          </button>
+          <button
+            type="button"
+            class="btn student-home-btn"
+            :class="classRoster.length ? 'btn-secondary' : 'btn-primary'"
+            @click="continueAsGuest"
+          >
+            Continue as Guest
+          </button>
+        </div>
+        <button type="button" class="teacher-link-btn" @click="returnToLanding">
+          Back
+        </button>
+      </section>
+
+      <!-- Teacher / Review Mode only -->
+      <div v-if="showTeacherUi" class="test-section">
         <button @click="runRuntimeTest" class="btn btn-test" :disabled="runtimeTestRunning">
-          {{ runtimeTestRunning ? 'Testing...' : '🔧 Runtime Self-Test' }}
+          {{ runtimeTestRunning ? 'Testing...' : 'Runtime Self-Test' }}
         </button>
         <button @click="runPipelineTest" class="btn btn-test" :disabled="!pipelineReady || pipelineTestRunning">
-          {{ pipelineTestRunning ? 'Testing...' : '📊 Pipeline Smoke Test' }}
+          {{ pipelineTestRunning ? 'Testing...' : 'Pipeline Smoke Test' }}
         </button>
       </div>
 
-      <!-- Test Results Console -->
-      <div v-if="testResults.length > 0" class="console-output">
+      <div v-if="showTeacherUi && testResults.length > 0" class="console-output">
         <div class="console-header">
           <span>Test Output</span>
           <button @click="clearResults" class="btn-clear">Clear</button>
@@ -35,68 +96,512 @@
         </div>
       </div>
 
-      <CameraCapture
-        @image-captured="handleImageCaptured"
-        @ocr-complete="handleOCRComplete"
-        ref="cameraRef"
-      />
+      <div
+        v-if="showStudentCaptureUi || showTeacherUi"
+        class="camera-wrapper"
+        :class="{ 'camera-wrapper--student': isStudentMode }"
+        ref="cameraWrapper"
+      >
+        <div v-if="showStudentCaptureUi" class="student-scan-bar">
+          <div>
+            <strong>{{ activeStudentSession?.studentName || 'Guest' }}</strong>
+            <span>Scan one worksheet</span>
+          </div>
+          <button type="button" class="student-scan-link" @click="returnToLanding">
+            Home
+          </button>
+        </div>
+        <CameraCapture
+          :key="isStudentMode ? 'student-camera' : 'teacher-camera'"
+          :student-mode="isStudentMode"
+          :capture-enabled="!isStudentMode || studentView === 'capture'"
+          :capture-blocked-reason="studentCaptureBlockedReason"
+          :auto-start="isStudentMode && studentView === 'capture'"
+          @image-captured="handleImageCaptured"
+          @ocr-complete="handleOCRComplete"
+          @student-done="handleStudentDone"
+          ref="cameraRef"
+        />
+        <canvas v-if="showAnnotationLayer && showTeacherUi" ref="annotationCanvas" class="annotation-layer"></canvas>
+      </div>
 
-      <div v-if="ocrResult" class="results">
+      <section v-if="showTeacherUi" class="teacher-panel">
+        <div class="teacher-panel-card">
+          <div class="teacher-panel-head">
+            <div>
+              <h2>Class Roster</h2>
+              <p>One student name per line. Student Mode uses this list for quick tap selection.</p>
+            </div>
+            <button type="button" class="btn btn-export" @click="exitTeacherMode">
+              Student Home
+            </button>
+          </div>
+          <textarea
+            v-model="rosterDraft"
+            class="teacher-roster-input"
+            rows="8"
+            placeholder="Ava&#10;Mason&#10;Noah"
+          />
+          <div class="teacher-panel-actions">
+            <button type="button" class="btn btn-export" @click="saveRoster">Save Roster</button>
+          </div>
+        </div>
+
+        <div class="teacher-panel-card">
+          <div class="teacher-panel-head">
+            <div>
+              <h2>Saved Scans</h2>
+              <p>
+                {{ reviewSummary.total }} saved.
+                {{ reviewSummary.open }} open.
+                {{ reviewSummary.reviewed }} reviewed.
+              </p>
+            </div>
+            <button
+              v-if="savedSubmissions.length"
+              type="button"
+              class="btn btn-export"
+              @click="clearReviewQueue"
+            >
+              Clear Queue
+            </button>
+          </div>
+          <div v-if="savedSubmissions.length" class="review-stats" aria-label="Review summary">
+            <button type="button" class="review-stat" :class="{ active: reviewFilter === 'open' }" @click="reviewFilter = 'open'">
+              <strong>{{ reviewSummary.open }}</strong>
+              <span>Open</span>
+            </button>
+            <button type="button" class="review-stat" :class="{ active: reviewFilter === 'review' }" @click="reviewFilter = 'review'">
+              <strong>{{ reviewSummary.needsReview }}</strong>
+              <span>Needs review</span>
+            </button>
+            <button type="button" class="review-stat" :class="{ active: reviewFilter === 'ready' }" @click="reviewFilter = 'ready'">
+              <strong>{{ reviewSummary.ready }}</strong>
+              <span>Ready</span>
+            </button>
+            <button type="button" class="review-stat" :class="{ active: reviewFilter === 'done' }" @click="reviewFilter = 'done'">
+              <strong>{{ reviewSummary.reviewed }}</strong>
+              <span>Reviewed</span>
+            </button>
+            <button type="button" class="review-stat" :class="{ active: reviewFilter === 'all' }" @click="reviewFilter = 'all'">
+              <strong>{{ reviewSummary.total }}</strong>
+              <span>All</span>
+            </button>
+          </div>
+          <p v-if="!savedSubmissions.length" class="teacher-empty-state">
+            No saved scans yet. Student Mode will add them here automatically after a successful read.
+          </p>
+          <p v-else-if="!filteredSubmissions.length" class="teacher-empty-state">
+            No scans in this view.
+          </p>
+          <div v-else class="review-queue">
+            <section
+              v-for="group in submissionsByStudent"
+              :key="group.studentName"
+              class="review-group"
+            >
+              <div class="review-group-head">
+                <div>
+                  <h3>{{ group.studentName }}</h3>
+                  <p>
+                    {{ group.total }} saved ·
+                    {{ group.open }} open ·
+                    latest {{ formatSavedAt(group.latestSavedAt) }}
+                  </p>
+                </div>
+              </div>
+              <article
+                v-for="submission in group.submissions"
+                :key="submission.id"
+                class="review-card"
+                :class="{
+                  'review-card--review': submission.status === 'review',
+                  'review-card--ready': submission.status === 'ready',
+                  'review-card--done': submission.status === 'done'
+                }"
+              >
+                <div class="review-card-row">
+                  <strong>{{ formatSavedAt(submission.savedAt) }}</strong>
+                  <span class="review-status" :class="`review-status--${submission.status}`">
+                    {{ statusLabel(submission.status) }}
+                  </span>
+                </div>
+                <div v-if="submissionScoreText(submission)" class="review-score">
+                  {{ submissionScoreText(submission) }}
+                </div>
+                <div class="review-card-meta">
+                  <span v-if="submission.totalTime">OCR {{ submission.totalTime }}ms</span>
+                  <span v-if="submission.avgConfidence != null">
+                    Avg {{ Math.round(submission.avgConfidence * 100) }}%
+                  </span>
+                </div>
+                <p class="review-card-digits">
+                  <span>Digits</span>
+                  <template v-if="submission.digits?.length">
+                    <span
+                      v-for="(digit, i) in submission.digits"
+                      :key="`${submission.id}-${i}`"
+                      class="review-digit"
+                      :class="{
+                        'review-digit--correct': submission.correct?.[i] === true,
+                        'review-digit--incorrect': submission.correct?.[i] === false
+                      }"
+                    >
+                      {{ digit }}
+                    </span>
+                  </template>
+                  <span v-else>None saved</span>
+                </p>
+                <p v-if="submission.template_id || submission.sheet_instance_id" class="review-card-meta">
+                  <span v-if="submission.template_id">Template {{ submission.template_id }}</span>
+                  <span v-if="submission.sheet_instance_id">Sheet {{ submission.sheet_instance_id }}</span>
+                </p>
+                <div class="review-card-actions">
+                  <button
+                    v-if="submission.status !== 'done'"
+                    type="button"
+                    class="btn btn-export review-action-btn"
+                    @click="markSubmissionDone(submission.id)"
+                  >
+                    Mark reviewed
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    class="btn btn-export review-action-btn"
+                    @click="markSubmissionForReview(submission.id)"
+                  >
+                    Reopen
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-export review-action-btn review-action-btn--danger"
+                    @click="removeSubmission(submission.id)"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </article>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <div v-if="showTeacherUi && ocrResult" class="results">
         <h2>Results</h2>
-        <p>Detected: {{ ocrResult.digits.join(', ') }}</p>
-        <p>Confidence: {{ ocrResult.confidence }}</p>
+        <p v-if="ocrResult.error" class="results-error">{{ ocrResult.error }}</p>
+        <p v-if="ocrResult.needsReview" class="results-error">
+          Alignment fallback was used for this page. Results may be unreliable and should be reviewed manually.
+        </p>
+        <p>Detected: {{ (ocrResult.digits && ocrResult.digits.length) ? ocrResult.digits.join(', ') : '—' }}</p>
+        <p>Avg Confidence: {{ (ocrResult.confidences && ocrResult.confidences.length) ? (ocrResult.confidences.reduce((a,b)=>a+b,0)/ocrResult.confidences.length*100).toFixed(0) + '%' : '—' }}</p>
+        <p v-if="ocrResult.totalTime">Time: {{ ocrResult.totalTime }}ms</p>
+        <button type="button" class="btn btn-export" @click="exportResultJson">Export JSON</button>
+        <button type="button" class="btn btn-export" @click="exportResultCsv">Export CSV</button>
       </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import CameraCapture from './components/CameraCapture.vue'
-import { processWorksheet } from './homography.js'
-import { initDigitModel, recognizeDigits } from './ocr-pipeline.js'
+import { publicUrl } from './public-paths.js'
+import {
+  clearSavedSubmissions,
+  deleteSubmission,
+  loadClassRoster,
+  loadSavedSubmissions,
+  saveClassRoster,
+  saveSubmission,
+  updateSubmissionStatus
+} from './services/studentReviewStore.js'
 
-const LAYOUT = {
-  "layout_id": "sg-10-box-v1",
-  "version": 1,
-  "debug": false,
-  "description": "2x5 grid of 22mm digit boxes for single-digit answers",
-  "page": {
-    "width_mm": 215.9,
-    "height_mm": 279.4,
-    "aspect_ratio": 0.773,
-    "units": "mm"
-  },
-  "safe_margin_mm": 12.7,
-  "boxes": [
-    {"id": 0, "question_num": 1,  "x": 33,  "y": 71,  "cx": 44, "cy": 82,  "width": 22, "height": 22, "expected_type": "digit"},
-    {"id": 1, "question_num": 2,  "x": 71,  "y": 71,  "cx": 82, "cy": 82,  "width": 22, "height": 22, "expected_type": "digit"},
-    {"id": 2, "question_num": 3,  "x": 109, "y": 71,  "cx": 120, "cy": 82, "width": 22, "height": 22, "expected_type": "digit"},
-    {"id": 3, "question_num": 4,  "x": 147, "y": 71,  "cx": 158, "cy": 82, "width": 22, "height": 22, "expected_type": "digit"},
-    {"id": 4, "question_num": 5,  "x": 185, "y": 71,  "cx": 196, "cy": 82, "width": 22, "height": 22, "expected_type": "digit"},
-    {"id": 5, "question_num": 6,  "x": 33,  "y": 141, "cx": 44, "cy": 152, "width": 22, "height": 22, "expected_type": "digit"},
-    {"id": 6, "question_num": 7,  "x": 71,  "y": 141, "cx": 82, "cy": 152, "width": 22, "height": 22, "expected_type": "digit"},
-    {"id": 7, "question_num": 8,  "x": 109, "y": 141, "cx": 120, "cy": 152, "width": 22, "height": 22, "expected_type": "digit"},
-    {"id": 8, "question_num": 9,  "x": 147, "y": 141, "cx": 158, "cy": 152, "width": 22, "height": 22, "expected_type": "digit"},
-    {"id": 9, "question_num": 10, "x": 185, "y": 141, "cx": 196, "cy": 152, "width": 22, "height": 22, "expected_type": "digit"}
-  ],
-  "homography": {
-    "marker_size_mm": 17.3,
-    "anchors": [
-      {"id": "tl", "x_mm": 10.8, "y_mm": 10.8,  "x_norm": 0.05, "y_norm": 0.05},
-      {"id": "tr", "x_mm": 187.8, "y_mm": 10.8, "x_norm": 0.95, "y_norm": 0.05},
-      {"id": "br", "x_mm": 187.8, "y_mm": 251.3, "x_norm": 0.95, "y_norm": 0.95},
-      {"id": "bl", "x_mm": 10.8, "y_mm": 251.3, "x_norm": 0.05, "y_norm": 0.95}
-    ]
+// Optional local gateway sync for desk testing. GitHub Pages and classroom devices
+// should not depend on a local server.
+const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+const gatewaySyncEnabled =
+  isLocalHost && new URLSearchParams(window.location.search).get('gateway') === '1'
+const GATEWAY_URL = gatewaySyncEnabled ? `http://${window.location.hostname}:18789` : ''
+const updateBoardState = async (ocrResult) => {
+  if (!gatewaySyncEnabled) return
+  try {
+    const response = await fetch(`${GATEWAY_URL}/api/board`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'update',
+        timestamp: new Date().toISOString(),
+        result: ocrResult
+      })
+    })
+    if (response.ok) {
+      console.log('[ScanGrade] Board state synced')
+    }
+  } catch (err) {
+    console.warn('Gateway sync failed:', err.message)
   }
 }
 
+const isStudentMode = ref(
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') !== 'teacher'
+)
+const showTeacherUi = ref(!isStudentMode.value)
+const studentView = ref(isStudentMode.value ? 'landing' : 'capture')
+const showStudentCaptureUi = computed(() => isStudentMode.value && studentView.value === 'capture')
 const ocrResult = ref(null)
+const classRoster = ref([])
+const rosterDraft = ref('')
+const selectedStudentName = ref('')
+const activeStudentSession = ref(null)
+const savedSubmissions = ref([])
+const reviewFilter = ref('open')
 const cameraRef = ref(null)
+const cameraWrapper = ref(null)
+const annotationCanvas = ref(null)
+const showAnnotationLayer = ref(false)
 const testResults = ref([])
 const runtimeTestRunning = ref(false)
 const pipelineTestRunning = ref(false)
 const pipelineReady = ref(false)
+const studentCaptureBlockedReason = computed(() =>
+  studentView.value !== 'capture' ? 'Start from the home screen first.' : ''
+)
+
+const setModeInUrl = (mode) => {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (mode === 'teacher') {
+    url.searchParams.set('mode', 'teacher')
+  } else {
+    url.searchParams.delete('mode')
+  }
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+const isOpenSubmission = (submission) => submission.status !== 'done'
+
+const reviewSummary = computed(() => {
+  const total = savedSubmissions.value.length
+  const needsReview = savedSubmissions.value.filter((submission) => submission.status === 'review').length
+  const ready = savedSubmissions.value.filter((submission) => submission.status === 'ready').length
+  const reviewed = savedSubmissions.value.filter((submission) => submission.status === 'done').length
+  return { total, open: needsReview + ready, needsReview, ready, reviewed }
+})
+
+const filteredSubmissions = computed(() => {
+  if (reviewFilter.value === 'all') return savedSubmissions.value
+  if (reviewFilter.value === 'open') return savedSubmissions.value.filter(isOpenSubmission)
+  return savedSubmissions.value.filter((submission) => submission.status === reviewFilter.value)
+})
+
+const statusPriority = (status) => {
+  if (status === 'review') return 0
+  if (status === 'ready') return 1
+  if (status === 'done') return 2
+  return 3
+}
+
+const submissionsByStudent = computed(() => {
+  const groups = new Map()
+  for (const submission of filteredSubmissions.value) {
+    if (!groups.has(submission.studentName)) {
+      groups.set(submission.studentName, [])
+    }
+    groups.get(submission.studentName).push(submission)
+  }
+  return Array.from(groups.entries())
+    .map(([studentName, submissions]) => {
+      const sorted = [...submissions].sort((a, b) => {
+        const byStatus = statusPriority(a.status) - statusPriority(b.status)
+        if (byStatus !== 0) return byStatus
+        return String(b.savedAt || '').localeCompare(String(a.savedAt || ''))
+      })
+      return {
+        studentName,
+        submissions: sorted,
+        total: sorted.length,
+        open: sorted.filter(isOpenSubmission).length,
+        latestSavedAt: sorted.reduce((latest, submission) => {
+          if (!latest) return submission.savedAt || null
+          return String(submission.savedAt || '').localeCompare(String(latest)) > 0
+            ? submission.savedAt
+            : latest
+        }, null)
+      }
+    })
+    .sort((a, b) => {
+      const byOpen = b.open - a.open
+      if (byOpen !== 0) return byOpen
+      return String(b.latestSavedAt || '').localeCompare(String(a.latestSavedAt || ''))
+    })
+})
+
+const syncRosterDraft = () => {
+  rosterDraft.value = classRoster.value.join('\n')
+}
+
+const clearActiveScanResult = () => {
+  ocrResult.value = null
+  showAnnotationLayer.value = false
+}
+
+const beginStudentSignIn = () => {
+  clearActiveScanResult()
+  selectedStudentName.value = ''
+  activeStudentSession.value = null
+  studentView.value = 'identity'
+}
+
+const beginGuestScan = () => {
+  continueAsGuest()
+}
+
+const continueAsGuest = () => {
+  clearActiveScanResult()
+  selectedStudentName.value = ''
+  activeStudentSession.value = { mode: 'guest', studentName: 'Guest' }
+  studentView.value = 'capture'
+}
+
+const startNamedScan = () => {
+  if (!selectedStudentName.value) return
+  clearActiveScanResult()
+  activeStudentSession.value = { mode: 'named', studentName: selectedStudentName.value }
+  studentView.value = 'capture'
+}
+
+const returnToLanding = () => {
+  clearActiveScanResult()
+  selectedStudentName.value = ''
+  activeStudentSession.value = null
+  studentView.value = 'landing'
+}
+
+const enterTeacherMode = () => {
+  clearActiveScanResult()
+  isStudentMode.value = false
+  studentView.value = 'capture'
+  showTeacherUi.value = true
+  setModeInUrl('teacher')
+}
+
+const exitTeacherMode = () => {
+  showTeacherUi.value = false
+  isStudentMode.value = true
+  setModeInUrl('student')
+  returnToLanding()
+}
+
+const handleStudentDone = () => {
+  returnToLanding()
+}
+
+const loadTeacherData = async () => {
+  classRoster.value = await loadClassRoster()
+  await refreshSavedSubmissions()
+  syncRosterDraft()
+  if (
+    selectedStudentName.value &&
+    !classRoster.value.includes(selectedStudentName.value)
+  ) {
+    selectedStudentName.value = ''
+  }
+}
+
+const saveRoster = async () => {
+  const names = rosterDraft.value.split('\n')
+  classRoster.value = await saveClassRoster(names)
+  syncRosterDraft()
+  if (
+    selectedStudentName.value &&
+    !classRoster.value.includes(selectedStudentName.value)
+  ) {
+    selectedStudentName.value = ''
+  }
+}
+
+const clearReviewQueue = async () => {
+  savedSubmissions.value = await clearSavedSubmissions()
+}
+
+const refreshSavedSubmissions = async () => {
+  savedSubmissions.value = await loadSavedSubmissions()
+}
+
+const markSubmissionDone = async (id) => {
+  savedSubmissions.value = await updateSubmissionStatus(id, 'done')
+}
+
+const markSubmissionForReview = async (id) => {
+  savedSubmissions.value = await updateSubmissionStatus(id, 'review')
+}
+
+const removeSubmission = async (id) => {
+  savedSubmissions.value = await deleteSubmission(id)
+}
+
+const formatSavedAt = (iso) => {
+  if (!iso) return 'Unknown time'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleString('en-CA', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  })
+}
+
+const statusLabel = (status) => {
+  if (status === 'review') return 'Needs review'
+  if (status === 'done') return 'Reviewed'
+  return 'Ready'
+}
+
+const submissionScoreText = (submission) => {
+  if (Array.isArray(submission.questionCorrect) && submission.questionCorrect.length > 0) {
+    const score = submission.questionCorrect.filter(Boolean).length
+    return `${score}/${submission.questionCorrect.length} correct`
+  }
+  if (!Array.isArray(submission.correct) || submission.correct.length === 0) return ''
+  const score = submission.correct.filter(Boolean).length
+  return `${score}/${submission.correct.length} correct`
+}
+
+const handleOCRComplete = async (res) => {
+  console.log('OCR Results:', res)
+  ocrResult.value = res
+
+  if (isStudentMode.value) {
+    const currentStudent = activeStudentSession.value?.studentName
+    if (!res?.error && currentStudent) {
+      await saveSubmission({
+        studentName: currentStudent,
+        result: res
+      })
+      await refreshSavedSubmissions()
+    }
+    return
+  }
+
+  // Teacher/Review Mode only: sync to gateway and init annotation layer
+  updateBoardState(res)
+  nextTick(() => {
+    if (annotationCanvas.value && cameraWrapper.value) {
+      initAnnotationLayer()
+      showAnnotationLayer.value = true
+    } else {
+      console.warn('Canvas refs not ready, retrying...')
+      setTimeout(() => {
+        if (annotationCanvas.value && cameraWrapper.value) {
+          initAnnotationLayer()
+          showAnnotationLayer.value = true
+        }
+      }, 100)
+    }
+  })
+}
 
 // Runtime test status tracking
 let runtimeStatus = {
@@ -108,82 +613,9 @@ let runtimeStatus = {
   ortSanity: false
 }
 
-const handleImageCaptured = async (imageData) => {
-  console.log('Image captured:', imageData)
-  
-  // Initialize ONNX model
-  try {
-    await initDigitModel()
-    console.log('✅ ONNX model ready')
-  } catch (err) {
-    log(`❌ Model load failed: ${err.message}`, 'fail')
-    return
-  }
-  
-  // Run full pipeline
-  try {
-    log('Running full OCR pipeline...', 'info')
-    const start = performance.now()
-    
-    // Load image into OpenCV
-    const img = new Image()
-    img.src = imageData
-    await new Promise((resolve, reject) => {
-      img.onload = resolve
-      img.onerror = reject
-    })
-    
-    const canvas = document.createElement('canvas')
-    canvas.width = img.naturalWidth
-    canvas.height = img.naturalHeight
-    const ctx = canvas.getContext('2d')
-    ctx.drawImage(img, 0, 0)
-    
-    const src = cv.imread(canvas)
-    
-    // Run homography + crops
-    const result = processWorksheet(src, LAYOUT)
-    
-    if (!result) {
-      log('❌ Corner marker detection failed', 'fail')
-      src.delete()
-      return
-    }
-    
-    const { warpedImage, processedTensors } = result
-    
-    // Run OCR on each digit
-    const predictions = []
-    for (const proc of processedTensors) {
-      const tensor = new ort.Tensor('float32', proc.tensor, [1, 1, 28, 28])
-      const digitResult = await recognizeDigits(tensor)
-      predictions.push({
-        questionNum: proc.questionNum,
-        digit: digitResult[0].digit,
-        confidence: digitResult[0].confidence
-      })
-    }
-    
-    const totalTime = (performance.now() - start).toFixed(2)
-    
-    log(`✅ OCR complete: ${predictions.length} digits in ${totalTime}ms`, 'success')
-    
-    // Display results
-    ocrResult.value = {
-      digits: predictions.map(p => p.digit),
-      confidences: predictions.map(p => p.confidence),
-      predictions: predictions,
-      totalTime: totalTime
-    }
-    
-    // Cleanup
-    src.delete()
-    warpedImage.delete()
-    
-  } catch (err) {
-    log(`❌ Pipeline error: ${err.message}`, 'fail')
-    console.error(err)
-  }
+// Image is processed in CameraCapture; result comes via @ocr-complete -> handleOCRComplete
+const handleImageCaptured = () => {
+  // No-op: single pipeline runs in CameraCapture.runRealOCR only
 }
 
 const log = (message, type = 'info') => {
@@ -196,8 +628,122 @@ const log = (message, type = 'info') => {
   testResults.value.push({ time, message, type })
 }
 
+const initAnnotationLayer = () => {
+  const canvas = annotationCanvas.value
+  const ctx = canvas.getContext('2d')
+  const wrapper = cameraWrapper.value
+
+  // Resize canvas to match wrapper
+  canvas.width = wrapper.offsetWidth
+  canvas.height = wrapper.offsetHeight
+
+  // Red pen styling
+  ctx.strokeStyle = '#ff453a'
+  ctx.lineWidth = 3
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+
+  // Store drawing state
+  let isDrawing = false
+  let lastX = 0
+  let lastY = 0
+
+  const getPos = (e) => {
+    const rect = canvas.getBoundingClientRect()
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    }
+  }
+
+  const startDrawing = (e) => {
+    e.preventDefault()
+    isDrawing = true
+    const pos = getPos(e)
+    lastX = pos.x
+    lastY = pos.y
+  }
+
+  const draw = (e) => {
+    if (!isDrawing) return
+    e.preventDefault()
+    const pos = getPos(e)
+
+    ctx.beginPath()
+    ctx.moveTo(lastX, lastY)
+    ctx.lineTo(pos.x, pos.y)
+    ctx.stroke()
+
+    lastX = pos.x
+    lastY = pos.y
+  }
+
+  const stopDrawing = () => {
+    isDrawing = false
+  }
+
+  // Event listeners
+  canvas.addEventListener('mousedown', startDrawing)
+  canvas.addEventListener('mousemove', draw)
+  canvas.addEventListener('mouseup', stopDrawing)
+  canvas.addEventListener('mouseleave', stopDrawing)
+
+  canvas.addEventListener('touchstart', startDrawing, { passive: false })
+  canvas.addEventListener('touchmove', draw, { passive: false })
+  canvas.addEventListener('touchend', stopDrawing)
+
+  console.log('[ScanGrade] Red pen layer initialized')
+}
+
 const clearResults = () => {
   testResults.value = []
+}
+
+const escapeCsv = (val) => {
+  if (val == null) return ''
+  const s = String(val)
+  if (/[,"\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"'
+  return s
+}
+
+const exportResultJson = () => {
+  if (!ocrResult.value) return
+  const json = JSON.stringify(ocrResult.value, null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `scangrade-result-${Date.now()}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const exportResultCsv = () => {
+  if (!ocrResult.value) return
+  const r = ocrResult.value
+  const predictions = r.predictions || []
+  const templateId = r.template_id != null ? r.template_id : ''
+  const sheetId = r.sheet_instance_id != null ? r.sheet_instance_id : ''
+  const header = ['box_index', 'question_num', 'predicted_digit', 'confidence', 'correct', 'template_id', 'sheet_instance_id']
+  const rows = predictions.map((p, i) => [
+    p.id ?? i,
+    p.questionNum ?? '',
+    p.digit ?? '',
+    p.confidence != null ? p.confidence : '',
+    p.correct !== undefined ? (p.correct ? 'true' : 'false') : '',
+    templateId,
+    sheetId
+  ].map(escapeCsv))
+  const csv = [header.map(escapeCsv).join(','), ...rows.map(row => row.join(','))].join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `scangrade-result-${Date.now()}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 const runRuntimeTest = async () => {
@@ -351,11 +897,20 @@ const runPipelineTest = async () => {
     const loadTime = (performance.now() - loadStart).toFixed(2)
     log(`✅ Image loaded: ${src.cols}×${src.rows} (${loadTime}ms)`, 'pass')
 
-    // Step 1: Run homography (detect → warp)
-    log('Running homography pipeline...', 'info')
+    // Load normalized layout (QR-SPEC) for this test path only
+    log('Loading normalized layout (QR-SPEC): layouts/sg-10-box-v1.json', 'info')
+    const layoutRes = await fetch(publicUrl('layouts/sg-10-box-v1.json'))
+    if (!layoutRes.ok) {
+      throw new Error('Failed to load normalized layout: ' + layoutRes.status)
+    }
+    const normalizedLayout = await layoutRes.json()
+    log(`✅ Layout loaded: ${normalizedLayout.layout_id}, units=${normalizedLayout.page?.units}`, 'pass')
+
+    // Step 1: Run homography (detect → warp → crop → tensors) with normalized layout
+    log('Running homography pipeline with normalized layout...', 'info')
     const homographyStart = performance.now()
 
-    const result = processWorksheet(src, LAYOUT)
+    const result = processWorksheet(src, normalizedLayout)
 
     if (!result) {
       throw new Error('Corner marker detection failed. Ensure 4 black square markers are visible.')
@@ -395,13 +950,13 @@ const runPipelineTest = async () => {
         continue
       }
 
-      // Check value range (MNIST normalization: roughly [-1, 1])
+      // Check value range (preprocessing: [0, 1] normalized pixels)
       const min = Math.min(...tensor)
       const max = Math.max(...tensor)
-      const inRange = min >= -3 && max <= 3 // Allow some margin
+      const inRange = min >= -0.01 && max <= 1.01
 
       if (!inRange) {
-        log(`⚠️ Tensor ${i}: Value range [${min.toFixed(2)}, ${max.toFixed(2)}] outside expected [-3, 3]`, 'warn')
+        log(`⚠️ Tensor ${i}: Value range [${min.toFixed(2)}, ${max.toFixed(2)}] outside expected [0, 1]`, 'warn')
         // Don't fail, just warn - real data varies
       }
     }
@@ -429,6 +984,7 @@ const runPipelineTest = async () => {
     // Final summary
     log('---', 'separator')
     log('🎉 Pipeline Smoke Test PASSED', 'success')
+    log(`   └─ Layout: normalized (QR-SPEC) end-to-end`, 'info')
     log(`   └─ Total time: ${homographyTime}ms`, 'info')
 
   } catch (err) {
@@ -439,13 +995,25 @@ const runPipelineTest = async () => {
   log('=== Pipeline Smoke Test Complete ===', 'header')
   pipelineTestRunning.value = false
 }
+
+onMounted(() => {
+  loadTeacherData()
+})
 </script>
 
 <style scoped>
 .scan-grade {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  color: #202124;
+}
+
+.scan-grade--student {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 56px 20px 20px;
+  padding-top: max(56px, calc(env(safe-area-inset-top, 0px) + 18px));
 }
 
 .header {
@@ -453,22 +1021,118 @@ const runPipelineTest = async () => {
   margin-bottom: 30px;
 }
 
-.header h1 {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1d1d1f;
-  margin-bottom: 8px;
+.brand-logo {
+  width: 82px;
+  height: 82px;
+  object-fit: contain;
+  margin: 0 auto 8px;
+  display: block;
 }
 
-.subtitle {
-  color: #6e6e73;
-  font-size: 16px;
+.scan-grade--student .header {
+  margin-bottom: 12px;
+}
+
+.scan-grade--student .brand-logo {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 6px;
+}
+
+.scan-grade--student .header h1 {
+  font-size: 24px;
+  margin-bottom: 0;
+}
+
+.header h1 {
+  font-size: 32px;
+  font-weight: 750;
+  color: #202124;
+  margin-bottom: 0;
 }
 
 .main {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.student-home,
+.student-roster {
+  background: white;
+  border-radius: 8px;
+  padding: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.student-home {
+  text-align: center;
+  background: transparent;
+  box-shadow: none;
+  padding: 6px 0 0;
+  max-width: 360px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.student-home-actions,
+.student-identity-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.student-home-btn {
+  width: 100%;
+}
+
+.teacher-link-btn {
+  margin-top: 14px;
+  background: transparent;
+  border: none;
+  color: #6e6e73;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.student-roster-title {
+  font-size: 20px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.student-selected-label,
+.student-roster-help,
+.student-roster-empty {
+  text-align: center;
+  color: #6e6e73;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.student-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.student-name-chip {
+  border: 2px solid #d2d2d7;
+  background: #f5f5f7;
+  color: #1d1d1f;
+  border-radius: 8px;
+  padding: 14px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.student-name-chip--active {
+  background: #007aff;
+  border-color: #007aff;
+  color: white;
 }
 
 /* Test Section */
@@ -484,12 +1148,14 @@ const runPipelineTest = async () => {
   min-width: 140px;
   padding: 12px 18px;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   -webkit-tap-highlight-color: transparent;
+  text-align: center;
+  text-decoration: none;
 }
 
 .btn:active {
@@ -499,6 +1165,36 @@ const runPipelineTest = async () => {
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #007aff;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0068d6;
+}
+
+.btn-secondary {
+  background: #e8e8ed;
+  color: #1d1d1f;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #d2d2d7;
+}
+
+.btn-worksheet {
+  background: #ffffff;
+  border: 1px solid #d7d2c7;
+  color: #202124;
+  box-shadow: 0 1px 2px rgba(32, 33, 36, 0.06);
+}
+
+.btn-worksheet:hover:not(:disabled) {
+  background: #fbfaf7;
+  border-color: #c7c0b2;
 }
 
 .btn-test {
@@ -591,9 +1287,364 @@ const runPipelineTest = async () => {
   margin-bottom: 12px;
 }
 
+.results .results-error {
+  color: #dc3545;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
 .results p {
   color: #6e6e73;
   font-size: 14px;
   margin-bottom: 8px;
+}
+
+.results .btn-export {
+  margin-top: 12px;
+  padding: 8px 14px;
+  font-size: 14px;
+  background: #e8e8ed;
+  color: #1d1d1f;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.results .btn-export:hover {
+  background: #d2d2d7;
+}
+
+.teacher-panel {
+  display: grid;
+  gap: 20px;
+}
+
+.teacher-panel-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.teacher-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.teacher-panel-head .btn {
+  flex: 0 0 auto;
+  min-width: 150px;
+}
+
+.teacher-panel-head h2 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.teacher-panel-head p,
+.teacher-empty-state,
+.review-card-meta,
+.review-card-digits {
+  color: #6e6e73;
+  font-size: 14px;
+}
+
+.teacher-roster-input {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  padding: 12px;
+  font: inherit;
+  margin-bottom: 12px;
+  min-height: 180px;
+}
+
+.teacher-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.teacher-panel-actions .btn {
+  flex: 0 0 auto;
+  min-width: 150px;
+}
+
+.review-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.review-stat {
+  appearance: none;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  background: #f8f8fa;
+  color: #1d1d1f;
+  padding: 10px 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-stat strong {
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.review-stat span {
+  display: block;
+  color: #6e6e73;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.review-stat.active {
+  border-color: #007aff;
+  background: #eef6ff;
+}
+
+.review-queue {
+  display: grid;
+  gap: 12px;
+}
+
+.review-group {
+  display: grid;
+  gap: 10px;
+}
+
+.review-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.review-group-head h3 {
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+.review-group-head p {
+  color: #6e6e73;
+  font-size: 13px;
+}
+
+.review-card {
+  border: 1px solid #e5e5ea;
+  border-left-width: 6px;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fafafa;
+}
+
+.review-card--ready {
+  border-left-color: #34c759;
+}
+
+.review-card--review {
+  border-left-color: #ff9f0a;
+}
+
+.review-card--done {
+  border-left-color: #8e8e93;
+  background: #f4f4f5;
+}
+
+.review-card-row,
+.review-card-meta {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.review-card-row {
+  margin-bottom: 6px;
+}
+
+.review-status {
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #3a3a3c;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.review-status--review {
+  background: #fff3cd;
+  color: #9a6700;
+}
+
+.review-status--ready {
+  background: #e8f5e9;
+  color: #137333;
+}
+
+.review-status--done {
+  background: #f1f1f4;
+  color: #636366;
+}
+
+.review-card-digits {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.review-card-digits > span:first-child {
+  font-weight: 700;
+  color: #3a3a3c;
+}
+
+.review-digit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid #d2d2d7;
+  background: white;
+  color: #1d1d1f;
+  font-weight: 700;
+}
+
+.review-digit--correct {
+  border-color: #34c759;
+  background: #e8f5e9;
+}
+
+.review-digit--incorrect {
+  border-color: #ff453a;
+  background: #ffebee;
+}
+
+.review-score {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: white;
+  color: #1d1d1f;
+  border: 1px solid #d2d2d7;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.review-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.review-action-btn {
+  margin-top: 0;
+}
+
+.review-action-btn--danger {
+  background: #ffe5e5;
+  color: #b42318;
+}
+
+/* Camera wrapper with annotation overlay */
+.camera-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.student-scan-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(100%, calc(72vh * 8.5 / 11));
+  max-width: min(100%, calc(72vh * 8.5 / 11));
+  margin: 0 auto 10px;
+  padding: 8px 10px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.student-scan-bar strong,
+.student-scan-bar span {
+  display: block;
+}
+
+.student-scan-bar span {
+  color: #6e6e73;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-scan-link {
+  border: 0;
+  background: transparent;
+  color: #007aff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Student Mode: dedicated layout — stage takes most of the screen */
+.main--student {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 20px;
+}
+
+.main--student .camera-wrapper--student {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0 12px;
+}
+
+@media (max-width: 640px) {
+  .scan-grade--student {
+    padding: 56px 14px 14px;
+    padding-top: max(56px, calc(env(safe-area-inset-top, 0px) + 18px));
+  }
+
+  .review-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .teacher-panel-head {
+    flex-direction: column;
+  }
+}
+
+.annotation-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  cursor: crosshair;
+  z-index: 10;
 }
 </style>

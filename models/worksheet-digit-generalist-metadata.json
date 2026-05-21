@@ -1,0 +1,920 @@
+{
+  "generatedAt": "2026-05-15T22:05:39.820167Z",
+  "arch": "ScanGradeDigitCNN",
+  "preprocessing": "worksheet RGB darkness/saturation ink extraction + centered 28x28 digit normalization",
+  "strictHoldoutPolicy": "Paths containing 7DE72F2C are excluded from training and used only for evaluation.",
+  "args": {
+    "epochs": 18,
+    "batch_size": 256,
+    "lr": 0.0008,
+    "seed": 51,
+    "external_per_digit": 2600,
+    "worksheet_repeat": 22,
+    "external_root": "/Users/openclaw/Codex Projects/scan-grade-cursor/datasets/external",
+    "holdout_debug": "/Users/openclaw/Codex Projects/scan-grade-cursor/benchmarks/holdout_student_samples_2026-05-15/results/debug",
+    "onnx_out": "public/models/worksheet-digit-generalist.onnx",
+    "checkpoint_out": "models/worksheet-digit-generalist.pt",
+    "metadata_out": "models/worksheet-digit-generalist-metadata.json",
+    "include_internal_val": false
+  },
+  "worksheetSources": [
+    "/Users/openclaw/Codex Projects/scan-grade-cursor/datasets/worksheet_digits_current_pipeline/debug",
+    "/Users/openclaw/Codex Projects/scan-grade-cursor/benchmarks/uploaded_student_samples/results-student-bakeoff-final-default/debug",
+    "/Users/openclaw/Codex Projects/scan-grade-cursor/benchmarks/worksheet_bakeoff/results-final-default-debug/debug"
+  ],
+  "worksheetSamples": {
+    "train": 810,
+    "internalVal": 50,
+    "groupsTrain": [
+      "71D954DC-1-Photo-1",
+      "71D954DC-2-Photo-2",
+      "71D954DC-3-Photo-3",
+      "71D954DC-4-Photo-4",
+      "71D954DC-6-Photo-6",
+      "71D954DC-7-Photo-7",
+      "71D954DC-9-Photo-9",
+      "AFAA58CF-1-Photo-1",
+      "AFAA58CF-10-Photo-10",
+      "AFAA58CF-2-Photo-2",
+      "AFAA58CF-3-Photo-3",
+      "AFAA58CF-4-Photo-4",
+      "AFAA58CF-5-Photo-5",
+      "AFAA58CF-7-Photo-7",
+      "AFAA58CF-8-Photo-8",
+      "F0613532-1-Photo-1",
+      "F0613532-10-Photo-10",
+      "F0613532-2-Photo-2",
+      "F0613532-3-Photo-3",
+      "F0613532-4-Photo-4",
+      "F0613532-5-Photo-5",
+      "F0613532-6-Photo-6",
+      "F0613532-8-Photo-8",
+      "F0613532-9-Photo-9",
+      "bakeoff-sheet01",
+      "bakeoff-sheet02",
+      "bakeoff-sheet03",
+      "bakeoff-sheet04",
+      "bakeoff-sheet05",
+      "bakeoff-sheet06",
+      "bakeoff-sheet07",
+      "bakeoff-sheet08",
+      "images-sheet01",
+      "images-sheet02",
+      "images-sheet03",
+      "images-sheet04",
+      "images-sheet05",
+      "images-sheet06",
+      "images-sheet07",
+      "images-sheet08",
+      "live-1777078893756",
+      "live-1777078910809",
+      "live-1777078922228",
+      "live-1777078940580",
+      "live-1777078952571",
+      "live-1777078964618",
+      "live-1777078976262",
+      "live-1777082936495",
+      "live-1777082960040",
+      "live-1777082984994",
+      "live-1777083018314",
+      "live-1777083067891",
+      "live-1777083088943",
+      "live-1777087456664",
+      "live-1777087478934",
+      "live-1777091371292",
+      "live-1777091405812",
+      "live-1777091425597",
+      "live-1777091460971",
+      "live-1777091479134",
+      "live-1777091527019",
+      "live-1777091547562",
+      "live-1777091557729",
+      "live-1777286903860",
+      "live-1777286925200",
+      "live-1777290129497",
+      "live-1777290161926",
+      "live-1777290180431",
+      "live-1777290209455",
+      "live-1777549525161",
+      "live-1777587518598",
+      "live-1777587530699",
+      "live-1777587539941",
+      "live-1777587550920",
+      "live-1777587560752",
+      "live-1777587571279",
+      "live-1777587580862",
+      "live-1777587598614",
+      "live-1777587608535",
+      "live-1777587618293",
+      "live-1777587627416"
+    ],
+    "groupsInternalVal": [
+      "71D954DC-5-Photo-5",
+      "71D954DC-8-Photo-8",
+      "AFAA58CF-6-Photo-6",
+      "AFAA58CF-9-Photo-9",
+      "F0613532-7-Photo-7"
+    ]
+  },
+  "externalCounts": {
+    "mnist": 8660,
+    "emnist": 26000
+  },
+  "expandedTrainSamples": 52480,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 0.6742886283048769,
+      "worksheetTrainAcc": 0.9111111111111111,
+      "worksheetValAcc": 0.76,
+      "externalEvalAcc": 0.980625,
+      "score": 0.81515625,
+      "lr": 0.0007939231012048833
+    },
+    {
+      "epoch": 2,
+      "loss": 0.3794151147691215,
+      "worksheetTrainAcc": 0.9641975308641976,
+      "worksheetValAcc": 0.8,
+      "externalEvalAcc": 0.9878125,
+      "score": 0.8469531250000001,
+      "lr": 0.0007758770483143635
+    },
+    {
+      "epoch": 3,
+      "loss": 0.3215735057505166,
+      "worksheetTrainAcc": 0.9728395061728395,
+      "worksheetValAcc": 0.84,
+      "externalEvalAcc": 0.9934375,
+      "score": 0.878359375,
+      "lr": 0.0007464101615137756
+    },
+    {
+      "epoch": 4,
+      "loss": 0.29305138696984545,
+      "worksheetTrainAcc": 0.9864197530864197,
+      "worksheetValAcc": 0.84,
+      "externalEvalAcc": 0.9921875,
+      "score": 0.878046875,
+      "lr": 0.0007064177772475912
+    },
+    {
+      "epoch": 5,
+      "loss": 0.2717335045337677,
+      "worksheetTrainAcc": 0.991358024691358,
+      "worksheetValAcc": 0.84,
+      "externalEvalAcc": 0.9940625,
+      "score": 0.878515625,
+      "lr": 0.0006571150438746157
+    },
+    {
+      "epoch": 6,
+      "loss": 0.2563321357820092,
+      "worksheetTrainAcc": 0.9950617283950617,
+      "worksheetValAcc": 0.84,
+      "externalEvalAcc": 0.9934375,
+      "score": 0.878359375,
+      "lr": 0.0006000000000000001
+    },
+    {
+      "epoch": 7,
+      "loss": 0.24574716294684062,
+      "worksheetTrainAcc": 0.9950617283950617,
+      "worksheetValAcc": 0.82,
+      "externalEvalAcc": 0.9940625,
+      "score": 0.863515625,
+      "lr": 0.0005368080573302676
+    },
+    {
+      "epoch": 8,
+      "loss": 0.23645055788319286,
+      "worksheetTrainAcc": 0.991358024691358,
+      "worksheetValAcc": 0.82,
+      "externalEvalAcc": 0.99375,
+      "score": 0.8634375,
+      "lr": 0.00046945927106677225
+    },
+    {
+      "epoch": 9,
+      "loss": 0.23209019921174864,
+      "worksheetTrainAcc": 0.9938271604938271,
+      "worksheetValAcc": 0.84,
+      "externalEvalAcc": 0.995625,
+      "score": 0.87890625,
+      "lr": 0.0004
+    },
+    {
+      "epoch": 10,
+      "loss": 0.2246690826445091,
+      "worksheetTrainAcc": 0.9950617283950617,
+      "worksheetValAcc": 0.86,
+      "externalEvalAcc": 0.9953125,
+      "score": 0.893828125,
+      "lr": 0.0003305407289332279
+    },
+    {
+      "epoch": 11,
+      "loss": 0.21932242599929253,
+      "worksheetTrainAcc": 0.9962962962962963,
+      "worksheetValAcc": 0.8,
+      "externalEvalAcc": 0.9940625,
+      "score": 0.8485156250000001,
+      "lr": 0.00026319194266973266
+    },
+    {
+      "epoch": 12,
+      "loss": 0.21500161406470508,
+      "worksheetTrainAcc": 0.9962962962962963,
+      "worksheetValAcc": 0.76,
+      "externalEvalAcc": 0.993125,
+      "score": 0.8182812500000001,
+      "lr": 0.00020000000000000012
+    },
+    {
+      "epoch": 13,
+      "loss": 0.21227234231262673,
+      "worksheetTrainAcc": 0.9962962962962963,
+      "worksheetValAcc": 0.82,
+      "externalEvalAcc": 0.995625,
+      "score": 0.86390625,
+      "lr": 0.00014288495612538427
+    },
+    {
+      "epoch": 14,
+      "loss": 0.20573981731403165,
+      "worksheetTrainAcc": 0.9962962962962963,
+      "worksheetValAcc": 0.84,
+      "externalEvalAcc": 0.995625,
+      "score": 0.87890625,
+      "lr": 9.358222275240886e-05
+    },
+    {
+      "epoch": 15,
+      "loss": 0.20671893467263477,
+      "worksheetTrainAcc": 0.9962962962962963,
+      "worksheetValAcc": 0.84,
+      "externalEvalAcc": 0.99625,
+      "score": 0.8790625,
+      "lr": 5.358983848622462e-05
+    },
+    {
+      "epoch": 16,
+      "loss": 0.20485684748102978,
+      "worksheetTrainAcc": 0.9962962962962963,
+      "worksheetValAcc": 0.86,
+      "externalEvalAcc": 0.9959375,
+      "score": 0.893984375,
+      "lr": 2.412295168563668e-05
+    },
+    {
+      "epoch": 17,
+      "loss": 0.19991977948968004,
+      "worksheetTrainAcc": 0.9962962962962963,
+      "worksheetValAcc": 0.84,
+      "externalEvalAcc": 0.9959375,
+      "score": 0.878984375,
+      "lr": 6.076898795116793e-06
+    },
+    {
+      "epoch": 18,
+      "loss": 0.19987020557973442,
+      "worksheetTrainAcc": 0.9962962962962963,
+      "worksheetValAcc": 0.84,
+      "externalEvalAcc": 0.995625,
+      "score": 0.87890625,
+      "lr": 0.0
+    }
+  ],
+  "eval": {
+    "worksheetTrain": {
+      "correct": 807,
+      "total": 810,
+      "accuracy": 0.9962962962962963,
+      "confusions": [
+        {
+          "pair": "5->1",
+          "count": 1
+        },
+        {
+          "pair": "6->5",
+          "count": 1
+        },
+        {
+          "pair": "9->1",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "bakeoff-sheet03-q8",
+          "expected": 5,
+          "predicted": 1,
+          "confidence": 0.34471315145492554,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.34471315145492554
+            },
+            {
+              "digit": 5,
+              "confidence": 0.24069464206695557
+            },
+            {
+              "digit": 6,
+              "confidence": 0.14969885349273682
+            }
+          ]
+        },
+        {
+          "name": "bakeoff-sheet04-q4",
+          "expected": 9,
+          "predicted": 1,
+          "confidence": 0.9088575839996338,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.9088575839996338
+            },
+            {
+              "digit": 7,
+              "confidence": 0.03553219139575958
+            },
+            {
+              "digit": 9,
+              "confidence": 0.032330404967069626
+            }
+          ]
+        },
+        {
+          "name": "AFAA58CF-10-Photo-10-q10",
+          "expected": 6,
+          "predicted": 5,
+          "confidence": 0.5901336073875427,
+          "topK": [
+            {
+              "digit": 5,
+              "confidence": 0.5901336073875427
+            },
+            {
+              "digit": 2,
+              "confidence": 0.12977498769760132
+            },
+            {
+              "digit": 4,
+              "confidence": 0.12009340524673462
+            }
+          ]
+        }
+      ]
+    },
+    "worksheetInternalVal": {
+      "correct": 43,
+      "total": 50,
+      "accuracy": 0.86,
+      "confusions": [
+        {
+          "pair": "9->8",
+          "count": 3
+        },
+        {
+          "pair": "1->4",
+          "count": 1
+        },
+        {
+          "pair": "2->1",
+          "count": 1
+        },
+        {
+          "pair": "5->8",
+          "count": 1
+        },
+        {
+          "pair": "6->0",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "71D954DC-5-Photo-5-q10",
+          "expected": 6,
+          "predicted": 0,
+          "confidence": 0.9270265698432922,
+          "topK": [
+            {
+              "digit": 0,
+              "confidence": 0.9270265698432922
+            },
+            {
+              "digit": 2,
+              "confidence": 0.04068070277571678
+            },
+            {
+              "digit": 6,
+              "confidence": 0.011689212173223495
+            }
+          ]
+        },
+        {
+          "name": "71D954DC-5-Photo-5-q4",
+          "expected": 9,
+          "predicted": 8,
+          "confidence": 0.6718809008598328,
+          "topK": [
+            {
+              "digit": 8,
+              "confidence": 0.6718809008598328
+            },
+            {
+              "digit": 0,
+              "confidence": 0.2150384932756424
+            },
+            {
+              "digit": 7,
+              "confidence": 0.05219279229640961
+            }
+          ]
+        },
+        {
+          "name": "71D954DC-8-Photo-8-q4",
+          "expected": 9,
+          "predicted": 8,
+          "confidence": 0.4185717701911926,
+          "topK": [
+            {
+              "digit": 8,
+              "confidence": 0.4185717701911926
+            },
+            {
+              "digit": 9,
+              "confidence": 0.20625407993793488
+            },
+            {
+              "digit": 4,
+              "confidence": 0.16504062712192535
+            }
+          ]
+        },
+        {
+          "name": "71D954DC-8-Photo-8-q5",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.9791862368583679,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.9791862368583679
+            },
+            {
+              "digit": 4,
+              "confidence": 0.010768197476863861
+            },
+            {
+              "digit": 8,
+              "confidence": 0.004200130235403776
+            }
+          ]
+        },
+        {
+          "name": "AFAA58CF-9-Photo-9-q4",
+          "expected": 9,
+          "predicted": 8,
+          "confidence": 0.9917908906936646,
+          "topK": [
+            {
+              "digit": 8,
+              "confidence": 0.9917908906936646
+            },
+            {
+              "digit": 0,
+              "confidence": 0.0027860819827765226
+            },
+            {
+              "digit": 9,
+              "confidence": 0.0018411584896966815
+            }
+          ]
+        },
+        {
+          "name": "AFAA58CF-9-Photo-9-q8",
+          "expected": 5,
+          "predicted": 8,
+          "confidence": 0.9354879260063171,
+          "topK": [
+            {
+              "digit": 8,
+              "confidence": 0.9354879260063171
+            },
+            {
+              "digit": 5,
+              "confidence": 0.040149297565221786
+            },
+            {
+              "digit": 9,
+              "confidence": 0.008023685775697231
+            }
+          ]
+        },
+        {
+          "name": "F0613532-7-Photo-7-q3",
+          "expected": 1,
+          "predicted": 4,
+          "confidence": 0.6525861620903015,
+          "topK": [
+            {
+              "digit": 4,
+              "confidence": 0.6525861620903015
+            },
+            {
+              "digit": 8,
+              "confidence": 0.12209079414606094
+            },
+            {
+              "digit": 3,
+              "confidence": 0.09663769602775574
+            }
+          ]
+        }
+      ]
+    },
+    "externalEval": {
+      "correct": 3187,
+      "total": 3200,
+      "accuracy": 0.9959375,
+      "confusions": [
+        {
+          "pair": "1->2",
+          "count": 1
+        },
+        {
+          "pair": "1->5",
+          "count": 1
+        },
+        {
+          "pair": "1->6",
+          "count": 1
+        },
+        {
+          "pair": "1->7",
+          "count": 1
+        },
+        {
+          "pair": "3->8",
+          "count": 1
+        },
+        {
+          "pair": "3->9",
+          "count": 1
+        },
+        {
+          "pair": "5->6",
+          "count": 1
+        },
+        {
+          "pair": "7->2",
+          "count": 1
+        },
+        {
+          "pair": "7->4",
+          "count": 1
+        },
+        {
+          "pair": "8->3",
+          "count": 1
+        },
+        {
+          "pair": "9->4",
+          "count": 1
+        },
+        {
+          "pair": "9->5",
+          "count": 1
+        },
+        {
+          "pair": "9->8",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "mnist-test-1527",
+          "expected": 1,
+          "predicted": 5,
+          "confidence": 0.5641353130340576,
+          "topK": [
+            {
+              "digit": 5,
+              "confidence": 0.5641353130340576
+            },
+            {
+              "digit": 1,
+              "confidence": 0.29728245735168457
+            },
+            {
+              "digit": 2,
+              "confidence": 0.06594856083393097
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-2040",
+          "expected": 5,
+          "predicted": 6,
+          "confidence": 0.5268909335136414,
+          "topK": [
+            {
+              "digit": 6,
+              "confidence": 0.5268909335136414
+            },
+            {
+              "digit": 5,
+              "confidence": 0.35984137654304504
+            },
+            {
+              "digit": 8,
+              "confidence": 0.041117824614048004
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-358",
+          "expected": 7,
+          "predicted": 4,
+          "confidence": 0.5320386290550232,
+          "topK": [
+            {
+              "digit": 4,
+              "confidence": 0.5320386290550232
+            },
+            {
+              "digit": 7,
+              "confidence": 0.3722425103187561
+            },
+            {
+              "digit": 1,
+              "confidence": 0.04481899365782738
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-582",
+          "expected": 8,
+          "predicted": 3,
+          "confidence": 0.35295453667640686,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.35295453667640686
+            },
+            {
+              "digit": 6,
+              "confidence": 0.20294640958309174
+            },
+            {
+              "digit": 8,
+              "confidence": 0.182804673910141
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-1232",
+          "expected": 9,
+          "predicted": 4,
+          "confidence": 0.6693389415740967,
+          "topK": [
+            {
+              "digit": 4,
+              "confidence": 0.6693389415740967
+            },
+            {
+              "digit": 9,
+              "confidence": 0.2718755006790161
+            },
+            {
+              "digit": 5,
+              "confidence": 0.018748586997389793
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-2939",
+          "expected": 9,
+          "predicted": 5,
+          "confidence": 0.8832579255104065,
+          "topK": [
+            {
+              "digit": 5,
+              "confidence": 0.8832579255104065
+            },
+            {
+              "digit": 0,
+              "confidence": 0.054968371987342834
+            },
+            {
+              "digit": 9,
+              "confidence": 0.023344507440924644
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-16151",
+          "expected": 1,
+          "predicted": 7,
+          "confidence": 0.88539057970047,
+          "topK": [
+            {
+              "digit": 7,
+              "confidence": 0.88539057970047
+            },
+            {
+              "digit": 1,
+              "confidence": 0.049771811813116074
+            },
+            {
+              "digit": 8,
+              "confidence": 0.02308245189487934
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-39026",
+          "expected": 1,
+          "predicted": 6,
+          "confidence": 0.5714852809906006,
+          "topK": [
+            {
+              "digit": 6,
+              "confidence": 0.5714852809906006
+            },
+            {
+              "digit": 1,
+              "confidence": 0.29918012022972107
+            },
+            {
+              "digit": 5,
+              "confidence": 0.03822171315550804
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-2767",
+          "expected": 1,
+          "predicted": 2,
+          "confidence": 0.7306262254714966,
+          "topK": [
+            {
+              "digit": 2,
+              "confidence": 0.7306262254714966
+            },
+            {
+              "digit": 1,
+              "confidence": 0.0861886739730835
+            },
+            {
+              "digit": 6,
+              "confidence": 0.08349835872650146
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-30064",
+          "expected": 3,
+          "predicted": 8,
+          "confidence": 0.7066473364830017,
+          "topK": [
+            {
+              "digit": 8,
+              "confidence": 0.7066473364830017
+            },
+            {
+              "digit": 3,
+              "confidence": 0.2561074197292328
+            },
+            {
+              "digit": 6,
+              "confidence": 0.008732235059142113
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-4164",
+          "expected": 3,
+          "predicted": 9,
+          "confidence": 0.4310847818851471,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.4310847818851471
+            },
+            {
+              "digit": 3,
+              "confidence": 0.2618056833744049
+            },
+            {
+              "digit": 8,
+              "confidence": 0.19643226265907288
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-7538",
+          "expected": 7,
+          "predicted": 2,
+          "confidence": 0.5078452229499817,
+          "topK": [
+            {
+              "digit": 2,
+              "confidence": 0.5078452229499817
+            },
+            {
+              "digit": 7,
+              "confidence": 0.3876418471336365
+            },
+            {
+              "digit": 3,
+              "confidence": 0.05102161690592766
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-35329",
+          "expected": 9,
+          "predicted": 8,
+          "confidence": 0.6466192603111267,
+          "topK": [
+            {
+              "digit": 8,
+              "confidence": 0.6466192603111267
+            },
+            {
+              "digit": 2,
+              "confidence": 0.13898225128650665
+            },
+            {
+              "digit": 9,
+              "confidence": 0.11377184092998505
+            }
+          ]
+        }
+      ]
+    },
+    "strictHoldout": {
+      "correct": 48,
+      "total": 50,
+      "accuracy": 0.96,
+      "confusions": [
+        {
+          "pair": "3->0",
+          "count": 1
+        },
+        {
+          "pair": "4->9",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "7DE72F2C-1-Photo-1-q9",
+          "expected": 3,
+          "predicted": 0,
+          "confidence": 0.692650318145752,
+          "topK": [
+            {
+              "digit": 0,
+              "confidence": 0.692650318145752
+            },
+            {
+              "digit": 8,
+              "confidence": 0.153883159160614
+            },
+            {
+              "digit": 3,
+              "confidence": 0.043825194239616394
+            }
+          ]
+        },
+        {
+          "name": "7DE72F2C-4-Photo-4-q2",
+          "expected": 4,
+          "predicted": 9,
+          "confidence": 0.6982668042182922,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.6982668042182922
+            },
+            {
+              "digit": 4,
+              "confidence": 0.13552361726760864
+            },
+            {
+              "digit": 1,
+              "confidence": 0.06918676942586899
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "checkpoint": "models/worksheet-digit-generalist.pt",
+  "onnx": "public/models/worksheet-digit-generalist.onnx"
+}

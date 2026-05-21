@@ -3,17 +3,18 @@
 ## 1. Printed Worksheets
 
 ### Typography
-- **Font**: Legend (Regular/Medium)
+- **Font**: Lexend (Regular/Medium/SemiBold)
 - **Use**: All math problems and text
-- **Style**: Teacher handwriting aesthetic
+- **Style**: Readable, modern, kid-friendly, and OCR-clear
 
 ### Visual Elements
-- **Anchor Points**: Solid 15mm black circles in all 4 corners
-  - Top-Left: ●
-  - Top-Right: ●
-  - Bottom-Left: ●
-  - Bottom-Right: ●
-- **QR Codes**: Top-right quadrant (100x100px placeholder)
+- **Anchor Points**: Solid black squares in all 4 corners
+  - Top-Left: square marker
+  - Top-Right: square marker
+  - Bottom-Left: square marker
+  - Bottom-Right: square marker
+  - Use QR-SPEC geometry as the source of truth for exact size and placement
+- **QR Codes**: Bottom center, paired with subtle ScanGrade.io text and a small Sheet ID
 - **No clipart or borders**
 - **Clean, professional layout**
 
@@ -54,6 +55,7 @@
 - **Teacher handwriting** authenticity
 - **K-3 appropriate** visual language
 - **Zero clutter** — pure focus on learning
+- **Shared-iPad practical** — worksheet should be easy to place on a table or floor and capture quickly
 
 ### Color Palette
 - Primary: Black (text), White (background)
@@ -64,9 +66,9 @@
 
 ## 4. Implementation Checklist
 
-- [ ] Legend font applied to all worksheet text
-- [ ] 15mm anchor points in all 4 corners
-- [ ] QR code placeholder in top-right
+- [ ] Lexend font applied to all worksheet text
+- [ ] Black square anchor points in all 4 corners
+- [ ] QR code and Sheet ID placed quietly at bottom center
 - [ ] No clipart or decorative borders
 - [ ] Coming Soon/Schoolbell font for digital feedback
 - [ ] Green/Red/Yellow color coding implemented

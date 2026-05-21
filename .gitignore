@@ -19,11 +19,28 @@ logs/
 .env
 .env.*
 
-# tooling outputs
-logs/
-
 # local runtime state
 .state/
-node_modules/
-logs/
-*.log
+.DS_Store
+board_state.json
+.venv/
+.venv-mnist/
+__pycache__/
+*.py[cod]
+test-results/
+
+# local debug outputs
+debug-crops-handwritten.png
+debug-crops-typed.png
+debug-tensors.json
+benchmarks/worksheet_bakeoff/results/export_debug/
+benchmarks/**/debug/
+benchmarks/**/debug-*/
+benchmarks/**/results*/
+benchmarks/ocr_sanity/results/
+datasets/
+models/*.pt
+
+# local backups and raw photo imports
+scan-grade BACKUP FEB @%/
+worksheet photos/

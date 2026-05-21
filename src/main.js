@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, nextTick } from 'vue'
 import App from './App.vue'
 
 // DEV-only QR round-trip test harness
@@ -29,3 +29,10 @@ if (import.meta.env.DEV) {
 }
 
 createApp(App).mount('#app')
+
+nextTick(() => {
+  const loading = document.getElementById('loading')
+  if (!loading) return
+  loading.classList.add('hidden')
+  window.setTimeout(() => loading.remove(), 350)
+})

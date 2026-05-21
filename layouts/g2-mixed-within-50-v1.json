@@ -1,0 +1,561 @@
+{
+  "layout_id": "g2-mixed-within-50-v1",
+  "version": 1,
+  "answer_key": [
+    3,
+    7,
+    2,
+    9,
+    4,
+    3,
+    2,
+    8,
+    4,
+    2,
+    2,
+    5,
+    3,
+    7,
+    3,
+    8,
+    4,
+    1,
+    1,
+    5
+  ],
+  "page": {
+    "aspect_ratio": 0.7727,
+    "units": "normalized"
+  },
+  "boxes": [
+    {
+      "id": 0,
+      "question_num": 1,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3696,
+      "y": 0.3049,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 3
+    },
+    {
+      "id": 1,
+      "question_num": 1,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4481,
+      "y": 0.3049,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 7
+    },
+    {
+      "id": 2,
+      "question_num": 2,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3696,
+      "y": 0.4159,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 2
+    },
+    {
+      "id": 3,
+      "question_num": 2,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4481,
+      "y": 0.4159,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 9
+    },
+    {
+      "id": 4,
+      "question_num": 3,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3696,
+      "y": 0.5268,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 4
+    },
+    {
+      "id": 5,
+      "question_num": 3,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4481,
+      "y": 0.5268,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 3
+    },
+    {
+      "id": 6,
+      "question_num": 4,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3696,
+      "y": 0.6378,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 2
+    },
+    {
+      "id": 7,
+      "question_num": 4,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4481,
+      "y": 0.6378,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 8
+    },
+    {
+      "id": 8,
+      "question_num": 5,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3696,
+      "y": 0.7487,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 4
+    },
+    {
+      "id": 9,
+      "question_num": 5,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4481,
+      "y": 0.7487,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 2
+    },
+    {
+      "id": 10,
+      "question_num": 6,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8143,
+      "y": 0.3049,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 2
+    },
+    {
+      "id": 11,
+      "question_num": 6,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8928,
+      "y": 0.3049,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 5
+    },
+    {
+      "id": 12,
+      "question_num": 7,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8143,
+      "y": 0.4159,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 3
+    },
+    {
+      "id": 13,
+      "question_num": 7,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8928,
+      "y": 0.4159,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 7
+    },
+    {
+      "id": 14,
+      "question_num": 8,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8143,
+      "y": 0.5268,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 3
+    },
+    {
+      "id": 15,
+      "question_num": 8,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8928,
+      "y": 0.5268,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 8
+    },
+    {
+      "id": 16,
+      "question_num": 9,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8143,
+      "y": 0.6378,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 4
+    },
+    {
+      "id": 17,
+      "question_num": 9,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8928,
+      "y": 0.6378,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 1
+    },
+    {
+      "id": 18,
+      "question_num": 10,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8143,
+      "y": 0.7487,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 1
+    },
+    {
+      "id": 19,
+      "question_num": 10,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8928,
+      "y": 0.7487,
+      "width": 0.0732,
+      "height": 0.0616,
+      "expected_type": "digit",
+      "expected_digit": 5
+    }
+  ],
+  "question_groups": [
+    {
+      "question_num": 1,
+      "problem": "23 + 14",
+      "answer": 37,
+      "digit_box_ids": [
+        0,
+        1
+      ],
+      "canonical_digits": [
+        3,
+        7
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "37",
+          "digits": [
+            3,
+            7
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    },
+    {
+      "question_num": 2,
+      "problem": "48 - 19",
+      "answer": 29,
+      "digit_box_ids": [
+        2,
+        3
+      ],
+      "canonical_digits": [
+        2,
+        9
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "29",
+          "digits": [
+            2,
+            9
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    },
+    {
+      "question_num": 3,
+      "problem": "16 + 27",
+      "answer": 43,
+      "digit_box_ids": [
+        4,
+        5
+      ],
+      "canonical_digits": [
+        4,
+        3
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "43",
+          "digits": [
+            4,
+            3
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    },
+    {
+      "question_num": 4,
+      "problem": "50 - 22",
+      "answer": 28,
+      "digit_box_ids": [
+        6,
+        7
+      ],
+      "canonical_digits": [
+        2,
+        8
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "28",
+          "digits": [
+            2,
+            8
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    },
+    {
+      "question_num": 5,
+      "problem": "34 + 8",
+      "answer": 42,
+      "digit_box_ids": [
+        8,
+        9
+      ],
+      "canonical_digits": [
+        4,
+        2
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "42",
+          "digits": [
+            4,
+            2
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    },
+    {
+      "question_num": 6,
+      "problem": "41 - 16",
+      "answer": 25,
+      "digit_box_ids": [
+        10,
+        11
+      ],
+      "canonical_digits": [
+        2,
+        5
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "25",
+          "digits": [
+            2,
+            5
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    },
+    {
+      "question_num": 7,
+      "problem": "19 + 18",
+      "answer": 37,
+      "digit_box_ids": [
+        12,
+        13
+      ],
+      "canonical_digits": [
+        3,
+        7
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "37",
+          "digits": [
+            3,
+            7
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    },
+    {
+      "question_num": 8,
+      "problem": "45 - 7",
+      "answer": 38,
+      "digit_box_ids": [
+        14,
+        15
+      ],
+      "canonical_digits": [
+        3,
+        8
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "38",
+          "digits": [
+            3,
+            8
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    },
+    {
+      "question_num": 9,
+      "problem": "26 + 15",
+      "answer": 41,
+      "digit_box_ids": [
+        16,
+        17
+      ],
+      "canonical_digits": [
+        4,
+        1
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "41",
+          "digits": [
+            4,
+            1
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    },
+    {
+      "question_num": 10,
+      "problem": "39 - 24",
+      "answer": 15,
+      "digit_box_ids": [
+        18,
+        19
+      ],
+      "canonical_digits": [
+        1,
+        5
+      ],
+      "accepted_digit_responses": [
+        {
+          "label": "15",
+          "digits": [
+            1,
+            5
+          ],
+          "meaning": "exact two-digit answer"
+        }
+      ]
+    }
+  ],
+  "homography": {
+    "anchors": [
+      {
+        "id": "tl",
+        "x": 0.0829,
+        "y": 0.0641
+      },
+      {
+        "id": "tr",
+        "x": 0.9171,
+        "y": 0.0641
+      },
+      {
+        "id": "br",
+        "x": 0.9171,
+        "y": 0.9359
+      },
+      {
+        "id": "bl",
+        "x": 0.0829,
+        "y": 0.9359
+      }
+    ],
+    "marker_size": 0.0528
+  },
+  "metadata": {
+    "title": "Mixed Within 50",
+    "human_code": "SG-G2-C-001",
+    "grade_level": 2,
+    "total_questions": 10,
+    "answer_box_count": 20,
+    "printed_text_font_family": "Lexend",
+    "required_font_files": [
+      "public/fonts/Lexend-wght.ttf"
+    ],
+    "digit_box_width_mm": 15.8,
+    "digit_box_height_mm": 17.2,
+    "marker_size_mm": 11.4,
+    "grading_policy": {
+      "answer_slots_per_question": 2,
+      "blank_digit_value": null,
+      "single_digit_two_slot_accepts": [
+        "_d",
+        "d_",
+        "0d"
+      ],
+      "single_digit_two_slot_rejects": [
+        "d0"
+      ]
+    },
+    "qr_position": {
+      "x": 0.4403,
+      "y": 0.8812,
+      "width": 0.1195,
+      "height": 0.0923
+    }
+  }
+}

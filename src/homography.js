@@ -1,6 +1,6 @@
 /**
  * ScanGrade Homography Module
- * 
+ *
  * Detects 4 corner markers → warps to top-down → crops answer boxes
  * Uses pure geometric approach (no box contour detection)
  */
@@ -9,139 +9,1212 @@ const WARP_WIDTH = 1700;
 const WARP_HEIGHT = 2200;
 const MNIST_SIZE = 28;
 
+function cornerTargets(cols, rows) {
+  return {
+    tl: { x: cols * 0.05, y: rows * 0.05 },
+    tr: { x: cols * 0.95, y: rows * 0.05 },
+    br: { x: cols * 0.95, y: rows * 0.95 },
+    bl: { x: cols * 0.05, y: rows * 0.95 }
+  };
+}
+
+function anchorsPassCornerValidation(anchors, cols, rows, toleranceFrac = 0.22) {
+  if (!Array.isArray(anchors) || anchors.length !== 4) return false;
+  const targets = cornerTargets(cols, rows);
+  const tolX = cols * toleranceFrac;
+  const tolY = rows * toleranceFrac;
+  return anchors.every((anchor) => {
+    const target = targets[anchor.id];
+    return !!target &&
+      Math.abs(anchor.x - target.x) <= tolX &&
+      Math.abs(anchor.y - target.y) <= tolY;
+  });
+}
+
+function markerAreaRange(cols, rows, layout) {
+  const markerSizeNorm = layout?.homography?.marker_size != null && layout.homography.marker_size <= 1
+    ? layout.homography.marker_size
+    : null;
+  const minArea = markerSizeNorm != null
+    ? Math.pow(markerSizeNorm * Math.min(cols, rows), 2) * 0.03
+    : Math.pow((layout?.homography?.marker_size_mm || 17.3) * 5, 2);
+  return {
+    minArea,
+    maxArea: cols * rows * 0.05
+  };
+}
+
+function anchorsFormPlausiblePageQuad(anchors, cols, rows, layout) {
+  if (!Array.isArray(anchors) || anchors.length !== 4) return false;
+  const byId = Object.fromEntries(anchors.map((anchor) => [anchor.id, anchor]));
+  const tl = byId.tl;
+  const tr = byId.tr;
+  const br = byId.br;
+  const bl = byId.bl;
+  if (!tl || !tr || !br || !bl) return false;
+
+  const topW = Math.hypot(tr.x - tl.x, tr.y - tl.y);
+  const bottomW = Math.hypot(br.x - bl.x, br.y - bl.y);
+  const leftH = Math.hypot(bl.x - tl.x, bl.y - tl.y);
+  const rightH = Math.hypot(br.x - tr.x, br.y - tr.y);
+  const avgW = (topW + bottomW) / 2;
+  const avgH = (leftH + rightH) / 2;
+  const aspect = avgH > 0 ? avgW / avgH : 0;
+  const targetAspect = layout?.page?.aspect_ratio || 0.773;
+  const cross =
+    (tr.x - tl.x) * (bl.y - tl.y) -
+    (tr.y - tl.y) * (bl.x - tl.x);
+  return (
+    cross > 0 &&
+    tl.x < tr.x &&
+    bl.x < br.x &&
+    tl.y < bl.y &&
+    tr.y < br.y &&
+    avgW > cols * 0.42 &&
+    avgH > rows * 0.42 &&
+    aspect >= targetAspect * 0.55 &&
+    aspect <= targetAspect * 1.45
+  );
+}
+
+function pageGeometryUsableForAnchorEstimate(pageGeometry, cols, rows, layout) {
+  const rect = pageGeometry?.rect;
+  if (!rect) return false;
+  const targetAspect = layout?.page?.aspect_ratio || 0.773;
+  const aspect = rect.height > 0 ? rect.width / rect.height : 0;
+  return (
+    rect.width >= cols * 0.55 &&
+    rect.height >= rows * 0.55 &&
+    rect.x <= cols * 0.20 &&
+    rect.y <= rows * 0.20 &&
+    rect.x + rect.width >= cols * 0.78 &&
+    rect.y + rect.height >= rows * 0.78 &&
+    aspect >= targetAspect * 0.62 &&
+    aspect <= targetAspect * 1.42
+  );
+}
+
+function orderQuadPoints(points) {
+  if (!Array.isArray(points) || points.length !== 4) return null;
+  const sorted = points.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y));
+  const tl = sorted[0];
+  const br = sorted[3];
+  const remaining = sorted.slice(1, 3).sort((a, b) => (a.x - a.y) - (b.x - b.y));
+  const bl = remaining[0];
+  const tr = remaining[1];
+  return [tl, tr, br, bl];
+}
+
+function bilinearPoint(quad, nx, ny) {
+  const [tl, tr, br, bl] = quad;
+  const topX = tl.x + (tr.x - tl.x) * nx;
+  const topY = tl.y + (tr.y - tl.y) * nx;
+  const botX = bl.x + (br.x - bl.x) * nx;
+  const botY = bl.y + (br.y - bl.y) * nx;
+  return {
+    x: topX + (botX - topX) * ny,
+    y: topY + (botY - topY) * ny
+  };
+}
+
+function lineIntersection(a1, a2, b1, b2) {
+  const den = (a1.x - a2.x) * (b1.y - b2.y) - (a1.y - a2.y) * (b1.x - b2.x);
+  if (Math.abs(den) < 1e-6) return null;
+  const detA = a1.x * a2.y - a1.y * a2.x;
+  const detB = b1.x * b2.y - b1.y * b2.x;
+  return {
+    x: (detA * (b1.x - b2.x) - (a1.x - a2.x) * detB) / den,
+    y: (detA * (b1.y - b2.y) - (a1.y - a2.y) * detB) / den
+  };
+}
+
+function markerCenterFromApprox(approx, rect, offsetX = 0, offsetY = 0) {
+  if (approx && approx.rows === 4) {
+    const pts = [];
+    for (let i = 0; i < 4; i++) {
+      pts.push({
+        x: approx.data32S[i * 2],
+        y: approx.data32S[i * 2 + 1]
+      });
+    }
+    const quad = orderQuadPoints(pts);
+    if (quad) {
+      const p = lineIntersection(quad[0], quad[2], quad[1], quad[3]);
+      if (p) {
+        return { x: p.x + offsetX, y: p.y + offsetY };
+      }
+    }
+  }
+  return {
+    x: offsetX + rect.x + rect.width / 2,
+    y: offsetY + rect.y + rect.height / 2
+  };
+}
+
+function quadLooksPlausible(quad, rect) {
+  if (!Array.isArray(quad) || quad.length !== 4 || !rect) return false;
+  const [tl, tr, br, bl] = quad;
+  const minBottomY = Math.min(br.y, bl.y);
+  const maxTopY = Math.max(tl.y, tr.y);
+  const minRightX = Math.min(tr.x, br.x);
+  const maxLeftX = Math.max(tl.x, bl.x);
+  return (
+    minBottomY > maxTopY + rect.height * 0.45 &&
+    minRightX > maxLeftX + rect.width * 0.45
+  );
+}
+
+function expandPageRect(rect, cols, rows) {
+  if (!rect) return null;
+  const padLeft = Math.max(24, Math.round(rect.width * 0.04));
+  const padRight = Math.max(24, Math.round(rect.width * 0.04));
+  const padTop = Math.max(24, Math.round(rect.height * 0.03));
+  const padBottom = Math.max(48, Math.round(rect.height * 0.22));
+  const x = Math.max(0, rect.x - padLeft);
+  const y = Math.max(0, rect.y - padTop);
+  const right = Math.min(cols, rect.x + rect.width + padRight);
+  const bottom = Math.min(rows, rect.y + rect.height + padBottom);
+  return new cv.Rect(x, y, Math.max(1, right - x), Math.max(1, bottom - y));
+}
+
+function measureBinaryOccupancy(binary, rect) {
+  const x0 = Math.max(0, rect.x);
+  const y0 = Math.max(0, rect.y);
+  const x1 = Math.min(binary.cols, rect.x + rect.width);
+  const y1 = Math.min(binary.rows, rect.y + rect.height);
+  const width = Math.max(0, x1 - x0);
+  const height = Math.max(0, y1 - y0);
+  const area = Math.max(1, width * height);
+  let ink = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      if (binary.ucharAt(y, x) > 0) ink++;
+    }
+  }
+  return ink / area;
+}
+
+function estimateAnchorsFromPageGeometry(pageGeometry, layout) {
+  if (!pageGeometry?.rect) return null;
+  const layoutAnchors = Array.isArray(layout?.homography?.anchors) ? layout.homography.anchors : null;
+  const ids = ['tl', 'tr', 'br', 'bl'];
+  const quad = Array.isArray(pageGeometry.quad) && pageGeometry.quad.length === 4
+    ? pageGeometry.quad
+    : null;
+  return ids.map((id) => {
+    const fallback = { tl: [0.05, 0.05], tr: [0.95, 0.05], br: [0.95, 0.95], bl: [0.05, 0.95] }[id];
+    const layoutAnchor = layoutAnchors?.find((a) => a.id === id);
+    const nx = typeof layoutAnchor?.x === 'number' ? layoutAnchor.x : fallback[0];
+    const ny = typeof layoutAnchor?.y === 'number' ? layoutAnchor.y : fallback[1];
+    if (quad) {
+      const p = bilinearPoint(quad, nx, ny);
+      return { id, x: p.x, y: p.y };
+    }
+    return {
+      id,
+      x: pageGeometry.rect.x + pageGeometry.rect.width * nx,
+      y: pageGeometry.rect.y + pageGeometry.rect.height * ny
+    };
+  });
+}
+
+/**
+ * Stage 1 (page-first): find the worksheet page region before marker detection.
+ * Returns page geometry with bounding rect and perspective quad when available.
+ */
+function detectPageGeometry(src) {
+  const gray = new cv.Mat();
+  const blur = new cv.Mat();
+  const pageMask = new cv.Mat();
+  const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(11, 11));
+  const contours = new cv.MatVector();
+  const hierarchy = new cv.Mat();
+  try {
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+    cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+    // White worksheet page should be bright in most captures.
+    cv.threshold(blur, pageMask, 170, 255, cv.THRESH_BINARY);
+    cv.morphologyEx(pageMask, pageMask, cv.MORPH_CLOSE, kernel);
+    cv.findContours(pageMask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    const total = src.cols * src.rows;
+    let best = null;
+    let bestArea = 0;
+    for (let i = 0; i < contours.size(); i++) {
+      const cnt = contours.get(i);
+      const area = cv.contourArea(cnt);
+      if (area < total * 0.12 || area > total * 0.98) {
+        cnt.delete();
+        continue;
+      }
+      const rect = cv.boundingRect(cnt);
+      const aspect = rect.height > 0 ? rect.width / rect.height : 0;
+      if (aspect < 0.45 || aspect > 0.95) {
+        cnt.delete();
+        continue;
+      }
+      const peri = cv.arcLength(cnt, true);
+      const approx = new cv.Mat();
+      cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+    let quad = null;
+      if (approx.rows === 4) {
+        const pts = [];
+        for (let j = 0; j < 4; j++) {
+          pts.push({
+            x: approx.data32S[j * 2],
+            y: approx.data32S[j * 2 + 1]
+          });
+        }
+        quad = orderQuadPoints(pts);
+      }
+      if (quad && !quadLooksPlausible(quad, rect)) {
+        quad = null;
+      }
+      if (area > bestArea) {
+        bestArea = area;
+        best = { rect: expandPageRect(rect, src.cols, src.rows), quad };
+      }
+      approx.delete();
+      cnt.delete();
+    }
+    return best;
+  } finally {
+    gray.delete();
+    blur.delete();
+    pageMask.delete();
+    kernel.delete();
+    contours.delete();
+    hierarchy.delete();
+  }
+}
+
+function detectPageRoiRect(src) {
+  return detectPageGeometry(src)?.rect || null;
+}
+
+/**
+ * Stage 2 fallback: detect one marker candidate per page corner window.
+ * This avoids interior answer-box squares hijacking marker selection.
+ */
+function detectCornerMarkersByCornerWindows(src, pageRect, minArea, maxArea) {
+  const roiX = pageRect ? pageRect.x : 0;
+  const roiY = pageRect ? pageRect.y : 0;
+  const pageMat = pageRect
+    ? src.roi(new cv.Rect(pageRect.x, pageRect.y, pageRect.width, pageRect.height)).clone()
+    : src.clone();
+  const gray = new cv.Mat();
+  const blur = new cv.Mat();
+  const binary = new cv.Mat();
+  const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+  try {
+    cv.cvtColor(pageMat, gray, cv.COLOR_RGBA2GRAY);
+    cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+    cv.adaptiveThreshold(
+      blur,
+      binary,
+      255,
+      cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+      cv.THRESH_BINARY_INV,
+      51,
+      10
+    );
+    cv.morphologyEx(binary, binary, cv.MORPH_OPEN, kernel);
+
+    const w = pageMat.cols;
+    const h = pageMat.rows;
+    const wx = Math.max(1, Math.floor(w * 0.28));
+    const wy = Math.max(1, Math.floor(h * 0.28));
+    const windows = [
+      { id: 'tl', rect: new cv.Rect(0, 0, wx, wy), cx: 0, cy: 0 },
+      { id: 'tr', rect: new cv.Rect(w - wx, 0, wx, wy), cx: w - 1, cy: 0 },
+      { id: 'br', rect: new cv.Rect(w - wx, h - wy, wx, wy), cx: w - 1, cy: h - 1 },
+      { id: 'bl', rect: new cv.Rect(0, h - wy, wx, wy), cx: 0, cy: h - 1 }
+    ];
+
+    const picks = [];
+    for (const win of windows) {
+      const sub = binary.roi(win.rect);
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+      cv.findContours(sub, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      let best = null;
+      let bestScore = -Infinity;
+      for (let i = 0; i < contours.size(); i++) {
+        const cnt = contours.get(i);
+        const area = cv.contourArea(cnt);
+        const rect = cv.boundingRect(cnt);
+        const rectArea = Math.max(1, rect.width * rect.height);
+        const aspect = rect.height > 0 ? rect.width / rect.height : 0;
+        const fillRatio = area / rectArea;
+        const inkRatio = measureBinaryOccupancy(sub, rect);
+        const peri = cv.arcLength(cnt, true);
+        const approx = new cv.Mat();
+        cv.approxPolyDP(cnt, approx, 0.05 * peri, true);
+        if (
+          area < minArea * 0.15 ||
+          area > maxArea * 1.2 ||
+          aspect < 0.5 ||
+          aspect > 1.8 ||
+          fillRatio < 0.18
+        ) {
+          approx.delete();
+          cnt.delete();
+          continue;
+        }
+        const center = markerCenterFromApprox(approx, rect, win.rect.x, win.rect.y);
+        approx.delete();
+        if (!center) {
+          cnt.delete();
+          continue;
+        }
+        const cx = center.x;
+        const cy = center.y;
+        const d = Math.hypot(cx - win.cx, cy - win.cy);
+        const squareness = 1 - Math.min(1, Math.abs(1 - aspect));
+        const density = Math.max(fillRatio * 0.35, inkRatio);
+        const score = area * density * (0.7 + 0.3 * squareness) - d * 120;
+        if (score > bestScore) {
+          bestScore = score;
+          best = { id: win.id, x: cx + roiX, y: cy + roiY };
+        }
+        cnt.delete();
+      }
+      contours.delete();
+      hierarchy.delete();
+      sub.delete();
+      if (!best) return null;
+      picks.push(best);
+    }
+    return picks;
+  } finally {
+    pageMat.delete();
+    gray.delete();
+    blur.delete();
+    binary.delete();
+    kernel.delete();
+  }
+}
+
 /**
  * Detect 4 corner markers from image
  * @param {cv.Mat} src - Input image (OpenCV Mat)
  * @param {Object} layout - Layout JSON with homography.anchors metadata
  * @returns {Array|null} - [{id, x, y}, ...] for tl, tr, br, bl or null if failed
  */
-export function detectCornerMarkers(src, layout) {
+export function detectCornerMarkers(src, layout, options = {}) {
+  const allowFallback = options.allowFallback !== false;
+  const fullAreaRange = markerAreaRange(src.cols, src.rows, layout);
+  const fullFrameCornerAnchors = detectCornerMarkersByCornerWindows(
+    src,
+    null,
+    fullAreaRange.minArea,
+    fullAreaRange.maxArea
+  );
+  const fullFrameCornerValid =
+    anchorsPassCornerValidation(fullFrameCornerAnchors, src.cols, src.rows, 0.30) &&
+    anchorsFormPlausiblePageQuad(fullFrameCornerAnchors, src.cols, src.rows, layout);
+  if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_MARKERS) {
+    window.__SCANGRADE_DEBUG_FULL_FRAME_ANCHORS = fullFrameCornerAnchors;
+    window.__SCANGRADE_DEBUG_FULL_FRAME_VALID = fullFrameCornerValid;
+  }
+  if (fullFrameCornerValid) {
+    if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_MARKERS) {
+      window.__SCANGRADE_DEBUG_FALLBACK_USED = true;
+      window.__SCANGRADE_DEBUG_FALLBACK_VALID = true;
+      window.__SCANGRADE_DEBUG_PAGE_RECT_ESTIMATE_USED = false;
+      window.__SCANGRADE_DEBUG_FULL_FRAME_MARKERS_USED = true;
+    }
+    return fullFrameCornerAnchors;
+  }
+
+  // Stage 1: detect worksheet page ROI and limit marker detection to that region.
+  const pageGeometry = detectPageGeometry(src);
+  const pageRect = pageGeometry?.rect || null;
+  const roiX = pageRect ? pageRect.x : 0;
+  const roiY = pageRect ? pageRect.y : 0;
+  const markerSrc = pageRect
+    ? src.roi(new cv.Rect(pageRect.x, pageRect.y, pageRect.width, pageRect.height)).clone()
+    : src;
+  const ownsMarkerSrc = markerSrc !== src;
+  const workCols = markerSrc.cols;
+  const workRows = markerSrc.rows;
+
   // Convert to grayscale
   const gray = new cv.Mat();
-  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-  
-  // Threshold: black markers on white paper
+  cv.cvtColor(markerSrc, gray, cv.COLOR_RGBA2GRAY);
+
+  // Threshold: black markers on white paper (stable baseline for current worksheet photos).
   const binary = new cv.Mat();
-  cv.threshold(gray, binary, 80, 255, cv.THRESH_BINARY_INV);
-  
+  cv.threshold(gray, binary, 100, 255, cv.THRESH_BINARY_INV);
+
   // Find contours
   const contours = new cv.MatVector();
   const hierarchy = new cv.Mat();
   cv.findContours(binary, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-  
+
   const markers = [];
-  const minArea = Math.pow(layout.homography.marker_size_mm * 5, 2); // Approximate
-  const maxArea = src.cols * src.rows * 0.05; // Max 5% of image
-  
+  const { minArea, maxArea } = markerAreaRange(workCols, workRows, layout);
+
+  // Target marker positions: 5% and 95% of canvas
+  const targets = cornerTargets(workCols, workRows);
+  const targetTL = targets.tl;
+  const targetTR = targets.tr;
+  const targetBR = targets.br;
+  const targetBL = targets.bl;
+
+  const debugMarkers = typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_MARKERS;
+  const debugContours = debugMarkers ? [] : null;
+
   for (let i = 0; i < contours.size(); i++) {
     const cnt = contours.get(i);
     const area = cv.contourArea(cnt);
-    
+    const rect = cv.boundingRect(cnt);
+    const rectArea = Math.max(1, rect.width * rect.height);
+    const fillRatio = area / rectArea;
+    const inkRatio = measureBinaryOccupancy(binary, rect);
+
+    if (debugContours) {
+      const rec = { area, minArea, maxArea, fillRatio, inkRatio, x: rect.x, y: rect.y, w: rect.width, h: rect.height };
+      if (area < minArea) rec.reject = 'area_too_small';
+      else if (area > maxArea) rec.reject = 'area_too_large';
+      debugContours.push(rec);
+    }
+
     // Size filter
     if (area < minArea || area > maxArea) {
       cnt.delete();
       continue;
     }
-    
+
     // Approximate polygon - should be 4 corners (square-ish)
     const peri = cv.arcLength(cnt, true);
     const approx = new cv.Mat();
     cv.approxPolyDP(cnt, approx, 0.05 * peri, true);
-    
-    if (approx.rows === 4) {
-      // Get centroid
-      const moments = cv.moments(cnt);
-      const cx = moments.m10 / moments.m00;
-      const cy = moments.m01 / moments.m00;
-      
+
+    const aspect = rect.height > 0 ? rect.width / rect.height : 0;
+    const squareish = aspect > 0.5 && aspect < 1.8;
+    const filledish = fillRatio >= 0.18 && inkRatio >= 0.24;
+    if (approx.rows >= 4 && approx.rows <= 8 && squareish && filledish) {
+      const center = markerCenterFromApprox(approx, rect);
+      const cx = center.x;
+      const cy = center.y;
+      if (debugContours && debugContours.length > 0) {
+        const last = debugContours[debugContours.length - 1];
+        delete last.reject;
+        last.passedApprox = true;
+        last.cx = Math.round(cx);
+        last.cy = Math.round(cy);
+      }
       markers.push({
         x: cx,
         y: cy,
+        xGlobal: cx + roiX,
+        yGlobal: cy + roiY,
         area: area,
         approx: approx
       });
     } else {
+      if (debugContours && debugContours.length > 0) {
+        const last = debugContours[debugContours.length - 1];
+        delete last.reject;
+        last.reject = !filledish ? 'fill_ratio_too_low' : 'approx_not_4_corners';
+        last.approxRows = approx.rows;
+      }
       approx.delete();
     }
-    
+
     cnt.delete();
   }
-  
+
+  if (debugMarkers) {
+    try {
+      const w = binary.cols;
+      const h = binary.rows;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      const id = ctx.getImageData(0, 0, w, h);
+      for (let r = 0; r < h; r++) {
+        for (let c = 0; c < w; c++) {
+          const v = binary.ucharAt(r, c);
+          const i = (r * w + c) * 4;
+          id.data[i] = id.data[i + 1] = id.data[i + 2] = v;
+          id.data[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(id, 0, 0);
+      window.__SCANGRADE_DEBUG_BINARY_URL = canvas.toDataURL('image/png');
+    } catch (e) {
+      window.__SCANGRADE_DEBUG_BINARY_ERROR = String(e);
+    }
+    window.__SCANGRADE_DEBUG_CONTOURS = debugContours;
+    window.__SCANGRADE_DEBUG_MARKER_COUNT_AFTER_LOOP = markers.length;
+    window.__SCANGRADE_DEBUG_MIN_MAX_AREA = { minArea, maxArea, cols: workCols, rows: workRows };
+      window.__SCANGRADE_DEBUG_PAGE_ROI = pageRect
+        ? { x: pageRect.x, y: pageRect.y, width: pageRect.width, height: pageRect.height }
+        : null;
+      window.__SCANGRADE_DEBUG_PAGE_QUAD = Array.isArray(pageGeometry?.quad)
+        ? pageGeometry.quad
+        : null;
+    console.log('[ScanGrade] Marker debug: binary image in window.__SCANGRADE_DEBUG_BINARY_URL, contours in __SCANGRADE_DEBUG_CONTOURS, count=', markers.length);
+  }
+
   // Clean up
   gray.delete();
   binary.delete();
   contours.delete();
   hierarchy.delete();
-  
-  // Need exactly 4 markers
+  if (ownsMarkerSrc) markerSrc.delete();
+  const cornerWindowAnchors = detectCornerMarkersByCornerWindows(src, pageRect, minArea, maxArea);
+  const cornerWindowValid = anchorsPassCornerValidation(
+    cornerWindowAnchors
+      ? cornerWindowAnchors.map((a) => ({ id: a.id, x: a.x - roiX, y: a.y - roiY }))
+      : null,
+    workCols,
+    workRows
+  );
+  const tryFallback = () => {
+    if (!allowFallback) {
+      if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_MARKERS) {
+        window.__SCANGRADE_DEBUG_FALLBACK_USED = false;
+        window.__SCANGRADE_DEBUG_FALLBACK_VALID = false;
+        window.__SCANGRADE_DEBUG_PAGE_RECT_ESTIMATE_USED = false;
+      }
+      return null;
+    }
+    const usePageRectEstimate =
+      !cornerWindowValid &&
+      pageGeometryUsableForAnchorEstimate(pageGeometry, src.cols, src.rows, layout);
+    const pageRectEstimate = usePageRectEstimate ? estimateAnchorsFromPageGeometry(pageGeometry, layout) : null;
+    if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_MARKERS) {
+      window.__SCANGRADE_DEBUG_FALLBACK_USED = !!cornerWindowAnchors;
+      window.__SCANGRADE_DEBUG_FALLBACK_VALID = cornerWindowValid;
+      window.__SCANGRADE_DEBUG_PAGE_RECT_ESTIMATE_USED = !!pageRectEstimate;
+      window.__SCANGRADE_DEBUG_PAGE_RECT_ESTIMATE_REJECTED = !cornerWindowValid && !usePageRectEstimate;
+    }
+    return cornerWindowValid ? cornerWindowAnchors : pageRectEstimate;
+  };
+
+  if (cornerWindowValid) {
+    markers.forEach((m) => m.approx.delete());
+    if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_MARKERS) {
+      window.__SCANGRADE_DEBUG_FALLBACK_USED = true;
+      window.__SCANGRADE_DEBUG_FALLBACK_VALID = true;
+      window.__SCANGRADE_DEBUG_PAGE_RECT_ESTIMATE_USED = false;
+    }
+    return cornerWindowAnchors;
+  }
+
+  // Need at least 4 markers; if more (e.g. digits/boxes), pick 4 closest to corner targets
+  if (markers.length < 4) {
+    markers.forEach(m => m.approx.delete());
+    return tryFallback();
+  }
+  if (markers.length > 4) {
+    const dist = (m, t) => Math.hypot(m.x - t.x, m.y - t.y);
+    const targets = [targetTL, targetTR, targetBR, targetBL];
+    const chosen = [];
+    const used = new Set();
+    for (const t of targets) {
+      let best = null;
+      let bestD = Infinity;
+      for (let i = 0; i < markers.length; i++) {
+        if (used.has(i)) continue;
+        const d = dist(markers[i], t);
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      }
+      if (best != null) {
+        chosen.push(markers[best]);
+        used.add(best);
+      }
+    }
+    markers.forEach(m => {
+      if (!chosen.includes(m)) m.approx.delete();
+    });
+    markers.length = 0;
+    markers.push(...chosen);
+  }
   if (markers.length !== 4) {
     markers.forEach(m => m.approx.delete());
-    return null;
+    return tryFallback();
   }
-  
+
   // Assign tl, tr, br, bl using x+y / x-y sorting
-  // tl: min(x+y), tr: max(x-y), br: max(x+y), bl: min(x-y)
-  const sorted = markers.sort((a, b) => (a.x + a.y) - (b.x + b.y));
+  const sorted = markers.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y));
   const tl = sorted[0];
   const br = sorted[3];
-  
   const remaining = sorted.slice(1, 3);
   remaining.sort((a, b) => (a.x - a.y) - (b.x - b.y));
   const bl = remaining[0];
   const tr = remaining[1];
-  
+
+  // Validate marker positions are at 5%/95% coordinates
+  const tolerance = 0.22;
+  const tlValid = Math.abs(tl.x - targetTL.x) < workCols * tolerance && Math.abs(tl.y - targetTL.y) < workRows * tolerance;
+  const trValid = Math.abs(tr.x - targetTR.x) < workCols * tolerance && Math.abs(tr.y - targetTR.y) < workRows * tolerance;
+  const brValid = Math.abs(br.x - targetBR.x) < workCols * tolerance && Math.abs(br.y - targetBR.y) < workRows * tolerance;
+  const blValid = Math.abs(bl.x - targetBL.x) < workCols * tolerance && Math.abs(bl.y - targetBL.y) < workRows * tolerance;
+
+  if (debugMarkers) {
+    window.__SCANGRADE_DEBUG_POSITION = {
+      tolerance,
+      tl: { x: tl.x, y: tl.y, target: targetTL, valid: tlValid },
+      tr: { x: tr.x, y: tr.y, target: targetTR, valid: trValid },
+      br: { x: br.x, y: br.y, target: targetBR, valid: brValid },
+      bl: { x: bl.x, y: bl.y, target: targetBL, valid: blValid },
+      allValid: tlValid && trValid && brValid && blValid
+    };
+  }
+
+  if (!(tlValid && trValid && brValid && blValid)) {
+    markers.forEach(m => m.approx.delete());
+    return tryFallback();
+  }
+
   // Clean up approx mats (keep only the 4 we return)
   markers.forEach(m => {
     if (m !== tl && m !== tr && m !== br && m !== bl) {
       m.approx.delete();
     }
   });
-  
+
   return [
-    { id: 'tl', x: tl.x, y: tl.y },
-    { id: 'tr', x: tr.x, y: tr.y },
-    { id: 'br', x: br.x, y: br.y },
-    { id: 'bl', x: bl.x, y: bl.y }
+    { id: 'tl', x: tl.x + roiX, y: tl.y + roiY },
+    { id: 'tr', x: tr.x + roiX, y: tr.y + roiY },
+    { id: 'br', x: br.x + roiX, y: br.y + roiY },
+    { id: 'bl', x: bl.x + roiX, y: bl.y + roiY }
   ];
 }
 
 /**
  * Compute homography and warp image to template coordinates
  * @param {cv.Mat} src - Input image
- * @param {Array} anchors - [{id, x, y}, ...] from detectCornerMarkers
+ * @param {Array} anchors - [{id, x, y}, ...] from detectCornerMarkers (source pixel coords)
+ * @param {Object} layout - Layout JSON; if layout.homography.anchors has x,y in 0–1, use them as warp destination.
+ *   Anchor x,y must be the **printed marker centers** in the same page-normalized system as layout.boxes (0–1 over the physical page), not nominal “5%” unless markers are actually centered there.
  * @returns {cv.Mat} - Warped image (1700×2200)
  */
-export function warpToTemplate(src, anchors) {
-  // Source points from detected anchors
+export function warpToTemplate(src, anchors, layout) {
+  // Source points from detected anchors (order: tl, tr, br, bl)
   const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
     anchors.find(a => a.id === 'tl').x, anchors.find(a => a.id === 'tl').y,
     anchors.find(a => a.id === 'tr').x, anchors.find(a => a.id === 'tr').y,
     anchors.find(a => a.id === 'br').x, anchors.find(a => a.id === 'br').y,
     anchors.find(a => a.id === 'bl').x, anchors.find(a => a.id === 'bl').y
   ]);
-  
-  // Destination points: fixed template size
-  // Order: tl, tr, br, bl
-  const dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    0, 0,
-    WARP_WIDTH, 0,
-    WARP_WIDTH, WARP_HEIGHT,
-    0, WARP_HEIGHT
-  ]);
-  
-  // Compute homography
+
+  // Destination points: from layout homography anchors (normalized 0–1 → pixels) or fixed
+  const layoutAnchors = layout?.homography?.anchors;
+  const hasLayoutAnchors = Array.isArray(layoutAnchors) && layoutAnchors.length === 4 &&
+    ['tl', 'tr', 'br', 'bl'].every(id => {
+      const a = layoutAnchors.find(an => an.id === id);
+      return a && typeof a.x === 'number' && typeof a.y === 'number' && a.x >= 0 && a.x <= 1 && a.y >= 0 && a.y <= 1;
+    });
+
+  let dstPoints;
+  if (hasLayoutAnchors) {
+    const tl = layoutAnchors.find(a => a.id === 'tl');
+    const tr = layoutAnchors.find(a => a.id === 'tr');
+    const br = layoutAnchors.find(a => a.id === 'br');
+    const bl = layoutAnchors.find(a => a.id === 'bl');
+    dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+      tl.x * WARP_WIDTH, tl.y * WARP_HEIGHT,
+      tr.x * WARP_WIDTH, tr.y * WARP_HEIGHT,
+      br.x * WARP_WIDTH, br.y * WARP_HEIGHT,
+      bl.x * WARP_WIDTH, bl.y * WARP_HEIGHT
+    ]);
+  } else {
+    dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+      0, 0,
+      WARP_WIDTH, 0,
+      WARP_WIDTH, WARP_HEIGHT,
+      0, WARP_HEIGHT
+    ]);
+  }
+
   const H = cv.findHomography(srcPoints, dstPoints);
-  
-  // Warp
   const warped = new cv.Mat();
   cv.warpPerspective(src, warped, H, new cv.Size(WARP_WIDTH, WARP_HEIGHT));
-  
-  // Clean up
+
   srcPoints.delete();
   dstPoints.delete();
   H.delete();
-  
+
   return warped;
+}
+
+function refineBoxRectFromOutline(warped, expectedRect) {
+  const padX = Math.max(8, Math.round(expectedRect.w * 0.45));
+  const padY = Math.max(8, Math.round(expectedRect.h * 0.45));
+  const sx = Math.max(0, Math.floor(expectedRect.x - padX));
+  const sy = Math.max(0, Math.floor(expectedRect.y - padY));
+  const ex = Math.min(warped.cols, Math.ceil(expectedRect.x + expectedRect.w + padX));
+  const ey = Math.min(warped.rows, Math.ceil(expectedRect.y + expectedRect.h + padY));
+  const sw = Math.max(1, ex - sx);
+  const sh = Math.max(1, ey - sy);
+
+  const roi = warped.roi(new cv.Rect(sx, sy, sw, sh)).clone();
+  const gray = new cv.Mat();
+  const blur = new cv.Mat();
+  const binary = new cv.Mat();
+  const contours = new cv.MatVector();
+  const hierarchy = new cv.Mat();
+  try {
+    cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY);
+    cv.GaussianBlur(gray, blur, new cv.Size(3, 3), 0);
+    cv.adaptiveThreshold(
+      blur,
+      binary,
+      255,
+      cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+      cv.THRESH_BINARY_INV,
+      31,
+      6
+    );
+    cv.findContours(binary, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    let best = null;
+    let bestScore = -Infinity;
+    const expAspect = expectedRect.h > 0 ? expectedRect.w / expectedRect.h : 1;
+    const expArea = Math.max(1, expectedRect.w * expectedRect.h);
+    const expCx = expectedRect.x + expectedRect.w / 2;
+    const expCy = expectedRect.y + expectedRect.h / 2;
+
+    for (let i = 0; i < contours.size(); i++) {
+      const cnt = contours.get(i);
+      const area = cv.contourArea(cnt);
+      const rect = cv.boundingRect(cnt);
+      const rectArea = Math.max(1, rect.width * rect.height);
+      const fillRatio = area / rectArea;
+      const aspect = rect.height > 0 ? rect.width / rect.height : 0;
+      const peri = cv.arcLength(cnt, true);
+      const approx = new cv.Mat();
+      cv.approxPolyDP(cnt, approx, 0.04 * peri, true);
+
+      const globalRect = {
+        x: sx + rect.x,
+        y: sy + rect.y,
+        w: rect.width,
+        h: rect.height
+      };
+      const cx = globalRect.x + globalRect.w / 2;
+      const cy = globalRect.y + globalRect.h / 2;
+      const areaRatio = rectArea / expArea;
+      const centerDist = Math.hypot(cx - expCx, cy - expCy);
+      const aspectPenalty = Math.abs(aspect - expAspect);
+
+      const acceptable =
+        approx.rows >= 4 &&
+        approx.rows <= 8 &&
+        areaRatio >= 0.7 &&
+        areaRatio <= 2.2 &&
+        fillRatio >= 0.03 &&
+        fillRatio <= 0.45 &&
+        aspect >= Math.max(0.4, expAspect * 0.50) &&
+        aspect <= Math.min(4.8, expAspect * 1.85) &&
+        centerDist <= Math.max(expectedRect.w, expectedRect.h) * 0.85;
+
+      if (acceptable) {
+        const score =
+          500
+          - centerDist * 2.2
+          - Math.abs(areaRatio - 1) * 120
+          - aspectPenalty * 90
+          + Math.min(40, peri / 20);
+        if (score > bestScore) {
+          bestScore = score;
+          best = globalRect;
+        }
+      }
+
+      approx.delete();
+      cnt.delete();
+    }
+
+    return best;
+  } finally {
+    roi.delete();
+    gray.delete();
+    blur.delete();
+    binary.delete();
+    contours.delete();
+    hierarchy.delete();
+  }
+}
+
+function rectCenter(rect) {
+  return {
+    x: rect.x + rect.w / 2,
+    y: rect.y + rect.h / 2
+  };
+}
+
+function rectOverlapRatio(a, b) {
+  const x0 = Math.max(a.x, b.x);
+  const y0 = Math.max(a.y, b.y);
+  const x1 = Math.min(a.x + a.w, b.x + b.w);
+  const y1 = Math.min(a.y + a.h, b.y + b.h);
+  const iw = Math.max(0, x1 - x0);
+  const ih = Math.max(0, y1 - y0);
+  const intersection = iw * ih;
+  const smaller = Math.max(1, Math.min(a.w * a.h, b.w * b.h));
+  return intersection / smaller;
+}
+
+function rectSizeRatio(candidate, expected) {
+  const expectedArea = Math.max(1, expected.w * expected.h);
+  const candidateArea = Math.max(1, candidate.w * candidate.h);
+  return candidateArea / expectedArea;
+}
+
+function answerRectLooksLocal(candidate, expected) {
+  if (!candidate || !expected) return false;
+  const ec = rectCenter(expected);
+  const cc = rectCenter(candidate);
+  const dx = Math.abs(cc.x - ec.x);
+  const dy = Math.abs(cc.y - ec.y);
+  const areaRatio = rectSizeRatio(candidate, expected);
+  const aspect = candidate.h > 0 ? candidate.w / candidate.h : 0;
+  const expectedAspect = expected.h > 0 ? expected.w / expected.h : 1;
+
+  return (
+    dx <= expected.w * 1.05 &&
+    dy <= expected.h * 1.25 &&
+    areaRatio >= 0.45 &&
+    areaRatio <= 1.85 &&
+    aspect >= expectedAspect * 0.55 &&
+    aspect <= expectedAspect * 1.85
+  );
+}
+
+function unionRects(rects) {
+  const valid = (rects || []).filter(Boolean);
+  if (valid.length === 0) return null;
+  const x0 = Math.min(...valid.map((rect) => rect.x));
+  const y0 = Math.min(...valid.map((rect) => rect.y));
+  const x1 = Math.max(...valid.map((rect) => rect.x + rect.w));
+  const y1 = Math.max(...valid.map((rect) => rect.y + rect.h));
+  return {
+    x: x0,
+    y: y0,
+    w: x1 - x0,
+    h: y1 - y0
+  };
+}
+
+function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
+  const frameRects = [];
+  const expectedById = new Map(expectedRects.map((rect) => [rect.id, rect]));
+  const groups = Array.isArray(layout.question_groups) ? layout.question_groups : [];
+
+  for (const group of groups) {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : [];
+    if (ids.length < 2) continue;
+    const digitRects = ids.map((id) => expectedById.get(id)).filter(Boolean);
+    const expectedFrame = unionRects(digitRects);
+    if (!expectedFrame) continue;
+    frameRects.push({
+      ...expectedFrame,
+      id: `question-${group.question_num}`,
+      questionNum: group.question_num,
+      digitIds: ids,
+      digitRects
+    });
+  }
+
+  const assignedFrames = detectAnswerBoxRects(warped, frameRects);
+  const assignments = new Map();
+
+  for (const expectedFrame of frameRects) {
+    const detectedFrame = assignedFrames.get(expectedFrame.id);
+    const refinedFrameCandidate = answerRectLooksLocal(detectedFrame, expectedFrame)
+      ? detectedFrame
+      : refineBoxRectFromOutline(warped, expectedFrame);
+    const refinedFrame = answerRectLooksLocal(refinedFrameCandidate, expectedFrame)
+      ? refinedFrameCandidate
+      : expectedFrame;
+
+    for (const digitRect of expectedFrame.digitRects) {
+      const relX = expectedFrame.w > 0 ? (digitRect.x - expectedFrame.x) / expectedFrame.w : 0;
+      const relY = expectedFrame.h > 0 ? (digitRect.y - expectedFrame.y) / expectedFrame.h : 0;
+      const relW = expectedFrame.w > 0 ? digitRect.w / expectedFrame.w : 1 / expectedFrame.digitRects.length;
+      const relH = expectedFrame.h > 0 ? digitRect.h / expectedFrame.h : 1;
+      assignments.set(digitRect.id, {
+        x: refinedFrame.x + relX * refinedFrame.w,
+        y: refinedFrame.y + relY * refinedFrame.h,
+        w: relW * refinedFrame.w,
+        h: relH * refinedFrame.h
+      });
+    }
+  }
+
+  return assignments;
+}
+
+function binaryFillRatio(binary, rect, insetFrac = 0) {
+  if (!binary || !rect) return 1;
+  const insetX = Math.max(0, Math.round(rect.width * insetFrac));
+  const insetY = Math.max(0, Math.round(rect.height * insetFrac));
+  const x0 = Math.max(0, rect.x + insetX);
+  const y0 = Math.max(0, rect.y + insetY);
+  const x1 = Math.min(binary.cols, rect.x + rect.width - insetX);
+  const y1 = Math.min(binary.rows, rect.y + rect.height - insetY);
+  let total = 0;
+  let filled = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      total++;
+      if (binary.ucharPtr(y, x)[0] > 0) filled++;
+    }
+  }
+  return total ? filled / total : 1;
+}
+
+function medianNumber(values) {
+  const sorted = values.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function chooseBestOrderedSubset(candidates, expectedRow, expW, expH) {
+  if (candidates.length < expectedRow.length) return null;
+  const sortedCandidates = candidates.slice().sort((a, b) => a.cx - b.cx);
+  const targetCount = expectedRow.length;
+  let best = null;
+
+  const scoreSubset = (subset) => {
+    const expectedCenters = expectedRow.map((rect) => rectCenter(rect).x);
+    const actualCenters = subset.map((candidate) => candidate.cx);
+    const meanExpected = expectedCenters.reduce((sum, x) => sum + x, 0) / targetCount;
+    const meanActual = actualCenters.reduce((sum, x) => sum + x, 0) / targetCount;
+    let numerator = 0;
+    let denominator = 0;
+    for (let i = 0; i < targetCount; i++) {
+      numerator += (expectedCenters[i] - meanExpected) * (actualCenters[i] - meanActual);
+      denominator += Math.pow(expectedCenters[i] - meanExpected, 2);
+    }
+    const scale = Math.abs(denominator) > 1e-6 ? numerator / denominator : 1;
+    const offset = meanActual - scale * meanExpected;
+    const xResidual = actualCenters.reduce((sum, x, idx) => {
+      const predicted = scale * expectedCenters[idx] + offset;
+      return sum + Math.abs(x - predicted) / Math.max(1, expW);
+    }, 0) / targetCount;
+    const yMedian = medianNumber(subset.map((candidate) => candidate.cy));
+    const yResidual = subset.reduce((sum, candidate) => (
+      sum + Math.abs(candidate.cy - yMedian) / Math.max(1, expH)
+    ), 0) / targetCount;
+    const sizeScore = subset.reduce((sum, candidate) => sum + candidate.sizeScore, 0) / targetCount;
+    return xResidual + yResidual * 0.35 + sizeScore * 0.12;
+  };
+
+  const walk = (start, picked) => {
+    if (picked.length === targetCount) {
+      const score = scoreSubset(picked);
+      if (!best || score < best.score) {
+        best = { subset: picked.slice(), score };
+      }
+      return;
+    }
+    const remainingNeeded = targetCount - picked.length;
+    for (let i = start; i <= sortedCandidates.length - remainingNeeded; i++) {
+      picked.push(sortedCandidates[i]);
+      walk(i + 1, picked);
+      picked.pop();
+    }
+  };
+  walk(0, []);
+  return best;
+}
+
+function assignAnswerBoxesByGridOrder(candidates, expectedRects, expW, expH) {
+  // The template positions are ideal, but live webcam homography can retain
+  // slight projective skew. When all printed boxes are visible, physical
+  // reading order is safer than nearest-neighbor matching to ideal coordinates.
+  if (expectedRects.length !== 10 || candidates.length < 10) return null;
+
+  const expectedByRow = expectedRects
+    .slice()
+    .sort((a, b) => rectCenter(a).y - rectCenter(b).y)
+    .reduce((rows, rect, idx) => {
+      rows[idx < 5 ? 0 : 1].push(rect);
+      return rows;
+    }, [[], []])
+    .map((row) => row.sort((a, b) => rectCenter(a).x - rectCenter(b).x));
+
+  let rowCenters = [
+    medianNumber(candidates.map((candidate) => candidate.cy)) - expH,
+    medianNumber(candidates.map((candidate) => candidate.cy)) + expH
+  ];
+  for (let iter = 0; iter < 8; iter++) {
+    const rows = [[], []];
+    for (const candidate of candidates) {
+      const rowIdx = Math.abs(candidate.cy - rowCenters[0]) <= Math.abs(candidate.cy - rowCenters[1]) ? 0 : 1;
+      rows[rowIdx].push(candidate);
+    }
+    for (let rowIdx = 0; rowIdx < 2; rowIdx++) {
+      if (rows[rowIdx].length > 0) {
+        rowCenters[rowIdx] = medianNumber(rows[rowIdx].map((candidate) => candidate.cy));
+      }
+    }
+    rowCenters = rowCenters.sort((a, b) => a - b);
+  }
+
+  const candidateRows = [[], []];
+  for (const candidate of candidates) {
+    const rowIdx = Math.abs(candidate.cy - rowCenters[0]) <= Math.abs(candidate.cy - rowCenters[1]) ? 0 : 1;
+    candidateRows[rowIdx].push(candidate);
+  }
+  if (candidateRows[0].length < 5 || candidateRows[1].length < 5) return null;
+
+  const rowAssignments = [
+    chooseBestOrderedSubset(candidateRows[0], expectedByRow[0], expW, expH),
+    chooseBestOrderedSubset(candidateRows[1], expectedByRow[1], expW, expH)
+  ];
+  if (!rowAssignments[0] || !rowAssignments[1]) return null;
+  if (rowAssignments[0].score > 1.25 || rowAssignments[1].score > 1.25) return null;
+
+  const assignments = new Map();
+  for (let rowIdx = 0; rowIdx < 2; rowIdx++) {
+    const subset = rowAssignments[rowIdx].subset.slice().sort((a, b) => a.cx - b.cx);
+    const expectedRow = expectedByRow[rowIdx];
+    for (let i = 0; i < expectedRow.length; i++) {
+      assignments.set(expectedRow[i].id, subset[i].rect);
+    }
+  }
+  return assignments;
+}
+
+function detectAnswerBoxRects(warped, expectedRects) {
+  if (!Array.isArray(expectedRects) || expectedRects.length === 0) return new Map();
+
+  const expW = medianNumber(expectedRects.map((r) => r.w));
+  const expH = medianNumber(expectedRects.map((r) => r.h));
+  const expArea = Math.max(1, expW * expH);
+  const minX = Math.min(...expectedRects.map((r) => r.x)) - expW * 1.05;
+  const maxX = Math.max(...expectedRects.map((r) => r.x + r.w)) + expW * 1.05;
+  const minY = Math.min(...expectedRects.map((r) => r.y)) - expH * 1.25;
+  const maxY = Math.max(...expectedRects.map((r) => r.y + r.h)) + expH * 1.25;
+
+  const gray = new cv.Mat();
+  const blur = new cv.Mat();
+  const binary = new cv.Mat();
+  const contours = new cv.MatVector();
+  const hierarchy = new cv.Mat();
+  try {
+    cv.cvtColor(warped, gray, cv.COLOR_RGBA2GRAY);
+    cv.GaussianBlur(gray, blur, new cv.Size(3, 3), 0);
+    cv.adaptiveThreshold(
+      blur,
+      binary,
+      255,
+      cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+      cv.THRESH_BINARY_INV,
+      31,
+      6
+    );
+    cv.findContours(binary, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    const candidates = [];
+    for (let i = 0; i < contours.size(); i++) {
+      const cnt = contours.get(i);
+      const contourArea = cv.contourArea(cnt);
+      const rect = cv.boundingRect(cnt);
+      const w = rect.width;
+      const h = rect.height;
+      const rectArea = Math.max(1, w * h);
+      const fillRatio = contourArea / rectArea;
+      const aspect = h > 0 ? w / h : 0;
+      const areaRatio = rectArea / expArea;
+      const cx = rect.x + w / 2;
+      const cy = rect.y + h / 2;
+      const filledRatio = binaryFillRatio(binary, rect, 0);
+      const innerFilledRatio = binaryFillRatio(binary, rect, 0.22);
+
+      const plausible =
+        cx >= minX &&
+        cx <= maxX &&
+        cy >= minY &&
+        cy <= maxY &&
+        w >= expW * 0.45 &&
+        w <= expW * 1.55 &&
+        h >= expH * 0.45 &&
+        h <= expH * 1.65 &&
+        areaRatio >= 0.30 &&
+        areaRatio <= 2.50 &&
+        aspect >= 0.45 &&
+        aspect <= 2.20 &&
+        fillRatio >= 0.015 &&
+        fillRatio <= 0.95 &&
+        filledRatio >= 0.025 &&
+        filledRatio <= 0.58 &&
+        innerFilledRatio <= 0.42;
+
+      if (plausible) {
+        const sizeScore = Math.abs(Math.log(Math.max(0.01, areaRatio))) +
+          Math.abs(Math.log(Math.max(0.01, aspect / (expW / expH)))) +
+          Math.max(0, innerFilledRatio - 0.22) * 1.8;
+        candidates.push({
+          rect: { x: rect.x, y: rect.y, w, h },
+          cx,
+          cy,
+          areaRatio,
+          fillRatio,
+          filledRatio,
+          innerFilledRatio,
+          sizeScore
+        });
+      }
+      cnt.delete();
+    }
+
+    // De-duplicate nested/duplicate contours from thick or partially broken box outlines.
+    const deduped = [];
+    for (const candidate of candidates.sort((a, b) => a.sizeScore - b.sizeScore)) {
+      const duplicate = deduped.some((other) => {
+        const dx = candidate.cx - other.cx;
+        const dy = candidate.cy - other.cy;
+        return Math.hypot(dx, dy) < Math.max(expW, expH) * 0.35 ||
+          rectOverlapRatio(candidate.rect, other.rect) > 0.55;
+      });
+      if (!duplicate) deduped.push(candidate);
+    }
+
+    const gridAssignments = assignAnswerBoxesByGridOrder(deduped, expectedRects, expW, expH);
+    if (gridAssignments) return gridAssignments;
+
+    const pairs = [];
+    for (const expected of expectedRects) {
+      const ec = rectCenter(expected);
+      for (const candidate of deduped) {
+        const dist = Math.hypot(candidate.cx - ec.x, candidate.cy - ec.y) / Math.max(expW, expH);
+        const sizePenalty = Math.abs(Math.log(Math.max(0.01, candidate.areaRatio))) * 0.35;
+        const score = dist + sizePenalty + candidate.sizeScore * 0.12;
+        pairs.push({ expected, candidate, score });
+      }
+    }
+
+    const assignments = new Map();
+    const usedCandidates = new Set();
+    const usedExpected = new Set();
+    for (const pair of pairs.sort((a, b) => a.score - b.score)) {
+      if (pair.score > 2.15) continue;
+      if (usedExpected.has(pair.expected.id) || usedCandidates.has(pair.candidate)) continue;
+      assignments.set(pair.expected.id, pair.candidate.rect);
+      usedExpected.add(pair.expected.id);
+      usedCandidates.add(pair.candidate);
+    }
+    return assignments;
+  } finally {
+    gray.delete();
+    blur.delete();
+    binary.delete();
+    contours.delete();
+    hierarchy.delete();
+  }
 }
 
 /**
@@ -152,34 +1225,94 @@ export function warpToTemplate(src, anchors) {
  */
 export function cropBoxes(warped, layout) {
   const crops = [];
-  const scaleX = WARP_WIDTH / layout.page.width_mm;
-  const scaleY = WARP_HEIGHT / layout.page.height_mm;
-  
-  for (const box of layout.boxes) {
-    // Convert mm to pixels in warped space
-    // Use center point and half-dimensions for crop
+  const normalized = layout.page?.units === 'normalized';
+  const scaleX = normalized ? WARP_WIDTH : WARP_WIDTH / layout.page.width_mm;
+  const scaleY = normalized ? WARP_HEIGHT : WARP_HEIGHT / layout.page.height_mm;
+  // Normalized layout (e.g. sg-10-box-v1): box.x, box.y are bottom-right corner; legacy mm: box.cx, box.cy are center
+  const getRect = (box) => {
+    if (normalized) {
+      const left = (box.x - box.width) * scaleX;
+      const top = (box.y - box.height) * scaleY;
+      const w = box.width * scaleX;
+      const h = box.height * scaleY;
+      return { x: left, y: top, w, h, cx: left + w / 2, cy: top + h / 2 };
+    }
     const cx = box.cx * scaleX;
     const cy = box.cy * scaleY;
-    const halfW = (box.width * scaleX) / 2;
-    const halfH = (box.height * scaleY) / 2;
-    
-    const x = Math.max(0, Math.floor(cx - halfW));
-    const y = Math.max(0, Math.floor(cy - halfH));
-    const w = Math.floor(box.width * scaleX);
-    const h = Math.floor(box.height * scaleY);
-    
-    const rect = new cv.Rect(x, y, w, h);
+    const w = box.width * scaleX;
+    const h = box.height * scaleY;
+    return { x: cx - w / 2, y: cy - h / 2, w, h, cx, cy };
+  };
+
+  // OCR should see the handwritten digit, not the printed answer-box border.
+  // Keep boxRect as the full printed box for annotation, but crop the interior
+  // for recognition so faint pencil strokes are not drowned out by dark borders.
+  const BOX_OCR_INSET_X_FRAC = 0.12;
+  const BOX_OCR_INSET_Y_FRAC = 0.12;
+  const VIRTUAL_DIGIT_OCR_INSET_X_FRAC = 0.065;
+  const VIRTUAL_DIGIT_OCR_INSET_Y_FRAC = 0.15;
+  const layoutBoxes = Array.isArray(layout.boxes) ? layout.boxes : [];
+  const usesVirtualDigitBoxes = Array.isArray(layout.question_groups) &&
+    layout.question_groups.some((group) => Array.isArray(group?.digit_box_ids) && group.digit_box_ids.length > 1) &&
+    layoutBoxes.some((box) => Number.isFinite(box?.digit_index));
+
+  const expectedRects = layoutBoxes.map((box) => ({
+    ...getRect(box),
+    id: box.id
+  }));
+  const detectedRects = usesVirtualDigitBoxes
+    ? buildVirtualDigitBoxRects(warped, layout, expectedRects)
+    : detectAnswerBoxRects(warped, expectedRects);
+
+  for (let i = 0; i < layoutBoxes.length; i++) {
+    const box = layoutBoxes[i];
+    const expected = expectedRects[i];
+    const { x, y, w, h, cx, cy } = expected;
+    const expectedRect = { x, y, w, h };
+    const detectedRect = detectedRects.get(box.id);
+    const refinedCandidate = usesVirtualDigitBoxes
+      ? (answerRectLooksLocal(detectedRect, expectedRect) ? detectedRect : expectedRect)
+      : (answerRectLooksLocal(detectedRect, expectedRect)
+        ? detectedRect
+        : refineBoxRectFromOutline(warped, expectedRect));
+    const refinedRect = usesVirtualDigitBoxes
+      ? refinedCandidate
+      : (answerRectLooksLocal(refinedCandidate, expectedRect)
+        ? refinedCandidate
+        : expectedRect);
+    const insetX = refinedRect.w * (usesVirtualDigitBoxes ? VIRTUAL_DIGIT_OCR_INSET_X_FRAC : BOX_OCR_INSET_X_FRAC);
+    const insetY = refinedRect.h * (usesVirtualDigitBoxes ? VIRTUAL_DIGIT_OCR_INSET_Y_FRAC : BOX_OCR_INSET_Y_FRAC);
+    const innerX = refinedRect.x + insetX;
+    const innerY = refinedRect.y + insetY;
+    const innerW = Math.max(1, refinedRect.w - 2 * insetX);
+    const innerH = Math.max(1, refinedRect.h - 2 * insetY);
+    const xPx = Math.max(0, Math.floor(innerX));
+    const yPx = Math.max(0, Math.floor(innerY));
+    let widthPx = Math.max(1, Math.ceil(innerW));
+    let heightPx = Math.max(1, Math.ceil(innerH));
+    if (xPx + widthPx > warped.cols) widthPx = warped.cols - xPx;
+    if (yPx + heightPx > warped.rows) heightPx = warped.rows - yPx;
+    if (widthPx < 1 || heightPx < 1) continue;
+    const rect = new cv.Rect(xPx, yPx, widthPx, heightPx);
     const cropped = warped.roi(rect).clone();
-    
+
     crops.push({
       id: box.id,
       questionNum: box.question_num,
       image: cropped,
       centerX: cx,
-      centerY: cy
+      centerY: cy,
+      boxRect: {
+        x: Math.round(refinedRect.x),
+        y: Math.round(refinedRect.y),
+        w: Math.round(refinedRect.w),
+        h: Math.round(refinedRect.h)
+      },
+      /** Actual OCR ROI in warped pixel space (interior-only), for debug overlays */
+      cropRect: { x: xPx, y: yPx, w: widthPx, h: heightPx }
     });
   }
-  
+
   return crops;
 }
 
@@ -188,41 +1321,429 @@ export function cropBoxes(warped, layout) {
  * @param {cv.Mat} boxImg - Cropped box image (RGBA)
  * @returns {Float32Array} - Normalized 28×28 MNIST-format tensor
  */
-export function preprocessToMNIST(boxImg) {
-  // Convert to grayscale
-  const gray = new cv.Mat();
-  cv.cvtColor(boxImg, gray, cv.COLOR_RGBA2GRAY);
-  
-  // Invert (dark digit on light background → light digit on dark)
-  const inverted = new cv.Mat();
-  cv.bitwise_not(gray, inverted);
-  
-  // Resize to 28×28
-  const resized = new cv.Mat();
-  cv.resize(inverted, resized, new cv.Size(MNIST_SIZE, MNIST_SIZE));
-  
-  // Normalize to 0-1, then mean=0, std=1 (MNIST standard)
-  const floatData = new Float32Array(MNIST_SIZE * MNIST_SIZE);
-  for (let i = 0; i < MNIST_SIZE; i++) {
-    for (let j = 0; j < MNIST_SIZE; j++) {
-      floatData[i * MNIST_SIZE + j] = resized.ucharAt(i, j) / 255.0;
+function preprocessToMNISTCore(boxImg, withDebug = false) {
+  if (!boxImg || boxImg.rows === 0 || boxImg.cols === 0) {
+    return withDebug
+      ? { tensor: new Float32Array(MNIST_SIZE * MNIST_SIZE), debug: null }
+      : new Float32Array(MNIST_SIZE * MNIST_SIZE);
+  }
+  const debug = withDebug ? {} : null;
+  const extracted = extractWorksheetInk(boxImg);
+  const tensor = centerInkToMNIST(extracted.ink, extracted.width, extracted.height);
+
+  if (debug) {
+    debug.gray = matFromUint8(extracted.gray, extracted.width, extracted.height);
+    debug.inkMask = matFromFloatInk(extracted.ink, extracted.width, extracted.height);
+    debug.framed = matFromFloatInk(tensor, MNIST_SIZE, MNIST_SIZE);
+  }
+  if (debug) {
+    return { tensor, debug };
+  }
+  return tensor;
+}
+
+function getMatChannelCount(mat) {
+  if (typeof mat.channels === 'function') return mat.channels();
+  const pixels = Math.max(1, mat.rows * mat.cols);
+  return Math.max(1, Math.round((mat.data?.length || pixels) / pixels));
+}
+
+function quantile(values, q) {
+  if (!values || values.length === 0) return 0;
+  const sorted = Array.from(values).sort((a, b) => a - b);
+  const idx = Math.max(0, Math.min(sorted.length - 1, Math.round((sorted.length - 1) * q)));
+  return sorted[idx];
+}
+
+function extractWorksheetInk(boxImg) {
+  const pixelSource = getDisplayPixelSource(boxImg);
+  const { width, height, channels, data } = pixelSource;
+  const total = width * height;
+  const luminance = new Float32Array(total);
+  const saturation = new Float32Array(total);
+  const gray = new Uint8Array(total);
+
+  for (let i = 0; i < total; i++) {
+    const offset = i * channels;
+    const r = data[offset] ?? 0;
+    const g = channels > 1 ? data[offset + 1] : r;
+    const b = channels > 2 ? data[offset + 2] : r;
+    const maxc = Math.max(r, g, b);
+    const minc = Math.min(r, g, b);
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    luminance[i] = lum;
+    saturation[i] = maxc - minc;
+    gray[i] = Math.max(0, Math.min(255, Math.round(lum)));
+  }
+
+  const bg = quantile(luminance, 0.82);
+  const darkness = new Float32Array(total);
+  const positives = [];
+  for (let i = 0; i < total; i++) {
+    const value = Math.max(0, bg - luminance[i]) + Math.max(0, saturation[i] - 18) * 0.25;
+    darkness[i] = value;
+    if (value > 2) positives.push(value);
+  }
+
+  const scale = Math.max(10, quantile(positives, 0.96));
+  const ink = new Float32Array(total);
+  for (let i = 0; i < total; i++) {
+    ink[i] = Math.max(0, Math.min(1, darkness[i] / scale));
+  }
+
+  if (height >= 5 && width >= 5) {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if ((y < 2 || y >= height - 2 || x < 2 || x >= width - 2) && ink[y * width + x] > 0.75) {
+          ink[y * width + x] = 0;
+        }
+      }
     }
   }
-  
-  // Standardize (mean=0, std=1) - approximate MNIST normalization
-  const mean = floatData.reduce((a, b) => a + b) / floatData.length;
-  const std = Math.sqrt(floatData.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / floatData.length);
-  
-  for (let i = 0; i < floatData.length; i++) {
-    floatData[i] = (floatData[i] - mean) / (std + 1e-7);
+
+  removeLongEdgeLinesFromInk(ink, width, height);
+  removeDashedEdgeGuidesFromInk(ink, width, height);
+  removeSmallInkComponents(ink, width, height);
+  if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_PREPROCESS_STATS) {
+    const alphaValues = [];
+    if (channels >= 4) {
+      for (let i = 0; i < total; i++) alphaValues.push(data[i * channels + 3]);
+    }
+    window.__SCANGRADE_DEBUG_PREPROCESS_STATS.push({
+      width,
+      height,
+      channels,
+      bg,
+      scale,
+      inkMean: Array.from(ink).reduce((sum, value) => sum + value, 0) / Math.max(1, ink.length),
+      inkMax: Math.max(...ink),
+      luminanceMin: Math.min(...luminance),
+      luminanceMax: Math.max(...luminance),
+      alphaMin: alphaValues.length ? Math.min(...alphaValues) : null,
+      alphaMax: alphaValues.length ? Math.max(...alphaValues) : null,
+      firstPixels: Array.from(data.slice(0, Math.min(data.length, channels * 8)))
+    });
   }
-  
-  // Clean up
-  gray.delete();
-  inverted.delete();
-  resized.delete();
-  
-  return floatData;
+  return { ink, gray, width, height };
+}
+
+function getDisplayPixelSource(mat) {
+  if (typeof document !== 'undefined' && typeof cv !== 'undefined' && typeof cv.imshow === 'function') {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = mat.cols;
+      canvas.height = mat.rows;
+      cv.imshow(canvas, mat);
+      const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+      return {
+        width: canvas.width,
+        height: canvas.height,
+        channels: 4,
+        data: imageData.data
+      };
+    } catch (_) {
+      // Fall through to raw Mat access below.
+    }
+  }
+  return {
+    width: mat.cols,
+    height: mat.rows,
+    channels: getMatChannelCount(mat),
+    data: mat.data
+  };
+}
+
+function removeLongEdgeLinesFromInk(ink, width, height) {
+  const threshold = 0.35;
+  const rowLimit = width * 0.55;
+  const colLimit = height * 0.55;
+
+  for (let y = 0; y < height; y++) {
+    let count = 0;
+    const rowOffset = y * width;
+    for (let x = 0; x < width; x++) {
+      if (ink[rowOffset + x] > threshold) count++;
+    }
+    if (count >= rowLimit && (y < height * 0.18 || y > height * 0.82)) {
+      for (let yy = Math.max(0, y - 1); yy < Math.min(height, y + 2); yy++) {
+        const offset = yy * width;
+        for (let x = 0; x < width; x++) ink[offset + x] = 0;
+      }
+    }
+  }
+
+  for (let x = 0; x < width; x++) {
+    let count = 0;
+    for (let y = 0; y < height; y++) {
+      if (ink[y * width + x] > threshold) count++;
+    }
+    if (count >= colLimit && (x < width * 0.18 || x > width * 0.82)) {
+      for (let y = 0; y < height; y++) {
+        const offset = y * width;
+        for (let xx = Math.max(0, x - 1); xx < Math.min(width, x + 2); xx++) {
+          ink[offset + xx] = 0;
+        }
+      }
+    }
+  }
+}
+
+function removeDashedEdgeGuidesFromInk(ink, width, height) {
+  const threshold = 0.22;
+  const xEdge = Math.max(2, Math.round(width * 0.18));
+  const yEdge = Math.max(2, Math.round(height * 0.18));
+  const colLimit = height * 0.16;
+  const rowLimit = width * 0.16;
+
+  for (let x = 0; x < width; x++) {
+    const nearEdge = x <= xEdge || x >= width - xEdge - 1;
+    if (!nearEdge) continue;
+    let count = 0;
+    for (let y = 0; y < height; y++) {
+      const value = ink[y * width + x];
+      if (value > threshold) {
+        count++;
+      }
+    }
+    if (count >= colLimit) {
+      for (let y = 0; y < height; y++) {
+        const offset = y * width;
+        for (let xx = Math.max(0, x - 1); xx < Math.min(width, x + 2); xx++) {
+          if (ink[offset + xx] < 0.9) ink[offset + xx] = 0;
+        }
+      }
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    if (y > yEdge && y < height - yEdge - 1) continue;
+    let count = 0;
+    const offset = y * width;
+    for (let x = 0; x < width; x++) {
+      if (ink[offset + x] > threshold) count++;
+    }
+    if (count >= rowLimit) {
+      for (let yy = Math.max(0, y - 1); yy < Math.min(height, y + 2); yy++) {
+        const rowOffset = yy * width;
+        for (let x = 0; x < width; x++) {
+          if (ink[rowOffset + x] < 0.9) ink[rowOffset + x] = 0;
+        }
+      }
+    }
+  }
+}
+
+function removeSmallInkComponents(ink, width, height) {
+  const threshold = 0.24;
+  const total = width * height;
+  const visited = new Uint8Array(total);
+  const stack = [];
+  const pixels = [];
+  const tinyArea = Math.max(3, Math.round(total * 0.0012));
+  const smallArea = Math.max(6, Math.round(total * 0.0024));
+  const smallSpan = Math.max(3, Math.round(Math.min(width, height) * 0.13));
+
+  for (let start = 0; start < total; start++) {
+    if (visited[start] || ink[start] <= threshold) continue;
+    visited[start] = 1;
+    stack.length = 0;
+    pixels.length = 0;
+    stack.push(start);
+    let minX = width;
+    let minY = height;
+    let maxX = 0;
+    let maxY = 0;
+    let maxValue = 0;
+
+    while (stack.length) {
+      const idx = stack.pop();
+      pixels.push(idx);
+      const y = Math.floor(idx / width);
+      const x = idx - y * width;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+      maxValue = Math.max(maxValue, ink[idx]);
+
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(height - 1, y + 1); yy++) {
+        for (let xx = Math.max(0, x - 1); xx <= Math.min(width - 1, x + 1); xx++) {
+          const next = yy * width + xx;
+          if (!visited[next] && ink[next] > threshold) {
+            visited[next] = 1;
+            stack.push(next);
+          }
+        }
+      }
+    }
+
+    const area = pixels.length;
+    const spanX = maxX - minX + 1;
+    const spanY = maxY - minY + 1;
+    const remove =
+      area <= tinyArea ||
+      (area <= smallArea && Math.max(spanX, spanY) <= smallSpan && maxValue < 0.82);
+    if (remove) {
+      for (const idx of pixels) ink[idx] = 0;
+    }
+  }
+}
+
+function centerInkToMNIST(ink, width, height, threshold = 0.16, targetExtent = 20) {
+  const out = new Float32Array(MNIST_SIZE * MNIST_SIZE);
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y++) {
+    const offset = y * width;
+    for (let x = 0; x < width; x++) {
+      if (ink[offset + x] > threshold) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return out;
+
+  let boxW = maxX - minX + 1;
+  let boxH = maxY - minY + 1;
+  const padX = Math.max(2, Math.round(boxW * 0.18));
+  const padY = Math.max(2, Math.round(boxH * 0.18));
+  minX = Math.max(0, minX - padX);
+  maxX = Math.min(width - 1, maxX + padX);
+  minY = Math.max(0, minY - padY);
+  maxY = Math.min(height - 1, maxY + padY);
+  boxW = maxX - minX + 1;
+  boxH = maxY - minY + 1;
+
+  const scale = Math.min(targetExtent / boxW, targetExtent / boxH);
+  const drawW = Math.max(1, boxW * scale);
+  const drawH = Math.max(1, boxH * scale);
+  const offsetX = (MNIST_SIZE - drawW) / 2;
+  const offsetY = (MNIST_SIZE - drawH) / 2;
+
+  for (let oy = 0; oy < MNIST_SIZE; oy++) {
+    for (let ox = 0; ox < MNIST_SIZE; ox++) {
+      const sx = minX + (ox + 0.5 - offsetX) / scale;
+      const sy = minY + (oy + 0.5 - offsetY) / scale;
+      if (sx < minX || sx > maxX || sy < minY || sy > maxY) continue;
+
+      const x0 = Math.max(0, Math.min(width - 1, Math.floor(sx)));
+      const y0 = Math.max(0, Math.min(height - 1, Math.floor(sy)));
+      const x1 = Math.min(width - 1, x0 + 1);
+      const y1 = Math.min(height - 1, y0 + 1);
+      const fx = sx - x0;
+      const fy = sy - y0;
+      const top = ink[y0 * width + x0] * (1 - fx) + ink[y0 * width + x1] * fx;
+      const bottom = ink[y1 * width + x0] * (1 - fx) + ink[y1 * width + x1] * fx;
+      out[oy * MNIST_SIZE + ox] = Math.max(0, Math.min(1, top * (1 - fy) + bottom * fy));
+    }
+  }
+
+  return out;
+}
+
+function matFromUint8(values, width, height) {
+  const mat = new cv.Mat(height, width, cv.CV_8UC1);
+  mat.data.set(values);
+  return mat;
+}
+
+function matFromFloatInk(values, width, height) {
+  const mat = new cv.Mat(height, width, cv.CV_8UC1);
+  for (let i = 0; i < values.length; i++) {
+    mat.data[i] = Math.max(0, Math.min(255, Math.round(values[i] * 255)));
+  }
+  return mat;
+}
+
+function removePrintedBoxLines(invertedGray) {
+  const cleaned = invertedGray.clone();
+  const binary = new cv.Mat();
+  cv.threshold(invertedGray, binary, 90, 255, cv.THRESH_BINARY);
+
+  const lineMask = cv.Mat.zeros(invertedGray.rows, invertedGray.cols, cv.CV_8UC1);
+  const horizontal = new cv.Mat();
+  const vertical = new cv.Mat();
+  const hKernel = cv.getStructuringElement(
+    cv.MORPH_RECT,
+    new cv.Size(Math.max(9, Math.round(invertedGray.cols * 0.42)), 1)
+  );
+  const vKernel = cv.getStructuringElement(
+    cv.MORPH_RECT,
+    new cv.Size(1, Math.max(9, Math.round(invertedGray.rows * 0.42)))
+  );
+  cv.morphologyEx(binary, horizontal, cv.MORPH_OPEN, hKernel);
+  cv.morphologyEx(binary, vertical, cv.MORPH_OPEN, vKernel);
+
+  addEdgeLineComponents(horizontal, lineMask, 'horizontal');
+  addEdgeLineComponents(vertical, lineMask, 'vertical');
+
+  const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+  cv.dilate(lineMask, lineMask, dilateKernel);
+  const linePixels = cv.countNonZero(lineMask);
+  const maxSafeLinePixels = Math.round(invertedGray.rows * invertedGray.cols * 0.22);
+  if (linePixels > 0 && linePixels <= maxSafeLinePixels) {
+    cleaned.setTo(new cv.Scalar(0), lineMask);
+  }
+
+  binary.delete();
+  lineMask.delete();
+  horizontal.delete();
+  vertical.delete();
+  hKernel.delete();
+  vKernel.delete();
+  dilateKernel.delete();
+  return cleaned;
+}
+
+function addEdgeLineComponents(sourceMask, targetMask, orientation) {
+  const contours = new cv.MatVector();
+  const hierarchy = new cv.Mat();
+  cv.findContours(sourceMask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+  const cols = sourceMask.cols;
+  const rows = sourceMask.rows;
+  for (let i = 0; i < contours.size(); i++) {
+    const contour = contours.get(i);
+    const r = cv.boundingRect(contour);
+    const isHorizontal =
+      orientation === 'horizontal' &&
+      r.width >= cols * 0.42 &&
+      (r.y <= rows * 0.28 || r.y + r.height >= rows * 0.72);
+    const isVertical =
+      orientation === 'vertical' &&
+      r.height >= rows * 0.42 &&
+      (r.x <= cols * 0.28 || r.x + r.width >= cols * 0.72);
+    if (isHorizontal || isVertical) {
+      for (let yy = r.y; yy < r.y + r.height; yy++) {
+        for (let xx = r.x; xx < r.x + r.width; xx++) {
+          if (sourceMask.ucharAt(yy, xx) > 0) {
+            targetMask.ucharPtr(yy, xx)[0] = 255;
+          }
+        }
+      }
+    }
+    contour.delete();
+  }
+  contours.delete();
+  hierarchy.delete();
+}
+
+export function preprocessToMNIST(boxImg) {
+  return preprocessToMNISTCore(boxImg, false);
+}
+
+/**
+ * Same preprocessing pipeline as preprocessToMNIST, but also returns intermediate Mats for inspection.
+ * Caller must delete returned debug Mats when done.
+ */
+export function preprocessToMNISTWithDebug(boxImg) {
+  return preprocessToMNISTCore(boxImg, true);
 }
 
 /**
@@ -241,20 +1762,20 @@ export function processWorksheet(input, layout) {
   } else {
     throw new Error('Input must be cv.Mat or HTMLCanvasElement');
   }
-  
+
   // Step 1: Detect corner markers
   const anchors = detectCornerMarkers(src, layout);
   if (!anchors) {
     src.delete();
     return null;
   }
-  
-  // Step 2: Warp to template
-  const warped = warpToTemplate(src, anchors);
-  
+
+  // Step 2: Warp to template (destination from layout.homography.anchors when present)
+  const warped = warpToTemplate(src, anchors, layout);
+
   // Step 3: Crop boxes
   const crops = cropBoxes(warped, layout);
-  
+
   // Step 4: Preprocess each crop
   const processed = crops.map(crop => ({
     id: crop.id,
@@ -264,13 +1785,19 @@ export function processWorksheet(input, layout) {
     centerX: crop.centerX,
     centerY: crop.centerY
   }));
-  
+
   // Clean up source (warped kept for preview, caller must delete)
   src.delete();
-  
+
   return {
     warpedImage: warped,
-    rawCrops: crops.map(c => ({ id: c.id, image: c.image })),
+    rawCrops: crops.map(c => ({
+      id: c.id,
+      questionNum: c.questionNum,
+      image: c.image,
+      boxRect: c.boxRect,
+      cropRect: c.cropRect
+    })),
     processedTensors: processed
   };
 }
@@ -285,7 +1812,7 @@ export function processWorksheet(input, layout) {
  */
 export function drawDebugOverlay(canvas, anchors, layout, scaleX = 1, scaleY = 1) {
   const ctx = canvas.getContext('2d');
-  
+
   // Draw anchor markers
   ctx.strokeStyle = '#00ff00';
   ctx.lineWidth = 3;
@@ -293,17 +1820,17 @@ export function drawDebugOverlay(canvas, anchors, layout, scaleX = 1, scaleY = 1
     ctx.beginPath();
     ctx.arc(anchor.x * scaleX, anchor.y * scaleY, 20, 0, Math.PI * 2);
     ctx.stroke();
-    
+
     ctx.fillStyle = '#00ff00';
     ctx.font = 'bold 24px sans-serif';
     ctx.fillText(anchor.id, anchor.x * scaleX + 25, anchor.y * scaleY);
   });
-  
+
   // Draw box centers (if layout provided)
   if (layout && layout.boxes) {
     ctx.strokeStyle = '#ff0000';
     ctx.lineWidth = 2;
-    
+
     // Note: these positions are in mm, need conversion to pixels
     // This is simplified - real overlay would need scale factors
     ctx.fillStyle = '#ff0000';

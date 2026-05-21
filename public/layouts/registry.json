@@ -1,0 +1,59 @@
+{
+  "generated_at": "2026-05-21T03:02:59.555Z",
+  "templates": [
+    {
+      "template_id": "g2-add-within-20-v1",
+      "layout_id": "g2-add-within-20-v1",
+      "human_code": "SG-G2-A-001",
+      "title": "Addition Within 20",
+      "worksheet_url": "worksheets/grade2-addition-within-20-v1.svg",
+      "layout_url": "layouts/g2-add-within-20-v1.json",
+      "qr_payload": {
+        "schema_version": 1,
+        "template_id": "g2-add-within-20-v1",
+        "template_version": 1,
+        "sheet_instance_id": "g2-add-within-20-v1-classroom-set",
+        "layout_id": "g2-add-within-20-v1",
+        "answer_key_checksum": "f0ce9bfe8e6b"
+      },
+      "total_questions": 10,
+      "answer_box_count": 20
+    },
+    {
+      "template_id": "g2-sub-within-20-v1",
+      "layout_id": "g2-sub-within-20-v1",
+      "human_code": "SG-G2-B-001",
+      "title": "Subtraction Within 20",
+      "worksheet_url": "worksheets/grade2-subtraction-within-20-v1.svg",
+      "layout_url": "layouts/g2-sub-within-20-v1.json",
+      "qr_payload": {
+        "schema_version": 1,
+        "template_id": "g2-sub-within-20-v1",
+        "template_version": 1,
+        "sheet_instance_id": "g2-sub-within-20-v1-classroom-set",
+        "layout_id": "g2-sub-within-20-v1",
+        "answer_key_checksum": "09042d877797"
+      },
+      "total_questions": 10,
+      "answer_box_count": 20
+    },
+    {
+      "template_id": "g2-mixed-within-50-v1",
+      "layout_id": "g2-mixed-within-50-v1",
+      "human_code": "SG-G2-C-001",
+      "title": "Mixed Within 50",
+      "worksheet_url": "worksheets/grade2-mixed-within-50-v1.svg",
+      "layout_url": "layouts/g2-mixed-within-50-v1.json",
+      "qr_payload": {
+        "schema_version": 1,
+        "template_id": "g2-mixed-within-50-v1",
+        "template_version": 1,
+        "sheet_instance_id": "g2-mixed-within-50-v1-classroom-set",
+        "layout_id": "g2-mixed-within-50-v1",
+        "answer_key_checksum": "f4ccdad5079b"
+      },
+      "total_questions": 10,
+      "answer_box_count": 20
+    }
+  ]
+}

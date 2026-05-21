@@ -2,6 +2,7 @@
 
 ## NORTH STAR
 Build low-friction assessment infrastructure for primary teachers.
+Primary workflow: students scan completed worksheets on shared iPads, and results are saved for teacher review when needed.
 
 ## PRIORITY 1 — Reduce Teacher Friction
 Every feature must:
@@ -9,6 +10,11 @@ Every feature must:
 - Improve classroom usability
 - Reduce cognitive load
 If it increases complexity without friction reduction → reject.
+
+Classroom default:
+- Optimize for 3-4 shared iPads used by students independently
+- Assume worksheets are captured on a table or floor, not under a fixed stand
+- Treat teacher review as an async follow-up step, not the primary live workflow
 
 ## PRIORITY 2 — Strengthen Worksheet Engine
 - Standardize ScanGrade-compatible sheet format
@@ -33,6 +39,7 @@ Reliability > speed.
 - Ship 3 strong products
 - Improve conversion before scaling
 - Avoid feature creep
+- Validate the shared-iPad student capture loop before building admin-heavy tooling
 
 ## DRIFT SIGNALS
 Drifting if:

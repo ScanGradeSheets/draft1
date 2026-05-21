@@ -1,0 +1,3 @@
+# For scripts/verify_onnx_python.py (Python 3.9+)
+onnxruntime>=1.17
+numpy>=1.24

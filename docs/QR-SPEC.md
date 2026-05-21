@@ -3,6 +3,7 @@
 ## Overview
 
 QR codes encode worksheet metadata, answer keys, and geometric layout information for reliable auto-grading. All processing happens on-device; the QR contains everything needed to interpret the worksheet.
+The primary capture workflow is student self-scan on shared iPads, with results saved for later teacher review.
 
 ---
 
@@ -86,6 +87,10 @@ Each anchor has:
 - `x`: Horizontal position in template space (0.0 = left edge, 1.0 = right edge)
 - `y`: Vertical position in template space (0.0 = top edge, 1.0 = bottom edge)
 
+Marker shape standard:
+- Use solid black squares, not circles.
+- Keep marker geometry visually simple and highly contrastive for handheld iPad capture on tables or floors.
+
 #### `marker_size` (number)
 - Normalized size of the anchor markers (0.08 = 8% of page width)
 - Used by detector to find marker centers precisely
@@ -112,10 +117,10 @@ pixelY = normalizedY * warpedImageHeight
 
 ## Layout Definition (Separate File)
 
-Pre-defined layouts live in `src/layouts/`:
+Pre-defined layout files are served by the app at `/layouts/` (from `public/layouts/` at runtime). Example:
 
 ```javascript
-// layouts/sg-20-box-grid-v2.json
+// public/layouts/sg-20-box-grid-v2.json (fetched as /layouts/sg-20-box-grid-v2.json)
 {
   "layout_id": "sg-20-box-grid-v2",
   "page": {
@@ -206,6 +211,12 @@ The worksheet template must print:
 2. **Data QR**: Contains the encoded payload (typically upper-right corner or separate)
 
 3. **Digit boxes**: Printed to match `layout.boxes` positions exactly
+
+4. **Optional student name area**: If used, reserve a consistent top-of-page region for either:
+   - manual student selection in the app, or
+   - a future OCR-assisted read of a handwritten name line
+
+For now, name capture should not be required for the OCR pipeline to succeed.
 
 ---
 

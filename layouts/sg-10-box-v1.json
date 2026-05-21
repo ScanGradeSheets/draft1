@@ -1,0 +1,30 @@
+{
+  "layout_id": "sg-10-box-v1",
+  "version": 1,
+  "answer_key": [8, 4, 1, 9, 2, 7, 0, 5, 3, 6],
+  "page": {
+    "aspect_ratio": 0.773,
+    "units": "normalized"
+  },
+  "boxes": [
+    {"id": 0, "question_num": 1,  "x": 0.204, "y": 0.294, "width": 0.102, "height": 0.079, "expected_type": "digit"},
+    {"id": 1, "question_num": 2,  "x": 0.380, "y": 0.294, "width": 0.102, "height": 0.079, "expected_type": "digit"},
+    {"id": 2, "question_num": 3,  "x": 0.556, "y": 0.294, "width": 0.102, "height": 0.079, "expected_type": "digit"},
+    {"id": 3, "question_num": 4,  "x": 0.733, "y": 0.294, "width": 0.102, "height": 0.079, "expected_type": "digit"},
+    {"id": 4, "question_num": 5,  "x": 0.908, "y": 0.294, "width": 0.102, "height": 0.079, "expected_type": "digit"},
+    {"id": 5, "question_num": 6,  "x": 0.204, "y": 0.544, "width": 0.102, "height": 0.079, "expected_type": "digit"},
+    {"id": 6, "question_num": 7,  "x": 0.380, "y": 0.544, "width": 0.102, "height": 0.079, "expected_type": "digit"},
+    {"id": 7, "question_num": 8,  "x": 0.556, "y": 0.544, "width": 0.102, "height": 0.079, "expected_type": "digit"},
+    {"id": 8, "question_num": 9,  "x": 0.733, "y": 0.544, "width": 0.102, "height": 0.079, "expected_type": "digit"},
+    {"id": 9, "question_num": 10, "x": 0.908, "y": 0.544, "width": 0.102, "height": 0.079, "expected_type": "digit"}
+  ],
+  "homography": {
+    "anchors": [
+      {"id": "tl", "x": 0.0900, "y": 0.0696},
+      {"id": "tr", "x": 0.9100, "y": 0.0696},
+      {"id": "br", "x": 0.9100, "y": 0.9304},
+      {"id": "bl", "x": 0.0900, "y": 0.9304}
+    ],
+    "marker_size": 0.08
+  }
+}
