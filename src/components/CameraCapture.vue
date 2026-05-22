@@ -56,6 +56,26 @@
               &times;
             </button>
           </div>
+          <div class="student-correction-manual">
+            <input
+              v-model="manualCorrectionText"
+              type="text"
+              aria-label="Enter answer"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              enterkeyhint="done"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              :maxlength="activeCorrectionMaxLength"
+              :placeholder="activeCorrectionPlaceholder"
+              @input="normalizeManualCorrectionInput"
+              @keydown.enter.prevent="applyManualCorrectionText"
+            >
+            <button type="button" class="btn btn-primary student-correction-save" @click="applyManualCorrectionText">
+              Save
+            </button>
+          </div>
           <div v-if="activeCorrectionChoices.length" class="student-correction-choices">
             <button
               v-for="choice in activeCorrectionChoices"
@@ -65,20 +85,6 @@
               @click="applyCorrectionChoice(choice)"
             >
               {{ choice.text }}
-            </button>
-          </div>
-          <div class="student-correction-manual">
-            <input
-              v-model="manualCorrectionText"
-              aria-label="Enter answer"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              :maxlength="activeCorrectionMaxLength"
-              :placeholder="activeCorrectionPlaceholder"
-              @keydown.enter.prevent="applyManualCorrectionText"
-            >
-            <button type="button" class="btn btn-primary student-correction-save" @click="applyManualCorrectionText">
-              Save
             </button>
           </div>
           <p v-if="correctionError" class="student-correction-error">{{ correctionError }}</p>
@@ -551,7 +557,7 @@ const activeCorrectionRegion = computed(() => {
 const correctionPanelStyle = computed(() => {
   const region = activeCorrectionRegion.value
   if (!region) return {}
-  const panelWidthPct = 38
+  const panelWidthPct = 48
   const centerY = region.topPct + region.heightPct / 2
   const spaceRight = 100 - (region.leftPct + region.widthPct)
   const placeRight = spaceRight >= panelWidthPct + 4 || region.leftPct < 48
@@ -698,6 +704,7 @@ function openCorrection(region) {
   activeCorrectionQuestion.value = region
   const currentText = activeCorrectionCurrentText.value
   manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
+  normalizeManualCorrectionInput()
   correctionError.value = ''
 }
 
@@ -718,6 +725,7 @@ async function applyCorrectionChoice(choice) {
 }
 
 async function applyManualCorrectionText() {
+  normalizeManualCorrectionInput()
   const group = activeCorrectionGroup.value
   const slotCount = Math.max(1, Array.isArray(group?.digit_box_ids) ? group.digit_box_ids.length : 1)
   const cells = parseManualAnswerText(manualCorrectionText.value, slotCount)
@@ -728,6 +736,17 @@ async function applyManualCorrectionText() {
     return
   }
   await applyManualCorrectionCells(cells)
+}
+
+function normalizeManualCorrectionInput(event) {
+  const maxLength = activeCorrectionMaxLength.value
+  const rawText = event?.target?.value ?? manualCorrectionText.value
+  const normalized = String(rawText || '')
+    .replace(/[^\d_]/g, '')
+    .slice(0, maxLength)
+  if (event?.target && event.target.value !== normalized) event.target.value = normalized
+  manualCorrectionText.value = normalized
+  if (correctionError.value) correctionError.value = ''
 }
 
 async function applyManualCorrectionCells(cells) {
@@ -1841,7 +1860,7 @@ function composeStudentAnnotatedImage(
         const now = new Date()
         const text = `${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()}`
         const topQuestionY = Math.min(...questionRects.map((rect) => rect.y))
-        const fontSize = Math.max(22, Math.min(33, warpedW * 0.0165))
+        const fontSize = Math.max(28, Math.min(42, warpedW * 0.021))
         const spacing = Math.max(2.2, fontSize * 0.18)
         const estimatedW = text.length * fontSize * 0.62 + (text.length - 1) * spacing
         const topRightAnchor = Array.isArray(layout?.homography?.anchors)
@@ -1855,7 +1874,7 @@ function composeStudentAnnotatedImage(
           ? Math.max(warpedW * 0.54, Math.min(warpedW - estimatedW - warpedW * 0.05, markerCenterX - estimatedW * 0.9))
           : Math.min(warpedW * 0.84, warpedW - estimatedW - warpedW * 0.055)
         const y = topRightAnchor
-          ? Math.min(warpedH * 0.145, Math.max(markerBottom + fontSize * 0.35, markerCenterY + warpedH * 0.04))
+          ? Math.min(warpedH * 0.155, Math.max(markerBottom + fontSize * 0.42, markerCenterY + warpedH * 0.045))
           : Math.max(warpedH * 0.068, Math.min(warpedH * 0.145, topQuestionY - warpedH * 0.09))
         ctx.save()
         ctx.translate(x + jitter(707, 2.5), y + jitter(709, 1.8))
@@ -2069,7 +2088,7 @@ function composeStudentAnnotatedImage(
         const y = hasQr
           ? Math.min(qrTop - warpedH * 0.025, Math.max(maxQuestionBottom + warpedH * 0.09, qrTop - warpedH * 0.045))
           : Math.min(warpedH * 0.82, Math.max(maxQuestionBottom + warpedH * 0.08, warpedH * 0.59))
-        const fontSize = Math.max(46, Math.min(78, warpedW * 0.04))
+        const fontSize = Math.max(58, Math.min(96, warpedW * 0.052))
         drawScoreMark(scoreText, x, y, {
           color: ratio >= 0.7 ? TEACHER_INK.green : ratio >= 0.5 ? TEACHER_INK.amber : TEACHER_INK.red,
           fontSize,
@@ -3628,12 +3647,13 @@ onUnmounted(stopStream)
 .student-correction-panel--image {
   position: absolute;
   z-index: 4;
-  width: min(208px, 36%);
+  width: min(236px, 44%);
+  min-width: 186px;
   max-width: calc(100% - 20px);
-  max-height: min(72%, 270px);
+  max-height: min(76%, 286px);
   overflow: auto;
   margin: 0;
-  padding: 10px;
+  padding: 10px 10px 11px;
   transform: translateY(-50%);
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
 }
@@ -3648,6 +3668,8 @@ onUnmounted(stopStream)
 }
 
 .student-correction-panel--image .correction-choice-btn {
+  flex: 1 1 calc(50% - 3px);
+  min-width: 0;
   padding: 8px 12px;
 }
 
@@ -3717,6 +3739,10 @@ onUnmounted(stopStream)
   flex-wrap: wrap;
 }
 
+.student-correction-choices {
+  margin-top: 7px;
+}
+
 .correction-choice-btn {
   min-width: 48px;
   padding: 10px 14px;
@@ -3727,7 +3753,7 @@ onUnmounted(stopStream)
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 7px;
-  margin: 10px 0 0;
+  margin: 0;
   color: #1d1d1f;
   font-size: 14px;
   font-weight: 700;
@@ -3745,7 +3771,29 @@ onUnmounted(stopStream)
 }
 
 .student-correction-save {
+  min-width: 0;
   padding: 8px 12px;
+}
+
+.student-correction-panel--image .student-correction-save {
+  flex: 0 0 auto;
+  min-width: 64px;
+  padding: 8px 11px;
+}
+
+@media (max-width: 430px) {
+  .student-correction-panel--image {
+    width: min(232px, 50%);
+    min-width: 178px;
+  }
+
+  .student-correction-panel--image .student-correction-manual {
+    grid-template-columns: 1fr;
+  }
+
+  .student-correction-panel--image .student-correction-save {
+    width: 100%;
+  }
 }
 
 .student-correction-error {
