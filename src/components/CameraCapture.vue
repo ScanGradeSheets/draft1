@@ -41,12 +41,21 @@
           :style="correctionPanelStyle"
           @click.stop
         >
-          <p class="student-correction-title">
-            Fix {{ activeCorrectionQuestion.label }}
-          </p>
-          <p class="student-correction-subtext">
-            Current read: <strong>{{ activeCorrectionCurrentText }}</strong>
-          </p>
+          <div class="student-correction-title">
+            <span class="student-correction-label" :aria-label="activeCorrectionQuestion.label">
+              {{ scantronAnswerLabel(activeCorrectionQuestion.label) }}
+            </span>
+            <strong>Fix</strong>
+            <span class="student-correction-current">{{ activeCorrectionCurrentText }}</span>
+            <button
+              type="button"
+              class="student-correction-close"
+              aria-label="Close"
+              @click="cancelCorrection"
+            >
+              &times;
+            </button>
+          </div>
           <div v-if="activeCorrectionChoices.length" class="student-correction-choices">
             <button
               v-for="choice in activeCorrectionChoices"
@@ -55,29 +64,24 @@
               class="btn btn-secondary correction-choice-btn"
               @click="applyCorrectionChoice(choice)"
             >
-              Use {{ choice.text }}
+              {{ choice.text }}
             </button>
           </div>
-          <label class="student-correction-manual">
-            <span>Enter answer</span>
+          <div class="student-correction-manual">
             <input
               v-model="manualCorrectionText"
+              aria-label="Enter answer"
               inputmode="numeric"
               pattern="[0-9]*"
               :maxlength="activeCorrectionMaxLength"
               :placeholder="activeCorrectionPlaceholder"
               @keydown.enter.prevent="applyManualCorrectionText"
             >
-          </label>
-          <p v-if="correctionError" class="student-correction-error">{{ correctionError }}</p>
-          <div class="student-correction-actions">
-            <button type="button" class="btn btn-secondary" @click="cancelCorrection">
-              Cancel
-            </button>
-            <button type="button" class="btn btn-primary" @click="applyManualCorrectionText">
-              Update answer
+            <button type="button" class="btn btn-primary student-correction-save" @click="applyManualCorrectionText">
+              Save
             </button>
           </div>
+          <p v-if="correctionError" class="student-correction-error">{{ correctionError }}</p>
         </div>
       </div>
 
@@ -250,7 +254,7 @@
             class="student-answer-item"
             :class="[
               `student-answer-item--${group.status}`,
-              { 'student-answer-item--clickable': group.status === 'review' }
+              { 'student-answer-item--clickable': isAnswerGroupEditable(group) }
             ]"
             @click="openCorrectionByGroup(group)"
           >
@@ -530,7 +534,7 @@ const correctionRegions = computed(() => {
     : []
   const seenQuestions = new Set()
   return regions.filter((region) => {
-    if (!region?.reviewNeeded) return false
+    if (!isCorrectionRegionEditable(region)) return false
     const key = region.questionNum ?? region.key
     if (seenQuestions.has(key)) return false
     seenQuestions.add(key)
@@ -604,7 +608,7 @@ const activeCorrectionMaxLength = computed(() => {
 })
 
 const activeCorrectionPlaceholder = computed(() =>
-  activeCorrectionMaxLength.value > 1 ? 'ex. 37' : 'ex. 8'
+  activeCorrectionMaxLength.value > 1 ? '37' : '8'
 )
 
 const studentScoreText = computed(() => {
@@ -679,15 +683,26 @@ function correctionHotspotStyle(region) {
   }
 }
 
+function isCorrectionRegionEditable(region) {
+  return !!(region?.reviewNeeded || region?.manualCorrected)
+}
+
+function isAnswerGroupEditable(group) {
+  if (!group) return false
+  if (group.status === 'review' || group.manualCorrected) return true
+  return correctionRegions.value.some((region) => region.questionNum === group.questionNum)
+}
+
 function openCorrection(region) {
-  if (!region?.reviewNeeded) return
+  if (!isCorrectionRegionEditable(region)) return
   activeCorrectionQuestion.value = region
-  manualCorrectionText.value = ''
+  const currentText = activeCorrectionCurrentText.value
+  manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
   correctionError.value = ''
 }
 
 function openCorrectionByGroup(group) {
-  if (group?.status !== 'review') return
+  if (!isAnswerGroupEditable(group)) return
   const region = correctionRegions.value.find((item) => item.questionNum === group.questionNum)
   if (region) openCorrection(region)
 }
@@ -2324,6 +2339,7 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) 
     const expectedDigitCount = /^\d+$/.test(answerText) ? answerText.length : predictionCells.length
     const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
     const hasReview = groupPredictions.some((prediction) => prediction.reviewNeeded)
+    const manualCorrected = groupPredictions.some((prediction) => prediction.manualCorrected)
     const status =
       hasReview ? 'review' :
       correct === true ? 'correct' :
@@ -2346,6 +2362,7 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) 
       answerText: predictedAnswerText,
       correct,
       reviewNeeded: hasReview || correct !== true,
+      manualCorrected,
       status
     }
   })
@@ -2415,6 +2432,7 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
     if (!rect) return null
     const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
     const hasReview = groupPredictions.some((prediction) => prediction?.reviewNeeded)
+    const manualCorrected = groupPredictions.some((prediction) => prediction?.manualCorrected)
     const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
     const padX = Math.max(rect.h * 0.42, rect.w * 0.14)
     const padY = Math.max(rect.h * 0.38, rect.w * 0.06)
@@ -2437,7 +2455,8 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
       leftPct: (target.x / warpedW) * 100,
       topPct: (target.y / warpedH) * 100,
       widthPct: (target.w / warpedW) * 100,
-      heightPct: (target.h / warpedH) * 100
+      heightPct: (target.h / warpedH) * 100,
+      manualCorrected
     }
   }).filter(Boolean)
 }
@@ -3609,44 +3628,80 @@ onUnmounted(stopStream)
 .student-correction-panel--image {
   position: absolute;
   z-index: 4;
-  width: min(236px, 38%);
+  width: min(208px, 36%);
   max-width: calc(100% - 20px);
-  max-height: min(76%, 320px);
+  max-height: min(72%, 270px);
   overflow: auto;
   margin: 0;
-  padding: 12px;
+  padding: 10px;
   transform: translateY(-50%);
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
 }
 
 .student-correction-panel--image .student-correction-title {
-  font-size: 16px;
-}
-
-.student-correction-panel--image .student-correction-subtext {
-  margin-bottom: 10px;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .student-correction-panel--image .student-correction-choices,
 .student-correction-panel--image .student-correction-actions {
-  gap: 8px;
+  gap: 6px;
 }
 
 .student-correction-panel--image .correction-choice-btn {
-  padding: 9px 11px;
+  padding: 8px 12px;
 }
 
 .student-correction-panel--image .student-correction-manual input {
-  padding: 9px 10px;
+  padding: 8px 9px;
   font-size: 20px;
 }
 
 .student-correction-title {
-  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 9px;
   color: #1d1d1f;
   font-size: 18px;
   font-weight: 800;
+}
+
+.student-correction-label {
+  width: 25px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1.5px solid #c7ccd1;
+  border-radius: 999px;
+  color: #4f565f;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 650;
+}
+
+.student-correction-current {
+  margin-left: auto;
+  padding: 3px 7px;
+  border: 1px solid #e0d28b;
+  border-radius: 999px;
+  color: #4f565f;
+  background: #fffef8;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.student-correction-close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #6e6e73;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 1px;
+  cursor: pointer;
 }
 
 .student-correction-subtext {
@@ -3663,14 +3718,16 @@ onUnmounted(stopStream)
 }
 
 .correction-choice-btn {
-  min-width: 0;
+  min-width: 48px;
   padding: 10px 14px;
+  font-weight: 800;
 }
 
 .student-correction-manual {
   display: grid;
-  gap: 6px;
-  margin: 12px 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  margin: 10px 0 0;
   color: #1d1d1f;
   font-size: 14px;
   font-weight: 700;
@@ -3687,8 +3744,12 @@ onUnmounted(stopStream)
   letter-spacing: 0;
 }
 
+.student-correction-save {
+  padding: 8px 12px;
+}
+
 .student-correction-error {
-  margin: -4px 0 10px;
+  margin: 7px 0 0;
   color: #b42318;
   font-size: 13px;
   font-weight: 700;
