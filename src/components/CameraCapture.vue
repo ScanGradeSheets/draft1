@@ -407,10 +407,12 @@ const props = defineProps({
   autoStart: { type: Boolean, default: false }
 })
 const DEFAULT_LAYOUT_URL = publicUrl('layouts/sg-10-box-v1.json')
-const LOW_CONFIDENCE_THRESHOLD = 0.86
-const LOW_MARGIN_THRESHOLD = 0.18
-const AUTO_CHECK_CONFIDENCE_THRESHOLD = 0.9
-const AUTO_CHECK_MARGIN_THRESHOLD = 0.25
+const ROBUST_RETRY_CONFIDENCE_THRESHOLD = 0.86
+const ROBUST_RETRY_MARGIN_THRESHOLD = 0.18
+const LOW_CONFIDENCE_THRESHOLD = 0.78
+const LOW_MARGIN_THRESHOLD = 0.08
+const AUTO_CHECK_CONFIDENCE_THRESHOLD = 0.45
+const AUTO_CHECK_MARGIN_THRESHOLD = 0.06
 const AUTO_X_CONFIDENCE_THRESHOLD = 0.995
 const AUTO_X_MARGIN_THRESHOLD = 0.75
 
@@ -1574,83 +1576,344 @@ function composeStudentAnnotatedImage(
 
       const jitter = (seed, amount) => (seededUnit(seed) - 0.5) * 2 * amount
 
-      const drawHandStroke = (segments, { color, width, seed = 1 }) => {
+      const TEACHER_INK = {
+        green: '#207a4d',
+        red: '#b33d35',
+        amber: '#c66f22',
+        blue: '#245aa4'
+      }
+
+      const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+      const hexToRgb = (hex) => {
+        const clean = String(hex).replace('#', '')
+        const value = Number.parseInt(clean, 16)
+        return {
+          r: (value >> 16) & 255,
+          g: (value >> 8) & 255,
+          b: value & 255
+        }
+      }
+
+      const varyInk = (hex, seed, amount = 14) => {
+        const base = hexToRgb(hex)
+        const warm = jitter(seed + 401, amount)
+        const cool = jitter(seed + 409, amount * 0.7)
+        return `rgb(${Math.round(clamp(base.r + warm, 0, 255))}, ${Math.round(clamp(base.g + jitter(seed + 407, amount * 0.75), 0, 255))}, ${Math.round(clamp(base.b + cool, 0, 255))})`
+      }
+
+      const transformLocalPoints = (cx, cy, size, points, angle, scaleX = 1, scaleY = 1) => {
+        const cos = Math.cos(angle)
+        const sin = Math.sin(angle)
+        return points.map(([px, py]) => {
+          const sx = px * size * scaleX
+          const sy = py * size * scaleY
+          return [
+            cx + sx * cos - sy * sin,
+            cy + sx * sin + sy * cos
+          ]
+        })
+      }
+
+      const drawHandStroke = (segments, { color, width, seed = 1, passes = null }) => {
+        const strokePasses = passes || [
+          { alpha: 0.12, widthScale: 1.72, spread: 0.24 },
+          { alpha: 0.7, widthScale: 1, spread: 0.11 },
+          { alpha: 0.26, widthScale: 0.5, spread: 0.06 }
+        ]
         ctx.save()
         ctx.strokeStyle = color
-        ctx.lineWidth = width
+        ctx.globalCompositeOperation = 'multiply'
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        for (let pass = 0; pass < 2; pass++) {
-          ctx.globalAlpha = pass === 0 ? 0.94 : 0.38
-          ctx.lineWidth = width + (pass === 0 ? 0 : Math.max(1, width * 0.14))
+        strokePasses.forEach((passConfig, pass) => {
+          ctx.globalAlpha = passConfig.alpha
+          ctx.lineWidth = Math.max(1, width * passConfig.widthScale)
           segments.forEach((segment, segmentIndex) => {
             ctx.beginPath()
             const start = [
-              segment[0][0] + jitter(seed + pass * 17 + segmentIndex * 5, width * 0.06),
-              segment[0][1] + jitter(seed + pass * 23 + segmentIndex * 7, width * 0.06)
+              segment[0][0] + jitter(seed + pass * 17 + segmentIndex * 5, width * passConfig.spread),
+              segment[0][1] + jitter(seed + pass * 23 + segmentIndex * 7, width * passConfig.spread)
             ]
             ctx.moveTo(start[0], start[1])
             for (let i = 1; i < segment.length; i++) {
-              const px = segment[i][0] + jitter(seed + pass * 29 + i * 11 + segmentIndex, width * 0.08)
-              const py = segment[i][1] + jitter(seed + pass * 31 + i * 13 + segmentIndex, width * 0.08)
+              const px = segment[i][0] + jitter(seed + pass * 29 + i * 11 + segmentIndex, width * passConfig.spread)
+              const py = segment[i][1] + jitter(seed + pass * 31 + i * 13 + segmentIndex, width * passConfig.spread)
               ctx.lineTo(px, py)
             }
             ctx.stroke()
           })
+        })
+        ctx.restore()
+      }
+
+      const drawInkDot = (cx, cy, radius, color, seed) => {
+        ctx.save()
+        ctx.fillStyle = color
+        ctx.globalCompositeOperation = 'multiply'
+        for (let pass = 0; pass < 4; pass++) {
+          ctx.globalAlpha = pass === 0 ? 0.34 : 0.16
+          ctx.beginPath()
+          ctx.ellipse(
+            cx + jitter(seed + pass * 17, radius * 0.22),
+            cy + jitter(seed + pass * 19, radius * 0.18),
+            Math.max(1.5, radius * (1.08 + jitter(seed + pass * 23, 0.2))),
+            Math.max(1.5, radius * (0.82 + jitter(seed + pass * 29, 0.18))),
+            jitter(seed + pass * 31, 0.35),
+            0,
+            Math.PI * 2
+          )
+          ctx.fill()
         }
         ctx.restore()
       }
 
-      const drawTeacherCircle = (cx, cy, rx, ry, color, seed) => {
+      const indicatorAnchor = (rect, seed) => {
+        const size = Math.max(30, Math.min(rect.h * 1.02, warpedW * 0.058))
+        let x = rect.x + rect.w + size * (0.48 + seededUnit(seed + 71) * 0.08) + jitter(seed + 79, size * 0.045)
+        let y = rect.y + rect.h * (0.52 + jitter(seed + 73, 0.025)) + jitter(seed + 83, size * 0.025)
+        const rightLimit = warpedW - size * 0.72
+        if (x > rightLimit) {
+          x = rightLimit + jitter(seed + 89, size * 0.025)
+        }
+        y = Math.max(size * 0.65, Math.min(warpedH - size * 0.65, y))
+        return { x, y, size }
+      }
+
+      const drawReviewMark = (rect, seed) => {
+        const reviewInk = '#d7ab32'
+        const cx = rect.x + rect.w * (0.5 + jitter(seed + 205, 0.018))
+        const cy = rect.y + rect.h * (0.5 + jitter(seed + 207, 0.032))
+        const rx = Math.max(18, (rect.w * 0.56 + rect.h * 0.14) * (0.98 + seededUnit(seed + 211) * 0.07))
+        const ry = Math.max(16, rect.h * (0.56 + seededUnit(seed + 213) * 0.08))
+        const angle = jitter(seed + 193, 0.055)
+        const pointsPerLoop = 42
+
         ctx.save()
-        ctx.strokeStyle = color
+        ctx.globalCompositeOperation = 'source-over'
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        ctx.globalAlpha = 0.72
-        ctx.lineWidth = Math.max(3.5, Math.min(5.75, Math.min(rx, ry) * 0.1))
-        const points = 22
-        ctx.beginPath()
-        for (let i = 0; i <= points; i++) {
-          const t = (i / points) * Math.PI * 2
-          const wobble = 1 + jitter(seed + i, 0.025)
-          const x = cx + Math.cos(t) * rx * wobble
-          const y = cy + Math.sin(t) * ry * (1 + jitter(seed + i * 3, 0.022))
-          if (i === 0) ctx.moveTo(x, y)
-          else ctx.lineTo(x, y)
+        for (let pass = 0; pass < 2; pass++) {
+          const passSeed = seed + pass * 97
+          const start = -Math.PI * 0.08 + jitter(passSeed + 1, 0.16)
+          const end = Math.PI * 2 + start + jitter(passSeed + 3, 0.14)
+          ctx.beginPath()
+          for (let i = 0; i <= pointsPerLoop; i++) {
+            const t = start + ((end - start) * i) / pointsPerLoop
+            const wobbleX = 1 + jitter(passSeed + i * 7, 0.045)
+            const wobbleY = 1 + jitter(passSeed + i * 11, 0.055)
+            const localX = Math.cos(t) * rx * wobbleX
+            const localY = Math.sin(t) * ry * wobbleY
+            const x = cx + localX * Math.cos(angle) - localY * Math.sin(angle) + jitter(passSeed + i * 13, 0.75)
+            const y = cy + localX * Math.sin(angle) + localY * Math.cos(angle) + jitter(passSeed + i * 17, 0.75)
+            if (i === 0) ctx.moveTo(x, y)
+            else ctx.lineTo(x, y)
+          }
+          ctx.strokeStyle = varyInk(reviewInk, passSeed + 23, 9)
+          ctx.globalAlpha = pass === 0 ? 0.72 : 0.42
+          ctx.lineWidth = Math.max(3.2, Math.min(6.4, rect.h * (0.07 + seededUnit(passSeed + 29) * 0.018)))
+          ctx.stroke()
         }
-        ctx.stroke()
         ctx.restore()
       }
 
       const drawCheck = (rect, seed) => {
-        const markLeft = rect.x + rect.w + rect.h * (0.18 + seededUnit(seed + 2) * 0.08)
-        const markTop = rect.y + rect.h * (0.16 + seededUnit(seed + 4) * 0.08)
+        const { x, y, size } = indicatorAnchor(rect, seed)
+        const color = varyInk(TEACHER_INK.green, seed + 17, 20)
+        const angle = jitter(seed + 101, 0.22)
+        const scaleX = 0.86 + seededUnit(seed + 103) * 0.32
+        const scaleY = 0.84 + seededUnit(seed + 107) * 0.28
+        const points = transformLocalPoints(
+          x,
+          y,
+          size,
+          [
+            [-0.4 + jitter(seed + 1, 0.03), 0.06 + jitter(seed + 2, 0.06)],
+            [-0.25 + jitter(seed + 3, 0.04), 0.18 + jitter(seed + 4, 0.045)],
+            [-0.11 + jitter(seed + 5, 0.04), 0.32 + jitter(seed + 6, 0.055)],
+            [0.12 + jitter(seed + 7, 0.05), -0.01 + jitter(seed + 8, 0.04)],
+            [0.48 + jitter(seed + 9, 0.055), -0.41 + jitter(seed + 10, 0.055)]
+          ],
+          angle,
+          scaleX,
+          scaleY
+        )
         drawHandStroke(
-          [[
-            [markLeft, markTop + rect.h * 0.34],
-            [markLeft + rect.h * 0.18, markTop + rect.h * 0.56],
-            [markLeft + rect.h * 0.55, markTop]
-          ]],
-          { color: '#2da44e', width: Math.max(7, rect.h * 0.13), seed }
+          [points],
+          {
+            color,
+            width: Math.max(3.8, size * (0.092 + seededUnit(seed + 109) * 0.03)),
+            seed,
+            passes: [
+              { alpha: 0.08, widthScale: 1.9, spread: 0.34 },
+              { alpha: 0.17, widthScale: 1.34, spread: 0.22 },
+              { alpha: 0.58, widthScale: 0.92, spread: 0.13 },
+              { alpha: 0.2, widthScale: 0.42, spread: 0.06 }
+            ]
+          }
         )
       }
 
       const drawX = (rect, seed) => {
-        const markRight = rect.x + rect.w + rect.h * (0.24 + seededUnit(seed + 6) * 0.08)
-        const centerY = rect.y + rect.h / 2
-        drawHandStroke(
+        const { x, y, size } = indicatorAnchor(rect, seed)
+        const color = varyInk(TEACHER_INK.red, seed + 23, 14)
+        const angle = jitter(seed + 131, 0.12)
+        const first = transformLocalPoints(
+          x,
+          y,
+          size,
           [
-            [
-              [markRight - rect.h * 0.52, centerY - rect.h * 0.28],
-              [markRight, centerY + rect.h * 0.28]
-            ],
-            [
-              [markRight, centerY - rect.h * 0.28],
-              [markRight - rect.h * 0.52, centerY + rect.h * 0.28]
-            ]
+            [-0.35 + jitter(seed + 1, 0.035), -0.31 + jitter(seed + 2, 0.04)],
+            [0.02 + jitter(seed + 3, 0.04), -0.01 + jitter(seed + 4, 0.03)],
+            [0.29 + jitter(seed + 5, 0.04), 0.3 + jitter(seed + 6, 0.04)]
           ],
-          { color: '#dc4c43', width: Math.max(5, rect.h * 0.1), seed }
+          angle
         )
+        const second = transformLocalPoints(
+          x,
+          y,
+          size,
+          [
+            [0.3 + jitter(seed + 7, 0.04), -0.34 + jitter(seed + 8, 0.04)],
+            [-0.02 + jitter(seed + 9, 0.035), 0.01 + jitter(seed + 10, 0.035)],
+            [-0.32 + jitter(seed + 11, 0.04), 0.31 + jitter(seed + 12, 0.04)]
+          ],
+          angle + jitter(seed + 133, 0.05)
+        )
+        drawHandStroke(
+          [first, second],
+          {
+            color,
+            width: Math.max(3.2, size * 0.075),
+            seed,
+            passes: [
+              { alpha: 0.16, widthScale: 1.24, spread: 0.12 },
+              { alpha: 0.7, widthScale: 1, spread: 0.06 },
+              { alpha: 0.24, widthScale: 0.44, spread: 0.04 }
+            ]
+          }
+        )
+      }
+
+      const drawStampedText = (text, startX, y, spacing, seed, fontSize, opacityScale = 1) => {
+        let x = startX
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i]
+          const width = ctx.measureText(ch).width
+          if (ch !== ' ') {
+            for (let pass = 0; pass < 3; pass++) {
+              const charSeed = seed + i * 37 + pass * 11
+              ctx.save()
+              ctx.globalAlpha = Math.min(
+                0.76,
+                (pass === 0 ? 0.4 : 0.16) * (0.55 + seededUnit(charSeed + 5) * 0.62) * opacityScale
+              )
+              ctx.translate(
+                x + jitter(charSeed + 1, fontSize * 0.04),
+                y + jitter(charSeed + 3, fontSize * 0.04)
+              )
+              ctx.scale(0.76 + jitter(charSeed + 7, 0.035), 1.04 + jitter(charSeed + 9, 0.02))
+              ctx.fillText(ch, 0, 0)
+              ctx.restore()
+            }
+          }
+          x += width * 0.82 + spacing + jitter(seed + i * 13, 0.32)
+        }
+      }
+
+      const drawDateStamp = (questionRects) => {
+        if (!Array.isArray(questionRects) || questionRects.length === 0) return
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+        const now = new Date()
+        const text = `${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()}`
+        const topQuestionY = Math.min(...questionRects.map((rect) => rect.y))
+        const fontSize = Math.max(22, Math.min(33, warpedW * 0.0165))
+        const spacing = Math.max(2.2, fontSize * 0.18)
+        const estimatedW = text.length * fontSize * 0.62 + (text.length - 1) * spacing
+        const topRightAnchor = Array.isArray(layout?.homography?.anchors)
+          ? layout.homography.anchors.find((anchor) => anchor?.id === 'tr')
+          : null
+        const markerSize = Number.isFinite(layout?.homography?.marker_size) ? layout.homography.marker_size : 0.08
+        const markerCenterX = topRightAnchor ? topRightAnchor.x * warpedW : null
+        const markerCenterY = topRightAnchor ? topRightAnchor.y * warpedH : null
+        const markerBottom = topRightAnchor ? markerCenterY + markerSize * warpedH * 0.58 : null
+        const x = topRightAnchor
+          ? Math.max(warpedW * 0.54, Math.min(warpedW - estimatedW - warpedW * 0.05, markerCenterX - estimatedW * 0.9))
+          : Math.min(warpedW * 0.84, warpedW - estimatedW - warpedW * 0.055)
+        const y = topRightAnchor
+          ? Math.min(warpedH * 0.145, Math.max(markerBottom + fontSize * 0.35, markerCenterY + warpedH * 0.04))
+          : Math.max(warpedH * 0.068, Math.min(warpedH * 0.145, topQuestionY - warpedH * 0.09))
+        ctx.save()
+        ctx.translate(x + jitter(707, 2.5), y + jitter(709, 1.8))
+        ctx.rotate(-0.048 + jitter(711, 0.02))
+        ctx.font = `500 ${fontSize}px "Courier New", "Lucida Console", Menlo, Monaco, monospace`
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'middle'
+        ctx.fillStyle = varyInk(TEACHER_INK.blue, 701, 10)
+        ctx.globalCompositeOperation = 'multiply'
+        drawStampedText(text, 0, 0, spacing, 719, fontSize, 1.28)
+        ctx.restore()
+      }
+
+      const scoreGlyphs = {
+        '0': [[[-0.06, -0.42], [-0.24, -0.31], [-0.31, -0.05], [-0.25, 0.24], [-0.05, 0.42], [0.17, 0.32], [0.27, 0.06], [0.19, -0.27], [-0.06, -0.42]]],
+        '1': [[[-0.16, -0.22], [0.03, -0.39], [0.02, 0.39]], [[-0.12, 0.4], [0.18, 0.39]]],
+        '2': [[[-0.23, -0.27], [-0.08, -0.42], [0.14, -0.4], [0.28, -0.24], [0.18, -0.04], [-0.12, 0.18], [-0.25, 0.39], [0.28, 0.38]]],
+        '3': [[[-0.22, -0.32], [-0.03, -0.43], [0.2, -0.32], [0.1, -0.08], [-0.04, -0.01], [0.15, 0.04], [0.25, 0.25], [0.05, 0.42], [-0.22, 0.32]]],
+        '4': [[[0.18, -0.42], [-0.23, 0.1], [0.25, 0.08]], [[0.16, -0.39], [0.13, 0.42]]],
+        '5': [[[0.24, -0.39], [-0.17, -0.38], [-0.22, -0.05], [-0.04, -0.11], [0.19, -0.02], [0.26, 0.23], [0.07, 0.41], [-0.22, 0.33]]],
+        '6': [[[0.18, -0.34], [-0.05, -0.39], [-0.25, -0.12], [-0.22, 0.21], [0, 0.43], [0.25, 0.27], [0.2, 0.04], [-0.03, -0.03], [-0.21, 0.12]]],
+        '7': [[[-0.25, -0.36], [0.29, -0.37], [0.02, 0.05], [-0.13, 0.43]]],
+        '8': [[[-0.02, -0.42], [-0.22, -0.31], [-0.19, -0.09], [0.03, -0.01], [0.23, -0.13], [0.19, -0.34], [-0.02, -0.42]], [[0.03, -0.01], [-0.22, 0.09], [-0.22, 0.31], [0.01, 0.43], [0.24, 0.31], [0.21, 0.09], [0.03, -0.01]]],
+        '9': [[[0.19, 0.38], [0.12, 0.03], [0.24, -0.23], [0.04, -0.42], [-0.19, -0.34], [-0.24, -0.1], [-0.04, 0.05], [0.16, -0.02]]],
+        '/': [[[0.2, -0.44], [-0.18, 0.46]]]
+      }
+
+      const drawScoreMark = (text, centerX, y, { color, fontSize, seed }) => {
+        const chars = Array.from(text)
+        const advances = chars.map((ch) => ch === '/' ? fontSize * 0.34 : fontSize * 0.48)
+        const spacing = fontSize * 0.07
+        const totalWidth = advances.reduce((sum, width) => sum + width, 0) + spacing * Math.max(0, chars.length - 1)
+        let cursor = -totalWidth / 2
+        const baseAngle = -0.11 + jitter(seed + 1, 0.045)
+        ctx.save()
+        ctx.translate(centerX + jitter(seed + 3, fontSize * 0.14), y + jitter(seed + 5, fontSize * 0.08))
+        ctx.rotate(baseAngle)
+        chars.forEach((ch, index) => {
+          const glyph = scoreGlyphs[ch]
+          const advance = advances[index]
+          if (!glyph) {
+            cursor += advance + spacing
+            return
+          }
+          const charSeed = seed + index * 53
+          const charCenterX = cursor + advance / 2 + jitter(charSeed + 7, fontSize * 0.045)
+          const charCenterY = jitter(charSeed + 9, fontSize * 0.055)
+          const charAngle = jitter(charSeed + 11, 0.08)
+          const scaleX = ch === '/' ? 0.82 : 0.92 + seededUnit(charSeed + 13) * 0.18
+          const scaleY = 0.9 + seededUnit(charSeed + 17) * 0.16
+          const segments = glyph.map((segment, segmentIndex) => transformLocalPoints(
+            charCenterX + jitter(charSeed + segmentIndex * 7, fontSize * 0.01),
+            charCenterY + jitter(charSeed + segmentIndex * 11, fontSize * 0.012),
+            fontSize,
+            segment,
+            charAngle,
+            scaleX,
+            scaleY
+          ))
+          drawHandStroke(segments, {
+            color: varyInk(color, charSeed + 19, color === TEACHER_INK.green ? 18 : 12),
+            width: Math.max(4, fontSize * (0.078 + seededUnit(charSeed + 23) * 0.018)),
+            seed: charSeed,
+            passes: [
+              { alpha: 0.07, widthScale: 1.8, spread: 0.24 },
+              { alpha: 0.2, widthScale: 1.22, spread: 0.15 },
+              { alpha: 0.54, widthScale: 0.86, spread: 0.09 },
+              { alpha: 0.18, widthScale: 0.42, spread: 0.04 }
+            ]
+          })
+          cursor += advance + spacing
+        })
+        ctx.restore()
       }
 
       const drawManualAnswer = (rects, cells, seed) => {
@@ -1704,14 +1967,20 @@ function composeStudentAnnotatedImage(
       const cropById = new Map(rawCrops.map((crop, index) => [crop.id ?? index, crop]))
       const predictionById = new Map(predictions.map((prediction, index) => [prediction.id ?? index, prediction]))
       const questionGroups = Array.isArray(layout?.question_groups) ? layout.question_groups : []
+      const questionRectsByIndex = questionGroups.map((group) => {
+        const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+        return unionRects(ids.map((id) => {
+          const crop = cropById.get(id)
+          return crop?.boxRect || crop?.cropRect
+        }))
+      })
+      const questionRects = questionRectsByIndex.filter(Boolean)
 
       if (questionGroups.length > 0) {
+        drawDateStamp(questionRects)
         questionGroups.forEach((group, index) => {
           const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-          const rect = unionRects(ids.map((id) => {
-            const crop = cropById.get(id)
-            return crop?.boxRect || crop?.cropRect
-          }))
+          const rect = questionRectsByIndex[index]
           if (!rect) return
           const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
           const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
@@ -1731,16 +2000,7 @@ function composeStudentAnnotatedImage(
             )
           }
           if (hasReview) {
-            const cx = rect.x + rect.w / 2
-            const cy = rect.y + rect.h / 2
-            drawTeacherCircle(
-              cx,
-              cy,
-              rect.w * 0.52 + rect.h * 0.07 + jitter(seed, rect.h * 0.025),
-              rect.h * 0.56 + jitter(seed + 3, rect.h * 0.025),
-              '#f0c744',
-              seed
-            )
+            drawReviewMark(rect, seed)
           } else if (correct === true) {
             drawCheck(rect, seed)
           } else if (correct === false) {
@@ -1749,20 +2009,28 @@ function composeStudentAnnotatedImage(
           ctx.restore()
         })
       } else {
+        const grouped = new Map()
         rawCrops.forEach((crop, index) => {
           const prediction = predictions[index]
-          if (!prediction) return
-          const rect = crop.boxRect || crop.cropRect
-          const seed = (index + 1) * 97
+          const questionNum = crop.questionNum ?? prediction?.questionNum ?? index + 1
+          if (!grouped.has(questionNum)) grouped.set(questionNum, [])
+          grouped.get(questionNum).push({ crop, prediction, index })
+        })
+        Array.from(grouped.entries()).forEach(([questionNum, items], groupIndex) => {
+          const rect = unionRects(items.map(({ crop }) => crop.boxRect || crop.cropRect))
+          const groupPredictions = items.map(({ prediction }) => prediction).filter(Boolean)
+          if (!rect || !groupPredictions.length) return
+          const numericQuestionNum = Number(questionNum)
+          const seed = (groupIndex + 1) * 97 + (Number.isFinite(numericQuestionNum) ? numericQuestionNum : 0)
+          const hasReview = groupPredictions.some((prediction) => prediction.reviewNeeded)
+          const correctPredictions = groupPredictions.filter((prediction) => typeof prediction.correct === 'boolean')
           ctx.save()
 
-          if (prediction.reviewNeeded) {
-            const cx = rect.x + rect.w / 2
-            const cy = rect.y + rect.h / 2
-            drawTeacherCircle(cx, cy, rect.w * 0.58 + jitter(seed, rect.w * 0.02), rect.h * 0.58 + jitter(seed + 3, rect.h * 0.02), '#f0c744', seed)
-          } else if (typeof prediction.correct === 'boolean') {
-            if (prediction.correct) drawCheck(rect, seed)
-            else drawX(rect, seed)
+          if (hasReview) {
+            drawReviewMark(rect, seed)
+          } else if (correctPredictions.length > 0) {
+            if (correctPredictions.every((prediction) => prediction.correct === true)) drawCheck(rect, seed)
+            else if (correctPredictions.some((prediction) => prediction.correct === false)) drawX(rect, seed)
           }
           ctx.restore()
         })
@@ -1771,46 +2039,27 @@ function composeStudentAnnotatedImage(
       if (Array.isArray(questionCorrect) && questionCorrect.length > 0) {
         const score = questionCorrect.filter(Boolean).length
         const total = questionCorrect.length
-        const reviewCount = questionGroups.reduce((count, group) => {
-          const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-          const needsReview = ids.some((id) => predictionById.get(id)?.reviewNeeded)
-          return count + (needsReview ? 1 : 0)
-        }, 0)
-        const checkedCount = Math.max(0, total - reviewCount)
-        const phrase = score / total >= 0.8 ? 'Great job!' : score / total >= 0.6 ? 'Good work!' : 'Keep practicing!'
-        const scoreText = reviewCount > 0
-          ? `${checkedCount} checked, ${reviewCount} review`
-          : `${score}/${total} ${phrase}`
-        const questionRects = questionGroups
-          .map((group) => unionRects((group?.digit_box_ids || []).map((id) => {
-            const crop = cropById.get(id)
-            return crop?.boxRect || crop?.cropRect
-          })))
-          .filter(Boolean)
+        const ratio = score / total
+        const scoreText = `${score}/${total}`
         const maxQuestionBottom = questionRects.length
           ? Math.max(...questionRects.map((rect) => rect.y + rect.h))
           : warpedH * 0.56
         const qr = layout?.metadata?.qr_position
-        const qrTop = qr && Number.isFinite(qr.y) ? qr.y * warpedH : warpedH * 0.8
-        const x = warpedW * 0.5
-        const y = Math.min(Math.max(maxQuestionBottom + warpedH * 0.075, warpedH * 0.58), qrTop - warpedH * 0.035)
-        const fontSize = Math.max(42, Math.min(74, warpedW * 0.038))
-        ctx.save()
-        ctx.translate(x + jitter(9001, 8), y + jitter(9002, 5))
-        ctx.rotate(jitter(9003, 0.018))
-        ctx.font = `700 ${fontSize}px "Marker Felt", "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.lineJoin = 'round'
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.56)'
-        ctx.lineWidth = Math.max(5, fontSize * 0.11)
-        ctx.strokeText(scoreText, 0, 0)
-        ctx.fillStyle = reviewCount > 0 ? '#c49b16' : '#2da44e'
-        ctx.globalAlpha = 0.96
-        ctx.fillText(scoreText, 0, 0)
-        ctx.globalAlpha = 0.32
-        ctx.fillText(scoreText, jitter(9004, 1.8), jitter(9005, 1.5))
-        ctx.restore()
+        const hasQr = qr && Number.isFinite(qr.x) && Number.isFinite(qr.y)
+        const qrTop = hasQr ? qr.y * warpedH : warpedH * 0.8
+        const qrRight = hasQr && Number.isFinite(qr.width) ? (qr.x + qr.width) * warpedW : warpedW * 0.57
+        const x = hasQr
+          ? Math.min(warpedW * 0.735, Math.max(qrRight + warpedW * 0.075, warpedW * 0.675))
+          : warpedW * 0.67
+        const y = hasQr
+          ? Math.min(qrTop - warpedH * 0.025, Math.max(maxQuestionBottom + warpedH * 0.09, qrTop - warpedH * 0.045))
+          : Math.min(warpedH * 0.82, Math.max(maxQuestionBottom + warpedH * 0.08, warpedH * 0.59))
+        const fontSize = Math.max(46, Math.min(78, warpedW * 0.04))
+        drawScoreMark(scoreText, x, y, {
+          color: ratio >= 0.7 ? TEACHER_INK.green : ratio >= 0.5 ? TEACHER_INK.amber : TEACHER_INK.red,
+          fontSize,
+          seed: 9001
+        })
       }
 
       resolve(canvas.toDataURL('image/jpeg', 0.92))
@@ -2572,7 +2821,7 @@ const runRealOCR = async () => {
       let digitResult = await recognizeDigits(data)
       const baseTopK = digitResult[0].topK || []
       const baseTopGap = baseTopK.length >= 2 ? (baseTopK[0].confidence - baseTopK[1].confidence) : 1
-      if (digitResult[0].confidence < LOW_CONFIDENCE_THRESHOLD || baseTopGap < LOW_MARGIN_THRESHOLD) {
+      if (digitResult[0].confidence < ROBUST_RETRY_CONFIDENCE_THRESHOLD || baseTopGap < ROBUST_RETRY_MARGIN_THRESHOLD) {
         digitResult = await recognizeDigitsRobust(data, digitResult[0])
       }
       const digit = digitResult[0].digit
@@ -2587,15 +2836,14 @@ const runRealOCR = async () => {
       const autoXAllowed =
         digitResult[0].confidence >= AUTO_X_CONFIDENCE_THRESHOLD &&
         topGap >= AUTO_X_MARGIN_THRESHOLD
-      const mismatchNeedsReview =
-        correct === false && !autoXAllowed
-      const matchNeedsReview =
-        correct === true && !autoCheckAllowed
-      const reviewNeeded =
+      const lowSignal =
         digitResult[0].confidence < LOW_CONFIDENCE_THRESHOLD ||
-        topGap < LOW_MARGIN_THRESHOLD ||
-        mismatchNeedsReview ||
-        matchNeedsReview
+        topGap < LOW_MARGIN_THRESHOLD
+      const reviewNeeded = correct === true
+        ? !autoCheckAllowed
+        : correct === false
+          ? !autoXAllowed
+          : lowSignal
       predictions.push({
         id: proc.id,
         questionNum: proc.questionNum,
