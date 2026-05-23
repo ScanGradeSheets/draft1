@@ -891,6 +891,58 @@ function answerRectLooksLocal(candidate, expected) {
   );
 }
 
+function answerFrameLooksLocal(candidate, expected) {
+  if (!candidate || !expected) return false;
+  const ec = rectCenter(expected);
+  const cc = rectCenter(candidate);
+  const dx = Math.abs(cc.x - ec.x);
+  const dy = Math.abs(cc.y - ec.y);
+  const areaRatio = rectSizeRatio(candidate, expected);
+  const aspect = candidate.h > 0 ? candidate.w / candidate.h : 0;
+  const expectedAspect = expected.h > 0 ? expected.w / expected.h : 1;
+
+  return (
+    dx <= expected.w * 0.48 &&
+    dy <= expected.h * 0.62 &&
+    areaRatio >= 0.66 &&
+    areaRatio <= 1.46 &&
+    aspect >= expectedAspect * 0.72 &&
+    aspect <= expectedAspect * 1.34
+  );
+}
+
+function digitRectLooksLocal(candidate, expected) {
+  if (!candidate || !expected) return false;
+  const ec = rectCenter(expected);
+  const cc = rectCenter(candidate);
+  const dx = Math.abs(cc.x - ec.x);
+  const dy = Math.abs(cc.y - ec.y);
+  const areaRatio = rectSizeRatio(candidate, expected);
+  const aspect = candidate.h > 0 ? candidate.w / candidate.h : 0;
+  const expectedAspect = expected.h > 0 ? expected.w / expected.h : 1;
+
+  return (
+    dx <= expected.w * 0.58 &&
+    dy <= expected.h * 0.62 &&
+    areaRatio >= 0.68 &&
+    areaRatio <= 1.42 &&
+    aspect >= expectedAspect * 0.70 &&
+    aspect <= expectedAspect * 1.38
+  );
+}
+
+function blendRects(expected, candidate, candidateWeight = 0.38) {
+  if (!expected || !candidate) return expected || candidate || null;
+  const w = clampNumber(candidateWeight, 0, 1);
+  const ew = 1 - w;
+  return {
+    x: expected.x * ew + candidate.x * w,
+    y: expected.y * ew + candidate.y * w,
+    w: expected.w * ew + candidate.w * w,
+    h: expected.h * ew + candidate.h * w
+  };
+}
+
 function unionRects(rects) {
   const valid = (rects || []).filter(Boolean);
   if (valid.length === 0) return null;
@@ -935,6 +987,17 @@ function splitFrameByPrintedDigitGuide(refinedFrame, expectedFrame, digitRects, 
   ]);
 }
 
+function frameFromExpectedDigitRects(expectedFrame, digitRects) {
+  if (!expectedFrame || !Array.isArray(digitRects) || digitRects.length === 0) return null;
+  return new Map(digitRects.map((digitRect) => {
+    const relX = expectedFrame.w > 0 ? (digitRect.x - expectedFrame.x) / expectedFrame.w : 0;
+    const relY = expectedFrame.h > 0 ? (digitRect.y - expectedFrame.y) / expectedFrame.h : 0;
+    const relW = expectedFrame.w > 0 ? digitRect.w / expectedFrame.w : 1 / digitRects.length;
+    const relH = expectedFrame.h > 0 ? digitRect.h / expectedFrame.h : 1;
+    return [digitRect.id, { relX, relY, relW, relH }];
+  }));
+}
+
 function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
   const frameRects = [];
   const expectedById = new Map(expectedRects.map((rect) => [rect.id, rect]));
@@ -961,32 +1024,37 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
 
   for (const expectedFrame of frameRects) {
     const detectedFrame = assignedFrames.get(expectedFrame.id);
-    const refinedFrameCandidate = answerRectLooksLocal(detectedFrame, expectedFrame)
+    const refinedFrameCandidate = answerFrameLooksLocal(detectedFrame, expectedFrame)
       ? detectedFrame
       : refineBoxRectFromOutline(warped, expectedFrame);
-    const refinedFrame = answerRectLooksLocal(refinedFrameCandidate, expectedFrame)
-      ? refinedFrameCandidate
+    const refinedFrame = answerFrameLooksLocal(refinedFrameCandidate, expectedFrame)
+      ? blendRects(expectedFrame, refinedFrameCandidate, 0.38)
       : expectedFrame;
 
     const guidedSplit = splitFrameByPrintedDigitGuide(refinedFrame, expectedFrame, expectedFrame.digitRects, expectedFrame);
     if (guidedSplit) {
       for (const digitRect of expectedFrame.digitRects) {
         const guidedRect = guidedSplit.get(digitRect.id);
-        if (guidedRect) assignments.set(digitRect.id, guidedRect);
+        assignments.set(
+          digitRect.id,
+          digitRectLooksLocal(guidedRect, digitRect) ? guidedRect : digitRect
+        );
       }
       continue;
     }
 
+    const relativeDigitRects = frameFromExpectedDigitRects(expectedFrame, expectedFrame.digitRects);
     for (const digitRect of expectedFrame.digitRects) {
-      const relX = expectedFrame.w > 0 ? (digitRect.x - expectedFrame.x) / expectedFrame.w : 0;
-      const relY = expectedFrame.h > 0 ? (digitRect.y - expectedFrame.y) / expectedFrame.h : 0;
-      const relW = expectedFrame.w > 0 ? digitRect.w / expectedFrame.w : 1 / expectedFrame.digitRects.length;
-      const relH = expectedFrame.h > 0 ? digitRect.h / expectedFrame.h : 1;
+      const rel = relativeDigitRects?.get(digitRect.id);
+      if (!rel) {
+        assignments.set(digitRect.id, digitRect);
+        continue;
+      }
       assignments.set(digitRect.id, {
-        x: refinedFrame.x + relX * refinedFrame.w,
-        y: refinedFrame.y + relY * refinedFrame.h,
-        w: relW * refinedFrame.w,
-        h: relH * refinedFrame.h
+        x: refinedFrame.x + rel.relX * refinedFrame.w,
+        y: refinedFrame.y + rel.relY * refinedFrame.h,
+        w: rel.relW * refinedFrame.w,
+        h: rel.relH * refinedFrame.h
       });
     }
   }
@@ -1310,7 +1378,7 @@ export function cropBoxes(warped, layout) {
     const expectedRect = { x, y, w, h };
     const detectedRect = detectedRects.get(box.id);
     const refinedCandidate = usesVirtualDigitBoxes
-      ? (answerRectLooksLocal(detectedRect, expectedRect) ? detectedRect : expectedRect)
+      ? (digitRectLooksLocal(detectedRect, expectedRect) ? detectedRect : expectedRect)
       : (answerRectLooksLocal(detectedRect, expectedRect)
         ? detectedRect
         : refineBoxRectFromOutline(warped, expectedRect));

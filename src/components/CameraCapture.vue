@@ -1067,12 +1067,12 @@ function analyzeStudentSheetInPortraitCrop(canvas) {
       leftLean <= 0.16 &&
       rightLean <= 0.16
     const softPerspectiveOkay =
-      widthBalance >= 0.58 &&
-      heightBalance >= 0.62 &&
-      topTilt <= 0.24 &&
-      bottomTilt <= 0.24 &&
-      leftLean <= 0.24 &&
-      rightLean <= 0.24
+      widthBalance >= 0.66 &&
+      heightBalance >= 0.70 &&
+      topTilt <= 0.195 &&
+      bottomTilt <= 0.195 &&
+      leftLean <= 0.195 &&
+      rightLean <= 0.195
     const appearance = validateStudentSheetAppearance(canvas, markers)
     const ok = centered && spansEnough && cornersLookPlaced && (perspectiveOkay || softPerspectiveOkay) && appearance.ok
     let status = 'Hold steady'
@@ -1893,8 +1893,11 @@ function composeStudentAnnotatedImage(
         const x = topRightAnchor
           ? Math.max(warpedW * 0.54, Math.min(warpedW - estimatedW - warpedW * 0.05, markerCenterX - estimatedW * 0.9))
           : Math.min(warpedW * 0.84, warpedW - estimatedW - warpedW * 0.055)
+        const minStampY = topRightAnchor ? markerBottom + fontSize * 1.36 : null
+        const targetStampY = topRightAnchor ? markerCenterY + warpedH * 0.108 : null
+        const maxStampY = topRightAnchor ? Math.max(minStampY, topQuestionY - fontSize * 0.38) : null
         const y = topRightAnchor
-          ? Math.min(warpedH * 0.155, Math.max(markerBottom + fontSize * 0.42, markerCenterY + warpedH * 0.045))
+          ? Math.min(maxStampY, Math.max(minStampY, targetStampY))
           : Math.max(warpedH * 0.068, Math.min(warpedH * 0.145, topQuestionY - warpedH * 0.09))
         ctx.save()
         ctx.translate(x + jitter(707, 2.5), y + jitter(709, 1.8))
