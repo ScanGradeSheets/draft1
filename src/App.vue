@@ -107,12 +107,22 @@
             <strong>{{ activeStudentSession?.studentName || 'Guest' }}</strong>
             <span>Scan one worksheet</span>
           </div>
-          <button type="button" class="student-scan-link" @click="returnToLanding">
-            Home
-          </button>
+          <div class="student-scan-actions">
+            <button
+              v-if="ocrResult"
+              type="button"
+              class="student-scan-link student-scan-reset"
+              @click="resetStudentScan"
+            >
+              {{ ocrResult?.error ? 'Try again' : 'Scan another' }}
+            </button>
+            <button type="button" class="student-scan-link" @click="returnToLanding">
+              Home
+            </button>
+          </div>
         </div>
         <CameraCapture
-          :key="isStudentMode ? 'student-camera' : 'teacher-camera'"
+          :key="cameraKey"
           :student-mode="isStudentMode"
           :capture-enabled="!isStudentMode || studentView === 'capture'"
           :capture-blocked-reason="studentCaptureBlockedReason"
@@ -350,6 +360,8 @@ const showTeacherUi = ref(!isStudentMode.value)
 const studentView = ref(isStudentMode.value ? 'landing' : 'capture')
 const showStudentCaptureUi = computed(() => isStudentMode.value && studentView.value === 'capture')
 const ocrResult = ref(null)
+const studentScanKey = ref(0)
+const cameraKey = computed(() => isStudentMode.value ? `student-camera-${studentScanKey.value}` : 'teacher-camera')
 const classRoster = ref([])
 const rosterDraft = ref('')
 const selectedStudentName = ref('')
@@ -444,6 +456,12 @@ const syncRosterDraft = () => {
 const clearActiveScanResult = () => {
   ocrResult.value = null
   showAnnotationLayer.value = false
+}
+
+const resetStudentScan = () => {
+  clearActiveScanResult()
+  studentView.value = 'capture'
+  studentScanKey.value += 1
 }
 
 const beginStudentSignIn = () => {
@@ -1593,6 +1611,13 @@ onMounted(() => {
   font-weight: 700;
 }
 
+.student-scan-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .student-scan-link {
   border: 0;
   background: transparent;
@@ -1600,6 +1625,14 @@ onMounted(() => {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.student-scan-reset {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #f5f5f7;
+  color: #202124;
+  font-size: 13px;
 }
 
 /* Student Mode: dedicated layout — stage takes most of the screen */

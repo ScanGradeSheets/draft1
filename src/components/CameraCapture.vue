@@ -17,7 +17,7 @@
         <p class="overlay-frame-text">{{ studentMode ? studentAutoStatus : 'Line up your sheet' }}</p>
       </div>
 
-      <div v-else-if="displayedResultImage" class="captured-image-wrap">
+      <div v-else-if="displayedResultImage" ref="capturedImageWrapRef" class="captured-image-wrap">
         <img
           :src="displayedResultImage"
           class="captured-image"
@@ -262,7 +262,11 @@
               `student-answer-item--${group.status}`,
               { 'student-answer-item--clickable': isAnswerGroupEditable(group) }
             ]"
+            :role="isAnswerGroupEditable(group) ? 'button' : undefined"
+            :tabindex="isAnswerGroupEditable(group) ? 0 : undefined"
             @click="openCorrectionByGroup(group)"
+            @keydown.enter.prevent="openCorrectionByGroup(group)"
+            @keydown.space.prevent="openCorrectionByGroup(group)"
           >
             <span class="student-answer-label" :aria-label="group.label">{{ scantronAnswerLabel(group.label) }}</span>
             <span class="student-answer-pills" :class="{ 'student-answer-pills--double': group.displayDigits.length > 1 }">
@@ -302,9 +306,6 @@
           @click="emit('student-done')"
         >
           Done
-        </button>
-        <button type="button" class="btn btn-primary" @click="onStudentTryAgain">
-          {{ ocrResult.error ? 'Try again' : 'Scan another' }}
         </button>
       </div>
     </div>
@@ -486,6 +487,7 @@ const markerDebugSnapshot = ref(null)
 const modelInfoSnapshot = ref(null)
 const modelSanityRunning = ref(false)
 const modelSanityResults = ref(null)
+const capturedImageWrapRef = ref(null)
 const activeCorrectionQuestion = ref(null)
 const manualCorrectionText = ref('')
 const correctionError = ref('')
@@ -534,6 +536,12 @@ const studentAnswerGroups = computed(() => {
   })
 })
 
+const allAnnotationRegions = computed(() => (
+  Array.isArray(ocrResult.value?.annotationRegions)
+    ? ocrResult.value.annotationRegions
+    : []
+))
+
 const correctionRegions = computed(() => {
   const regions = Array.isArray(ocrResult.value?.annotationRegions)
     ? ocrResult.value.annotationRegions
@@ -551,7 +559,7 @@ const correctionRegions = computed(() => {
 const activeCorrectionRegion = computed(() => {
   const question = activeCorrectionQuestion.value
   if (!question) return null
-  return correctionRegions.value.find((region) => region.questionNum === question.questionNum) || question
+  return allAnnotationRegions.value.find((region) => region.questionNum === question.questionNum) || question
 })
 
 const correctionPanelStyle = computed(() => {
@@ -694,9 +702,7 @@ function isCorrectionRegionEditable(region) {
 }
 
 function isAnswerGroupEditable(group) {
-  if (!group) return false
-  if (group.status === 'review' || group.manualCorrected) return true
-  return correctionRegions.value.some((region) => region.questionNum === group.questionNum)
+  return !!(group && !ocrResult.value?.error && Array.isArray(group.digitBoxIds) && group.digitBoxIds.length)
 }
 
 function openCorrection(region) {
@@ -710,8 +716,22 @@ function openCorrection(region) {
 
 function openCorrectionByGroup(group) {
   if (!isAnswerGroupEditable(group)) return
-  const region = correctionRegions.value.find((item) => item.questionNum === group.questionNum)
-  if (region) openCorrection(region)
+  const region = allAnnotationRegions.value.find((item) => item.questionNum === group.questionNum) || {
+    key: `question-region-${group.questionNum}`,
+    label: group.label,
+    questionNum: group.questionNum,
+    reviewNeeded: group.reviewNeeded,
+    manualCorrected: group.manualCorrected,
+    correct: group.correct
+  }
+  activeCorrectionQuestion.value = region
+  const currentText = activeCorrectionCurrentText.value
+  manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
+  normalizeManualCorrectionInput()
+  correctionError.value = ''
+  nextTick(() => {
+    capturedImageWrapRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+  })
 }
 
 function cancelCorrection() {
@@ -3185,10 +3205,6 @@ const retake = () => {
   error.value = null
 }
 
-const onStudentTryAgain = () => {
-  retake()
-}
-
 const stopStream = () => {
   clearAutoCaptureInterval()
   cameraReady.value = false
@@ -3572,12 +3588,15 @@ onUnmounted(stopStream)
 
 .student-answer-item--clickable {
   cursor: pointer;
-  border-color: #e7cf67;
-  background: #fffdf3;
 }
 
 .student-answer-item--clickable:active {
   transform: scale(0.98);
+}
+
+.student-answer-item--clickable:focus-visible {
+  outline: 3px solid rgba(0, 122, 255, 0.32);
+  outline-offset: 2px;
 }
 
 .student-answer-label {
