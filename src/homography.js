@@ -846,6 +846,121 @@ function refineBoxRectFromOutline(warped, expectedRect) {
   }
 }
 
+function refineAnswerFrameFromHorizontalLines(warped, expectedRect) {
+  if (!warped || !expectedRect) return null;
+  const padX = Math.max(10, Math.round(expectedRect.w * 0.42));
+  const padY = Math.max(10, Math.round(expectedRect.h * 0.95));
+  const sx = Math.max(0, Math.floor(expectedRect.x - padX));
+  const sy = Math.max(0, Math.floor(expectedRect.y - padY));
+  const ex = Math.min(warped.cols, Math.ceil(expectedRect.x + expectedRect.w + padX));
+  const ey = Math.min(warped.rows, Math.ceil(expectedRect.y + expectedRect.h + padY));
+  const sw = Math.max(1, ex - sx);
+  const sh = Math.max(1, ey - sy);
+  if (sw < 4 || sh < 4) return null;
+
+  const roi = warped.roi(new cv.Rect(sx, sy, sw, sh)).clone();
+  const gray = new cv.Mat();
+  const blur = new cv.Mat();
+  const binary = new cv.Mat();
+  const horizontal = new cv.Mat();
+  const kernelWidth = Math.max(9, Math.round(expectedRect.w * 0.20));
+  const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(kernelWidth, 1));
+  try {
+    cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY);
+    cv.GaussianBlur(gray, blur, new cv.Size(3, 3), 0);
+    cv.adaptiveThreshold(
+      blur,
+      binary,
+      255,
+      cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+      cv.THRESH_BINARY_INV,
+      31,
+      5
+    );
+    cv.morphologyEx(binary, horizontal, cv.MORPH_OPEN, kernel);
+
+    const rx0 = clampNumber(Math.floor(expectedRect.x - sx - expectedRect.w * 0.12), 0, sw - 1);
+    const rx1 = clampNumber(Math.ceil(expectedRect.x - sx + expectedRect.w * 1.12), rx0 + 1, sw);
+    const rowScores = [];
+    for (let y = 0; y < sh; y++) {
+      let score = 0;
+      for (let x = rx0; x < rx1; x++) {
+        if (horizontal.ucharPtr(y, x)[0] > 0) score++;
+      }
+      rowScores.push(score);
+    }
+
+    const minRowScore = Math.max(7, expectedRect.w * 0.16);
+    const peaks = [];
+    let start = -1;
+    let weighted = 0;
+    let total = 0;
+    let maxScore = 0;
+    for (let y = 0; y <= rowScores.length; y++) {
+      const score = rowScores[y] || 0;
+      if (score >= minRowScore) {
+        if (start < 0) start = y;
+        weighted += y * score;
+        total += score;
+        maxScore = Math.max(maxScore, score);
+      } else if (start >= 0) {
+        const end = y - 1;
+        peaks.push({
+          y: total > 0 ? weighted / total : (start + end) / 2,
+          start,
+          end,
+          score: total,
+          maxScore
+        });
+        start = -1;
+        weighted = 0;
+        total = 0;
+        maxScore = 0;
+      }
+    }
+
+    const expectedCenterY = expectedRect.y + expectedRect.h / 2;
+    let best = null;
+    let bestScore = -Infinity;
+    for (let i = 0; i < peaks.length; i++) {
+      for (let j = i + 1; j < peaks.length; j++) {
+        const top = peaks[i];
+        const bottom = peaks[j];
+        const sep = bottom.y - top.y;
+        if (sep < expectedRect.h * 0.55 || sep > expectedRect.h * 1.52) continue;
+        const globalTop = sy + top.y;
+        const globalBottom = sy + bottom.y;
+        const centerY = (globalTop + globalBottom) / 2;
+        const centerDist = Math.abs(centerY - expectedCenterY);
+        if (centerDist > expectedRect.h * 1.18) continue;
+        const score =
+          top.score + bottom.score
+          - Math.abs(sep - expectedRect.h) * 0.85
+          - centerDist * 0.45
+          + Math.min(top.maxScore, bottom.maxScore) * 8;
+        if (score > bestScore) {
+          bestScore = score;
+          best = {
+            x: expectedRect.x,
+            y: Math.max(0, globalTop),
+            w: expectedRect.w,
+            h: Math.max(1, globalBottom - globalTop)
+          };
+        }
+      }
+    }
+
+    return best;
+  } finally {
+    roi.delete();
+    gray.delete();
+    blur.delete();
+    binary.delete();
+    horizontal.delete();
+    kernel.delete();
+  }
+}
+
 function rectCenter(rect) {
   return {
     x: rect.x + rect.w / 2,
@@ -943,6 +1058,20 @@ function blendRects(expected, candidate, candidateWeight = 0.38) {
   };
 }
 
+function blendRectsByAxis(expected, candidate, weights = {}) {
+  if (!expected || !candidate) return expected || candidate || null;
+  const wx = clampNumber(weights.x ?? 0.38, 0, 1);
+  const wy = clampNumber(weights.y ?? wx, 0, 1);
+  const ww = clampNumber(weights.w ?? wx, 0, 1);
+  const wh = clampNumber(weights.h ?? wy, 0, 1);
+  return {
+    x: expected.x * (1 - wx) + candidate.x * wx,
+    y: expected.y * (1 - wy) + candidate.y * wy,
+    w: expected.w * (1 - ww) + candidate.w * ww,
+    h: expected.h * (1 - wh) + candidate.h * wh
+  };
+}
+
 function unionRects(rects) {
   const valid = (rects || []).filter(Boolean);
   if (valid.length === 0) return null;
@@ -1024,11 +1153,35 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
 
   for (const expectedFrame of frameRects) {
     const detectedFrame = assignedFrames.get(expectedFrame.id);
-    const refinedFrameCandidate = answerFrameLooksLocal(detectedFrame, expectedFrame)
+    const outlineFrameCandidate = answerFrameLooksLocal(detectedFrame, expectedFrame)
       ? detectedFrame
       : refineBoxRectFromOutline(warped, expectedFrame);
-    const refinedFrame = answerFrameLooksLocal(refinedFrameCandidate, expectedFrame)
-      ? blendRects(expectedFrame, refinedFrameCandidate, 0.38)
+    const lineFrameCandidate = refineAnswerFrameFromHorizontalLines(warped, expectedFrame);
+    const refinedFrameCandidate = lineFrameCandidate
+      ? {
+        ...(answerFrameLooksLocal(outlineFrameCandidate, expectedFrame) ? outlineFrameCandidate : expectedFrame),
+        y: lineFrameCandidate.y,
+        h: lineFrameCandidate.h
+      }
+      : outlineFrameCandidate;
+    // Two-digit worksheet answer frames contain a printed center guide. The
+    // template gives stable row order, but older-device captures can leave the
+    // printed answer boxes shifted after the page homography. Trust the
+    // detected outline when it is still local to the expected slot so the OCR
+    // crops follow the real box instead of a stale template position.
+    const frameCandidateLooksSafe =
+      refinedFrameCandidate &&
+      Math.abs(rectCenter(refinedFrameCandidate).x - rectCenter(expectedFrame).x) <= expectedFrame.w * 0.12 &&
+      Math.abs(rectCenter(refinedFrameCandidate).y - rectCenter(expectedFrame).y) <= expectedFrame.h * 1.05 &&
+      rectSizeRatio(refinedFrameCandidate, expectedFrame) >= 0.88 &&
+      rectSizeRatio(refinedFrameCandidate, expectedFrame) <= 1.14;
+    const refinedFrame = frameCandidateLooksSafe
+      ? blendRectsByAxis(expectedFrame, refinedFrameCandidate, {
+        x: 0.78,
+        w: 0.78,
+        y: lineFrameCandidate ? 0.96 : 0.84,
+        h: lineFrameCandidate ? 0.90 : 0.65
+      })
       : expectedFrame;
 
     const guidedSplit = splitFrameByPrintedDigitGuide(refinedFrame, expectedFrame, expectedFrame.digitRects, expectedFrame);
@@ -1356,8 +1509,8 @@ export function cropBoxes(warped, layout) {
   // for recognition so faint pencil strokes are not drowned out by dark borders.
   const BOX_OCR_INSET_X_FRAC = 0.12;
   const BOX_OCR_INSET_Y_FRAC = 0.12;
-  const VIRTUAL_DIGIT_OCR_INSET_X_FRAC = 0.065;
-  const VIRTUAL_DIGIT_OCR_INSET_Y_FRAC = 0.15;
+  const VIRTUAL_DIGIT_OCR_INSET_TOP_FRAC = -0.50;
+  const VIRTUAL_DIGIT_OCR_INSET_BOTTOM_FRAC = 0.14;
   const layoutBoxes = Array.isArray(layout.boxes) ? layout.boxes : [];
   const usesVirtualDigitBoxes = Array.isArray(layout.question_groups) &&
     layout.question_groups.some((group) => Array.isArray(group?.digit_box_ids) && group.digit_box_ids.length > 1) &&
@@ -1387,12 +1540,21 @@ export function cropBoxes(warped, layout) {
       : (answerRectLooksLocal(refinedCandidate, expectedRect)
         ? refinedCandidate
         : expectedRect);
-    const insetX = refinedRect.w * (usesVirtualDigitBoxes ? VIRTUAL_DIGIT_OCR_INSET_X_FRAC : BOX_OCR_INSET_X_FRAC);
-    const insetY = refinedRect.h * (usesVirtualDigitBoxes ? VIRTUAL_DIGIT_OCR_INSET_Y_FRAC : BOX_OCR_INSET_Y_FRAC);
-    const innerX = refinedRect.x + insetX;
-    const innerY = refinedRect.y + insetY;
-    const innerW = Math.max(1, refinedRect.w - 2 * insetX);
-    const innerH = Math.max(1, refinedRect.h - 2 * insetY);
+    const ocrRect = refinedRect;
+    const digitIndex = Number.isFinite(box?.digit_index) ? Number(box.digit_index) : null;
+    // Two-digit worksheet frames use one wide printed answer box with a faint
+    // center guide. Crop mostly inside each half while leaving a tiny overlap
+    // across the guide for real handwriting that drifts toward the middle.
+    const virtualLeftInsetFrac = digitIndex === 0 ? 0.12 : -0.02;
+    const virtualRightInsetFrac = digitIndex === 0 ? -0.02 : 0.12;
+    const insetLeft = ocrRect.w * (usesVirtualDigitBoxes ? virtualLeftInsetFrac : BOX_OCR_INSET_X_FRAC);
+    const insetRight = ocrRect.w * (usesVirtualDigitBoxes ? virtualRightInsetFrac : BOX_OCR_INSET_X_FRAC);
+    const insetTop = ocrRect.h * (usesVirtualDigitBoxes ? VIRTUAL_DIGIT_OCR_INSET_TOP_FRAC : BOX_OCR_INSET_Y_FRAC);
+    const insetBottom = ocrRect.h * (usesVirtualDigitBoxes ? VIRTUAL_DIGIT_OCR_INSET_BOTTOM_FRAC : BOX_OCR_INSET_Y_FRAC);
+    const innerX = ocrRect.x + insetLeft;
+    const innerY = ocrRect.y + insetTop;
+    const innerW = Math.max(1, ocrRect.w - insetLeft - insetRight);
+    const innerH = Math.max(1, ocrRect.h - insetTop - insetBottom);
     const xPx = Math.max(0, Math.floor(innerX));
     const yPx = Math.max(0, Math.floor(innerY));
     let widthPx = Math.max(1, Math.ceil(innerW));
@@ -1402,7 +1564,18 @@ export function cropBoxes(warped, layout) {
     if (widthPx < 1 || heightPx < 1) continue;
     const rect = new cv.Rect(xPx, yPx, widthPx, heightPx);
     const cropped = warped.roi(rect).clone();
-
+    if (usesVirtualDigitBoxes) {
+      eraseKnownVirtualDigitLines(
+        cropped,
+        { x: xPx, y: yPx, w: widthPx, h: heightPx },
+        ocrRect,
+        {
+          eraseLeft: true,
+          eraseRight: true,
+          eraseHorizontal: false
+        }
+      );
+    }
     crops.push({
       id: box.id,
       questionNum: box.question_num,
@@ -1416,11 +1589,52 @@ export function cropBoxes(warped, layout) {
         h: Math.round(refinedRect.h)
       },
       /** Actual OCR ROI in warped pixel space (interior-only), for debug overlays */
-      cropRect: { x: xPx, y: yPx, w: widthPx, h: heightPx }
+      cropRect: { x: xPx, y: yPx, w: widthPx, h: heightPx },
+      isVirtualDigitBox: usesVirtualDigitBoxes
     });
   }
 
   return crops;
+}
+
+function eraseKnownVirtualDigitLines(crop, cropRect, digitRect, options = {}) {
+  if (!crop || !cropRect || !digitRect) return;
+  const paper = new cv.Scalar(245, 245, 245, 255);
+  const thickness = Math.max(4, Math.round(Math.min(digitRect.w, digitRect.h) * 0.055));
+  const eraseRect = (x, y, w, h) => {
+    const x0 = Math.max(0, Math.round(x));
+    const y0 = Math.max(0, Math.round(y));
+    const x1 = Math.min(crop.cols, Math.round(x + w));
+    const y1 = Math.min(crop.rows, Math.round(y + h));
+    if (x1 <= x0 || y1 <= y0) return;
+    cv.rectangle(
+      crop,
+      new cv.Point(x0, y0),
+      new cv.Point(x1, y1),
+      paper,
+      -1
+    );
+  };
+
+  const left = digitRect.x - cropRect.x;
+  const right = digitRect.x + digitRect.w - cropRect.x;
+  const top = digitRect.y - cropRect.y;
+  const bottom = digitRect.y + digitRect.h - cropRect.y;
+  // Suppress the printed answer-box frame, but leave the faint center guide
+  // mostly intact. Students often write across that guide; treating it like a
+  // hard border can erase the actual digit before the model sees it.
+  if (options.eraseLeft !== false) {
+    eraseRect(left - thickness / 2, top - thickness / 2, thickness, digitRect.h + thickness);
+  }
+  if (options.eraseRight !== false) {
+    eraseRect(right - thickness / 2, top - thickness / 2, thickness, digitRect.h + thickness);
+  }
+  if (options.eraseHorizontal !== false) {
+    const horizontalLeft = options.eraseHorizontalFullWidth ? 0 : left - thickness / 2;
+    const horizontalWidth = options.eraseHorizontalFullWidth ? crop.cols : digitRect.w + thickness;
+    eraseRect(horizontalLeft, top - thickness / 2, horizontalWidth, thickness);
+    eraseRect(horizontalLeft, bottom - thickness / 2, horizontalWidth, thickness);
+  }
 }
 
 /**
@@ -1428,14 +1642,14 @@ export function cropBoxes(warped, layout) {
  * @param {cv.Mat} boxImg - Cropped box image (RGBA)
  * @returns {Float32Array} - Normalized 28×28 MNIST-format tensor
  */
-function preprocessToMNISTCore(boxImg, withDebug = false) {
+function preprocessToMNISTCore(boxImg, withDebug = false, options = {}) {
   if (!boxImg || boxImg.rows === 0 || boxImg.cols === 0) {
     return withDebug
       ? { tensor: new Float32Array(MNIST_SIZE * MNIST_SIZE), debug: null }
       : new Float32Array(MNIST_SIZE * MNIST_SIZE);
   }
   const debug = withDebug ? {} : null;
-  const extracted = extractWorksheetInk(boxImg);
+  const extracted = extractWorksheetInk(boxImg, options);
   const tensor = centerInkToMNIST(extracted.ink, extracted.width, extracted.height);
 
   if (debug) {
@@ -1462,7 +1676,7 @@ function quantile(values, q) {
   return sorted[idx];
 }
 
-function extractWorksheetInk(boxImg) {
+function extractWorksheetInk(boxImg, options = {}) {
   const pixelSource = getDisplayPixelSource(boxImg);
   const { width, height, channels, data } = pixelSource;
   const total = width * height;
@@ -1510,6 +1724,9 @@ function extractWorksheetInk(boxImg) {
 
   removeLongEdgeLinesFromInk(ink, width, height);
   removeDashedEdgeGuidesFromInk(ink, width, height);
+  removePrintedLineComponentsFromInk(ink, width, height, {
+    protectInteriorStrokes: options.protectInteriorStrokes === true
+  });
   removeSmallInkComponents(ink, width, height);
   if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_PREPROCESS_STATS) {
     const alphaValues = [];
@@ -1635,6 +1852,84 @@ function removeDashedEdgeGuidesFromInk(ink, width, height) {
         for (let x = 0; x < width; x++) {
           if (ink[rowOffset + x] < 0.9) ink[rowOffset + x] = 0;
         }
+      }
+    }
+  }
+}
+
+function removePrintedLineComponentsFromInk(ink, width, height, options = {}) {
+  const threshold = 0.24;
+  const total = width * height;
+  const visited = new Uint8Array(total);
+  const stack = [];
+  const pixels = [];
+  const minHorizontalSpan = Math.max(8, Math.round(width * 0.19));
+  const maxHorizontalThickness = Math.max(3, Math.round(height * 0.10));
+  const minVerticalSpan = Math.max(10, Math.round(height * 0.38));
+  const maxVerticalThickness = Math.max(3, Math.round(width * 0.10));
+
+  for (let start = 0; start < total; start++) {
+    if (visited[start] || ink[start] <= threshold) continue;
+    visited[start] = 1;
+    stack.length = 0;
+    pixels.length = 0;
+    stack.push(start);
+    let minX = width;
+    let minY = height;
+    let maxX = 0;
+    let maxY = 0;
+    let sum = 0;
+
+    while (stack.length) {
+      const idx = stack.pop();
+      pixels.push(idx);
+      sum += ink[idx];
+      const y = Math.floor(idx / width);
+      const x = idx - y * width;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(height - 1, y + 1); yy++) {
+        for (let xx = Math.max(0, x - 1); xx <= Math.min(width - 1, x + 1); xx++) {
+          const next = yy * width + xx;
+          if (!visited[next] && ink[next] > threshold) {
+            visited[next] = 1;
+            stack.push(next);
+          }
+        }
+      }
+    }
+
+    const spanX = maxX - minX + 1;
+    const spanY = maxY - minY + 1;
+    const density = pixels.length / Math.max(1, spanX * spanY);
+    const avg = sum / Math.max(1, pixels.length);
+    const touchesCropEdge =
+      minX <= 1 ||
+      minY <= 1 ||
+      maxX >= width - 2 ||
+      maxY >= height - 2;
+    const horizontalRule =
+      spanX >= minHorizontalSpan &&
+      spanY <= maxHorizontalThickness &&
+      density >= 0.34 &&
+      (
+        touchesCropEdge ||
+        minY <= height * 0.14 ||
+        maxY >= height * 0.86 ||
+        (!options.protectInteriorStrokes && avg < 0.72)
+      );
+    const verticalRule =
+      spanY >= minVerticalSpan &&
+      spanX <= maxVerticalThickness &&
+      density >= 0.34 &&
+      touchesCropEdge;
+
+    if (horizontalRule || verticalRule) {
+      for (const idx of pixels) {
+        if (ink[idx] < 0.94 || touchesCropEdge) ink[idx] = 0;
       }
     }
   }
@@ -1888,7 +2183,9 @@ export function processWorksheet(input, layout) {
     id: crop.id,
     questionNum: crop.questionNum,
     rawImage: crop.image,
-    tensor: preprocessToMNIST(crop.image),
+    tensor: preprocessToMNISTCore(crop.image, false, {
+      protectInteriorStrokes: crop.isVirtualDigitBox === true
+    }),
     centerX: crop.centerX,
     centerY: crop.centerY
   }));
@@ -1903,7 +2200,8 @@ export function processWorksheet(input, layout) {
       questionNum: c.questionNum,
       image: c.image,
       boxRect: c.boxRect,
-      cropRect: c.cropRect
+      cropRect: c.cropRect,
+      isVirtualDigitBox: c.isVirtualDigitBox === true
     })),
     processedTensors: processed
   };

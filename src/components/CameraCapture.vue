@@ -1734,11 +1734,17 @@ function composeStudentAnnotatedImage(
       }
 
       const drawReviewMark = (rect, seed) => {
-        const reviewInk = '#d7ab32'
-        const cx = rect.x + rect.w * (0.5 + jitter(seed + 205, 0.018))
-        const cy = rect.y + rect.h * (0.5 + jitter(seed + 207, 0.032))
-        const rx = Math.max(18, (rect.w * 0.56 + rect.h * 0.14) * (0.98 + seededUnit(seed + 211) * 0.07))
-        const ry = Math.max(16, rect.h * (0.56 + seededUnit(seed + 213) * 0.08))
+        const reviewInk = '#d6a63a'
+        const cx = rect.x + rect.w * (0.5 + jitter(seed + 205, 0.01))
+        const cy = rect.y + rect.h * (0.5 + jitter(seed + 207, 0.014))
+        const rx = Math.max(
+          rect.h * 0.68,
+          Math.min(rect.w * 0.62, rect.w * (0.5 + seededUnit(seed + 211) * 0.04) + rect.h * 0.16)
+        )
+        const ry = Math.max(
+          rect.h * 0.42,
+          Math.min(rect.h * 0.62, rect.h * (0.5 + seededUnit(seed + 213) * 0.06))
+        )
         const angle = jitter(seed + 193, 0.055)
         const pointsPerLoop = 42
 
@@ -1764,7 +1770,7 @@ function composeStudentAnnotatedImage(
           }
           ctx.strokeStyle = varyInk(reviewInk, passSeed + 23, 9)
           ctx.globalAlpha = pass === 0 ? 0.72 : 0.42
-          ctx.lineWidth = Math.max(3.2, Math.min(6.4, rect.h * (0.07 + seededUnit(passSeed + 29) * 0.018)))
+          ctx.lineWidth = Math.max(2.8, Math.min(5.4, rect.h * (0.058 + seededUnit(passSeed + 29) * 0.014)))
           ctx.stroke()
         }
         ctx.restore()
@@ -1893,9 +1899,9 @@ function composeStudentAnnotatedImage(
         const x = topRightAnchor
           ? Math.max(warpedW * 0.54, Math.min(warpedW - estimatedW - warpedW * 0.05, markerCenterX - estimatedW * 0.9))
           : Math.min(warpedW * 0.84, warpedW - estimatedW - warpedW * 0.055)
-        const minStampY = topRightAnchor ? markerBottom + fontSize * 1.36 : null
-        const targetStampY = topRightAnchor ? markerCenterY + warpedH * 0.108 : null
-        const maxStampY = topRightAnchor ? Math.max(minStampY, topQuestionY - fontSize * 0.38) : null
+        const minStampY = topRightAnchor ? markerBottom + fontSize * 2.55 : null
+        const targetStampY = topRightAnchor ? markerBottom + fontSize * 3.05 : null
+        const maxStampY = topRightAnchor ? Math.max(minStampY, topQuestionY - fontSize * 0.25) : null
         const y = topRightAnchor
           ? Math.min(maxStampY, Math.max(minStampY, targetStampY))
           : Math.max(warpedH * 0.068, Math.min(warpedH * 0.145, topQuestionY - warpedH * 0.09))
@@ -2028,7 +2034,7 @@ function composeStudentAnnotatedImage(
         const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
         return unionRects(ids.map((id) => {
           const crop = cropById.get(id)
-          return crop?.boxRect || crop?.cropRect
+          return annotationRectForCrop(crop)
         }))
       })
       const questionRects = questionRectsByIndex.filter(Boolean)
@@ -2050,7 +2056,7 @@ function composeStudentAnnotatedImage(
             drawManualAnswer(
               ids.map((id) => {
                 const crop = cropById.get(id)
-                return crop?.boxRect || crop?.cropRect
+                return annotationRectForCrop(crop)
               }),
               correction.cells,
               seed + 47
@@ -2074,7 +2080,7 @@ function composeStudentAnnotatedImage(
           grouped.get(questionNum).push({ crop, prediction, index })
         })
         Array.from(grouped.entries()).forEach(([questionNum, items], groupIndex) => {
-          const rect = unionRects(items.map(({ crop }) => crop.boxRect || crop.cropRect))
+          const rect = unionRects(items.map(({ crop }) => annotationRectForCrop(crop)))
           const groupPredictions = items.map(({ prediction }) => prediction).filter(Boolean)
           if (!rect || !groupPredictions.length) return
           const numericQuestionNum = Number(questionNum)
@@ -2096,6 +2102,17 @@ function composeStudentAnnotatedImage(
       if (Array.isArray(questionCorrect) && questionCorrect.length > 0) {
         const score = questionCorrect.filter(Boolean).length
         const total = questionCorrect.length
+        const reviewCount = questionGroups.length > 0
+          ? questionGroups.filter((group) => {
+              const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+              return ids.some((id) => predictionById.get(id)?.reviewNeeded)
+            }).length
+          : 0
+        const tooUncertainForScore = reviewCount >= Math.ceil(total * 0.7) && score <= Math.floor(total * 0.3)
+        if (tooUncertainForScore) {
+          resolve(canvas.toDataURL('image/jpeg', 0.92))
+          return
+        }
         const ratio = score / total
         const scoreText = `${score}/${total}`
         const maxQuestionBottom = questionRects.length
@@ -2435,6 +2452,44 @@ function unionRects(rects) {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
 }
 
+function layoutBoxRect(box, warpedW, warpedH, layout) {
+  if (!box || !Number.isFinite(warpedW) || !Number.isFinite(warpedH)) return null
+  const normalized = layout?.page?.units === 'normalized'
+  if (normalized) {
+    const x = (Number(box.x) - Number(box.width)) * warpedW
+    const y = (Number(box.y) - Number(box.height)) * warpedH
+    const w = Number(box.width) * warpedW
+    const h = Number(box.height) * warpedH
+    if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) return null
+    return { x, y, w, h }
+  }
+  const pageW = Number(layout?.page?.width_mm)
+  const pageH = Number(layout?.page?.height_mm)
+  if (!pageW || !pageH) return null
+  const scaleX = warpedW / pageW
+  const scaleY = warpedH / pageH
+  const w = Number(box.width) * scaleX
+  const h = Number(box.height) * scaleY
+  const x = Number(box.cx) * scaleX - w / 2
+  const y = Number(box.cy) * scaleY - h / 2
+  if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) return null
+  return { x, y, w, h }
+}
+
+function layoutBoxRectMap(layout, warpedW, warpedH) {
+  const out = new Map()
+  if (!Array.isArray(layout?.boxes)) return out
+  for (const box of layout.boxes) {
+    const rect = layoutBoxRect(box, warpedW, warpedH, layout)
+    if (rect) out.set(box.id, rect)
+  }
+  return out
+}
+
+function annotationRectForCrop(crop) {
+  return crop?.layoutBoxRect || crop?.boxRect || crop?.cropRect || null
+}
+
 function buildLayoutSnapshot(layout) {
   if (!layout) return null
   return {
@@ -2444,7 +2499,8 @@ function buildLayoutSnapshot(layout) {
   }
 }
 
-function buildAnnotationGeometry(rawCrops, warpedW, warpedH) {
+function buildAnnotationGeometry(rawCrops, warpedW, warpedH, layout = null) {
+  const expectedById = layoutBoxRectMap(layout, warpedW, warpedH)
   return {
     warpedW,
     warpedH,
@@ -2452,7 +2508,8 @@ function buildAnnotationGeometry(rawCrops, warpedW, warpedH) {
       id: crop.id ?? index,
       questionNum: crop.questionNum ?? index + 1,
       cropRect: cloneRect(crop.cropRect),
-      boxRect: cloneRect(crop.boxRect)
+      boxRect: cloneRect(crop.boxRect),
+      layoutBoxRect: cloneRect(expectedById.get(crop.id ?? index))
     }))
   }
 }
@@ -2469,7 +2526,7 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
     const rect = unionRects(ids.map((id) => {
       const crop = cropById.get(id)
-      return crop?.boxRect || crop?.cropRect
+      return annotationRectForCrop(crop)
     }))
     if (!rect) return null
     const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
@@ -2501,6 +2558,198 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
       manualCorrected
     }
   }).filter(Boolean)
+}
+
+function tensorInkQuality(tensor, id = null) {
+  const values = tensor && typeof tensor.length === 'number' ? tensor : []
+  let inkPixels = 0
+  let minX = 28
+  let minY = 28
+  let maxX = -1
+  let maxY = -1
+  for (let i = 0; i < Math.min(values.length, 28 * 28); i++) {
+    const value = Number(values[i]) || 0
+    if (value <= 0.16) continue
+    const y = Math.floor(i / 28)
+    const x = i - y * 28
+    inkPixels += 1
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x)
+    maxY = Math.max(maxY, y)
+  }
+  const inkW = maxX >= minX ? maxX - minX + 1 : 0
+  const inkH = maxY >= minY ? maxY - minY + 1 : 0
+  const density = inkW > 0 && inkH > 0 ? inkPixels / (inkW * inkH) : 0
+  const lineArtifactLikely =
+    inkPixels >= 10 &&
+    inkPixels <= 90 &&
+    inkW <= 7 &&
+    inkH >= 12 &&
+    density <= 0.72
+  return {
+    id,
+    inkPixels,
+    inkW,
+    inkH,
+    density,
+    lineArtifactLikely,
+    ok: inkPixels >= 14 && inkW >= 3 && inkH >= 8
+  }
+}
+
+function detectTwoDigitCropFailure(questionGroups, cropQuality) {
+  if (!Array.isArray(questionGroups) || !questionGroups.length || !Array.isArray(cropQuality)) return null
+  const qualityById = new Map(cropQuality.map((quality) => [quality.id, quality]))
+  let expectedTwoDigitGroups = 0
+  let missingLeft = 0
+  let missingRight = 0
+  let oneSidedGroups = 0
+
+  for (const group of questionGroups) {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    const answer = group?.answer == null ? '' : String(group.answer).trim()
+    if (ids.length !== 2 || !/^\d{2,}$/.test(answer)) continue
+    expectedTwoDigitGroups += 1
+    const left = qualityById.get(ids[0])
+    const right = qualityById.get(ids[1])
+    if (!left || !right) continue
+    if (!left.ok && right.ok) {
+      missingLeft += 1
+      oneSidedGroups += 1
+    } else if (left.ok && !right.ok) {
+      missingRight += 1
+      oneSidedGroups += 1
+    }
+  }
+
+  if (expectedTwoDigitGroups < 4) return null
+  const repeatedOneSided = oneSidedGroups >= Math.max(3, Math.ceil(expectedTwoDigitGroups * 0.35))
+  const sidePattern = Math.max(missingLeft, missingRight) >= Math.max(3, Math.ceil(expectedTwoDigitGroups * 0.3))
+  if (!repeatedOneSided || !sidePattern) return null
+  return {
+    expectedTwoDigitGroups,
+    missingLeft,
+    missingRight,
+    oneSidedGroups
+  }
+}
+
+function detectTwoDigitRecognitionFailure(questionGroups, cropQuality, predictions, answerKey) {
+  if (
+    !Array.isArray(questionGroups) ||
+    !questionGroups.length ||
+    !Array.isArray(cropQuality) ||
+    !Array.isArray(predictions) ||
+    !Array.isArray(answerKey)
+  ) {
+    return null
+  }
+
+  const qualityById = new Map(cropQuality.map((quality) => [quality.id, quality]))
+  const predictionById = new Map(predictions.map((prediction) => [prediction.id, prediction]))
+  let expectedTwoDigitGroups = 0
+  let reviewGroups = 0
+  let guideOneMismatchGroups = 0
+  let guideOneMismatchCells = 0
+
+  for (const group of questionGroups) {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    const answer = group?.answer == null ? '' : String(group.answer).trim()
+    if (ids.length !== 2 || !/^\d{2,}$/.test(answer)) continue
+    expectedTwoDigitGroups += 1
+    let groupHasReview = false
+    let groupHasGuideOneMismatch = false
+    for (const id of ids) {
+      const quality = qualityById.get(id)
+      const prediction = predictionById.get(id)
+      const expectedDigit = answerKey[id]
+      if (!quality || !prediction) continue
+      if (prediction.reviewNeeded) groupHasReview = true
+      const guideOnlyOne =
+        quality.lineArtifactLikely &&
+        prediction.digit === 1 &&
+        expectedDigit !== 1 &&
+        (prediction.confidence ?? 0) < 0.86
+      if (guideOnlyOne) {
+        guideOneMismatchCells += 1
+        groupHasGuideOneMismatch = true
+      }
+    }
+    if (groupHasReview) reviewGroups += 1
+    if (groupHasGuideOneMismatch) guideOneMismatchGroups += 1
+  }
+
+  if (expectedTwoDigitGroups < 4) return null
+  const repeatedReview = reviewGroups >= Math.max(5, Math.ceil(expectedTwoDigitGroups * 0.58))
+  const repeatedGuideOnes = guideOneMismatchGroups >= Math.max(3, Math.ceil(expectedTwoDigitGroups * 0.34))
+  if (!repeatedReview || !repeatedGuideOnes) return null
+  return {
+    expectedTwoDigitGroups,
+    reviewGroups,
+    guideOneMismatchGroups,
+    guideOneMismatchCells
+  }
+}
+
+function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, questionCorrect, questionReview) {
+  if (
+    !Array.isArray(questionGroups) ||
+    !Array.isArray(cropQuality) ||
+    !Array.isArray(predictions) ||
+    !Array.isArray(questionCorrect) ||
+    !Array.isArray(questionReview)
+  ) {
+    return null
+  }
+
+  const qualityById = new Map(cropQuality.map((quality) => [quality.id, quality]))
+  const predictionById = new Map(predictions.map((prediction) => [prediction.id, prediction]))
+  const total = questionGroups.length
+  const score = questionCorrect.filter(Boolean).length
+  const reviewCount = questionReview.filter(Boolean).length
+  let expectedTwoDigitGroups = 0
+  let suspiciousTwoDigitGroups = 0
+  let oneOrBlankDominatedGroups = 0
+
+  for (const group of questionGroups) {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    const answer = group?.answer == null ? '' : String(group.answer).trim()
+    if (ids.length !== 2 || !/^\d{2,}$/.test(answer)) continue
+    expectedTwoDigitGroups += 1
+    let suspiciousCells = 0
+    let oneOrBlankCells = 0
+    for (const id of ids) {
+      const quality = qualityById.get(id)
+      const prediction = predictionById.get(id)
+      if (!quality || !prediction) continue
+      const confidence = Number(prediction.confidence) || 0
+      const topGap = Number(prediction.topGap) || 0
+      const skinnySignal =
+        quality.lineArtifactLikely ||
+        (quality.inkPixels <= 115 && quality.inkW <= 8 && quality.inkH >= 10 && quality.density <= 0.78)
+      if (skinnySignal && (prediction.reviewNeeded || confidence < 0.92 || topGap < 0.5)) suspiciousCells += 1
+      if (prediction.digit === 1 || !quality.ok || quality.inkPixels < 18) oneOrBlankCells += 1
+    }
+    if (suspiciousCells > 0) suspiciousTwoDigitGroups += 1
+    if (oneOrBlankCells >= 1) oneOrBlankDominatedGroups += 1
+  }
+
+  if (expectedTwoDigitGroups < 5 || total < 8) return null
+  const catastrophicLowScore = score <= Math.max(1, Math.floor(total * 0.15))
+  const mostlyReview = reviewCount >= Math.ceil(total * 0.72)
+  const repeatedSuspicious = suspiciousTwoDigitGroups >= Math.ceil(expectedTwoDigitGroups * 0.35)
+  const repeatedOneOrBlank = oneOrBlankDominatedGroups >= Math.ceil(expectedTwoDigitGroups * 0.65)
+  if (!(catastrophicLowScore && mostlyReview && (repeatedSuspicious || repeatedOneOrBlank))) return null
+
+  return {
+    total,
+    score,
+    reviewCount,
+    expectedTwoDigitGroups,
+    suspiciousTwoDigitGroups,
+    oneOrBlankDominatedGroups
+  }
 }
 
 function cellsToAnswerText(cells) {
@@ -2813,9 +3062,19 @@ const runRealOCR = async () => {
     }
 
     const { warpedImage, rawCrops, processedTensors } = result
-    const annotationGeometry = buildAnnotationGeometry(rawCrops, warpedImage.cols, warpedImage.rows)
+    const annotationGeometry = buildAnnotationGeometry(rawCrops, warpedImage.cols, warpedImage.rows, layout)
     const layoutSnapshot = buildLayoutSnapshot(layout)
     partialDebug.stage = 'preparing OCR crops'
+    const cropQuality = processedTensors.map((proc) => tensorInkQuality(proc.tensor, proc.id))
+    partialDebug.cropQuality = cropQuality
+    const twoDigitCropFailure = detectTwoDigitCropFailure(layout.question_groups, cropQuality)
+    partialDebug.twoDigitCropFailure = twoDigitCropFailure
+    if (twoDigitCropFailure) {
+      rawCrops.forEach((crop) => crop.image.delete())
+      warpedImage.delete()
+      src.delete()
+      throw new Error('Answer boxes were not captured clearly. Hold the sheet flatter and try again.')
+    }
     if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_OCR_INPUTS) {
       try {
         window.__SCANGRADE_DEBUG_RAW_CROPS = rawCrops.map((c, i) => matToDataURL(c.image, `box-${i + 1}`))
@@ -2925,6 +3184,19 @@ const runRealOCR = async () => {
       })
     }
     partialDebug.predictions = predictions
+    const twoDigitRecognitionFailure = detectTwoDigitRecognitionFailure(
+      layout.question_groups,
+      cropQuality,
+      predictions,
+      answerKey
+    )
+    partialDebug.twoDigitRecognitionFailure = twoDigitRecognitionFailure
+    if (twoDigitRecognitionFailure) {
+      rawCrops.forEach((crop) => crop.image.delete())
+      warpedImage.delete()
+      src.delete()
+      throw new Error('Answer boxes were not captured clearly. Hold the sheet flatter and try again.')
+    }
 
     const totalTime = (performance.now() - start).toFixed(2)
     const baseNeedsReview =
@@ -2939,9 +3211,23 @@ const runRealOCR = async () => {
       predictions,
       questionCorrect
     )
+    const unusableTwoDigitScan = detectUnusableTwoDigitScan(
+      layout.question_groups,
+      cropQuality,
+      predictions,
+      questionCorrect,
+      questionReview
+    )
     partialDebug.questionCorrect = questionCorrect
     partialDebug.questionReview = questionReview
     partialDebug.answerGroups = answerGroups
+    partialDebug.unusableTwoDigitScan = unusableTwoDigitScan
+    if (unusableTwoDigitScan) {
+      rawCrops.forEach((crop) => crop.image.delete())
+      warpedImage.delete()
+      src.delete()
+      throw new Error('Answer boxes were not captured clearly. Hold the sheet flatter and try again.')
+    }
 
     // Build result; include per-box correctness only when answer_key was present.
     // Low-confidence captures are still useful in a classroom: save them for teacher review
@@ -3004,6 +3290,10 @@ const runRealOCR = async () => {
         modelInputDataUrls: partialDebug.modelInputDataUrls,
         tensors: partialDebug.tensors,
         preprocessStats: partialDebug.preprocessStats,
+        cropQuality: partialDebug.cropQuality,
+        twoDigitCropFailure: partialDebug.twoDigitCropFailure,
+        twoDigitRecognitionFailure: partialDebug.twoDigitRecognitionFailure,
+        unusableTwoDigitScan: partialDebug.unusableTwoDigitScan,
         predictions,
         answerGroups,
         questionCorrect,
