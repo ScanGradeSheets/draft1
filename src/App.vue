@@ -3,6 +3,7 @@
     <header class="header">
       <img :src="publicUrl('scangrade-logo-transparent.png')" alt="ScanGrade logo" class="brand-logo" />
       <h1>ScanGrade .io</h1>
+      <p class="build-label">Build {{ APP_BUILD_LABEL }}</p>
     </header>
 
     <main class="main" :class="{ 'main--student': isStudentMode }">
@@ -326,6 +327,8 @@ import {
   saveSubmission,
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
+
+const APP_BUILD_LABEL = '2026.05.25-two-digit-guard'
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -1067,6 +1070,14 @@ onMounted(() => {
   font-weight: 750;
   color: #202124;
   margin-bottom: 0;
+}
+
+.build-label {
+  margin: 4px 0 0;
+  color: #8a8a8e;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .main {
