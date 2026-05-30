@@ -71,7 +71,15 @@
       "command": "npm run build",
       "plain_english": "Vite production build completed successfully. It reported only the standard large-chunk warning for the main app bundle.",
       "path_exercised": "Production bundle build path"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Mission Control document links",
+      "result": "pass",
+      "command": "Browser check of http://127.0.0.1:8787/ plus curl -sI http://127.0.0.1:8787/repo/docs/SCRATCH_FILE_INVENTORY.md",
+      "plain_english": "Mission Control served the updated dashboard, showed 12 clickable document rows, included Scratch File Inventory and Mission Control Private Access, and served Markdown docs with the expected content type.",
+      "path_exercised": "Private Mission Control dashboard and repo-backed document links"
     }
   ],
-  "updated_at": "2026-05-30T14:28:00.000Z"
+  "updated_at": "2026-05-30T14:36:00.000Z"
 }
