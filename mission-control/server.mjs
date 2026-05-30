@@ -90,6 +90,7 @@ async function latestDocSummaries() {
     ['Benchmark Artifact Inventory', 'docs/BENCHMARK_ARTIFACT_INVENTORY.md'],
     ['Backend Readiness', 'docs/BACKEND_DEPLOYMENT_READINESS.md'],
     ['Model Artifact Inventory', 'docs/MODEL_ARTIFACT_INVENTORY.md'],
+    ['Legacy iPad Compatibility', 'docs/LEGACY_IPAD_COMPATIBILITY.md'],
     ['Mission Control Private Access', 'docs/MISSION_CONTROL_PRIVATE_ACCESS.md'],
     ['Operating Goals', 'docs/GOALS.md'],
     ['Prototype Roadmap', 'docs/PROTOTYPE_ROADMAP.md'],

@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>ScanGrade Legacy Check</title>
+  <style>
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: #f4f8f4;
+      color: #17231b;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.45;
+    }
+
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .hero,
+    .panel {
+      background: #fff;
+      border: 1px solid #dfe8df;
+      border-radius: 10px;
+      box-shadow: 0 8px 22px rgba(23, 35, 27, 0.08);
+      margin-bottom: 14px;
+      padding: 16px;
+    }
+
+    .brand {
+      align-items: center;
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .brand img {
+      height: 54px;
+      width: 54px;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+    }
+
+    h1 {
+      color: #1f7a3b;
+      font-size: 29px;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin: 8px 0;
+    }
+
+    .muted {
+      color: #5b6d61;
+      font-size: 14px;
+    }
+
+    .status {
+      border-radius: 8px;
+      display: inline-block;
+      font-weight: 700;
+      margin-top: 8px;
+      padding: 8px 10px;
+    }
+
+    .ok {
+      background: #dff4e6;
+      color: #165c2e;
+    }
+
+    .warn {
+      background: #fff1c7;
+      color: #6b4c00;
+    }
+
+    .bad {
+      background: #ffe1de;
+      color: #84251c;
+    }
+
+    .grid {
+      display: block;
+    }
+
+    .check-row {
+      border-top: 1px solid #edf2ed;
+      padding: 10px 0;
+    }
+
+    .check-row:first-child {
+      border-top: 0;
+    }
+
+    .check-row strong {
+      display: block;
+      font-size: 16px;
+    }
+
+    .check-row span {
+      display: block;
+      font-size: 14px;
+      margin-top: 3px;
+    }
+
+    button,
+    .file-button {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #1f7a3b;
+      border: 0;
+      border-radius: 10px;
+      color: #fff;
+      display: inline-block;
+      font-size: 16px;
+      font-weight: 700;
+      margin: 8px 8px 8px 0;
+      padding: 12px 14px;
+      text-decoration: none;
+    }
+
+    button.secondary {
+      background: #eef5ef;
+      color: #1f7a3b;
+    }
+
+    input[type="file"] {
+      font-size: 16px;
+      max-width: 100%;
+      padding: 8px 0;
+    }
+
+    textarea {
+      border: 1px solid #cbd9cd;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-family: Menlo, Consolas, monospace;
+      font-size: 12px;
+      min-height: 170px;
+      padding: 10px;
+      width: 100%;
+    }
+
+    .preview {
+      background: #f8fbf8;
+      border: 1px dashed #bfd0c2;
+      border-radius: 8px;
+      margin-top: 10px;
+      min-height: 92px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .preview img {
+      max-height: 260px;
+      max-width: 100%;
+    }
+
+    @media (min-width: 680px) {
+      .grid {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        gap: 14px;
+      }
+
+      .grid .panel {
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="brand">
+        <img src="/scangrade-logo-transparent.png" alt="ScanGrade logo">
+        <div>
+          <h1>ScanGrade</h1>
+          <p class="muted">Legacy iPad compatibility check</p>
+        </div>
+      </div>
+      <p>This page does not load the main app, OCR model, OpenCV, ONNX, or Vue. It only checks whether an older iPad can load a lightweight ScanGrade page and capture or choose a worksheet photo.</p>
+      <div id="summary" class="status warn">Checking this iPad...</div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Device</h2>
+        <div id="deviceRows"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Browser Features</h2>
+        <div id="featureRows"></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Photo Test</h2>
+      <p>Tap the button below. On older iPads this may open the camera, the photo library, or only a file picker. Any of those outcomes is useful evidence.</p>
+      <input id="photoInput" type="file" accept="image/*" capture="environment">
+      <div id="photoStatus" class="status warn">No photo selected yet.</div>
+      <div id="preview" class="preview">Preview will appear here if this Safari can read the image.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Report</h2>
+      <p class="muted">Send this report back to Codex after trying the page on the older iPad.</p>
+      <button type="button" onclick="refreshReport()">Refresh Report</button>
+      <button type="button" class="secondary" onclick="selectReport()">Select Report Text</button>
+      <textarea id="report" readonly></textarea>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var photoInfo = {
+        selected: false,
+        name: '',
+        type: '',
+        size: 0,
+        preview: false,
+        error: ''
+      };
+
+      function byId(id) {
+        return document.getElementById(id);
+      }
+
+      function has(path) {
+        try {
+          var parts = path.split('.');
+          var value = window;
+          for (var i = 0; i < parts.length; i += 1) {
+            value = value[parts[i]];
+            if (typeof value === 'undefined' || value === null) return false;
+          }
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function supportsLocalStorage() {
+        try {
+          window.localStorage.setItem('sg_legacy_check', '1');
+          window.localStorage.removeItem('sg_legacy_check');
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function supportsWasmBasic() {
+        if (!has('WebAssembly') || typeof WebAssembly.validate !== 'function') return false;
+        try {
+          return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function detectIosVersion(ua) {
+        var match = ua.match(/OS ([0-9_]+) like Mac OS X/);
+        return match ? match[1].replace(/_/g, '.') : 'not detected';
+      }
+
+      function row(title, detail, good) {
+        var cls = good === true ? 'ok' : good === false ? 'bad' : 'warn';
+        var label = good === true ? 'OK' : good === false ? 'No' : 'Check';
+        return '<div class="check-row"><strong>' + escapeHtml(title) + ' <span class="status ' + cls + '">' + label + '</span></strong><span>' + escapeHtml(detail) + '</span></div>';
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function bytes(value) {
+        if (!value) return '0 B';
+        if (value < 1024) return value + ' B';
+        if (value < 1024 * 1024) return Math.round(value / 1024) + ' KB';
+        return (value / 1024 / 1024).toFixed(1) + ' MB';
+      }
+
+      function collect() {
+        var ua = navigator.userAgent || '';
+        var input = document.createElement('input');
+        input.type = 'file';
+        return {
+          url: window.location.href,
+          loadedAt: new Date().toISOString(),
+          userAgent: ua,
+          platform: navigator.platform || '',
+          vendor: navigator.vendor || '',
+          iosVersion: detectIosVersion(ua),
+          online: navigator.onLine,
+          cookieEnabled: navigator.cookieEnabled,
+          screen: window.screen ? (screen.width + 'x' + screen.height) : 'unknown',
+          devicePixelRatio: window.devicePixelRatio || 1,
+          viewport: document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight,
+          features: {
+            promise: typeof Promise !== 'undefined',
+            fetch: typeof fetch !== 'undefined',
+            fileReader: typeof FileReader !== 'undefined',
+            fileInput: !input.disabled,
+            canvas: !!document.createElement('canvas').getContext,
+            webAssembly: supportsWasmBasic(),
+            mediaDevices: has('navigator.mediaDevices'),
+            getUserMedia: has('navigator.mediaDevices.getUserMedia'),
+            localStorage: supportsLocalStorage(),
+            serviceWorker: has('navigator.serviceWorker'),
+            moduleScripts: 'noModule' in document.createElement('script')
+          },
+          photo: photoInfo
+        };
+      }
+
+      function render() {
+        var data = collect();
+        var f = data.features;
+        var canFallbackCapture = f.fileReader && f.fileInput && f.canvas;
+        var canModernCamera = f.mediaDevices && f.getUserMedia;
+        var likelyMainApp = f.promise && f.fetch && f.webAssembly && f.moduleScripts;
+        var summary = byId('summary');
+
+        if (likelyMainApp && canModernCamera) {
+          summary.className = 'status ok';
+          summary.innerHTML = 'This iPad looks capable of the modern app path.';
+        } else if (canFallbackCapture) {
+          summary.className = 'status warn';
+          summary.innerHTML = 'This iPad may support a lightweight capture-only fallback.';
+        } else {
+          summary.className = 'status bad';
+          summary.innerHTML = 'This iPad may be too old for browser capture. Try photo library selection below.';
+        }
+
+        byId('deviceRows').innerHTML =
+          row('iOS version', data.iosVersion, data.iosVersion !== 'not detected' ? null : false) +
+          row('Screen', data.screen + ', viewport ' + data.viewport + ', DPR ' + data.devicePixelRatio, true) +
+          row('Online', String(data.online), data.online) +
+          row('User agent', data.userAgent, null);
+
+        byId('featureRows').innerHTML =
+          row('File/photo input', 'Needed for the capture-only fallback.', f.fileInput) +
+          row('FileReader', 'Needed to preview or submit a selected image.', f.fileReader) +
+          row('Canvas', 'Useful for resizing a submitted image before upload.', f.canvas) +
+          row('MediaDevices camera', 'Needed for the modern live camera path.', canModernCamera) +
+          row('WebAssembly', 'Needed by OCR/OpenCV/model-heavy paths.', f.webAssembly) +
+          row('Module scripts', 'Needed by the modern Vite app bundle.', f.moduleScripts) +
+          row('Fetch', 'Needed for API submission and loading app data.', f.fetch) +
+          row('LocalStorage', 'Useful for queueing fallback submissions.', f.localStorage);
+
+        byId('report').value = JSON.stringify(data, null, 2);
+      }
+
+      window.refreshReport = render;
+
+      window.selectReport = function () {
+        var report = byId('report');
+        report.focus();
+        report.select();
+      };
+
+      byId('photoInput').onchange = function (event) {
+        var file = event.target.files && event.target.files[0];
+        var status = byId('photoStatus');
+        var preview = byId('preview');
+        photoInfo = {
+          selected: !!file,
+          name: file ? file.name : '',
+          type: file ? file.type : '',
+          size: file ? file.size : 0,
+          preview: false,
+          error: ''
+        };
+
+        if (!file) {
+          status.className = 'status warn';
+          status.innerHTML = 'No photo selected yet.';
+          preview.innerHTML = 'Preview will appear here if this Safari can read the image.';
+          render();
+          return;
+        }
+
+        status.className = 'status warn';
+        status.innerHTML = 'Selected ' + escapeHtml(file.name || 'image') + ' (' + bytes(file.size) + '). Trying preview...';
+
+        if (typeof FileReader === 'undefined') {
+          photoInfo.error = 'FileReader unavailable';
+          status.className = 'status bad';
+          status.innerHTML = 'Photo selected, but this Safari cannot preview it with FileReader.';
+          render();
+          return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function (loadEvent) {
+          photoInfo.preview = true;
+          status.className = 'status ok';
+          status.innerHTML = 'Photo selected and preview loaded: ' + escapeHtml(file.name || 'image') + ' (' + bytes(file.size) + ').';
+          preview.innerHTML = '<img alt="Selected worksheet preview" src="' + loadEvent.target.result + '">';
+          render();
+        };
+        reader.onerror = function () {
+          photoInfo.error = 'FileReader error';
+          status.className = 'status bad';
+          status.innerHTML = 'Photo selected, but preview failed.';
+          render();
+        };
+        reader.readAsDataURL(file);
+      };
+
+      render();
+    }());
+  </script>
+</body>
+</html>
