@@ -17,6 +17,10 @@ The deeper problem is deciding what the app should do when it is unsure:
 
 The system should never hide uncertainty or confidently invent.
 
+Copy and labels should follow:
+
+- `docs/REVIEW_AND_FEEDBACK_COPY_GUIDE.md`
+
 ## Product Principle
 
 The teacher owns final judgment.
@@ -192,4 +196,3 @@ Until evidence says otherwise:
 - uncertain answers should be visible
 - unreadable answers should not be scored
 - teacher override must remain easy and final
-

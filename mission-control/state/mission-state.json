@@ -233,6 +233,13 @@
           "detail": "See docs/TRUST_THRESHOLD_DECISION_FRAMEWORK.md. It separates practice mode from assessment mode and reinforces the rule that uncertain answers should be visible, not confidently invented."
         },
         {
+          "title": "Review and feedback copy guide drafted",
+          "type": "app",
+          "owner": "Codex",
+          "summary": "Teacher/student-facing wording is now captured for scan success, review-needed answers, unreadable answers, retries, and future red-pen review.",
+          "detail": "See docs/REVIEW_AND_FEEDBACK_COPY_GUIDE.md. It keeps future UI and prototypes in teacher language instead of raw OCR/model language."
+        },
+        {
           "title": "Student sample triage runbook drafted",
           "type": "validation",
           "owner": "Codex",

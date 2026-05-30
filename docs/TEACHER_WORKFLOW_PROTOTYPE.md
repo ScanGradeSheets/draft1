@@ -9,6 +9,7 @@ Read with `SCANGRADE_VISION_INTERVIEW_ADDENDUM.md`, especially the notes on red 
 Companion trust-threshold planning:
 
 - `docs/TRUST_THRESHOLD_DECISION_FRAMEWORK.md`
+- `docs/REVIEW_AND_FEEDBACK_COPY_GUIDE.md`
 
 ## Product Promise
 

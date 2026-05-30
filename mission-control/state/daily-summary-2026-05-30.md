@@ -18,6 +18,7 @@
   - `docs/STUDENT_SAMPLE_INTAKE.md`
 - A teacher-trust scorecard was added for judging real samples in classroom terms.
 - A worksheet promotion checklist was added to prevent the open-divider sheets from being marketed or expanded before evidence supports it.
+- A review and feedback copy guide was added for clear/read/review/retry states.
 - Mission Control's Tony question queue now groups open decisions by urgency.
 
 ## What Got Tested
@@ -26,6 +27,7 @@
 - `test-app.spec.js` passed again after adding the classroom sample collection and privacy docs.
 - `test-app.spec.js` passed again after adding the teacher-trust scorecard.
 - `test-app.spec.js` passed again after adding the worksheet promotion checklist.
+- `test-app.spec.js` passed again after adding the review and feedback copy guide.
 - Mission Control's updated question queue passed JS syntax, JSON parse, and local status endpoint checks.
 - Latest recorded smoke result: app loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.
 
