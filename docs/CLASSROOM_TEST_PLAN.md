@@ -32,6 +32,10 @@ Intake checklist:
 
 - `docs/STUDENT_SAMPLE_INTAKE.md`
 
+Teacher trust scorecard:
+
+- `docs/TEACHER_TRUST_SCORECARD.md`
+
 ## What This Test Should Prove
 
 ### Worksheet Usability
@@ -155,7 +159,7 @@ Do not move toward public claims if:
 
 ## Teacher Trust Rubric
 
-Use this rubric after each classroom test:
+Use `docs/TEACHER_TRUST_SCORECARD.md` after each classroom test. Short version:
 
 | Area | Green | Yellow | Red |
 | --- | --- | --- | --- |

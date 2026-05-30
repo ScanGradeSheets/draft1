@@ -143,7 +143,15 @@
       "command": "node --check mission-control/public/app.js; JSON parse decisions/mission state; curl -s http://127.0.0.1:8790/api/status; npx playwright test test-app.spec.js --config=playwright.config.js",
       "plain_english": "After grouping Tony questions by urgency, the Mission Control app script parsed, decisions/state JSON parsed, a temporary Mission Control server served the updated status with the new docs/decision fields, and the main app smoke test still passed.",
       "path_exercised": "Private Mission Control data/render path plus MacBook browser app-load smoke path"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Post-teacher-trust-scorecard app smoke",
+      "result": "pass",
+      "command": "node --check mission-control/server.mjs; JSON parse mission state; npx playwright test test-app.spec.js --config=playwright.config.js",
+      "plain_english": "After adding the teacher trust scorecard and linking it into the sample report and classroom test plan, Mission Control server syntax and mission-state JSON passed, and the app still loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.",
+      "path_exercised": "Private Mission Control document list plus MacBook browser app-load smoke path"
     }
   ],
-  "updated_at": "2026-05-30T21:00:00.000Z"
+  "updated_at": "2026-05-30T21:15:00.000Z"
 }

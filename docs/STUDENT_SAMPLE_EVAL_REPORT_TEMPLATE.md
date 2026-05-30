@@ -12,8 +12,11 @@ Sample folder:
 
 - Overall outcome:
 - Can this support the next small classroom pilot?
+- Teacher trust scorecard:
 - Biggest blocker, if any:
 - Recommended next action:
+
+Use `docs/TEACHER_TRUST_SCORECARD.md` to keep the rating focused on classroom trust instead of raw OCR numbers.
 
 ## Inputs
 
@@ -78,6 +81,19 @@ Choose one:
 - Pause app changes and gather more samples.
 
 Reason:
+
+## Teacher Trust Scorecard
+
+| Area | Rating | Evidence |
+| --- | --- | --- |
+| Page scan success | | |
+| Worksheet usability | | |
+| Answer crop quality | | |
+| Digit recognition | | |
+| Uncertainty handling | | |
+| Teacher review speed | | |
+| Student independence | | |
+| Classroom fit | | |
 
 ## Codex Guardrails
 

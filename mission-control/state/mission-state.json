@@ -233,6 +233,13 @@
           "detail": "See docs/STUDENT_SAMPLE_TRIAGE_RUNBOOK.md. It covers inventory, app health, single-sample inspection, per-sheet batch evaluation, failure categories, teacher-trust interpretation, reporting, patch rules, answer-key checks, and privacy."
         },
         {
+          "title": "Teacher trust scorecard drafted",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "A classroom-first scorecard now defines how real sample results should be judged before changing OCR/capture logic.",
+          "detail": "See docs/TEACHER_TRUST_SCORECARD.md. It rates scan success, worksheet usability, crops, recognition, uncertainty handling, review speed, student independence, and classroom fit."
+        },
+        {
           "title": "Open-divider answer keys documented",
           "type": "validation",
           "owner": "Codex",
