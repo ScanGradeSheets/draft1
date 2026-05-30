@@ -87,7 +87,15 @@
       "command": "npm run build; npx playwright test test-app.spec.js --config=playwright.config.js",
       "plain_english": "After the ScanGrade.io header and student scan action polish, the production build passed and the app-load smoke test passed with 0 console errors, 0 WASM/ONNX errors, and 0 failed model/worker requests.",
       "path_exercised": "Production build path plus MacBook browser app-load smoke path"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Post-TPT framework app smoke",
+      "result": "pass",
+      "command": "npx playwright test test-app.spec.js --config=playwright.config.js",
+      "plain_english": "After adding the internal TPT launch framework and Mission Control links, the app still loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.",
+      "path_exercised": "MacBook browser app-load smoke path"
     }
   ],
-  "updated_at": "2026-05-30T19:00:00.000Z"
+  "updated_at": "2026-05-30T19:30:00.000Z"
 }
