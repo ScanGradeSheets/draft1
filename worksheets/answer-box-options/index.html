@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ScanGrade Answer Box Options</title>
+    <style>
+      @font-face {
+        font-family: "Lexend";
+        src: url("../../fonts/Lexend-wght.ttf") format("truetype");
+        font-weight: 100 900;
+      }
+      body {
+        font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        margin: 0;
+        background: #f4f5f7;
+        color: #202124;
+      }
+      main {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding: 32px 20px 44px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(28px, 4vw, 44px);
+        letter-spacing: 0;
+      }
+      .intro {
+        max-width: 760px;
+        color: #666c73;
+        font-size: 17px;
+        line-height: 1.45;
+        margin: 0 0 24px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+      .ranked-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        margin-bottom: 20px;
+      }
+      .ranked-card img {
+        height: 780px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #dde1e6;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+      }
+      .preview-link {
+        display: block;
+        background: #f9fafb;
+        border-bottom: 1px solid #eceff2;
+      }
+      img {
+        display: block;
+        width: 100%;
+        height: 620px;
+        object-fit: contain;
+        background: #fff;
+      }
+      .copy {
+        padding: 18px 18px 20px;
+      }
+      h2 {
+        margin: 0 0 7px;
+        font-size: 20px;
+      }
+      p {
+        margin: 0 0 10px;
+        color: #626970;
+        line-height: 1.45;
+      }
+      .recommendation {
+        color: #2f5e47;
+        font-weight: 650;
+      }
+      a {
+        color: #0066d9;
+        font-weight: 750;
+      }
+      @media (max-width: 980px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        img {
+          height: 720px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Answer Box Design Options</h1>
+      <p class="intro">D-F are three new worksheet-safe variants for two-digit answers, shown first. A-C remain below for comparison. These are comparison mockups only; the production worksheets and OCR layout files are untouched.</p>
+      <section class="ranked-grid">
+
+      <article class="card ranked-card">
+        <a class="preview-link" href="./ranked-20-answer-box-variants.svg" target="_blank" rel="noreferrer">
+          <img alt="Ranked 20 answer box variants" src="./ranked-20-answer-box-variants.svg">
+        </a>
+        <div class="copy">
+          <h2>Ranked 20 Answer Box Variants</h2>
+          <p>A single comparison sheet ordered by expected OCR reliability, from best to worst.</p>
+          <p class="recommendation">Top recommendation to test first: #1 Separate cells or #2 Separate cells with open bridge.</p>
+          <a href="./ranked-20-answer-box-variants.svg" target="_blank" rel="noreferrer">Open ranked SVG</a>
+        </div>
+      </article>
+      </section>
+      <section class="grid">
+
+      <article class="card">
+        <a class="preview-link" href="./option-d-twin-cells.svg" target="_blank" rel="noreferrer">
+          <img alt="Option D preview" src="./option-d-twin-cells.svg">
+        </a>
+        <div class="copy">
+          <h2>Option D: Twin Cells</h2>
+          <p>Two clear digit cells with a real blank gutter between them.</p>
+          <p class="recommendation">Strongest OCR geometry: no center line can be mistaken for a digit.</p>
+          <a href="./option-d-twin-cells.svg" target="_blank" rel="noreferrer">Open printable SVG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <a class="preview-link" href="./option-e-center-band.svg" target="_blank" rel="noreferrer">
+          <img alt="Option E preview" src="./option-e-center-band.svg">
+        </a>
+        <div class="copy">
+          <h2>Option E: Center Band</h2>
+          <p>One answer box with a soft no-writing band between digits.</p>
+          <p class="recommendation">Best A-like variant if we want one visual box but clearer digit lanes.</p>
+          <a href="./option-e-center-band.svg" target="_blank" rel="noreferrer">Open printable SVG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <a class="preview-link" href="./option-f-open-divider.svg" target="_blank" rel="noreferrer">
+          <img alt="Option F preview" src="./option-f-open-divider.svg">
+        </a>
+        <div class="copy">
+          <h2>Option F: Open Divider</h2>
+          <p>A joined box with only top and bottom split marks, leaving handwriting space open.</p>
+          <p class="recommendation">Most elegant compromise: visible structure with fewer OCR artifacts.</p>
+          <a href="./option-f-open-divider.svg" target="_blank" rel="noreferrer">Open printable SVG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <a class="preview-link" href="./option-a-joined-cells.svg" target="_blank" rel="noreferrer">
+          <img alt="Option A preview" src="./option-a-joined-cells.svg">
+        </a>
+        <div class="copy">
+          <h2>Option A: Joined Digit Cells</h2>
+          <p>Most OCR-first. Two obvious cells inside one answer.</p>
+          <p class="recommendation">Best when reliability matters more than looking traditional.</p>
+          <a href="./option-a-joined-cells.svg" target="_blank" rel="noreferrer">Open printable SVG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <a class="preview-link" href="./option-b-side-notches.svg" target="_blank" rel="noreferrer">
+          <img alt="Option B preview" src="./option-b-side-notches.svg">
+        </a>
+        <div class="copy">
+          <h2>Option B: Side Notch Split</h2>
+          <p>Most traditional. One answer box with subtle midpoint notches.</p>
+          <p class="recommendation">Best when you want the sheet to feel like a familiar worksheet.</p>
+          <a href="./option-b-side-notches.svg" target="_blank" rel="noreferrer">Open printable SVG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <a class="preview-link" href="./option-c-quiet-gutter.svg" target="_blank" rel="noreferrer">
+          <img alt="Option C preview" src="./option-c-quiet-gutter.svg">
+        </a>
+        <div class="copy">
+          <h2>Option C: Quiet Center Gutter</h2>
+          <p>Balanced. Clear digit zones without a full OCR-confusing line.</p>
+          <p class="recommendation">My pick: strongest balance of classroom feel and scan reliability.</p>
+          <a href="./option-c-quiet-gutter.svg" target="_blank" rel="noreferrer">Open printable SVG</a>
+        </div>
+      </article>
+      </section>
+    </main>
+  </body>
+</html>
