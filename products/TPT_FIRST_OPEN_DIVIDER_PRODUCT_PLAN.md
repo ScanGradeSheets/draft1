@@ -39,6 +39,12 @@ Current terms and listing draft:
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Terms-of-Use.pdf`
 - `products/TPT_OPEN_DIVIDER_MINI_PACK_LISTING_DRAFT.md`
 
+Current preview assets:
+
+- `public/worksheets/open-divider-test/tpt-preview.html`
+- `public/worksheets/open-divider-test/preview/ScanGrade-Grade2-Open-Divider-TPT-Preview.png`
+- `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-TPT-Preview.pdf`
+
 ## What Must Be True Before Publishing
 
 Do not publish until:
@@ -85,7 +91,6 @@ Draft package could include:
 
 Missing before productization:
 
-- Cover/preview image
 - TPT thumbnail/preview copy
 - Final product description
 - Final validation note from real samples
@@ -125,8 +130,8 @@ It should not yet promise:
 - [ ] Tony approves answer-box design
 - [x] Teacher answer key generated
 - [x] Terms-of-use page generated
-- [ ] Cover image generated
-- [ ] Preview PDF generated
+- [x] Cover image generated
+- [x] Preview PDF generated
 - [x] TPT listing copy drafted
 - [ ] Tony reviews final promise
 
