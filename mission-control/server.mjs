@@ -94,6 +94,7 @@ async function latestDocSummaries() {
     ['Operating Goals', 'docs/GOALS.md'],
     ['Prototype Roadmap', 'docs/PROTOTYPE_ROADMAP.md'],
     ['Student Mode UX', 'docs/SCAN_GRADE_STUDENT_MODE_UX_SPEC.md'],
+    ['Student Sample Eval Report Template', 'docs/STUDENT_SAMPLE_EVAL_REPORT_TEMPLATE.md'],
     ['Student Sample Intake', 'docs/STUDENT_SAMPLE_INTAKE.md'],
     ['Scratch File Inventory', 'docs/SCRATCH_FILE_INVENTORY.md'],
     ['TPT First Product Plan', 'products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md'],
