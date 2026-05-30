@@ -18,6 +18,10 @@ Current packet:
 
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf`
 
+Current answer-key helper:
+
+- `docs/OPEN_DIVIDER_SAMPLE_ANSWER_KEYS.md`
+
 ## What Tony Should Send
 
 Minimum useful set:

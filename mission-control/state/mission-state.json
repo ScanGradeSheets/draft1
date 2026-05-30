@@ -217,6 +217,13 @@
           "owner": "Codex",
           "summary": "A step-by-step runbook now tells Codex exactly how to evaluate Tony's real student worksheet photos before patching app logic.",
           "detail": "See docs/STUDENT_SAMPLE_TRIAGE_RUNBOOK.md. It covers inventory, app health, single-sample inspection, per-sheet batch evaluation, failure categories, teacher-trust interpretation, reporting, patch rules, answer-key checks, and privacy."
+        },
+        {
+          "title": "Open-divider answer keys documented",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "The exact question answers and digit-level keys for Sheets A, B, and C are now documented for real sample scoring.",
+          "detail": "See docs/OPEN_DIVIDER_SAMPLE_ANSWER_KEYS.md. It also warns that some older eval helpers expect 10 single digits, while the current open-divider sheets use 20 digit cells for 10 two-digit answers."
         }
       ]
     }

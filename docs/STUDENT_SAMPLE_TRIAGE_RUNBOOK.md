@@ -174,9 +174,12 @@ Before scoring correctness, confirm the sheet type and answer key from the curre
 
 If unsure, report recognition output without correctness scoring.
 
+Current answer-key helper:
+
+- `docs/OPEN_DIVIDER_SAMPLE_ANSWER_KEYS.md`
+
 ## Privacy Rule
 
 Do not commit student-identifiable images.
 
 Preserve locally or in the agreed external backup location until Tony decides what can be stored in git, ignored artifact storage, or deleted.
-
