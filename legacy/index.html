@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>ScanGrade Legacy Capture</title>
+  <style>
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: #f4f8f4;
+      color: #17231b;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.42;
+    }
+
+    .wrap {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .hero,
+    .panel,
+    .capture-card {
+      background: #fff;
+      border: 1px solid #dfe8df;
+      border-radius: 10px;
+      box-shadow: 0 8px 22px rgba(23, 35, 27, 0.08);
+      margin-bottom: 14px;
+      padding: 16px;
+    }
+
+    .brand {
+      align-items: center;
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .brand img {
+      height: 54px;
+      width: 54px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+    }
+
+    h1 {
+      color: #1f7a3b;
+      font-size: 28px;
+    }
+
+    h2 {
+      font-size: 19px;
+      margin-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin: 8px 0;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      margin: 12px 0 5px;
+    }
+
+    input,
+    select,
+    textarea {
+      border: 1px solid #cbd9cd;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font: inherit;
+      font-size: 16px;
+      padding: 10px;
+      width: 100%;
+    }
+
+    input[type="file"] {
+      border: 0;
+      padding-left: 0;
+    }
+
+    button {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #1f7a3b;
+      border: 0;
+      border-radius: 10px;
+      color: #fff;
+      display: inline-block;
+      font-size: 16px;
+      font-weight: 700;
+      margin: 8px 8px 0 0;
+      padding: 12px 14px;
+    }
+
+    button.secondary {
+      background: #eef5ef;
+      color: #1f7a3b;
+    }
+
+    button.warn {
+      background: #8a5a00;
+    }
+
+    .muted {
+      color: #5b6d61;
+      font-size: 14px;
+    }
+
+    .status {
+      border-radius: 8px;
+      display: inline-block;
+      font-weight: 700;
+      margin-top: 8px;
+      padding: 8px 10px;
+    }
+
+    .ok {
+      background: #dff4e6;
+      color: #165c2e;
+    }
+
+    .warn-bg {
+      background: #fff1c7;
+      color: #6b4c00;
+    }
+
+    .bad {
+      background: #ffe1de;
+      color: #84251c;
+    }
+
+    .preview {
+      background: #f8fbf8;
+      border: 1px dashed #bfd0c2;
+      border-radius: 8px;
+      margin-top: 10px;
+      min-height: 110px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .preview img {
+      max-height: 320px;
+      max-width: 100%;
+    }
+
+    .row {
+      border-top: 1px solid #edf2ed;
+      padding: 9px 0;
+    }
+
+    .row:first-child {
+      border-top: 0;
+    }
+
+    .row strong {
+      display: block;
+    }
+
+    .capture-list {
+      margin-top: 8px;
+    }
+
+    .capture-card {
+      box-shadow: none;
+    }
+
+    textarea {
+      font-family: Menlo, Consolas, monospace;
+      font-size: 12px;
+      min-height: 170px;
+    }
+
+    .danger-note {
+      border-left: 5px solid #8a5a00;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="brand">
+        <img src="../scangrade-logo-transparent.png" alt="ScanGrade logo">
+        <div>
+          <h1>ScanGrade Legacy</h1>
+          <p class="muted">Capture-only fallback prototype</p>
+        </div>
+      </div>
+      <p>This page is for older iPads that may not load the full ScanGrade app. It does not grade worksheets. It only tests whether a student can choose a worksheet photo and create a clear capture record.</p>
+      <div class="status warn-bg">Prototype: use only for compatibility testing.</div>
+    </section>
+
+    <section class="panel danger-note">
+      <h2>Important</h2>
+      <p>This page keeps selected photos only while the page is open. It saves capture metadata, not full student photos, because old iPad browser storage is small and unreliable.</p>
+      <p class="muted">If this works on the blue iPad, the next version can submit images to a backend or teacher device.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Student Capture</h2>
+
+      <label for="studentName">Student name</label>
+      <input id="studentName" autocomplete="off" placeholder="Type student name">
+
+      <label for="worksheetChoice">Worksheet</label>
+      <select id="worksheetChoice">
+        <option value="sheet-a-addition">Sheet A - Addition Within 20</option>
+        <option value="sheet-b-subtraction">Sheet B - Subtraction Within 20</option>
+        <option value="sheet-c-mixed">Sheet C - Mixed Within 50</option>
+      </select>
+
+      <label for="photoInput">Worksheet photo</label>
+      <input id="photoInput" type="file" accept="image/*" capture="environment">
+
+      <div id="photoStatus" class="status warn-bg">No photo selected yet.</div>
+      <div id="preview" class="preview">Preview will appear here if this Safari can read the selected image.</div>
+
+      <button type="button" onclick="saveCapture()">Save Capture Record</button>
+      <button type="button" class="secondary" onclick="clearCurrentPhoto()">Clear Photo</button>
+    </section>
+
+    <section class="panel">
+      <h2>Saved Capture Records</h2>
+      <p class="muted">These records are metadata only. They confirm what was selected; they do not contain the full worksheet photo.</p>
+      <div id="captureList" class="capture-list"></div>
+      <button type="button" class="secondary" onclick="refreshReport()">Refresh Report</button>
+      <button type="button" class="secondary" onclick="selectReport()">Select Report Text</button>
+      <button type="button" class="warn" onclick="clearRecords()">Clear Records</button>
+      <textarea id="report" readonly></textarea>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var STORAGE_KEY = 'scangrade_legacy_capture_records_v1';
+      var currentPhoto = {
+        selected: false,
+        name: '',
+        type: '',
+        size: 0,
+        preview: false,
+        error: ''
+      };
+
+      function byId(id) {
+        return document.getElementById(id);
+      }
+
+      function escapeHtml(value) {
+        return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function bytes(value) {
+        if (!value) return '0 B';
+        if (value < 1024) return value + ' B';
+        if (value < 1024 * 1024) return Math.round(value / 1024) + ' KB';
+        return (value / 1024 / 1024).toFixed(1) + ' MB';
+      }
+
+      function storageAvailable() {
+        try {
+          window.localStorage.setItem('sg_legacy_capture_test', '1');
+          window.localStorage.removeItem('sg_legacy_capture_test');
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function loadRecords() {
+        if (!storageAvailable()) return [];
+        try {
+          var raw = window.localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function writeRecords(records) {
+        if (!storageAvailable()) return false;
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function deviceInfo() {
+        return {
+          userAgent: navigator.userAgent || '',
+          platform: navigator.platform || '',
+          online: navigator.onLine,
+          screen: window.screen ? (screen.width + 'x' + screen.height) : 'unknown',
+          viewport: document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight,
+          devicePixelRatio: window.devicePixelRatio || 1,
+          localStorage: storageAvailable(),
+          fileReader: typeof FileReader !== 'undefined',
+          canvas: !!document.createElement('canvas').getContext
+        };
+      }
+
+      function selectedWorksheetLabel(value) {
+        if (value === 'sheet-a-addition') return 'Sheet A - Addition Within 20';
+        if (value === 'sheet-b-subtraction') return 'Sheet B - Subtraction Within 20';
+        if (value === 'sheet-c-mixed') return 'Sheet C - Mixed Within 50';
+        return value;
+      }
+
+      function renderRecords() {
+        var records = loadRecords();
+        var list = byId('captureList');
+        if (!records.length) {
+          list.innerHTML = '<p class="muted">No saved records yet.</p>';
+        } else {
+          list.innerHTML = records.map(function (record, index) {
+            return '<article class="capture-card">' +
+              '<h3>' + escapeHtml(record.studentName || 'Unnamed student') + '</h3>' +
+              '<div class="row"><strong>Worksheet</strong><span>' + escapeHtml(record.worksheetLabel) + '</span></div>' +
+              '<div class="row"><strong>Photo</strong><span>' + escapeHtml(record.photo.name || 'selected image') + ' (' + escapeHtml(bytes(record.photo.size)) + ')</span></div>' +
+              '<div class="row"><strong>Saved</strong><span>' + escapeHtml(record.savedAt) + '</span></div>' +
+              '<button type="button" class="secondary" onclick="deleteRecord(' + index + ')">Delete Record</button>' +
+            '</article>';
+          }).join('');
+        }
+        refreshReport();
+      }
+
+      window.refreshReport = function () {
+        var report = {
+          generatedAt: new Date().toISOString(),
+          page: window.location.href,
+          device: deviceInfo(),
+          currentPhoto: currentPhoto,
+          records: loadRecords()
+        };
+        byId('report').value = JSON.stringify(report, null, 2);
+      };
+
+      window.selectReport = function () {
+        var report = byId('report');
+        report.focus();
+        report.select();
+      };
+
+      window.saveCapture = function () {
+        var status = byId('photoStatus');
+        var records = loadRecords();
+        var studentName = byId('studentName').value.replace(/^\s+|\s+$/g, '');
+        var worksheet = byId('worksheetChoice').value;
+
+        if (!studentName) {
+          status.className = 'status bad';
+          status.innerHTML = 'Type the student name before saving.';
+          return;
+        }
+
+        if (!currentPhoto.selected) {
+          status.className = 'status bad';
+          status.innerHTML = 'Choose or take a worksheet photo before saving.';
+          return;
+        }
+
+        records.push({
+          id: 'legacy-' + String(new Date().getTime()),
+          savedAt: new Date().toISOString(),
+          studentName: studentName,
+          worksheet: worksheet,
+          worksheetLabel: selectedWorksheetLabel(worksheet),
+          photo: currentPhoto,
+          device: deviceInfo()
+        });
+
+        if (!writeRecords(records)) {
+          status.className = 'status bad';
+          status.innerHTML = 'This iPad could not save the capture record. Use Select Report Text before leaving this page.';
+          refreshReport();
+          return;
+        }
+
+        status.className = 'status ok';
+        status.innerHTML = 'Capture record saved. Photo preview remains only while this page stays open.';
+        renderRecords();
+      };
+
+      window.deleteRecord = function (index) {
+        var records = loadRecords();
+        records.splice(index, 1);
+        writeRecords(records);
+        renderRecords();
+      };
+
+      window.clearRecords = function () {
+        if (!confirm('Clear saved capture records from this iPad?')) return;
+        writeRecords([]);
+        renderRecords();
+      };
+
+      window.clearCurrentPhoto = function () {
+        byId('photoInput').value = '';
+        currentPhoto = {
+          selected: false,
+          name: '',
+          type: '',
+          size: 0,
+          preview: false,
+          error: ''
+        };
+        byId('photoStatus').className = 'status warn-bg';
+        byId('photoStatus').innerHTML = 'No photo selected yet.';
+        byId('preview').innerHTML = 'Preview will appear here if this Safari can read the selected image.';
+        refreshReport();
+      };
+
+      byId('photoInput').onchange = function (event) {
+        var file = event.target.files && event.target.files[0];
+        var status = byId('photoStatus');
+        var preview = byId('preview');
+
+        currentPhoto = {
+          selected: !!file,
+          name: file ? file.name : '',
+          type: file ? file.type : '',
+          size: file ? file.size : 0,
+          preview: false,
+          error: ''
+        };
+
+        if (!file) {
+          clearCurrentPhoto();
+          return;
+        }
+
+        status.className = 'status warn-bg';
+        status.innerHTML = 'Selected ' + escapeHtml(file.name || 'image') + ' (' + bytes(file.size) + '). Trying preview...';
+
+        if (typeof FileReader === 'undefined') {
+          currentPhoto.error = 'FileReader unavailable';
+          status.className = 'status bad';
+          status.innerHTML = 'Photo selected, but this Safari cannot preview it.';
+          refreshReport();
+          return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function (loadEvent) {
+          currentPhoto.preview = true;
+          status.className = 'status ok';
+          status.innerHTML = 'Photo selected and preview loaded.';
+          preview.innerHTML = '<img alt="Selected worksheet preview" src="' + loadEvent.target.result + '">';
+          refreshReport();
+        };
+        reader.onerror = function () {
+          currentPhoto.error = 'FileReader error';
+          status.className = 'status bad';
+          status.innerHTML = 'Photo selected, but preview failed.';
+          refreshReport();
+        };
+        reader.readAsDataURL(file);
+      };
+
+      renderRecords();
+    }());
+  </script>
+</body>
+</html>
