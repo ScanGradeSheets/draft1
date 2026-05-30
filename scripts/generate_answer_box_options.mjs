@@ -344,7 +344,9 @@ function optionStyles() {
       .open-split { stroke: #8f969e; stroke-width: 0.42; stroke-linecap: round; }
       .center-tick { stroke: #9aa2aa; stroke-width: 0.4; stroke-linecap: round; }
       .qr-code { image-rendering: pixelated; }
-      .qr-label { font-size: 3.2px; fill: #555; font-weight: 500; }
+      .qr-label { font-size: 3.2px; }
+      .qr-label-name { fill: #202124; font-weight: 650; }
+      .qr-label-domain { fill: #6e6e73; font-weight: 420; }
       .qr-sheet-code { font-size: 3.05px; fill: #555; font-weight: 400; }
     `
 }
@@ -590,7 +592,7 @@ ${buildRankedVariantRows()}
 
   <line class="rank-divider" x1="15.5" y1="${rankedPage.height - 22.7}" x2="${rankedPage.width - 15.5}" y2="${rankedPage.height - 22.7}" />
   <text class="legend-text" x="${rankedPage.width / 2}" y="${rankedPage.height - 15.1}" text-anchor="middle">Design ranking only. Top candidates still need a handwriting/camera bake-off before becoming the template standard.</text>
-  <text class="qr-label" x="${rankedPage.width / 2}" y="${rankedPage.height - 8.6}" text-anchor="middle">ScanGrade.io</text>
+  <text class="qr-label" x="${rankedPage.width / 2}" y="${rankedPage.height - 8.6}" text-anchor="middle"><tspan class="qr-label-name">ScanGrade</tspan><tspan class="qr-label-domain">.io</tspan></text>
   <text class="qr-sheet-code" x="${rankedPage.width / 2}" y="${rankedPage.height - 4.6}" text-anchor="middle">SG-DESIGN-20</text>
 </svg>
 `
@@ -640,7 +642,7 @@ ${buildRows(option)}
   </g>
 
   <image class="qr-code" href="data:image/png;base64,${qrBase64}" x="${qr.x}" y="${qr.y}" width="${qr.size}" height="${qr.size}" />
-  <text class="qr-label" x="${page.width / 2}" y="${qr.y - 3.2}" text-anchor="middle">ScanGrade.io</text>
+  <text class="qr-label" x="${page.width / 2}" y="${qr.y - 2.4}" text-anchor="middle"><tspan class="qr-label-name">ScanGrade</tspan><tspan class="qr-label-domain">.io</tspan></text>
   <text class="qr-sheet-code" x="${page.width / 2}" y="${qr.y + qr.size + 3.35}" text-anchor="middle">${escapeXml(option.code)}</text>
 </svg>
 `

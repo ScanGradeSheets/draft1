@@ -207,17 +207,33 @@ function buildIndex() {
         line-height: 1.45;
       }
 
-      .packet-link {
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 0 0 24px;
+      }
+
+      .packet-link,
+      .key-link {
         display: inline-flex;
         align-items: center;
         min-height: 44px;
         padding: 0 17px;
-        margin: 0 0 24px;
         border-radius: 9px;
-        background: #0066d9;
-        color: #fff;
         font-weight: 760;
         text-decoration: none;
+      }
+
+      .packet-link {
+        background: #0066d9;
+        color: #fff;
+      }
+
+      .key-link {
+        border: 1px solid #b7e4c7;
+        background: #eaf8ef;
+        color: #126c39;
       }
 
       .grid {
@@ -288,7 +304,15 @@ function buildIndex() {
     <main>
       <h1>Open-Divider Worksheet Test Set</h1>
       <p class="intro">These three printables use the #5 open-divider answer box. Everything else is intentionally held steady so scans compare against the current production worksheet geometry.</p>
-      <a class="packet-link" href="./printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf" target="_blank" rel="noreferrer">Open print packet PDF</a>
+      <div class="actions">
+        <a class="packet-link" href="./printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf" target="_blank" rel="noreferrer">Open print packet PDF</a>
+        <a class="key-link" href="./teacher-answer-key.html" target="_blank" rel="noreferrer">Open teacher answer key</a>
+        <a class="key-link" href="./printables/ScanGrade-Grade2-Open-Divider-Teacher-Answer-Key.pdf" target="_blank" rel="noreferrer">Open answer key PDF</a>
+        <a class="key-link" href="./terms-of-use.html" target="_blank" rel="noreferrer">Open terms of use</a>
+        <a class="key-link" href="./printables/ScanGrade-Grade2-Open-Divider-Terms-of-Use.pdf" target="_blank" rel="noreferrer">Open terms PDF</a>
+        <a class="key-link" href="./tpt-preview.html" target="_blank" rel="noreferrer">Open preview page</a>
+        <a class="key-link" href="./preview/ScanGrade-Grade2-Open-Divider-TPT-Preview.png" target="_blank" rel="noreferrer">Open preview PNG</a>
+      </div>
       <section class="grid">
 ${cards}
       </section>
