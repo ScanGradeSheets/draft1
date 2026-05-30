@@ -331,7 +331,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.05.30-sg-io-new-scan'
+const APP_BUILD_LABEL = '2026.05.30-brand-header-polish'
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -1075,11 +1075,14 @@ onMounted(() => {
 }
 
 .brand-name {
-  color: #126c39;
+  color: #202124;
+  font-weight: 780;
 }
 
 .brand-domain {
-  color: #202124;
+  color: #6e6e73;
+  font-size: 0.92em;
+  font-weight: 450;
 }
 
 .build-label {
@@ -1636,17 +1639,28 @@ onMounted(() => {
   display: grid;
   grid-template-columns: auto auto auto;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex: 0 0 auto;
 }
 
 .student-scan-link {
-  border: 0;
+  min-height: 36px;
+  border: 1px solid transparent;
   background: transparent;
-  color: #007aff;
+  color: #555b5f;
   font: inherit;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 620;
+  padding: 0 8px;
+  border-radius: 8px;
   cursor: pointer;
+}
+
+.student-scan-link:hover,
+.student-scan-link:focus-visible {
+  background: #f5f7f6;
+  color: #202124;
+  outline: none;
 }
 
 .student-scan-reset {
@@ -1659,8 +1673,14 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(18, 108, 57, 0.24);
 }
 
+.student-scan-reset:hover,
+.student-scan-reset:focus-visible {
+  background: #0f5d31;
+  color: #fff;
+}
+
 .student-scan-login {
-  min-width: 62px;
+  min-width: 52px;
   text-align: center;
 }
 
