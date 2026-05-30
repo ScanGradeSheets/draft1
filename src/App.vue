@@ -2,7 +2,7 @@
   <div class="scan-grade" :class="{ 'scan-grade--student': isStudentMode }">
     <header class="header">
       <img :src="publicUrl('scangrade-logo-transparent.png')" alt="ScanGrade logo" class="brand-logo" />
-      <h1>ScanGrade .io</h1>
+      <h1><span class="brand-name">ScanGrade</span><span class="brand-domain">.io</span></h1>
       <p class="build-label">Build {{ APP_BUILD_LABEL }}</p>
     </header>
 
@@ -115,10 +115,13 @@
               class="student-scan-link student-scan-reset"
               @click="resetStudentScan"
             >
-              {{ ocrResult?.error ? 'Try again' : 'Scan another' }}
+              New Scan
+            </button>
+            <button type="button" class="student-scan-link student-scan-login" @click="beginStudentSignIn">
+              Login
             </button>
             <button type="button" class="student-scan-link" @click="returnToLanding">
-              Home
+              Menu
             </button>
           </div>
         </div>
@@ -328,7 +331,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.05.25-two-digit-guard'
+const APP_BUILD_LABEL = '2026.05.30-sg-io-new-scan'
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -1068,8 +1071,15 @@ onMounted(() => {
 .header h1 {
   font-size: 32px;
   font-weight: 750;
-  color: #202124;
   margin-bottom: 0;
+}
+
+.brand-name {
+  color: #126c39;
+}
+
+.brand-domain {
+  color: #202124;
 }
 
 .build-label {
@@ -1623,7 +1633,8 @@ onMounted(() => {
 }
 
 .student-scan-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto auto;
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
@@ -1639,11 +1650,18 @@ onMounted(() => {
 }
 
 .student-scan-reset {
-  padding: 6px 9px;
-  border-radius: 999px;
-  background: #f5f5f7;
-  color: #202124;
-  font-size: 13px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #126c39;
+  color: #fff;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(18, 108, 57, 0.24);
+}
+
+.student-scan-login {
+  min-width: 62px;
+  text-align: center;
 }
 
 /* Student Mode: dedicated layout — stage takes most of the screen */
