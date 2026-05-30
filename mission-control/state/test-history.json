@@ -55,7 +55,15 @@
       "command": "npx playwright test test-app.spec.js test-upload.spec.js test-ocr.spec.js verify-single-pipeline.spec.js test-upload-real.spec.js --config=playwright.config.js",
       "plain_english": "All seven active narrow Playwright checks passed after the safe preservation commits. Runtime Self-Test passed, app load had no console/WASM/ONNX errors, upload paths stayed functional, and the worksheet fixture tests still produced varied predictions.",
       "path_exercised": "MacBook app-load path, Teacher/debug runtime path, single-pipeline verification, and local worksheet fixture upload paths"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Uploaded worksheet inspection script",
+      "result": "pass",
+      "command": "npm run inspect:uploaded-worksheet -- public/test-worksheet-with-digits.png",
+      "plain_english": "The committed inspection helper ran successfully against an existing worksheet fixture and returned predictions plus marker/debug details. It required normal Playwright browser permissions outside the sandbox.",
+      "path_exercised": "Teacher/debug upload inspection path for future student sample triage"
     }
   ],
-  "updated_at": "2026-05-30T14:15:00.000Z"
+  "updated_at": "2026-05-30T14:22:00.000Z"
 }
