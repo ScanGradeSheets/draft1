@@ -614,6 +614,14 @@ input {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.doc-item:hover {
+  border-color: var(--sg-green);
+  transform: translateY(-1px);
 }
 
 pre {

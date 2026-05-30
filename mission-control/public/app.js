@@ -256,13 +256,13 @@ function renderValidation(data) {
 function renderDocs(data) {
   const docs = data.docs || [];
   $('docList').innerHTML = docs.map((doc) => `
-    <article class="doc-item">
+    <a class="doc-item" href="/repo/${escapeHtml(doc.file)}" target="_blank" rel="noreferrer">
       <div>
         <strong>${escapeHtml(doc.title)}</strong>
         <p>${escapeHtml(doc.file)}</p>
       </div>
       <span class="badge">${doc.exists ? 'present' : 'missing'}</span>
-    </article>
+    </a>
   `).join('');
 }
 
