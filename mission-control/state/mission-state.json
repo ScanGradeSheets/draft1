@@ -173,8 +173,8 @@
           "title": "Student header polish published",
           "type": "app",
           "owner": "Codex",
-          "summary": "The public app now uses a calmer ScanGrade.io header and quieter Login/Menu actions.",
-          "detail": "Build 2026.05.30-brand-header-polish passed the production build and app-load smoke test, then was pushed to the source branch and GitHub Pages. No OCR/capture/homography logic changed."
+          "summary": "The public app now uses a calmer ScanGrade.io header and cleaner post-capture actions.",
+          "detail": "Build 2026.05.30-capture-header-actions removed the extra post-capture helper text, placed Login under Guest, renamed Menu to Home, kept New Scan prominent, and matched the ready-sheet glow to the ScanGrade green. npm run build, test-app.spec.js, and test-upload.spec.js passed, then the source branch and GitHub Pages were pushed. No OCR/capture/homography logic changed."
         },
         {
           "title": "TPT launch framework drafted",

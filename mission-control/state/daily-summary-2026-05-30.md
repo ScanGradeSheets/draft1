@@ -5,6 +5,7 @@
 - Mission Control was updated to preserve Tony's new Codex autonomy rules.
 - The heartbeat cadence was changed to every 15 minutes.
 - ScanGrade app header/student scan UI polish was published to GitHub Pages.
+- The post-capture student header was tightened again: "Scan one worksheet" was removed, Login now sits under Guest, Menu became Home, New Scan stayed prominent, and the ready-sheet border glow now matches the ScanGrade green.
 - The internal ScanGrade style guide was refreshed around teacher trust, paper-first workflow, calm UI, worksheet rules, and conservative copy.
 - TPT launch planning was expanded:
   - `products/TPT_LAUNCH_FRAMEWORK.md`
@@ -25,6 +26,7 @@
 ## What Got Tested
 
 - `test-app.spec.js` passed repeatedly after the UI polish and product/marketing documentation work.
+- `npm run build` and `test-app.spec.js` + `test-upload.spec.js` passed after the post-capture header and ready-glow polish.
 - `test-app.spec.js` passed again after adding the classroom sample collection and privacy docs.
 - `test-app.spec.js` passed again after adding the teacher-trust scorecard.
 - `test-app.spec.js` passed again after adding the worksheet promotion checklist.
