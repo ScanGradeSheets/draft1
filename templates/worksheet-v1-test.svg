@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ScanGrade Worksheet Template v1 - TEST / PRINT VERSION
+  Revisions: solid black corner markers (no labels), header/footer clear of markers, number clearance above boxes.
+  Same geometry: 8.5x11 in, 4 markers at 5%/95%, 10 boxes matching sg-10-box-v1
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 215.9 279.4"
+     width="8.5in" height="11in"
+     preserveAspectRatio="xMidYMid meet">
+
+  <defs>
+    <style>
+      .page { fill: white; stroke: none; }
+      .corner-marker { fill: #1a1a1a; stroke: none; }
+      .digit-box { fill: none; stroke: #1a1a1a; stroke-width: 0.75; stroke-linecap: square; }
+      .digit-label { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 10pt; fill: #666; font-weight: 500; }
+      .header-text { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 7pt; fill: #1a1a1a; font-weight: 600; }
+      .sub-text { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 4.5pt; fill: #666; }
+    </style>
+    <rect id="corner-marker" width="17.3" height="17.3" />
+  </defs>
+
+  <rect class="page" width="215.9" height="279.4" />
+
+  <!-- Corner markers only - no labels (solid black for reliable detection) -->
+  <use href="#corner-marker" class="corner-marker" x="10.8" y="10.8" />
+  <use href="#corner-marker" class="corner-marker" x="187.8" y="10.8" />
+  <use href="#corner-marker" class="corner-marker" x="187.8" y="251.3" />
+  <use href="#corner-marker" class="corner-marker" x="10.8" y="251.3" />
+
+  <!-- Header between top markers and first row of boxes -->
+  <text class="header-text" x="107.95" y="22" text-anchor="middle">ScanGrade Worksheet</text>
+  <text class="sub-text" x="107.95" y="28" text-anchor="middle">Single Digit Practice - 10 Questions</text>
+
+  <!-- Digit boxes: same positions as worksheet-v1. Numbers at y=-6 for clearance. -->
+  <g id="answer-boxes">
+    <g transform="translate(0, 60)">
+      <rect class="digit-box" x="22" y="0" width="22" height="22" />
+      <text class="digit-label" x="33" y="-6" text-anchor="middle">1</text>
+      <rect class="digit-box" x="60" y="0" width="22" height="22" />
+      <text class="digit-label" x="71" y="-6" text-anchor="middle">2</text>
+      <rect class="digit-box" x="98" y="0" width="22" height="22" />
+      <text class="digit-label" x="109" y="-6" text-anchor="middle">3</text>
+      <rect class="digit-box" x="136" y="0" width="22" height="22" />
+      <text class="digit-label" x="147" y="-6" text-anchor="middle">4</text>
+      <rect class="digit-box" x="174" y="0" width="22" height="22" />
+      <text class="digit-label" x="185" y="-6" text-anchor="middle">5</text>
+    </g>
+    <g transform="translate(0, 130)">
+      <rect class="digit-box" x="22" y="0" width="22" height="22" />
+      <text class="digit-label" x="33" y="-6" text-anchor="middle">6</text>
+      <rect class="digit-box" x="60" y="0" width="22" height="22" />
+      <text class="digit-label" x="71" y="-6" text-anchor="middle">7</text>
+      <rect class="digit-box" x="98" y="0" width="22" height="22" />
+      <text class="digit-label" x="109" y="-6" text-anchor="middle">8</text>
+      <rect class="digit-box" x="136" y="0" width="22" height="22" />
+      <text class="digit-label" x="147" y="-6" text-anchor="middle">9</text>
+      <rect class="digit-box" x="174" y="0" width="22" height="22" />
+      <text class="digit-label" x="185" y="-6" text-anchor="middle">10</text>
+    </g>
+  </g>
+
+  <!-- Footer below bottom marker band -->
+  <text class="sub-text" x="107.95" y="261" text-anchor="middle" font-size="3.5pt">
+    Point - Scan - Grade. No app required.
+  </text>
+</svg>
