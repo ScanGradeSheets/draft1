@@ -110,10 +110,10 @@
               Login
             </button>
           </div>
+          <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
+            Home
+          </button>
           <div class="student-scan-actions">
-            <button type="button" class="student-scan-link" @click="returnToLanding">
-              Home
-            </button>
             <button
               v-if="ocrResult"
               type="button"
@@ -330,7 +330,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.05.30-capture-header-actions'
+const APP_BUILD_LABEL = '2026.05.30-stable-home-glow'
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -1610,9 +1610,9 @@ onMounted(() => {
 }
 
 .student-scan-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(64px, 1fr) auto minmax(76px, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   width: min(100%, calc(72vh * 8.5 / 11));
   max-width: min(100%, calc(72vh * 8.5 / 11));
@@ -1656,11 +1656,11 @@ onMounted(() => {
 }
 
 .student-scan-actions {
-  display: grid;
-  grid-template-columns: auto auto auto;
+  display: flex;
   align-items: center;
   gap: 4px;
-  flex: 0 0 auto;
+  justify-content: flex-end;
+  min-width: 76px;
 }
 
 .student-scan-link {
@@ -1681,6 +1681,10 @@ onMounted(() => {
   background: #f5f7f6;
   color: #202124;
   outline: none;
+}
+
+.student-scan-home {
+  justify-self: center;
 }
 
 .student-scan-reset {

@@ -3611,9 +3611,10 @@ onUnmounted(stopStream)
   border-color: rgba(18, 108, 57, 0.96);
   box-shadow:
     0 0 0 1px rgba(18, 108, 57, 0.72),
-    0 0 18px rgba(18, 108, 57, 0.30),
+    0 0 16px rgba(18, 108, 57, 0.34),
+    0 0 34px rgba(18, 108, 57, 0.20),
     inset 0 0 0 1px rgba(255, 255, 255, 0.78),
-    inset 0 0 18px rgba(18, 108, 57, 0.12);
+    inset 0 0 20px rgba(18, 108, 57, 0.14);
 }
 
 .capture-state-adjust .overlay-sheet--full {
