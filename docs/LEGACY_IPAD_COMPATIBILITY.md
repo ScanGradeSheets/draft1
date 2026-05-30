@@ -49,6 +49,37 @@ It checks:
 - MediaDevices/getUserMedia support
 - fetch/localStorage support
 
+## Capture-Only Prototype
+
+A separate static capture-only prototype also exists at:
+
+```text
+https://localhost:5174/legacy/index.html
+```
+
+On an iPad, use the Mac's reachable LAN/Tailscale/served app address with `/legacy/index.html` at the end.
+
+Use the exact `index.html` URL during local Vite development. The shorter `/legacy/` path may fall back to the modern app in Vite dev mode.
+
+This prototype is intentionally separate from the modern app. It does not load Vue, OCR, ONNX, OpenCV, homography, or the production capture pipeline.
+
+It can:
+
+- collect student name
+- choose worksheet A/B/C
+- choose or capture a worksheet photo through old Safari's file input
+- preview the selected photo if FileReader works
+- save capture metadata in localStorage
+- generate a report that Tony/Codex can inspect
+
+It cannot:
+
+- grade worksheets
+- reliably store full worksheet photos after the page is closed
+- submit to the backend yet
+
+The full photo is kept only while the page is open. This is deliberate because older mobile Safari storage is too small and unreliable for large student photo queues.
+
 ## Interpretation
 
 If `legacy-check.html` does not load:
@@ -58,8 +89,8 @@ If `legacy-check.html` does not load:
 
 If it loads and photo selection/preview works:
 
-- Build a `/legacy/` capture-only app.
-- It should let a student choose name/worksheet and upload or capture a worksheet photo.
+- Try the `/legacy/` capture-only prototype.
+- It should let a student choose name/worksheet and preview a worksheet photo.
 - OCR/grading should happen elsewhere, such as a newer iPad, teacher device, or backend.
 
 If it loads but photo preview fails:
@@ -87,13 +118,19 @@ If MediaDevices fails but file input works:
 
 ## Likely MVP Fallback
 
-The likely MVP is a legacy capture page:
+The likely MVP is the legacy capture page:
 
 1. Student selects name.
 2. Student selects worksheet A/B/C.
 3. Student takes or chooses a photo.
 4. Page previews the image if possible.
-5. Page saves/submits the image for teacher/Codex/server processing.
+5. Page saves metadata and keeps the photo preview in the current page session.
 6. Teacher reviews results on a newer device.
+
+Next likely improvement after blue-iPad testing:
+
+- Add backend image submission if the old iPad can select/preview photos.
+- Add a teacher-device intake page if backend deployment is not ready.
+- Keep local OCR/grading out of the legacy path unless diagnostic evidence says the old iPad can handle it.
 
 This would let older iPads remain useful in class without weakening the current app for newer hardware.
