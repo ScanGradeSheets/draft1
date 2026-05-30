@@ -104,11 +104,16 @@
         ref="cameraWrapper"
       >
         <div v-if="showStudentCaptureUi" class="student-scan-bar">
-          <div>
+          <div class="student-scan-identity">
             <strong>{{ activeStudentSession?.studentName || 'Guest' }}</strong>
-            <span>Scan one worksheet</span>
+            <button type="button" class="student-scan-login-inline" @click="beginStudentSignIn">
+              Login
+            </button>
           </div>
           <div class="student-scan-actions">
+            <button type="button" class="student-scan-link" @click="returnToLanding">
+              Home
+            </button>
             <button
               v-if="ocrResult"
               type="button"
@@ -116,12 +121,6 @@
               @click="resetStudentScan"
             >
               New Scan
-            </button>
-            <button type="button" class="student-scan-link student-scan-login" @click="beginStudentSignIn">
-              Login
-            </button>
-            <button type="button" class="student-scan-link" @click="returnToLanding">
-              Menu
             </button>
           </div>
         </div>
@@ -331,7 +330,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.05.30-brand-header-polish'
+const APP_BUILD_LABEL = '2026.05.30-capture-header-actions'
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -1614,25 +1613,46 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   width: min(100%, calc(72vh * 8.5 / 11));
   max-width: min(100%, calc(72vh * 8.5 / 11));
   margin: 0 auto 10px;
-  padding: 8px 10px;
+  padding: 8px;
   border: 1px solid #d2d2d7;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
 }
 
-.student-scan-bar strong,
-.student-scan-bar span {
-  display: block;
+.student-scan-identity {
+  min-width: 64px;
+  padding: 0 2px;
 }
 
-.student-scan-bar span {
+.student-scan-bar strong {
+  display: block;
+  color: #1d1d1f;
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.student-scan-login-inline {
+  display: block;
+  margin: 3px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #6e6e73;
+  font: inherit;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 720;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+.student-scan-login-inline:hover,
+.student-scan-login-inline:focus-visible {
+  color: #126c39;
+  outline: none;
 }
 
 .student-scan-actions {
@@ -1665,7 +1685,7 @@ onMounted(() => {
 
 .student-scan-reset {
   min-height: 40px;
-  padding: 0 16px;
+  padding: 0 18px;
   border-radius: 8px;
   background: #126c39;
   color: #fff;
@@ -1677,11 +1697,6 @@ onMounted(() => {
 .student-scan-reset:focus-visible {
   background: #0f5d31;
   color: #fff;
-}
-
-.student-scan-login {
-  min-width: 52px;
-  text-align: center;
 }
 
 /* Student Mode: dedicated layout — stage takes most of the screen */

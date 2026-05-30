@@ -3608,8 +3608,12 @@ onUnmounted(stopStream)
 }
 
 .capture-state-ready .overlay-sheet--full {
-  border-color: rgba(52, 199, 89, 0.95);
-  box-shadow: 0 0 0 1px rgba(19, 115, 51, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  border-color: rgba(18, 108, 57, 0.96);
+  box-shadow:
+    0 0 0 1px rgba(18, 108, 57, 0.72),
+    0 0 18px rgba(18, 108, 57, 0.30),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.78),
+    inset 0 0 18px rgba(18, 108, 57, 0.12);
 }
 
 .capture-state-adjust .overlay-sheet--full {
@@ -3640,7 +3644,7 @@ onUnmounted(stopStream)
 }
 
 .overlay-frame--ready .overlay-frame-text {
-  background: rgba(19, 115, 51, 0.9);
+  background: rgba(18, 108, 57, 0.9);
 }
 
 .overlay-frame--adjust .overlay-frame-text {
