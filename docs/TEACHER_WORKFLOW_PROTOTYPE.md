@@ -6,6 +6,10 @@ This is a product/UX prototype spec for the teacher-facing ScanGrade workflow. I
 
 Read with `SCANGRADE_VISION_INTERVIEW_ADDENDUM.md`, especially the notes on red teacher-pen review, Student Mode vs Teacher Mode, and trust thresholds.
 
+Companion trust-threshold planning:
+
+- `docs/TRUST_THRESHOLD_DECISION_FRAMEWORK.md`
+
 ## Product Promise
 
 The teacher should be able to print a worksheet, let students complete it naturally, scan it, and receive trustworthy results without manually defining answer regions or managing a complicated setup.

@@ -203,6 +203,13 @@
           "owner": "Codex",
           "summary": "A practical worksheet-quality rubric and future Tony interview guide now capture the biggest remaining design-taste gap.",
           "detail": "See docs/WORKSHEET_QUALITY_RUBRIC.md and docs/WORKSHEET_DESIGN_INTERVIEW_GUIDE.md. These help Codex judge worksheet clarity, scan safety, visual calm, grade fit, product identity, and marketplace readiness before asking Tony for direction."
+        },
+        {
+          "title": "Trust threshold framework drafted",
+          "type": "app",
+          "owner": "Codex",
+          "summary": "A product framework now defines how ScanGrade should think about clear reads, review-needed answers, and unreadable answers without hard-coding thresholds.",
+          "detail": "See docs/TRUST_THRESHOLD_DECISION_FRAMEWORK.md. It separates practice mode from assessment mode and reinforces the rule that uncertain answers should be visible, not confidently invented."
         }
       ]
     }

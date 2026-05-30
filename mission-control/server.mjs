@@ -104,6 +104,7 @@ async function latestDocSummaries() {
     ['Student Sample Intake', 'docs/STUDENT_SAMPLE_INTAKE.md'],
     ['Scratch File Inventory', 'docs/SCRATCH_FILE_INVENTORY.md'],
     ['Teacher Workflow Prototype', 'docs/TEACHER_WORKFLOW_PROTOTYPE.md'],
+    ['Trust Threshold Decision Framework', 'docs/TRUST_THRESHOLD_DECISION_FRAMEWORK.md'],
     ['TPT Copy Bank', 'products/TPT_COPY_BANK.md'],
     ['TPT Grade 2 First Paid Pack Blueprint', 'products/TPT_GRADE2_FIRST_PAID_PACK_BLUEPRINT.md'],
     ['TPT First Product Plan', 'products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md'],
