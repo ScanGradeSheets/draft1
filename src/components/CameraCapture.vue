@@ -3788,7 +3788,7 @@ onUnmounted(stopStream)
     width: min(100%, calc(62svh * 8.5 / 11));
     max-width: min(100%, calc(62svh * 8.5 / 11));
     max-height: 62svh;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
 
   .controls--student {
