@@ -43,8 +43,8 @@ const answerFrame = {
 }
 const digitGuide = {
   insetY: 2.6,
-  stroke: 0.34,
-  dash: '1.05 1.25'
+  stroke: 0.46,
+  markLength: 4.35
 }
 const qrSize = 25.8
 const qr = {
@@ -337,10 +337,10 @@ function buildLayout(sheet) {
       digit_box_ids: digitBoxIds,
       canonical_digits: digits,
       guide_line: {
-        type: 'vertical_digit_split',
+        type: 'open_divider',
         x: normalizeX(geometry.seamX),
-        y1: normalizeY(geometry.top + digitGuide.insetY),
-        y2: normalizeY(geometry.top + box.height - digitGuide.insetY),
+        y1: normalizeY(geometry.top),
+        y2: normalizeY(geometry.top + box.height),
         printed: true
       },
       accepted_digit_responses: acceptedResponses
@@ -379,7 +379,7 @@ function buildLayout(sheet) {
       marker_size_mm: marker.size,
       grading_policy: {
         answer_slots_per_question: 2,
-        printed_digit_split_guide: 'vertical dashed center line',
+        printed_digit_split_guide: 'open center divider notches',
         blank_digit_value: null,
         single_digit_two_slot_accepts: ['_d', 'd_', '0d'],
         single_digit_two_slot_rejects: ['d0']
@@ -402,8 +402,11 @@ function buildSvg(sheet, layout, qrBase64, payloadString) {
     const questionLabel = questionLetter(i)
     const problemText = `${problem} =`
     const problemClass = needsCompactProblemText(problem) ? 'problem-text problem-text-compact' : 'problem-text'
+    const dividerTopEnd = geometry.top + digitGuide.markLength
+    const dividerBottomStart = geometry.top + box.height - digitGuide.markLength
     const rects = `<rect class="answer-box answer-box-wide" data-question-boxes="${layout.question_groups[i].digit_box_ids.join(',')}" x="${geometry.answerX}" y="${geometry.top}" width="${answerFrame.width}" height="${answerFrame.height}" />
-      <line class="digit-guide" x1="${geometry.seamX}" y1="${geometry.top + digitGuide.insetY}" x2="${geometry.seamX}" y2="${geometry.top + box.height - digitGuide.insetY}" />`
+      <line class="open-divider-guide" x1="${geometry.seamX}" y1="${geometry.top}" x2="${geometry.seamX}" y2="${dividerTopEnd}" />
+      <line class="open-divider-guide" x1="${geometry.seamX}" y1="${dividerBottomStart}" x2="${geometry.seamX}" y2="${geometry.top + box.height}" />`
     rows.push(`
     <g class="question" data-question="${i + 1}">
       <g class="scantron-question-label" transform="translate(${geometry.labelX} ${geometry.labelCenterY})">
@@ -454,7 +457,7 @@ ${worksheetFontCss()}
       .scantron-bubble { fill: none; stroke: #b8bdc3; stroke-width: 0.42; }
       .scantron-letter { font-size: 4.55px; font-weight: 600; fill: #4f575f; }
       .answer-box { fill: none; stroke: #111; stroke-width: ${box.stroke}; shape-rendering: crispEdges; }
-      .digit-guide { fill: none; stroke: #c7ccd2; stroke-width: ${digitGuide.stroke}; stroke-linecap: round; stroke-dasharray: ${digitGuide.dash}; }
+      .open-divider-guide { fill: none; stroke: #707780; stroke-width: ${digitGuide.stroke}; stroke-linecap: round; }
       .footer { font-size: 3.4px; fill: #555; }
       .qr-label { font-size: 3.2px; }
       .qr-label-name { fill: #202124; font-weight: 650; }
@@ -482,7 +485,7 @@ ${rows.join('\n')}
   </g>
 
   <image class="qr-code" href="data:image/png;base64,${qrBase64}" x="${qr.x}" y="${qr.y}" width="${qr.size}" height="${qr.size}" />
-  <text class="qr-label" x="${page.width / 2}" y="${qr.y - 2.4}" text-anchor="middle"><tspan class="qr-label-name">ScanGrade</tspan><tspan class="qr-label-domain">.io</tspan></text>
+  <text class="qr-label" x="${page.width / 2}" y="${qr.y - 1.2}" text-anchor="middle"><tspan class="qr-label-name">ScanGrade</tspan><tspan class="qr-label-domain">.io</tspan></text>
   <text class="qr-sheet-code" x="${page.width / 2}" y="${qr.y + qr.size + 3.35}" text-anchor="middle">${escapeXml(sheet.humanCode)}</text>
 
   <metadata>${escapeXml(payloadString)}</metadata>

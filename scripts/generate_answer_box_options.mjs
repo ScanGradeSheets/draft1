@@ -642,7 +642,7 @@ ${buildRows(option)}
   </g>
 
   <image class="qr-code" href="data:image/png;base64,${qrBase64}" x="${qr.x}" y="${qr.y}" width="${qr.size}" height="${qr.size}" />
-  <text class="qr-label" x="${page.width / 2}" y="${qr.y - 2.4}" text-anchor="middle"><tspan class="qr-label-name">ScanGrade</tspan><tspan class="qr-label-domain">.io</tspan></text>
+  <text class="qr-label" x="${page.width / 2}" y="${qr.y - 1.2}" text-anchor="middle"><tspan class="qr-label-name">ScanGrade</tspan><tspan class="qr-label-domain">.io</tspan></text>
   <text class="qr-sheet-code" x="${page.width / 2}" y="${qr.y + qr.size + 3.35}" text-anchor="middle">${escapeXml(option.code)}</text>
 </svg>
 `
