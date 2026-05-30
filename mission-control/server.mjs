@@ -87,6 +87,7 @@ async function latestDocSummaries() {
     ['Operating Goals', 'docs/GOALS.md'],
     ['Prototype Roadmap', 'docs/PROTOTYPE_ROADMAP.md'],
     ['Student Mode UX', 'docs/SCAN_GRADE_STUDENT_MODE_UX_SPEC.md'],
+    ['Student Sample Intake', 'docs/STUDENT_SAMPLE_INTAKE.md'],
     ['Untracked Preservation', 'UNTRACKED_WORK_PRESERVATION_PLAN.md'],
   ];
 

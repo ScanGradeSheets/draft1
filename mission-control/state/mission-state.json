@@ -6,7 +6,8 @@
   "needs_tony": [
     "Print or share the 3 current worksheets.",
     "Have students complete them naturally, using their normal pencil/spacing.",
-    "Send the completed sheets back as clear photos/scans for OCR and iPad-path testing."
+    "Send the completed sheets back as clear photos/scans for OCR and iPad-path testing.",
+    "If possible, name files like sheet-a-student-01.jpg, sheet-b-student-01.jpg, and sheet-c-student-01.jpg."
   ],
   "blocked_or_risky": [
     "Main validation is blocked until real completed student sheets arrive.",
@@ -46,7 +47,7 @@
           "type": "app",
           "owner": "Codex",
           "summary": "Run the uploaded sheets through the current pipeline and report what works, what fails, and why.",
-          "detail": "Codex should translate failures into plain English and avoid patching OCR/capture until the failure mode is clear."
+          "detail": "Use docs/STUDENT_SAMPLE_INTAKE.md. Codex should translate failures into plain English and avoid patching OCR/capture until the failure mode is clear."
         }
       ]
     },
@@ -90,10 +91,17 @@
           "owner": "Codex",
           "summary": "Active Teacher/debug specs now open Teacher Mode before expecting Runtime Self-Test.",
           "detail": "test-app, test-upload, test-ocr, verify-single-pipeline, and test-upload-real all passed with the current harness. No production app logic was touched."
+        },
+        {
+          "title": "Student sample intake checklist",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "Plain-English intake instructions now exist for the real open-divider worksheet photos.",
+          "detail": "See docs/STUDENT_SAMPLE_INTAKE.md for file naming, photo quality, first-pass procedure, verification commands, and report format."
         }
       ]
     }
   ],
   "codex_autonomy_rule": "Codex may do read-only inspection, organize Mission Control state, run non-destructive verification, and propose tiny patches. OCR/capture/homography/iPad behavior, cleanup, deployment, and product-direction changes need Tony or reproducible evidence.",
-  "updated_at": "2026-05-30T13:52:00.000Z"
+  "updated_at": "2026-05-30T14:08:00.000Z"
 }

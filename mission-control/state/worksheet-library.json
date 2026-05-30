@@ -2,7 +2,7 @@
   "current_test_set": {
     "label": "Current student test set",
     "status": "Awaiting real student samples",
-    "summary": "These are the open-divider worksheets with the newer large answer boxes and center guide marks. Use these for the next classroom handwriting samples.",
+    "summary": "These are the open-divider worksheets with the newer large answer boxes and center guide marks. Use these for the next classroom handwriting samples. Intake instructions are in docs/STUDENT_SAMPLE_INTAKE.md.",
     "packet_pdf": "worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf",
     "templates": [
       {
@@ -38,5 +38,5 @@
     ]
   },
   "older_manifest_note": "The default public worksheet manifest still points at the older May 21 v1 worksheet SVGs. Keep those as background until the open-divider set is confirmed or promoted.",
-  "updated_at": "2026-05-30T13:15:00.000Z"
+  "updated_at": "2026-05-30T14:08:00.000Z"
 }
