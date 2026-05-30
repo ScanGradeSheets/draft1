@@ -2,7 +2,7 @@
   "current_mission": "Collect real student samples from the 3 current worksheets, then use them to test ScanGrade honestly.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
   "next_best_move": "Tony: have students fill out the 3 current worksheets with the new answer boxes, then send clear photos/scans back for testing.",
-  "plain_english_status": "We have worksheet assets and a working app path, but the next truth test is real student handwriting on the current sheets. Until those samples arrive, Codex should avoid changing OCR/capture logic and focus on safe verification, organization, and test harness cleanup.",
+  "plain_english_status": "We have the current open-divider worksheet packet, reusable test fixtures, a preserved backend scaffold, and a working app/test path. The next truth test is still real student handwriting on the current sheets. Until those samples arrive, Codex should avoid changing OCR/capture logic and focus on safe verification, organization, and careful preservation.",
   "needs_tony": [
     "Print or share the 3 current worksheets.",
     "Have students complete them naturally, using their normal pencil/spacing.",
@@ -98,10 +98,31 @@
           "owner": "Codex",
           "summary": "Plain-English intake instructions now exist for the real open-divider worksheet photos.",
           "detail": "See docs/STUDENT_SAMPLE_INTAKE.md for file naming, photo quality, first-pass procedure, verification commands, and report format."
+        },
+        {
+          "title": "Current worksheet packet preserved",
+          "type": "worksheet",
+          "owner": "Codex",
+          "summary": "The active open-divider Grade 2 A/B/C worksheet SVGs and print PDFs are now committed.",
+          "detail": "This protects the exact packet Tony is using for student samples: Addition Within 20, Subtraction Within 20, and Mixed Within 50."
+        },
+        {
+          "title": "Playwright worksheet fixtures preserved",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "The small worksheet image fixtures used by committed Playwright tests are now committed.",
+          "detail": "This keeps test-upload-real.spec.js and export-crops-debug.spec.js reproducible instead of depending on untracked local images."
+        },
+        {
+          "title": "Backend scaffold preserved",
+          "type": "backend",
+          "owner": "Codex",
+          "summary": "Cloudflare Pages Functions, D1 migration, and wrangler config are now committed as a checkpoint.",
+          "detail": "This is preserved for later deployment work, but it still needs access-control decisions and a real deployment test before classroom use."
         }
       ]
     }
   ],
   "codex_autonomy_rule": "Codex may do read-only inspection, organize Mission Control state, run non-destructive verification, and propose tiny patches. OCR/capture/homography/iPad behavior, cleanup, deployment, and product-direction changes need Tony or reproducible evidence.",
-  "updated_at": "2026-05-30T14:08:00.000Z"
+  "updated_at": "2026-05-30T14:11:00.000Z"
 }
