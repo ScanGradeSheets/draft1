@@ -29,7 +29,7 @@
       "type": "backend",
       "status": "4 later",
       "title": "Deploy scangrade.io with shared persistence",
-      "summary": "HTTPS frontend plus minimal roster/submission/review backend for multiple iPads.",
+      "summary": "HTTPS frontend plus minimal roster/submission/review backend for multiple iPads. Readiness note exists in docs/BACKEND_DEPLOYMENT_READINESS.md.",
       "why_it_matters": "LocalStorage is acceptable for prototype validation but not a real shared classroom."
     },
     {
@@ -57,5 +57,5 @@
       "why_it_matters": "The project should not depend on hidden chat history or Tony remembering every technical thread."
     }
   ],
-  "updated_at": "2026-05-30T14:18:00.000Z"
+  "updated_at": "2026-05-30T14:28:00.000Z"
 }

@@ -84,6 +84,7 @@ async function gitStatus() {
 async function latestDocSummaries() {
   const docs = [
     ['Project Memory', 'SCANGRADE_RECOVERED_PROJECT_MEMORY.md'],
+    ['Backend Readiness', 'docs/BACKEND_DEPLOYMENT_READINESS.md'],
     ['Operating Goals', 'docs/GOALS.md'],
     ['Prototype Roadmap', 'docs/PROTOTYPE_ROADMAP.md'],
     ['Student Mode UX', 'docs/SCAN_GRADE_STUDENT_MODE_UX_SPEC.md'],
