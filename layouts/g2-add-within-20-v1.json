@@ -283,10 +283,10 @@
         5
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.3723,
-        "y1": 0.2527,
-        "y2": 0.2956,
+        "y1": 0.2434,
+        "y2": 0.3049,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -313,10 +313,10 @@
         5
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.3723,
-        "y1": 0.3636,
-        "y2": 0.4066,
+        "y1": 0.3543,
+        "y2": 0.4159,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -343,10 +343,10 @@
         7
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.3723,
-        "y1": 0.4746,
-        "y2": 0.5175,
+        "y1": 0.4653,
+        "y2": 0.5268,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -373,10 +373,10 @@
         3
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.3723,
-        "y1": 0.5855,
-        "y2": 0.6285,
+        "y1": 0.5762,
+        "y2": 0.6378,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -403,10 +403,10 @@
         9
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.3723,
-        "y1": 0.6965,
-        "y2": 0.7394,
+        "y1": 0.6872,
+        "y2": 0.7487,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -433,10 +433,10 @@
         1
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.8169,
-        "y1": 0.2527,
-        "y2": 0.2956,
+        "y1": 0.2434,
+        "y2": 0.3049,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -463,10 +463,10 @@
         2
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.8169,
-        "y1": 0.3636,
-        "y2": 0.4066,
+        "y1": 0.3543,
+        "y2": 0.4159,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -493,10 +493,10 @@
         7
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.8169,
-        "y1": 0.4746,
-        "y2": 0.5175,
+        "y1": 0.4653,
+        "y2": 0.5268,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -523,10 +523,10 @@
         3
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.8169,
-        "y1": 0.5855,
-        "y2": 0.6285,
+        "y1": 0.5762,
+        "y2": 0.6378,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -553,10 +553,10 @@
         9
       ],
       "guide_line": {
-        "type": "vertical_digit_split",
+        "type": "open_divider",
         "x": 0.8169,
-        "y1": 0.6965,
-        "y2": 0.7394,
+        "y1": 0.6872,
+        "y2": 0.7487,
         "printed": true
       },
       "accepted_digit_responses": [
@@ -611,7 +611,7 @@
     "marker_size_mm": 11.4,
     "grading_policy": {
       "answer_slots_per_question": 2,
-      "printed_digit_split_guide": "vertical dashed center line",
+      "printed_digit_split_guide": "open center divider notches",
       "blank_digit_value": null,
       "single_digit_two_slot_accepts": [
         "_d",
