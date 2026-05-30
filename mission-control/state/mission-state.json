@@ -173,8 +173,8 @@
           "title": "Student header polish published",
           "type": "app",
           "owner": "Codex",
-          "summary": "The public app now uses a calmer ScanGrade.io header and cleaner mobile scan actions.",
-          "detail": "Build 2026.05.30-mobile-scan-lift removed the extra post-capture helper text, placed Home left and Guest/Login centered, kept New Scan prominent, matched the ready-sheet glow to the ScanGrade green, and adjusted mobile spacing so the logo clears the Dynamic Island while the blue scan button remains visible. npm run build, test-app.spec.js, test-upload.spec.js, and a 390x844 mobile screenshot check passed, then the source branch and GitHub Pages were pushed. No OCR/capture/homography logic changed."
+          "summary": "The public app now uses a calmer ScanGrade.io header and locked mobile scan actions.",
+          "detail": "Build 2026.05.30-login-bar-simplify removed the extra post-capture helper text, placed Home left, simplified the center item to Login when anonymous or student name when logged in, kept New Scan prominent, matched the ready-sheet glow to the ScanGrade green, and adjusted mobile spacing so the logo clears the Dynamic Island while the blue scan button remains visible. Tony approved this UI as locked for now; automations should not make further UI/style/layout changes unless Tony explicitly asks. npm run build, test-app.spec.js, test-upload.spec.js, and a 390x844 mobile screenshot check passed, then the source branch and GitHub Pages were pushed. No OCR/capture/homography logic changed."
         },
         {
           "title": "TPT launch framework drafted",
