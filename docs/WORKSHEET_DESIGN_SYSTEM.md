@@ -4,6 +4,8 @@ Created 2026-05-30 from Tony's ScanGrade vision interview and the current Grade 
 
 This is an internal design guide for Codex agents. It should guide new worksheet artifacts, preview assets, and TPT product pages. It does not replace classroom validation, and it should not be used as permission to change current worksheet geometry without evidence.
 
+This guide is intentionally incomplete on deeper worksheet taste. Tony identified worksheet design philosophy as a major follow-up interview topic.
+
 ## Design Goal
 
 ScanGrade worksheets should preserve the simplicity of paper while making scanning and review reliable.
@@ -25,6 +27,19 @@ They should not feel:
 - Like generic worksheet-factory output
 
 ## Core Principles
+
+### Real Classroom First
+
+Design for Tony's actual Grade 1/2 classroom:
+
+- Limited teacher time
+- Students working independently while Tony supports small groups
+- Pencil marks and incomplete erasures
+- Large or uneven handwriting
+- Shared or older devices
+- Very little patience for multi-step routines
+
+If a worksheet or scan routine takes more than a minute or two to manage, it probably will not be used consistently.
 
 ### Every Element Earns Its Place
 
@@ -180,6 +195,8 @@ Current canonical app-facing logo files:
 
 Student worksheet branding should be small and quiet. Product covers/previews can be more visibly branded.
 
+Keep `ScanGrade.io` visible on student worksheets unless Tony explicitly approves removing it. The URL is part of the growth path: another teacher may see a worksheet at the photocopier, type the URL later, and become a customer. It should be noticeable to teachers but not distracting to students.
+
 ### Decoration
 
 Avoid decorative filler. If an icon, shape, border, or illustration is present, it should clarify the worksheet's purpose or support the product package.
@@ -267,3 +284,7 @@ These need Tony or classroom evidence:
 3. How much ScanGrade branding belongs on student worksheets.
 4. Whether student feedback sheets need a different visual design from printable practice sheets.
 5. How worksheet families should scale across grades and subjects.
+6. Ideal white space and density by grade/skill.
+7. Preferred illustration philosophy and how much fun belongs on a ScanGrade page.
+8. Color vs black-and-white rules for classroom printing and TPT previews.
+9. What makes Tony instantly reject a TPT worksheet.

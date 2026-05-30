@@ -4,6 +4,8 @@ Created 2026-05-30 from Tony's ScanGrade vision interview.
 
 This is a product/UX prototype spec for the teacher-facing ScanGrade workflow. It is not an implementation request by itself. Use it to guide future UI changes after the current real-student worksheet test provides evidence.
 
+Read with `SCANGRADE_VISION_INTERVIEW_ADDENDUM.md`, especially the notes on red teacher-pen review, Student Mode vs Teacher Mode, and trust thresholds.
+
 ## Product Promise
 
 The teacher should be able to print a worksheet, let students complete it naturally, scan it, and receive trustworthy results without manually defining answer regions or managing a complicated setup.
@@ -43,6 +45,20 @@ Assessment mode should be more conservative:
 - Uncertain answers require review.
 - Overrides are prominent.
 - Export/recording should wait for teacher confirmation.
+
+### Permission Direction
+
+Student Mode should support independence, practice feedback, corrections, and rescan loops.
+
+Teacher Mode should control authority:
+
+- Final scores
+- Overrides
+- Assessment settings
+- Official records
+- Reopening or changing submitted results
+
+Formal assessment mode should be more locked down than practice mode. The exact permissions remain an open design decision for Tony.
 
 ## Main Teacher Screen
 
@@ -123,6 +139,8 @@ Avoid technical explanations unless expanded.
 
 The review screen should feel like marking a paper.
 
+Visual direction can borrow from teacher markup: checkmarks, circles, corrections, and possibly a restrained red-pen aesthetic. This should feel like familiar teacher review, not a cute gimmick and not a raw OCR inspection panel.
+
 For each flagged item, show:
 
 - Question number
@@ -172,6 +190,18 @@ Bad behavior:
 - Confidently marking unclear answers correct.
 - Hiding uncertainty.
 - Requiring the teacher to inspect every raw crop.
+
+### Trust Thresholds Still Need Definition
+
+The product still needs explicit threshold rules:
+
+- When should ScanGrade auto-grade?
+- When should it flag for review?
+- When should it refuse to grade?
+- Should thresholds differ between practice and assessment?
+- What uncertainty level makes teacher review slower than manual marking?
+
+Do not hard-code product meaning into confidence thresholds without evidence or Tony approval.
 
 ## Class Summary
 

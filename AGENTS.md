@@ -1,6 +1,6 @@
 # Start Here
 
-Future Codex agents should begin by reading `SCANGRADE_RECOVERED_PROJECT_MEMORY.md` and `SCANGRADE_VISION_AND_PRODUCT_PRINCIPLES.md`.
+Future Codex agents should begin by reading `SCANGRADE_RECOVERED_PROJECT_MEMORY.md`, `SCANGRADE_VISION_AND_PRODUCT_PRINCIPLES.md`, and `SCANGRADE_VISION_INTERVIEW_ADDENDUM.md`.
 
 Then read `CODEX_RECOVERY_MAY27_MISSION_CONTROL.md` if it exists.
 

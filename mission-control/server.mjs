@@ -86,6 +86,8 @@ async function gitStatus() {
 async function latestDocSummaries() {
   const docs = [
     ['Project Memory', 'SCANGRADE_RECOVERED_PROJECT_MEMORY.md'],
+    ['Vision Interview Addendum', 'SCANGRADE_VISION_INTERVIEW_ADDENDUM.md'],
+    ['Vision And Product Principles', 'SCANGRADE_VISION_AND_PRODUCT_PRINCIPLES.md'],
     ['Brand Asset Inventory', 'docs/BRAND_ASSET_INVENTORY.md'],
     ['Benchmark Artifact Inventory', 'docs/BENCHMARK_ARTIFACT_INVENTORY.md'],
     ['Backend Readiness', 'docs/BACKEND_DEPLOYMENT_READINESS.md'],

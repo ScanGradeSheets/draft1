@@ -121,6 +121,13 @@
           "detail": "See docs/TEACHER_WORKFLOW_PROTOTYPE.md. It defines scan states, review behavior, confidence labels, class summary scope, and open UX decisions for Tony."
         },
         {
+          "title": "Vision interview addendum captured",
+          "type": "decision",
+          "owner": "Tony",
+          "summary": "Follow-up vision details are now preserved, including teacher-pen review, Scantron heritage, Mission Control translation, autonomy, classroom reality, ScanGrade.io visibility, and trust thresholds.",
+          "detail": "See SCANGRADE_VISION_INTERVIEW_ADDENDUM.md. The three biggest unresolved follow-up areas are worksheet design philosophy, Mission Control behavior, and trust/grading thresholds."
+        },
+        {
           "title": "Current worksheet packet preserved",
           "type": "worksheet",
           "owner": "Codex",
@@ -145,5 +152,5 @@
     }
   ],
   "codex_autonomy_rule": "Codex may do read-only inspection, organize Mission Control state, run non-destructive verification, and propose tiny patches. OCR/capture/homography/iPad behavior, cleanup, deployment, and product-direction changes need Tony or reproducible evidence.",
-  "updated_at": "2026-05-30T16:39:00.000Z"
+  "updated_at": "2026-05-30T17:02:00.000Z"
 }

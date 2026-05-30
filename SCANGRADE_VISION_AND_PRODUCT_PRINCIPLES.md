@@ -2,6 +2,8 @@
 
 Created 2026-05-30 from Tony's ScanGrade vision interview. This is internal project memory for Codex agents. Treat it as a product-direction source of truth unless Tony later supersedes it.
 
+Read with `SCANGRADE_VISION_INTERVIEW_ADDENDUM.md`, which captures follow-up details about red teacher-pen review, modern Scantron heritage, Mission Control translation, Codex autonomy, classroom reality, worksheet quality gaps, ScanGrade.io visibility, question queues, and trust thresholds.
+
 ## Core Product Vision
 
 ### Why ScanGrade Exists
@@ -87,6 +89,8 @@ The user should immediately understand whether the scan succeeded, failed, or ne
 
 Review should feel like a teacher marking a paper, not like reviewing raw OCR output.
 
+Possible visual language includes checkmarks, circles, corrections, and a restrained red-pen/teacher-markup aesthetic. The goal is familiar teacher judgment, not machine-debug output.
+
 The teacher should see:
 
 - Student response
@@ -126,6 +130,8 @@ Teacher controlled:
 - Official records
 
 Practice mode may be more automated. Formal assessment mode remains teacher-owned.
+
+Student Mode should support self-correction and rescan loops. Teacher Mode should control final scores, overrides, assessment settings, and official records. Formal assessments should be more locked down than practice work.
 
 ## Student Experience
 
@@ -180,6 +186,8 @@ Reference points:
 - Professional teacher tool
 - Simple and trustworthy
 
+Modern Scantron means more than visual style: it should borrow Scantron's familiarity, institutional trust, and fast paper workflow, while becoming warmer, more flexible, and friendlier for Grade 1/2 students.
+
 ScanGrade should not feel like:
 
 - Startup-tech flash
@@ -213,6 +221,8 @@ It should not show:
 ### Technical Detail Philosophy
 
 Tony does not want constant technical information. Mission Control can contain deeper details. Daily workflow should remain simple.
+
+Mission Control should translate engineering into teacher/product language. Tony should not need to understand terms like OCR pipeline, homography, or confidence thresholding in order to steer the project.
 
 ### Personality
 
@@ -393,6 +403,8 @@ Tony can:
 - Approve direction changes.
 - Reject proposals.
 
+Mission Control should also collect and batch questions for Tony so Codex does not interrupt constantly. Answered questions should disappear from the active queue but remain reopenable if needed.
+
 ## Business And Roadmap Priorities
 
 Major milestones:
@@ -419,6 +431,8 @@ Codex can autonomously work on:
 - Mission Control updates
 - Competitive research
 - Roadmap suggestions
+
+This autonomy is a requirement, not just a convenience. Codex should not wait for Tony when safe, reversible, vision-aligned work is available.
 
 ## Risks
 
@@ -503,6 +517,9 @@ Always require Tony's approval for:
 8. Monetization model.
 9. Classroom testing plan.
 10. Long-term marketplace strategy.
+11. Detailed worksheet design philosophy.
+12. Mission Control's day-to-day question and autonomy behavior.
+13. Trust thresholds for auto-grade, review, and refusal.
 
 ## Immediate Next Artifacts Codex Should Build
 

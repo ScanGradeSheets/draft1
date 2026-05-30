@@ -43,7 +43,46 @@
       ],
       "recommendation": "Prefer verification and summaries first, then backlog/doc organization, then tiny test-only fixes when evidence is clear.",
       "answer": "Defer to Codex recommendation"
+    },
+    {
+      "id": "worksheet-design-deep-dive",
+      "priority": "steering",
+      "status": "open",
+      "question": "What makes a ScanGrade worksheet feel high quality enough for Tony to use, sell, and put the brand on?",
+      "why": "Worksheet quality is a major unresolved product area: white space, density, fonts, illustrations, color, fun vs academic tone, and what makes Tony reject a TPT worksheet.",
+      "options": [
+        "Schedule a dedicated worksheet-design interview",
+        "Let Codex draft 3 visual directions first",
+        "Defer until after student handwriting tests"
+      ],
+      "recommendation": "Schedule a dedicated worksheet-design interview after the first real sample test, then let Codex turn it into templates."
+    },
+    {
+      "id": "mission-control-question-flow",
+      "priority": "steering",
+      "status": "open",
+      "question": "How should Mission Control batch questions so Codex can keep working without interrupting Tony constantly?",
+      "why": "Tony wants one place for accumulated decisions, options, recommendations, and deferrable questions rather than scattered interruptions.",
+      "options": [
+        "Daily/weekly question batch",
+        "Priority-only interruptions plus backlog queue",
+        "Let Codex decide when to surface questions"
+      ],
+      "recommendation": "Use priority-only interruptions plus a visible backlog queue; include a 'defer to Codex recommendation' option when safe."
+    },
+    {
+      "id": "trust-thresholds",
+      "priority": "steering",
+      "status": "open",
+      "question": "What should ScanGrade do at different confidence levels: auto-grade, flag for review, or refuse to grade?",
+      "why": "Trust thresholds are central to teacher trust, student feedback, practice mode, assessment mode, and whether review saves time.",
+      "options": [
+        "Conservative: flag anything uncertain",
+        "Practice-friendly: auto-grade more, allow rescan",
+        "Assessment-safe: refuse or require teacher review when uncertain"
+      ],
+      "recommendation": "Use different thresholds by mode: more forgiving in practice, conservative in assessment, and always review/refuse when the app cannot explain itself."
     }
   ],
-  "updated_at": "2026-05-30T13:24:25.512Z"
+  "updated_at": "2026-05-30T17:02:00.000Z"
 }
