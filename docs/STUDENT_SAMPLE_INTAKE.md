@@ -100,6 +100,18 @@ npx playwright test test-upload-real.spec.js --config=playwright.config.js
 
 Do not run debug export specs unless crop/tensor artifacts are intentionally needed.
 
+## Sample Inspection Commands
+
+These helper scripts are available for the first pass once real photos arrive:
+
+```bash
+npm run inspect:uploaded-worksheet -- "worksheet photos/student-samples/open-divider-2026-05/sheet-a-student-01.jpg"
+npm run eval:uploaded-worksheets -- "worksheet photos/student-samples/open-divider-2026-05/"*.jpg
+npm run dataset:student-samples
+```
+
+Use `inspect:uploaded-worksheet` first for a small number of samples so failures can be understood before running a batch. `eval:uploaded-worksheets` writes batch results under `benchmarks/uploaded_student_samples/results` by default. `dataset:student-samples` should only be run after the expected answers are confirmed.
+
 ## Rules
 
 - Do not tune OCR blind.
