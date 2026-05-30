@@ -38,6 +38,7 @@ Current terms and listing draft:
 - `public/worksheets/open-divider-test/terms-of-use.html`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Terms-of-Use.pdf`
 - `products/TPT_OPEN_DIVIDER_MINI_PACK_LISTING_DRAFT.md`
+- `products/TPT_LAUNCH_FRAMEWORK.md`
 
 Current preview assets:
 
@@ -142,3 +143,5 @@ This product plan is intentionally downstream of the current mission. The curren
 > Collect real student samples from the 3 current worksheets, then use them to test ScanGrade honestly.
 
 Only after that evidence should this mini pack move from "future milestone" to active product work.
+
+The broader product sequence lives in `products/TPT_LAUNCH_FRAMEWORK.md`. Use it to keep future TPT work orderly, but do not load the full backlog until the current open-divider classroom test supports the worksheet format.

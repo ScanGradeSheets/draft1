@@ -161,10 +161,17 @@
           "owner": "Codex",
           "summary": "The public app now uses a calmer ScanGrade.io header and quieter Login/Menu actions.",
           "detail": "Build 2026.05.30-brand-header-polish passed the production build and app-load smoke test, then was pushed to the source branch and GitHub Pages. No OCR/capture/homography logic changed."
+        },
+        {
+          "title": "TPT launch framework drafted",
+          "type": "tpt",
+          "owner": "Codex",
+          "summary": "A conservative internal framework now maps the path from the current 3-sheet test packet to a small trustworthy TPT launch.",
+          "detail": "See products/TPT_LAUNCH_FRAMEWORK.md. It defines readiness gates, safe promises, a first-20 product backlog, preview rules, and a market-research checklist while keeping the current classroom sample test as the gate."
         }
       ]
     }
   ],
   "codex_autonomy_rule": "Codex should keep moving every 30 minutes when useful: inspect repo state, choose the safest high-value work from the mission/kanban, and prefer small reversible packets. Safe autonomous lanes include tests, diagnosis, docs, Mission Control upkeep, worksheet/TPT/marketing drafts, market research, and minimal UI micro-polish that improves clarity, spacing, hierarchy, contrast, mobile fit, or visual calm. Tony remains final authority for vision, brand, major UX, launch/pricing/claims, worksheet-format decisions, and risky OCR/capture/homography/model/backend changes. Never delete/clean untracked work, never run git clean -fd or git reset --hard, and preserve paper-first teacher trust over feature expansion.",
-  "updated_at": "2026-05-30T19:00:00.000Z"
+  "updated_at": "2026-05-30T19:30:00.000Z"
 }

@@ -103,6 +103,7 @@ async function latestDocSummaries() {
     ['Scratch File Inventory', 'docs/SCRATCH_FILE_INVENTORY.md'],
     ['Teacher Workflow Prototype', 'docs/TEACHER_WORKFLOW_PROTOTYPE.md'],
     ['TPT First Product Plan', 'products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md'],
+    ['TPT Launch Framework', 'products/TPT_LAUNCH_FRAMEWORK.md'],
     ['Untracked Preservation', 'UNTRACKED_WORK_PRESERVATION_PLAN.md'],
     ['Worksheet Design System', 'docs/WORKSHEET_DESIGN_SYSTEM.md'],
   ];

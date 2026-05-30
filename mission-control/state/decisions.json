@@ -86,6 +86,20 @@
       "answer": "Allow minimal reversible UI polish consistent with the clean ScanGrade teacher-trust aesthetic."
     },
     {
+      "id": "tpt-prep-boundary",
+      "priority": "steering",
+      "status": "answered",
+      "question": "Can Codex prepare TPT and marketing artifacts before the classroom sample test is finished?",
+      "why": "Tony wants Codex to keep using available time productively, but the marketplace promise must not get ahead of actual classroom evidence.",
+      "options": [
+        "Prepare internal drafts only",
+        "Prepare publish-ready assets after Tony review",
+        "Pause TPT work until student samples are tested"
+      ],
+      "recommendation": "Prepare internal drafts, product frameworks, preview concepts, and conservative copy now; wait for Tony approval and classroom evidence before publishing or making scan/automation claims.",
+      "answer": "Prepare internal drafts and frameworks now. Publishing, final claims, and customer-facing promises wait for Tony and real sample evidence."
+    },
+    {
       "id": "trust-thresholds",
       "priority": "steering",
       "status": "open",
