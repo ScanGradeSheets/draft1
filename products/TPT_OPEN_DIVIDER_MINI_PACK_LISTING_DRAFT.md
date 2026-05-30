@@ -2,6 +2,10 @@
 
 Drafted 2026-05-30. This is not final marketplace copy. Keep the promise conservative until Tony's real student sample test confirms the worksheet boxes and review workflow.
 
+For broader copy options, title variants, FAQ language, preview snippets, and copy to avoid, see:
+
+- `products/TPT_COPY_BANK.md`
+
 ## Working Title
 
 Grade 2 Addition and Subtraction Worksheets - No Prep Math Practice Mini Pack

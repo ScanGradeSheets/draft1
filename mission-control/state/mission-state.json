@@ -182,6 +182,13 @@
           "owner": "Codex",
           "summary": "A 12-page Grade 2 addition/subtraction product sequence is now sketched for after the 3-sheet classroom validation succeeds.",
           "detail": "See products/TPT_GRADE2_FIRST_PAID_PACK_BLUEPRINT.md. It keeps current scan geometry frozen, treats the 3-sheet packet as validation/sampler material, and proposes a cautious paid-product path."
+        },
+        {
+          "title": "TPT copy bank drafted",
+          "type": "marketing",
+          "owner": "Codex",
+          "summary": "Teacher-facing title, subtitle, description, preview, FAQ, and keyword options now exist for the first ScanGrade worksheet products.",
+          "detail": "See products/TPT_COPY_BANK.md. The copy stays conservative: no auto-grading, no learning-gain claims, and no customer-facing scan promises until classroom evidence supports them."
         }
       ]
     }
