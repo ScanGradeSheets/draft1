@@ -210,6 +210,13 @@
           "owner": "Codex",
           "summary": "A product framework now defines how ScanGrade should think about clear reads, review-needed answers, and unreadable answers without hard-coding thresholds.",
           "detail": "See docs/TRUST_THRESHOLD_DECISION_FRAMEWORK.md. It separates practice mode from assessment mode and reinforces the rule that uncertain answers should be visible, not confidently invented."
+        },
+        {
+          "title": "Student sample triage runbook drafted",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "A step-by-step runbook now tells Codex exactly how to evaluate Tony's real student worksheet photos before patching app logic.",
+          "detail": "See docs/STUDENT_SAMPLE_TRIAGE_RUNBOOK.md. It covers inventory, app health, single-sample inspection, per-sheet batch evaluation, failure categories, teacher-trust interpretation, reporting, patch rules, answer-key checks, and privacy."
         }
       ]
     }

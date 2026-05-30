@@ -86,6 +86,10 @@ Before any code changes, Codex should:
    - digit recognition
    - result display/export
 
+For the operational step-by-step, use:
+
+- `docs/STUDENT_SAMPLE_TRIAGE_RUNBOOK.md`
+
 ## Verification Commands
 
 Keep the known smoke tests green before and after sample testing:

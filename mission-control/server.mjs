@@ -102,6 +102,7 @@ async function latestDocSummaries() {
     ['Student Mode UX', 'docs/SCAN_GRADE_STUDENT_MODE_UX_SPEC.md'],
     ['Student Sample Eval Report Template', 'docs/STUDENT_SAMPLE_EVAL_REPORT_TEMPLATE.md'],
     ['Student Sample Intake', 'docs/STUDENT_SAMPLE_INTAKE.md'],
+    ['Student Sample Triage Runbook', 'docs/STUDENT_SAMPLE_TRIAGE_RUNBOOK.md'],
     ['Scratch File Inventory', 'docs/SCRATCH_FILE_INVENTORY.md'],
     ['Teacher Workflow Prototype', 'docs/TEACHER_WORKFLOW_PROTOTYPE.md'],
     ['Trust Threshold Decision Framework', 'docs/TRUST_THRESHOLD_DECISION_FRAMEWORK.md'],
