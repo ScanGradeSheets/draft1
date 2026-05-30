@@ -14,8 +14,12 @@
     "train:worksheet-model-current": "node scripts/build_current_pipeline_dataset.mjs && .venv/bin/python3.13 scripts/train_worksheet_digits.py --cpu --dataset datasets/worksheet_digits_current_pipeline",
     "train:digit-generalist": ".venv/bin/python3.13 scripts/train_generalized_digit_model.py",
     "eval:worksheet-models": "node scripts/eval_worksheet_models.mjs",
+    "eval:uploaded-worksheets": "node scripts/eval_uploaded_worksheets.mjs",
+    "eval:ipad-tta": "node scripts/eval_ipad_tta.mjs",
+    "inspect:uploaded-worksheet": "node scripts/inspect_uploaded_worksheet.mjs",
     "eval:live-ocr-debug": ".venv/bin/python3.13 scripts/replay_live_ocr_debug.py",
     "eval:live-ocr-captured": "node scripts/replay_live_ocr_captured.mjs",
+    "dataset:student-samples": "node scripts/build_student_sample_dataset.mjs",
     "export:labeled-crops": "node scripts/export_labeled_crops.mjs",
     "dataset:split": "node scripts/build_dataset_split.mjs",
     "sanity:ocr-preprocess": "node scripts/run_ocr_sanity_set.mjs"
