@@ -10,7 +10,7 @@ const HANDWRITTEN_IMAGE = path.resolve(__dirname, 'public/test-worksheet-handwri
 test.describe('ScanGrade Real Worksheet Upload Test', () => {
   test('should process calibrated worksheet with corner markings', async ({ page }) => {
     console.log('\n🚀 Navigating to ScanGrade app...');
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('/?mode=teacher', { waitUntil: 'networkidle', timeout: 30000 });
     
     // Wait for app to be interactive
     await page.waitForTimeout(3000);
@@ -135,7 +135,7 @@ test.describe('ScanGrade Real Worksheet Upload Test', () => {
   });
 
   test('should process worksheet-with-digits and show detected digits, confidence, and correctness', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('/?mode=teacher', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(3000);
 
     const testButton = page.locator('button:has-text("Runtime Self-Test")');
@@ -180,7 +180,7 @@ test.describe('ScanGrade Real Worksheet Upload Test', () => {
   });
 
   test('handwritten worksheet produces varied predictions (no all-5s)', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('/?mode=teacher', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(3000);
     await page.locator('button:has-text("Runtime Self-Test")').click();
     await page.waitForTimeout(5000);

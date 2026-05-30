@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('ScanGrade OCR Pipeline Test', () => {
   test('should process worksheet upload', async ({ page }) => {
     console.log('\n🚀 Navigating to ScanGrade app...');
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('/?mode=teacher', { waitUntil: 'networkidle', timeout: 30000 });
     
     // Wait for app to be interactive
     await page.waitForTimeout(3000);

@@ -17,10 +17,8 @@ test.describe('ScanGrade Worksheet Upload Test', () => {
     // Verify tests passed
     const consoleOutput = page.locator('.console-output');
     const consoleLines = await consoleOutput.locator('.console-line').all();
-    const allPassed = consoleLines.some(async line => {
-      const text = await line.textContent();
-      return text?.includes('ALL TESTS PASSED');
-    });
+    const lineTexts = await Promise.all(consoleLines.map(line => line.textContent()));
+    const allPassed = lineTexts.some(text => text?.includes('ALL TESTS PASSED'));
     
     expect(allPassed).toBe(true);
     console.log('✅ Runtime tests passed');

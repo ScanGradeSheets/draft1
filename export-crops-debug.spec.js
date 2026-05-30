@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 test.describe('Export crops debug', () => {
   test('export crops for handwritten worksheet', async ({ page }) => {
     const imagePath = path.resolve(__dirname, 'public/test-worksheet-handwritten.png');
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('/?mode=teacher', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(2000);
     await page.locator('button:has-text("Runtime Self-Test")').click();
     await page.waitForTimeout(5000);
@@ -27,7 +27,7 @@ test.describe('Export crops debug', () => {
 
   test('export crops for typed worksheet', async ({ page }) => {
     const imagePath = path.resolve(__dirname, 'public/test-worksheet-with-digits.png');
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('/?mode=teacher', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(2000);
     await page.locator('button:has-text("Runtime Self-Test")').click();
     await page.waitForTimeout(5000);
@@ -47,7 +47,7 @@ test.describe('Export crops debug', () => {
       if (text.includes('[OCR debug first tensor]')) debugLogs.push(text)
     })
     const imagePath = path.resolve(__dirname, 'public/test-worksheet-with-digits.png')
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 })
+    await page.goto('/?mode=teacher', { waitUntil: 'networkidle', timeout: 30000 })
     await page.waitForTimeout(2000)
     await page.locator('button:has-text("Runtime Self-Test")').click()
     await page.waitForTimeout(5000)
@@ -60,7 +60,7 @@ test.describe('Export crops debug', () => {
 
   test('export tensors JSON for Python verify', async ({ page }) => {
     const imagePath = path.resolve(__dirname, 'public/test-worksheet-with-digits.png');
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('/?mode=teacher', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(2000);
     await page.locator('button:has-text("Runtime Self-Test")').click();
     await page.waitForTimeout(5000);
