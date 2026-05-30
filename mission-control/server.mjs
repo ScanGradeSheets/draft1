@@ -102,6 +102,7 @@ async function latestDocSummaries() {
     ['Student Sample Intake', 'docs/STUDENT_SAMPLE_INTAKE.md'],
     ['Scratch File Inventory', 'docs/SCRATCH_FILE_INVENTORY.md'],
     ['Teacher Workflow Prototype', 'docs/TEACHER_WORKFLOW_PROTOTYPE.md'],
+    ['TPT Grade 2 First Paid Pack Blueprint', 'products/TPT_GRADE2_FIRST_PAID_PACK_BLUEPRINT.md'],
     ['TPT First Product Plan', 'products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md'],
     ['TPT Launch Framework', 'products/TPT_LAUNCH_FRAMEWORK.md'],
     ['TPT Market Research Notes', 'products/TPT_MARKET_RESEARCH_NOTES.md'],

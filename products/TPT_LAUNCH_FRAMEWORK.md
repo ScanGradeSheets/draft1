@@ -42,6 +42,7 @@ Related files:
 - `products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md`
 - `products/TPT_OPEN_DIVIDER_MINI_PACK_LISTING_DRAFT.md`
 - `products/TPT_MARKET_RESEARCH_NOTES.md`
+- `products/TPT_GRADE2_FIRST_PAID_PACK_BLUEPRINT.md`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Teacher-Answer-Key.pdf`
 

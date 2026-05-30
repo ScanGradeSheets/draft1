@@ -175,6 +175,13 @@
           "owner": "Codex",
           "summary": "Comparable Grade 2 math products suggest ScanGrade should lead with familiar no-prep worksheet language, then introduce ScanGrade compatibility only after classroom proof.",
           "detail": "See products/TPT_MARKET_RESEARCH_NOTES.md. Key insight: the 3-sheet packet is useful for validation or a sampler, while a stronger first paid pack likely needs 10-20 polished pages after the answer-box format is proven."
+        },
+        {
+          "title": "First paid pack blueprint drafted",
+          "type": "tpt",
+          "owner": "Codex",
+          "summary": "A 12-page Grade 2 addition/subtraction product sequence is now sketched for after the 3-sheet classroom validation succeeds.",
+          "detail": "See products/TPT_GRADE2_FIRST_PAID_PACK_BLUEPRINT.md. It keeps current scan geometry frozen, treats the 3-sheet packet as validation/sampler material, and proposes a cautious paid-product path."
         }
       ]
     }
