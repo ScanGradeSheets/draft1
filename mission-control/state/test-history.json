@@ -47,7 +47,15 @@
       "command": "npx playwright test test-app.spec.js test-upload.spec.js test-upload-real.spec.js --config=playwright.config.js",
       "plain_english": "After preserving the Playwright fixtures and current open-divider worksheet packet, the app-load, Teacher/debug upload, and real worksheet fixture tests all passed again.",
       "path_exercised": "MacBook app-load path plus Teacher/debug upload and local worksheet fixture paths"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Full narrow smoke suite",
+      "result": "pass",
+      "command": "npx playwright test test-app.spec.js test-upload.spec.js test-ocr.spec.js verify-single-pipeline.spec.js test-upload-real.spec.js --config=playwright.config.js",
+      "plain_english": "All seven active narrow Playwright checks passed after the safe preservation commits. Runtime Self-Test passed, app load had no console/WASM/ONNX errors, upload paths stayed functional, and the worksheet fixture tests still produced varied predictions.",
+      "path_exercised": "MacBook app-load path, Teacher/debug runtime path, single-pipeline verification, and local worksheet fixture upload paths"
     }
   ],
-  "updated_at": "2026-05-30T14:11:00.000Z"
+  "updated_at": "2026-05-30T14:15:00.000Z"
 }
