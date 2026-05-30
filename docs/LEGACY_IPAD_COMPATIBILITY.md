@@ -13,13 +13,19 @@ Support older iPads if possible without degrading or disrupting the current mode
 
 ## Current Diagnostic
 
-Open this URL on the older iPad:
+Open this URL from the Mac first:
 
 ```text
 https://localhost:5174/legacy-check.html
 ```
 
-Or use the equivalent Tailscale/served app URL with `/legacy-check.html` at the end.
+On an iPad, do not use `localhost`, because that means the iPad itself. Use the Mac's reachable LAN/Tailscale/served app address with `/legacy-check.html` at the end, for example:
+
+```text
+https://<mac-or-tailscale-address>:5174/legacy-check.html
+```
+
+If the old iPad cannot get past the HTTPS certificate warning, that is useful evidence too. It means the fallback route may need to be served through a trusted local/Tailscale endpoint before app compatibility can be judged.
 
 This page is intentionally lightweight:
 
