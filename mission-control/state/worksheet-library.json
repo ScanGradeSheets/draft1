@@ -38,5 +38,13 @@
     ]
   },
   "older_manifest_note": "The default public worksheet manifest still points at the older May 21 v1 worksheet SVGs. Keep those as background until the open-divider set is confirmed or promoted.",
-  "updated_at": "2026-05-30T14:08:00.000Z"
+  "design_evidence": {
+    "label": "Answer box option gallery",
+    "status": "Background reference",
+    "summary": "Comparison gallery showing the answer-box variants that led to the current open-divider choice. This is design evidence, not the packet Tony should print for the student handwriting test.",
+    "gallery_url": "worksheets/answer-box-options/index.html",
+    "selected_variant_url": "worksheets/answer-box-options/option-f-open-divider.svg",
+    "ranked_variants_url": "worksheets/answer-box-options/ranked-20-answer-box-variants.svg"
+  },
+  "updated_at": "2026-05-30T14:20:00.000Z"
 }
