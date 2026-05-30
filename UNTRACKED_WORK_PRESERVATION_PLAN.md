@@ -17,6 +17,7 @@ Several items that were untracked when this plan was created have now been commi
 - Student sample intake docs and uploaded worksheet inspection/evaluation scripts.
 - Historical ScanGrade reports.
 - OCR/dataset utility scripts.
+- Model artifact inventory, benchmark artifact inventory, scratch file inventory, and Mission Control private-access notes.
 
 Important current state:
 
@@ -26,6 +27,7 @@ Important current state:
 - Current worksheet assets and answer-box option assets are now tracked.
 - Model/runtime artifacts under `models/`, `public/models/`, and `public/ort*` are still untracked and should not be committed without a size/storage decision.
 - Stale scratch scripts such as `scripts/generate-test-image.py` and `scripts/tmp_debug_line.mjs` remain untracked intentionally because they contain old absolute paths or one-off debug assumptions.
+- The remaining small scratch/legacy files are cataloged in `docs/SCRATCH_FILE_INVENTORY.md`.
 
 ## Critical Warnings
 
@@ -53,7 +55,13 @@ These likely contain important OCR/capture/model/iPad work. Do not revert them w
 
 ## 1. Must Preserve And Likely Commit Soon
 
-These look like source, test, infrastructure, or documentation files that are part of the active project shape and should likely be committed after review:
+Most of the originally listed active source, test, infrastructure, and documentation files have now been committed in small checkpoints. This section is retained as historical context for why they were preserved.
+
+Current exception:
+
+- Do not treat `test-pipeline.js`, `test-server.js`, `scripts/generate-test-image.py`, `scripts/tmp_debug_line.mjs`, `systemd/`, or root-level `create_test_image*.py` files as ready-to-commit active project files. They are scratch/legacy files and are now documented in `docs/SCRATCH_FILE_INVENTORY.md`.
+
+Already-preserved examples from the original list:
 
 - `AGENTS.md`
 - `UNTRACKED_WORK_PRESERVATION_PLAN.md`
@@ -66,8 +74,6 @@ These look like source, test, infrastructure, or documentation files that are pa
 - `test-upload-real.spec.js`
 - `verify-single-pipeline.spec.js`
 - `export-crops-debug.spec.js`
-- `test-pipeline.js`
-- `test-server.js`
 - `mission-control/server.mjs`
 - `mission-control/public/index.html`
 - `mission-control/public/styles.css`
@@ -94,7 +100,6 @@ These look like source, test, infrastructure, or documentation files that are pa
 - `scripts/eval_worksheet_models.mjs`
 - `scripts/experiment_raw_crop_model.py`
 - `scripts/generate-test-image.js`
-- `scripts/generate-test-image.py`
 - `scripts/generate_answer_box_options.mjs`
 - `scripts/generate_open_divider_test_worksheets.mjs`
 - `scripts/import_live_ocr_debug.mjs`
@@ -107,8 +112,8 @@ These look like source, test, infrastructure, or documentation files that are pa
 
 Playwright note:
 
-- The HTTPS/baseURL fix is currently in untracked `playwright.config.js` and `playwright.config.ts`.
-- Passing navigation fixes are currently in untracked/modified spec files.
+- The HTTPS/baseURL fix is now tracked in `playwright.config.js` and `playwright.config.ts`.
+- Passing navigation fixes are now tracked in the active spec files.
 - Teacher/debug specs now use `/?mode=teacher` because `/` defaults to Student Mode.
 - `test-upload.spec.js` also fixes the previous async `consoleLines.some(async line => ...)` assertion issue.
 - `verify-single-pipeline.spec.js` has a strict-locator assertion fix after both `.results` and `.ocr-result` became visible.
@@ -117,25 +122,13 @@ Mission Control note:
 
 - `mission-control/` is the current private dashboard for Tony/Codex shared state.
 - It tracks the current mission, focused board, open-divider worksheet test set, decisions, validation history, docs, and Codex autonomy rules.
-- It should be preserved and likely committed as its own checkpoint before any cleanup.
+- It has been committed and should be preserved before any cleanup.
 
 ## Recommended Small Checkpoints After 2026-05-30 Safe Work
 
-First checkpoint: recovery docs, agent instructions, preservation notes, and Mission Control.
+The original recovery docs, agent instructions, Mission Control, Playwright harness, worksheet assets, backend scaffold, useful scripts, and safety inventories have now been committed in small checkpoints.
 
-Recommended add command:
-
-```bash
-git add AGENTS.md SCANGRADE_RECOVERED_PROJECT_MEMORY.md UNTRACKED_WORK_PRESERVATION_PLAN.md mission-control/
-```
-
-Second checkpoint: Playwright/Vite test harness fixes only.
-
-Recommended add command:
-
-```bash
-git add playwright.config.js playwright.config.ts test-app.spec.js test-upload.spec.js test-ocr.spec.js test-upload-real.spec.js verify-single-pipeline.spec.js export-crops-debug.spec.js
-```
+Next source-code checkpoint should wait for a dedicated review of the remaining modified tracked OCR/capture/model files.
 
 Do not include in either small checkpoint without separate review:
 
