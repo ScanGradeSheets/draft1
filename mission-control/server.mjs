@@ -88,6 +88,7 @@ async function latestDocSummaries() {
     ['Prototype Roadmap', 'docs/PROTOTYPE_ROADMAP.md'],
     ['Student Mode UX', 'docs/SCAN_GRADE_STUDENT_MODE_UX_SPEC.md'],
     ['Student Sample Intake', 'docs/STUDENT_SAMPLE_INTAKE.md'],
+    ['TPT First Product Plan', 'products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md'],
     ['Untracked Preservation', 'UNTRACKED_WORK_PRESERVATION_PLAN.md'],
   ];
 

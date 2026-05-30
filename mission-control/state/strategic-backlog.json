@@ -37,7 +37,7 @@
       "type": "tpt",
       "status": "5 later",
       "title": "Package a small solid TPT product set",
-      "summary": "Start with a few polished, tested, repeatable worksheet products and clear listing copy.",
+      "summary": "Start with a few polished, tested, repeatable worksheet products and clear listing copy. Draft plan exists in products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md.",
       "why_it_matters": "Commercial value comes from trustworthy classroom assets, not broad unfinished variety."
     },
     {
@@ -57,5 +57,5 @@
       "why_it_matters": "The project should not depend on hidden chat history or Tony remembering every technical thread."
     }
   ],
-  "updated_at": "2026-05-30T12:50:00.000Z"
+  "updated_at": "2026-05-30T14:18:00.000Z"
 }
