@@ -94,6 +94,7 @@ async function latestDocSummaries() {
     ['Classroom Test Plan', 'docs/CLASSROOM_TEST_PLAN.md'],
     ['Model Artifact Inventory', 'docs/MODEL_ARTIFACT_INVENTORY.md'],
     ['Legacy iPad Compatibility', 'docs/LEGACY_IPAD_COMPATIBILITY.md'],
+    ['Marketing Asset Pipeline', 'products/MARKETING_ASSET_PIPELINE.md'],
     ['Mission Control Private Access', 'docs/MISSION_CONTROL_PRIVATE_ACCESS.md'],
     ['Operating Goals', 'docs/GOALS.md'],
     ['Prototype Roadmap', 'docs/PROTOTYPE_ROADMAP.md'],

@@ -189,6 +189,13 @@
           "owner": "Codex",
           "summary": "Teacher-facing title, subtitle, description, preview, FAQ, and keyword options now exist for the first ScanGrade worksheet products.",
           "detail": "See products/TPT_COPY_BANK.md. The copy stays conservative: no auto-grading, no learning-gain claims, and no customer-facing scan promises until classroom evidence supports them."
+        },
+        {
+          "title": "Marketing asset pipeline drafted",
+          "type": "marketing",
+          "owner": "Codex",
+          "summary": "A safe asset sequence now defines what preview, TPT, landing-page, and teacher-facing promotion materials can be prepared before and after classroom proof.",
+          "detail": "See products/MARKETING_ASSET_PIPELINE.md. It separates safe pre-proof worksheet assets from later scan/demo assets so marketing does not outrun evidence."
         }
       ]
     }

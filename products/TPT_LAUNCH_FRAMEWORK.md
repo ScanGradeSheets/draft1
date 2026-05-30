@@ -44,6 +44,7 @@ Related files:
 - `products/TPT_COPY_BANK.md`
 - `products/TPT_MARKET_RESEARCH_NOTES.md`
 - `products/TPT_GRADE2_FIRST_PAID_PACK_BLUEPRINT.md`
+- `products/MARKETING_ASSET_PIPELINE.md`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Teacher-Answer-Key.pdf`
 
