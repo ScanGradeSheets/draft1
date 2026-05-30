@@ -124,6 +124,7 @@ App stack:
 - ONNX digit recognition through `onnxruntime-web`.
 - QR decode through `jsqr`.
 - Playwright tests exist, but test config may lag behind the HTTPS dev setup.
+- 2026-05-30 update: active Playwright specs now use the HTTPS Vite baseURL on port 5174, and Teacher/debug specs open `/?mode=teacher` before expecting Teacher-only controls.
 
 Implemented or present in the repo:
 
@@ -159,7 +160,7 @@ Repo/process risks:
 
 - The worktree is dirty with tracked modifications and many untracked files; future agents must not revert or overwrite user work.
 - Some docs are older than the current repo and should be treated as directional, not authoritative.
-- `vite.config.js` currently serves HTTPS on port 5174, while README/tests/config may still mention or use HTTP.
+- `vite.config.js` currently serves HTTPS on port 5174; active Playwright config/specs have been aligned, but older docs may still mention HTTP.
 - Cloudflare/D1 persistence appears scaffolded, not proven as the live classroom data path.
 - Mission-control recovery is partial; exact May 27+ UX/automation details are not fully recovered from a continuous transcript.
 
@@ -183,13 +184,21 @@ Repo/process risks:
 - No production app code, OCR, capture, homography, model, worksheet, backend, or recovery files were touched for the test fixes.
 - `test-upload.spec.js` appears untracked, so future agents should preserve/check local untracked test files carefully before cleanup.
 
+2026-05-30 safe verification note:
+
+- While waiting for Tony's real student worksheet samples, Codex fixed remaining active Teacher Mode test-harness mismatches.
+- `test-ocr.spec.js`, `test-upload-real.spec.js`, `verify-single-pipeline.spec.js`, and `export-crops-debug.spec.js` now open `/?mode=teacher` before expecting Runtime Self-Test.
+- `test-upload.spec.js` no longer uses the incorrect async `consoleLines.some(async line => ...)` assertion.
+- `verify-single-pipeline.spec.js` avoids a Playwright strict-locator false failure when both `.results` and `.ocr-result` are present.
+- Passed on 2026-05-30: `test-app.spec.js`, `test-upload.spec.js`, `test-ocr.spec.js`, `verify-single-pipeline.spec.js`, and `test-upload-real.spec.js` with all three fixture cases.
+- No production app code, OCR, capture, homography, model, worksheet, backend, or dataset logic was touched for these test-harness fixes.
+
 Safest next implementation action for the ScanGrade app:
 
-1. Stabilize the local verification harness before touching OCR/camera behavior.
-2. Align Playwright/dev-server expectations with the current HTTPS Vite setup on port 5174.
-3. Run the existing upload/OCR smoke tests.
-4. Then verify real iPad behavior with `?liveOcrDebug=1`.
-5. Only after that, make narrow fixes to `CameraCapture.vue` or the OCR pipeline based on actual failure mode.
+1. Wait for Tony's completed open-divider worksheet samples.
+2. Run the existing upload/OCR smoke tests against those real samples.
+3. Translate failures into plain-English causes before patching.
+4. Only after that, make narrow fixes to `CameraCapture.vue` or the OCR pipeline based on actual failure mode.
 
 Safest next action for mission control:
 

@@ -1,0 +1,99 @@
+{
+  "current_mission": "Collect real student samples from the 3 current worksheets, then use them to test ScanGrade honestly.",
+  "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
+  "next_best_move": "Tony: have students fill out the 3 current worksheets with the new answer boxes, then send clear photos/scans back for testing.",
+  "plain_english_status": "We have worksheet assets and a working app path, but the next truth test is real student handwriting on the current sheets. Until those samples arrive, Codex should avoid changing OCR/capture logic and focus on safe verification, organization, and test harness cleanup.",
+  "needs_tony": [
+    "Print or share the 3 current worksheets.",
+    "Have students complete them naturally, using their normal pencil/spacing.",
+    "Send the completed sheets back as clear photos/scans for OCR and iPad-path testing."
+  ],
+  "blocked_or_risky": [
+    "Main validation is blocked until real completed student sheets arrive.",
+    "OCR/capture/homography files contain large tracked modifications and should not be changed casually.",
+    "Debug crop export specs create local artifacts when run, so only run them intentionally."
+  ],
+  "focus_board": [
+    {
+      "column": "Now",
+      "cards": [
+        {
+          "title": "Collect 3 completed worksheets",
+          "type": "validation",
+          "owner": "Tony",
+          "summary": "Students fill out Addition Within 20, Subtraction Within 20, and Mixed Within 50 using the new answer boxes.",
+          "detail": "These samples become the honest test set for the next OCR/capture pass. Normal student handwriting is more valuable than perfect samples."
+        }
+      ]
+    },
+    {
+      "column": "Waiting on Tony",
+      "cards": [
+        {
+          "title": "Send photos/scans back to Codex",
+          "type": "tony",
+          "owner": "Tony",
+          "summary": "Clear images of each completed sheet, preferably including a few natural imperfections.",
+          "detail": "Good enough: full page visible, corners included, not badly blurred. Perfect lighting is not required."
+        }
+      ]
+    },
+    {
+      "column": "Codex Next",
+      "cards": [
+        {
+          "title": "Test real student samples",
+          "type": "app",
+          "owner": "Codex",
+          "summary": "Run the uploaded sheets through the current pipeline and report what works, what fails, and why.",
+          "detail": "Codex should translate failures into plain English and avoid patching OCR/capture until the failure mode is clear."
+        }
+      ]
+    },
+    {
+      "column": "Blocked / Risky",
+      "cards": [
+        {
+          "title": "Do not tune OCR blind",
+          "type": "app",
+          "owner": "Codex",
+          "summary": "OCR/capture changes should wait for real sample evidence or a reproducible failing test.",
+          "detail": "This protects the currently promising MacBook/upload behavior and avoids overfitting to imagined problems."
+        }
+      ]
+    },
+    {
+      "column": "Review",
+      "cards": [
+        {
+          "title": "Decide pilot threshold",
+          "type": "decision",
+          "owner": "Tony",
+          "summary": "After real samples are tested, decide what is good enough for a small classroom pilot.",
+          "detail": "This should be based on scan success rate, retry behavior, and teacher-review usefulness."
+        }
+      ]
+    },
+    {
+      "column": "Done",
+      "cards": [
+        {
+          "title": "Private Mission Control v1",
+          "type": "mission-control",
+          "owner": "Codex",
+          "summary": "Local private dashboard exists with mission, board, decisions, worksheets, validation, and docs.",
+          "detail": "Still being refined for clarity and Tailscale access."
+        },
+        {
+          "title": "Active Teacher Mode tests fixed",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "Active Teacher/debug specs now open Teacher Mode before expecting Runtime Self-Test.",
+          "detail": "test-app, test-upload, test-ocr, verify-single-pipeline, and test-upload-real all passed with the current harness. No production app logic was touched."
+        }
+      ]
+    }
+  ],
+  "codex_autonomy_rule": "Codex may do read-only inspection, organize Mission Control state, run non-destructive verification, and propose tiny patches. OCR/capture/homography/iPad behavior, cleanup, deployment, and product-direction changes need Tony or reproducible evidence.",
+  "updated_at": "2026-05-30T13:52:00.000Z"
+}

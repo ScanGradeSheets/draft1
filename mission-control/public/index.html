@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ScanGrade Mission Control</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-logo" src="/repo/public/scangrade-logo-transparent.png" alt="ScanGrade logo" />
+        <div>
+          <h1>ScanGrade</h1>
+          <p>Private ScanGrade cockpit</p>
+        </div>
+      </div>
+      <nav>
+        <a href="#today" class="active">Today</a>
+        <a href="#kanban">Kanban</a>
+        <a href="#decisions">Tony Decisions</a>
+        <a href="#worksheets">Worksheets</a>
+        <a href="#validation">Validation</a>
+        <a href="#docs">Documents</a>
+        <a href="#codex">Codex Rules</a>
+      </nav>
+      <div class="private-note">
+        Private via Tailscale. Do not publish this dashboard to the public web.
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Mission Control</p>
+          <h2>What we are doing now, what is blocking it, what comes later.</h2>
+        </div>
+        <button id="refreshButton" type="button">Refresh</button>
+      </header>
+
+      <section id="today" class="section">
+        <div class="hero">
+          <div>
+            <p class="eyebrow">Current Mission</p>
+            <div id="missionDisplay" class="mission-display"></div>
+            <div id="missionEditor" class="mission-editor" hidden>
+              <textarea id="missionInput" rows="2"></textarea>
+              <div class="button-row">
+                <button id="saveMissionButton" type="button">Save Mission</button>
+                <button id="cancelMissionButton" class="secondary" type="button">Cancel</button>
+              </div>
+            </div>
+            <button id="editMissionButton" class="secondary" type="button">Edit Mission</button>
+          </div>
+          <div class="status-stack">
+            <div class="metric">
+              <span id="openDecisionCount">0</span>
+              <label>open decisions</label>
+            </div>
+            <div class="metric">
+              <span id="activeCardCount">0</span>
+              <label>active board cards</label>
+            </div>
+            <div class="metric">
+              <span id="riskCount">0</span>
+              <label>risks visible</label>
+            </div>
+            <div class="metric">
+              <span id="worksheetCount">0</span>
+              <label>worksheet templates</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <article class="panel">
+            <h3>North Star</h3>
+            <p id="northStar"></p>
+          </article>
+          <article class="panel accent">
+            <h3>Next Best Move</h3>
+            <p id="nextBestMove"></p>
+          </article>
+        </div>
+
+        <div class="grid two">
+          <details class="panel" open>
+            <summary>Plain-English Status</summary>
+            <p id="plainStatus"></p>
+          </details>
+          <details class="panel" open>
+            <summary>Needs Tony</summary>
+            <ul id="needsTony"></ul>
+          </details>
+        </div>
+      </section>
+
+      <section id="kanban" class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Current Board</p>
+            <h2>What is happening right now</h2>
+          </div>
+        </div>
+        <div class="legend" id="typeLegend"></div>
+        <div id="boardColumns" class="board"></div>
+        <details class="panel">
+          <summary>Future Milestones</summary>
+          <div id="strategicCards" class="milestone-timeline"></div>
+        </details>
+      </section>
+
+      <section id="decisions" class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Steering Queue</p>
+            <h2>Open questions for Tony</h2>
+          </div>
+        </div>
+        <div id="decisionList" class="decision-list"></div>
+        <details class="panel">
+          <summary>Answered Questions</summary>
+          <div id="answeredDecisionList" class="decision-list"></div>
+        </details>
+      </section>
+
+      <section id="worksheets" class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Worksheet Library</p>
+            <h2>Current student test sheets</h2>
+          </div>
+        </div>
+        <article class="panel worksheet-set-note">
+          <div>
+            <span class="badge" id="worksheetSetLabel">Current test set</span>
+            <span class="badge" id="worksheetSetStatus">Awaiting samples</span>
+          </div>
+          <p id="worksheetSetSummary"></p>
+          <div class="worksheet-actions">
+            <a id="worksheetPacketLink" href="#" target="_blank" rel="noreferrer">Open 3-sheet packet</a>
+          </div>
+        </article>
+        <div id="worksheetList" class="worksheet-grid"></div>
+        <details class="panel">
+          <summary>Older worksheet manifest</summary>
+          <p id="olderWorksheetNote"></p>
+          <div id="olderWorksheetList" class="worksheet-grid compact"></div>
+        </details>
+      </section>
+
+      <section id="validation" class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Evidence</p>
+            <h2>What is proven, what is not</h2>
+          </div>
+        </div>
+        <div id="testHistory" class="timeline"></div>
+      </section>
+
+      <section id="docs" class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Documents</p>
+            <h2>Memory, goals, specs, and preservation notes</h2>
+          </div>
+        </div>
+        <div id="docList" class="doc-list"></div>
+      </section>
+
+      <section id="codex" class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Autonomy</p>
+            <h2>What Codex can do while Tony is away</h2>
+          </div>
+        </div>
+        <div class="grid two">
+          <article class="panel">
+            <h3>Codex Rule</h3>
+            <p id="codexRule"></p>
+          </article>
+          <article class="panel danger">
+            <h3>Blocked / Risky</h3>
+            <ul id="riskList"></ul>
+          </article>
+        </div>
+        <article class="panel">
+          <h3>Worktree Signal</h3>
+          <pre id="gitStatus"></pre>
+        </article>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

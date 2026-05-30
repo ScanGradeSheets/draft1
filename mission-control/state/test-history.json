@@ -1,0 +1,45 @@
+{
+  "runs": [
+    {
+      "date": "2026-05-30",
+      "name": "test-app.spec.js",
+      "result": "pass",
+      "command": "npx playwright test test-app.spec.js --config=playwright.config.js",
+      "plain_english": "The app loaded over HTTPS with no console errors, no WASM/ONNX errors, and model/worker files loaded.",
+      "path_exercised": "MacBook browser app-load smoke path"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "test-upload.spec.js",
+      "result": "pass",
+      "command": "npx playwright test test-upload.spec.js --config=playwright.config.js",
+      "plain_english": "Teacher/debug upload path passed after navigating to Teacher Mode. Runtime self-test assertion now checks resolved console text instead of async Array.some.",
+      "path_exercised": "Teacher/debug upload path"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "test-ocr.spec.js",
+      "result": "pass",
+      "command": "npx playwright test test-ocr.spec.js --config=playwright.config.js",
+      "plain_english": "Teacher/debug OCR runtime self-test passed after the spec was changed to open Teacher Mode.",
+      "path_exercised": "Teacher/debug OCR runtime path"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "test-upload-real.spec.js",
+      "result": "pass",
+      "command": "npx playwright test test-upload-real.spec.js --config=playwright.config.js",
+      "plain_english": "All three real-upload fixture tests passed after opening Teacher Mode: calibrated worksheet, typed worksheet with digits, and handwritten worksheet variety check.",
+      "path_exercised": "Teacher/debug upload path with existing local worksheet fixtures"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "verify-single-pipeline.spec.js",
+      "result": "pass",
+      "command": "npx playwright test verify-single-pipeline.spec.js --config=playwright.config.js",
+      "plain_english": "Single upload produced one result/timing path after the spec opened Teacher Mode and avoided a Playwright strict-locator false failure.",
+      "path_exercised": "Teacher/debug single-pipeline verification path"
+    }
+  ],
+  "updated_at": "2026-05-30T13:52:00.000Z"
+}

@@ -11,6 +11,7 @@ This repo currently contains important modified and untracked work. Treat cleanu
 - Do not delete untracked Playwright tests/configs.
 - Do not delete `public/models`, `models`, worksheet assets, `functions`, `migrations`, or recovery docs.
 - Passing Playwright fixes currently live in untracked test/config files.
+- The private Mission Control dashboard currently lives in untracked `mission-control/` files.
 - Full project snapshot exists at:
   `/Volumes/Tony's Rugged HD/Codex Rescue Backups/scan-grade-project-snapshots/scan-grade-cursor-20260529`
 - Back up before any cleanup.
@@ -45,6 +46,11 @@ These look like source, test, infrastructure, or documentation files that are pa
 - `export-crops-debug.spec.js`
 - `test-pipeline.js`
 - `test-server.js`
+- `mission-control/server.mjs`
+- `mission-control/public/index.html`
+- `mission-control/public/styles.css`
+- `mission-control/public/app.js`
+- `mission-control/state/*.json`
 - `docs/CLOUDFLARE_DEPLOY.md`
 - `docs/PROTOTYPE_ROADMAP.md`
 - `docs/SCAN_GRADE_STUDENT_MODE_UX_SPEC.md`
@@ -80,8 +86,47 @@ These look like source, test, infrastructure, or documentation files that are pa
 Playwright note:
 
 - The HTTPS/baseURL fix is currently in untracked `playwright.config.js` and `playwright.config.ts`.
-- Passing navigation fixes are currently in untracked spec files, especially `test-upload.spec.js`.
-- `test-upload.spec.js` now uses `/?mode=teacher` because `/` defaults to Student Mode.
+- Passing navigation fixes are currently in untracked/modified spec files.
+- Teacher/debug specs now use `/?mode=teacher` because `/` defaults to Student Mode.
+- `test-upload.spec.js` also fixes the previous async `consoleLines.some(async line => ...)` assertion issue.
+- `verify-single-pipeline.spec.js` has a strict-locator assertion fix after both `.results` and `.ocr-result` became visible.
+
+Mission Control note:
+
+- `mission-control/` is the current private dashboard for Tony/Codex shared state.
+- It tracks the current mission, focused board, open-divider worksheet test set, decisions, validation history, docs, and Codex autonomy rules.
+- It should be preserved and likely committed as its own checkpoint before any cleanup.
+
+## Recommended Small Checkpoints After 2026-05-30 Safe Work
+
+First checkpoint: recovery docs, agent instructions, preservation notes, and Mission Control.
+
+Recommended add command:
+
+```bash
+git add AGENTS.md SCANGRADE_RECOVERED_PROJECT_MEMORY.md UNTRACKED_WORK_PRESERVATION_PLAN.md mission-control/
+```
+
+Second checkpoint: Playwright/Vite test harness fixes only.
+
+Recommended add command:
+
+```bash
+git add playwright.config.js playwright.config.ts test-app.spec.js test-upload.spec.js test-ocr.spec.js test-upload-real.spec.js verify-single-pipeline.spec.js export-crops-debug.spec.js
+```
+
+Do not include in either small checkpoint without separate review:
+
+- `src/`
+- `scripts/replay_live_ocr_captured.mjs`
+- `create-mnist-model.py`
+- `public/models/`
+- `models/`
+- `public/ort*.mjs`
+- `public/ort*.wasm`
+- `benchmarks/`
+- `datasets/`
+- worksheet/model artifacts larger than ordinary source files
 
 ## 2. Must Preserve But Maybe Should Not Commit Directly
 

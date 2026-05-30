@@ -1,0 +1,42 @@
+{
+  "current_test_set": {
+    "label": "Current student test set",
+    "status": "Awaiting real student samples",
+    "summary": "These are the open-divider worksheets with the newer large answer boxes and center guide marks. Use these for the next classroom handwriting samples.",
+    "packet_pdf": "worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf",
+    "templates": [
+      {
+        "template_id": "g2-add-within-20-open-divider-test",
+        "human_code": "Sheet A",
+        "title": "Addition Within 20",
+        "worksheet_url": "worksheets/open-divider-test/grade2-addition-within-20-open-divider.svg",
+        "pdf_url": "worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheet-A-Addition-Within-20-Open-Divider.pdf",
+        "layout_url": "layouts/g2-add-within-20-v1.json",
+        "total_questions": 10,
+        "answer_box_style": "Open-divider large answer boxes"
+      },
+      {
+        "template_id": "g2-sub-within-20-open-divider-test",
+        "human_code": "Sheet B",
+        "title": "Subtraction Within 20",
+        "worksheet_url": "worksheets/open-divider-test/grade2-subtraction-within-20-open-divider.svg",
+        "pdf_url": "worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheet-B-Subtraction-Within-20-Open-Divider.pdf",
+        "layout_url": "layouts/g2-sub-within-20-v1.json",
+        "total_questions": 10,
+        "answer_box_style": "Open-divider large answer boxes"
+      },
+      {
+        "template_id": "g2-mixed-within-50-open-divider-test",
+        "human_code": "Sheet C",
+        "title": "Mixed Within 50",
+        "worksheet_url": "worksheets/open-divider-test/grade2-mixed-within-50-open-divider.svg",
+        "pdf_url": "worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheet-C-Mixed-Within-50-Open-Divider.pdf",
+        "layout_url": "layouts/g2-mixed-within-50-v1.json",
+        "total_questions": 10,
+        "answer_box_style": "Open-divider large answer boxes"
+      }
+    ]
+  },
+  "older_manifest_note": "The default public worksheet manifest still points at the older May 21 v1 worksheet SVGs. Keep those as background until the open-divider set is confirmed or promoted.",
+  "updated_at": "2026-05-30T13:15:00.000Z"
+}

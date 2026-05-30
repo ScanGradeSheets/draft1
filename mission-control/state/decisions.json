@@ -1,0 +1,49 @@
+{
+  "decisions": [
+    {
+      "id": "pilot-good-enough",
+      "priority": "steering",
+      "status": "answered",
+      "question": "What should count as good enough for the first classroom pilot?",
+      "why": "This controls when Codex stops polishing and helps prepare a real teacher/iPad test.",
+      "options": [
+        "A few successful real iPad scans with one worksheet and visible review flags",
+        "A full small-class dry run with saved results and teacher review",
+        "Defer to Codex recommendation after the next verification pass"
+      ],
+      "recommendation": "Aim for a full small-class dry run, but use a few successful real iPad scans as the next milestone.",
+      "answer": "Defer to Codex recommendation after the next verification pass"
+    },
+    {
+      "id": "tpt-tone",
+      "priority": "someday",
+      "status": "answered",
+      "question": "What should the first TPT worksheet pack sound like?",
+      "why": "The naming/copy direction should come from Tony's teacher and marketplace instincts.",
+      "options": [
+        "Plain and skill-based",
+        "No-prep teacher-convenience focused",
+        "ScanGrade-compatible assessment system",
+        "Defer to Codex recommendation"
+      ],
+      "recommendation": "Start plain and teacher-convenience focused; avoid over-explaining ScanGrade until the app loop is proven.",
+      "answer": "use this as simple hook"
+    },
+    {
+      "id": "autonomy-boundary",
+      "priority": "steering",
+      "status": "answered",
+      "question": "When Codex has idle time, what class of work should it prefer?",
+      "why": "This keeps paid Codex time useful without letting automation drift into risky production changes.",
+      "options": [
+        "Verification and summaries",
+        "Backlog/doc organization",
+        "Tiny test-only fixes",
+        "Defer to Codex recommendation"
+      ],
+      "recommendation": "Prefer verification and summaries first, then backlog/doc organization, then tiny test-only fixes when evidence is clear.",
+      "answer": "Defer to Codex recommendation"
+    }
+  ],
+  "updated_at": "2026-05-30T13:24:25.512Z"
+}

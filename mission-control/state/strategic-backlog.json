@@ -1,0 +1,61 @@
+{
+  "cards": [
+    {
+      "id": "app-classroom-loop",
+      "type": "app",
+      "status": "1 current",
+      "title": "Prove one shared-iPad classroom loop",
+      "summary": "Student chooses name, scans one worksheet type, result saves, teacher reviews problem cases.",
+      "why_it_matters": "This is the core product promise and must work before broad dashboards or marketplace scaling."
+    },
+    {
+      "id": "worksheet-engine",
+      "type": "worksheet",
+      "status": "2 next",
+      "title": "Lock the first reliable worksheet family",
+      "summary": "Use disciplined QR/layout/answer-key geometry and a small set of Grade 2 sheets.",
+      "why_it_matters": "Marketplace assets should compound from repeatable formats, not one-off sheets."
+    },
+    {
+      "id": "validation-history",
+      "type": "validation",
+      "status": "3 next",
+      "title": "Make test evidence visible and plain-English",
+      "summary": "Track Playwright smoke tests, real worksheet tests, replay/bake-off results, and iPad findings.",
+      "why_it_matters": "Tony needs to know what is actually proven versus merely working in one local path."
+    },
+    {
+      "id": "backend-deploy",
+      "type": "backend",
+      "status": "4 later",
+      "title": "Deploy scangrade.io with shared persistence",
+      "summary": "HTTPS frontend plus minimal roster/submission/review backend for multiple iPads.",
+      "why_it_matters": "LocalStorage is acceptable for prototype validation but not a real shared classroom."
+    },
+    {
+      "id": "tpt-products",
+      "type": "tpt",
+      "status": "5 later",
+      "title": "Package a small solid TPT product set",
+      "summary": "Start with a few polished, tested, repeatable worksheet products and clear listing copy.",
+      "why_it_matters": "Commercial value comes from trustworthy classroom assets, not broad unfinished variety."
+    },
+    {
+      "id": "marketing-promotion",
+      "type": "marketing",
+      "status": "6 later",
+      "title": "Create teacher-facing marketing and promotion",
+      "summary": "Position ScanGrade around saved marking time, shared iPads, and low-friction assessment.",
+      "why_it_matters": "Marketing should reflect the actual product proof and teacher pain point."
+    },
+    {
+      "id": "mission-control-itself",
+      "type": "mission-control",
+      "status": "supporting",
+      "title": "Use Mission Control as durable shared memory",
+      "summary": "Keep current mission, decisions, risks, tests, docs, worksheets, and Codex autonomy rules visible.",
+      "why_it_matters": "The project should not depend on hidden chat history or Tony remembering every technical thread."
+    }
+  ],
+  "updated_at": "2026-05-30T12:50:00.000Z"
+}
