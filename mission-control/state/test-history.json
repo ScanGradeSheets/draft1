@@ -63,7 +63,15 @@
       "command": "npm run inspect:uploaded-worksheet -- public/test-worksheet-with-digits.png",
       "plain_english": "The committed inspection helper ran successfully against an existing worksheet fixture and returned predictions plus marker/debug details. It required normal Playwright browser permissions outside the sandbox.",
       "path_exercised": "Teacher/debug upload inspection path for future student sample triage"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Production build",
+      "result": "pass",
+      "command": "npm run build",
+      "plain_english": "Vite production build completed successfully. It reported only the standard large-chunk warning for the main app bundle.",
+      "path_exercised": "Production bundle build path"
     }
   ],
-  "updated_at": "2026-05-30T14:22:00.000Z"
+  "updated_at": "2026-05-30T14:28:00.000Z"
 }
