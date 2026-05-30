@@ -95,7 +95,15 @@
       "command": "npx playwright test test-app.spec.js --config=playwright.config.js",
       "plain_english": "After adding the internal TPT launch framework and Mission Control links, the app still loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.",
       "path_exercised": "MacBook browser app-load smoke path"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Post-market-research app smoke",
+      "result": "pass",
+      "command": "npx playwright test test-app.spec.js --config=playwright.config.js",
+      "plain_english": "After adding TPT market research notes and the Grade 2 first paid pack blueprint, the app still loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.",
+      "path_exercised": "MacBook browser app-load smoke path"
     }
   ],
-  "updated_at": "2026-05-30T19:30:00.000Z"
+  "updated_at": "2026-05-30T19:45:00.000Z"
 }
