@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const DEFAULT_EXPECTED = [8, 4, 1, 9, 2, 7, 0, 5, 3, 6];
-const DEFAULT_URL = process.env.SG_EVAL_URL || 'https://scangradesheets.github.io/draft1';
+const DEFAULT_URL = process.env.SG_EVAL_URL || 'https://localhost:5174';
 const DEFAULT_OUT = path.join(ROOT, 'benchmarks', 'uploaded_student_samples', 'results');
 const OUT_DIR = process.env.SG_EVAL_OUT || DEFAULT_OUT;
 const MODEL_PATH = process.env.SG_EVAL_MODEL_PATH || '/models/mnist-model.onnx';
