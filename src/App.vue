@@ -107,12 +107,9 @@
           <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
             Home
           </button>
-          <div class="student-scan-identity">
-            <strong>{{ activeStudentSession?.studentName || 'Guest' }}</strong>
-            <button type="button" class="student-scan-login-inline" @click="beginStudentSignIn">
-              Login
-            </button>
-          </div>
+          <button type="button" class="student-scan-identity" @click="beginStudentSignIn">
+            <strong>{{ activeStudentSession?.mode === 'named' ? activeStudentSession.studentName : 'Login' }}</strong>
+          </button>
           <div class="student-scan-actions">
             <button
               v-if="ocrResult"
@@ -330,7 +327,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.05.30-mobile-scan-lift'
+const APP_BUILD_LABEL = '2026.05.30-login-bar-simplify'
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -1626,34 +1623,26 @@ onMounted(() => {
 .student-scan-identity {
   justify-self: center;
   min-width: 64px;
-  padding: 0 2px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
   text-align: center;
+  cursor: pointer;
 }
 
-.student-scan-bar strong {
+.student-scan-identity strong {
   display: block;
   color: #1d1d1f;
   font-size: 15px;
   line-height: 1.1;
 }
 
-.student-scan-login-inline {
-  display: block;
-  margin: 3px 0 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #6e6e73;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 720;
-  line-height: 1.15;
-  cursor: pointer;
-}
-
-.student-scan-login-inline:hover,
-.student-scan-login-inline:focus-visible {
-  color: #126c39;
+.student-scan-identity:hover,
+.student-scan-identity:focus-visible {
+  background: #f5f7f6;
   outline: none;
 }
 
