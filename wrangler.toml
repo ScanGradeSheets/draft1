@@ -1,0 +1,11 @@
+"$schema" = "./node_modules/wrangler/config-schema.json"
+name = "scangrade"
+compatibility_date = "2026-04-18"
+pages_build_output_dir = "./dist"
+
+# Add your D1 binding either here or in the Cloudflare Pages dashboard.
+# Example:
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "scangrade"
+# database_id = "replace-with-your-d1-database-id"
