@@ -2,7 +2,7 @@
   "current_test_set": {
     "label": "Current student test set",
     "status": "Awaiting real student samples",
-    "summary": "These are the open-divider worksheets with the newer large answer boxes and center guide marks. Use these for the next classroom handwriting samples. Intake instructions are in docs/STUDENT_SAMPLE_INTAKE.md.",
+    "summary": "These are the open-divider worksheets with the newer large answer boxes and notch-style center guide marks. They are now both the classroom test packet and the default public Grade 2 worksheets. Use these for the next classroom handwriting samples. Intake instructions are in docs/STUDENT_SAMPLE_INTAKE.md.",
     "packet_pdf": "worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf",
     "templates": [
       {
@@ -37,7 +37,7 @@
       }
     ]
   },
-  "older_manifest_note": "The default public worksheet manifest still points at the older May 21 v1 worksheet SVGs. Keep those as background until the open-divider set is confirmed or promoted.",
+  "default_public_note": "As of 2026-05-30, the default public Grade 2 A/B/C worksheet SVGs, layout JSON, and printable PDFs were promoted to the open/notch divider answer boxes. The separate open-divider-test URLs remain useful as explicit classroom-test links, but they should visually match the default public worksheets.",
   "design_evidence": {
     "label": "Answer box option gallery",
     "status": "Background reference",
@@ -46,5 +46,5 @@
     "selected_variant_url": "worksheets/answer-box-options/option-f-open-divider.svg",
     "ranked_variants_url": "worksheets/answer-box-options/ranked-20-answer-box-variants.svg"
   },
-  "updated_at": "2026-05-30T14:20:00.000Z"
+  "updated_at": "2026-05-30T23:44:21.700Z"
 }
