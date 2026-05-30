@@ -193,6 +193,15 @@ Repo/process risks:
 - Passed on 2026-05-30: `test-app.spec.js`, `test-upload.spec.js`, `test-ocr.spec.js`, `verify-single-pipeline.spec.js`, and `test-upload-real.spec.js` with all three fixture cases.
 - No production app code, OCR, capture, homography, model, worksheet, backend, or dataset logic was touched for these test-harness fixes.
 
+2026-05-30 worksheet packet note:
+
+- Tony confirmed the current public/default worksheets needed to match the open-divider answer boxes being classroom-tested.
+- The default Grade 2 A/B/C worksheet SVGs, layout JSON, and printable PDFs now use the open/notch divider answer boxes instead of the older dashed center guide.
+- Footer worksheet branding now matches the app convention: `ScanGrade` in black with lighter `.io`, lowered closer to the QR code.
+- The GitHub Pages worksheet files were published after the generator change.
+- Verification included `npm run build`, `npx playwright test test-app.spec.js --config=playwright.config.js`, `npm run build:github`, a local SVG screenshot check, and a raw GitHub `gh-pages` check confirming `open-divider-guide` in the default mixed worksheet.
+- OCR/capture/homography/model/backend logic was not touched for this worksheet-design correction.
+
 Safest next implementation action for the ScanGrade app:
 
 1. Wait for Tony's completed open-divider worksheet samples.

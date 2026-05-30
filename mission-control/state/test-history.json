@@ -170,6 +170,14 @@
     },
     {
       "date": "2026-05-30",
+      "name": "Default worksheet open-divider publish",
+      "result": "pass",
+      "command": "npm run build; npx playwright test test-app.spec.js --config=playwright.config.js; npm run build:github; raw GitHub gh-pages SVG check",
+      "plain_english": "The default public Grade 2 worksheets now match the open-divider answer boxes Tony is testing. The footer brand label also matches the app style and sits closer to the QR code. Raw GitHub confirmed the default mixed worksheet contains open-divider-guide markup and the lowered QR label.",
+      "path_exercised": "Worksheet generator, default worksheet SVG/PDF outputs, production build, app-load smoke path, and GitHub Pages worksheet publish path"
+    },
+    {
+      "date": "2026-05-30",
       "name": "Mission Control restart check",
       "result": "pass",
       "command": "Restarted node mission-control/server.mjs on 127.0.0.1:8787; checked /api/status for latest document titles and open decision count",
@@ -177,5 +185,5 @@
       "path_exercised": "Private Mission Control local dashboard service"
     }
   ],
-  "updated_at": "2026-05-30T22:00:00.000Z"
+  "updated_at": "2026-05-30T23:29:21.653Z"
 }

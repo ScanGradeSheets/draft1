@@ -24,6 +24,9 @@
 - A review and feedback copy guide was added for clear/read/review/retry states.
 - Mission Control's Tony question queue now groups open decisions by urgency.
 - Mission Control was restarted so the latest dashboard docs and question queue are live on `http://127.0.0.1:8787/`.
+- The default Grade 2 A/B/C public worksheets were corrected to use the open/notch divider answer boxes Tony is testing, replacing the older dashed guide in the default files.
+- Worksheet footer branding was aligned with the app style: `ScanGrade` black, `.io` lighter grey, and the label moved lower toward the QR code.
+- The corrected worksheet SVGs, layout JSON, and printable PDFs were committed and pushed to both the source branch and GitHub Pages.
 
 ## What Got Tested
 
@@ -37,6 +40,8 @@
 - `test-app.spec.js` passed again after adding the review and feedback copy guide.
 - Mission Control's updated question queue passed JS syntax, JSON parse, and local status endpoint checks.
 - Mission Control's restarted local service confirmed the latest document list through `/api/status`.
+- The corrected default worksheet SVG was rendered locally for visual inspection, and raw GitHub `gh-pages` was checked for `open-divider-guide` plus the lowered QR label.
+- `npm run build:github` passed before publishing the corrected worksheet files.
 - Latest recorded smoke result: app loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.
 
 ## What Needs Tony
