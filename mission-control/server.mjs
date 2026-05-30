@@ -84,6 +84,7 @@ async function gitStatus() {
 async function latestDocSummaries() {
   const docs = [
     ['Project Memory', 'SCANGRADE_RECOVERED_PROJECT_MEMORY.md'],
+    ['Benchmark Artifact Inventory', 'docs/BENCHMARK_ARTIFACT_INVENTORY.md'],
     ['Backend Readiness', 'docs/BACKEND_DEPLOYMENT_READINESS.md'],
     ['Model Artifact Inventory', 'docs/MODEL_ARTIFACT_INVENTORY.md'],
     ['Operating Goals', 'docs/GOALS.md'],
