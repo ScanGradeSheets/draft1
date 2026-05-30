@@ -1727,8 +1727,8 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .scan-grade--student {
-    padding: 24px 14px 10px;
-    padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 6px));
+    padding: 44px 14px 10px;
+    padding-top: max(44px, calc(env(safe-area-inset-top, 0px) + 14px));
   }
 
   .scan-grade--student .header {
