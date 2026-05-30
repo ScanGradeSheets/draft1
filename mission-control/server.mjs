@@ -118,6 +118,7 @@ async function latestDocSummaries() {
     ['Untracked Preservation', 'UNTRACKED_WORK_PRESERVATION_PLAN.md'],
     ['Worksheet Design Interview Guide', 'docs/WORKSHEET_DESIGN_INTERVIEW_GUIDE.md'],
     ['Worksheet Design System', 'docs/WORKSHEET_DESIGN_SYSTEM.md'],
+    ['Worksheet Promotion Checklist', 'docs/WORKSHEET_PROMOTION_CHECKLIST.md'],
     ['Worksheet Quality Rubric', 'docs/WORKSHEET_QUALITY_RUBRIC.md'],
   ];
 

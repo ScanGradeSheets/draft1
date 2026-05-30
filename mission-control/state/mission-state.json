@@ -219,6 +219,13 @@
           "detail": "See docs/WORKSHEET_QUALITY_RUBRIC.md and docs/WORKSHEET_DESIGN_INTERVIEW_GUIDE.md. These help Codex judge worksheet clarity, scan safety, visual calm, grade fit, product identity, and marketplace readiness before asking Tony for direction."
         },
         {
+          "title": "Worksheet promotion checklist drafted",
+          "type": "worksheet",
+          "owner": "Codex",
+          "summary": "A checklist now defines when the current open-divider sheets can graduate from test packet to classroom-ready template, sampler, or paid-product candidate.",
+          "detail": "See docs/WORKSHEET_PROMOTION_CHECKLIST.md. It prevents ScanGrade from promoting visually polished worksheets before student usability, scan reliability, teacher trust, and product readiness all line up."
+        },
+        {
           "title": "Trust threshold framework drafted",
           "type": "app",
           "owner": "Codex",

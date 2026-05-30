@@ -10,6 +10,7 @@ Companion documents:
 
 - `docs/WORKSHEET_QUALITY_RUBRIC.md`
 - `docs/WORKSHEET_DESIGN_INTERVIEW_GUIDE.md`
+- `docs/WORKSHEET_PROMOTION_CHECKLIST.md`
 
 ## Design Goal
 
@@ -246,6 +247,8 @@ Each future worksheet product should aim to include:
 - Listing copy
 
 Do not publish or over-market a ScanGrade-compatible product until the worksheet format and teacher-facing promise are supported by classroom evidence.
+
+Use `docs/WORKSHEET_PROMOTION_CHECKLIST.md` before moving any worksheet family from test packet to reusable library item, sampler, or paid-product candidate.
 
 ## Validation Checklist For New Worksheets
 

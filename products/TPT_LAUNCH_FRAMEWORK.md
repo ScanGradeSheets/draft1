@@ -45,6 +45,7 @@ Related files:
 - `products/TPT_MARKET_RESEARCH_NOTES.md`
 - `products/TPT_GRADE2_FIRST_PAID_PACK_BLUEPRINT.md`
 - `products/MARKETING_ASSET_PIPELINE.md`
+- `docs/WORKSHEET_PROMOTION_CHECKLIST.md`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Teacher-Answer-Key.pdf`
 
@@ -235,3 +236,5 @@ TPT work should not distract from the current app mission.
 If real student samples reveal answer-box or scan problems, pause launch expansion and fix the classroom loop first.
 
 The marketplace becomes valuable because the worksheets are both good paper products and part of a trustworthy ScanGrade workflow.
+
+Before any worksheet is treated as a sampler or paid-product candidate, use `docs/WORKSHEET_PROMOTION_CHECKLIST.md`.

@@ -151,7 +151,15 @@
       "command": "node --check mission-control/server.mjs; JSON parse mission state; npx playwright test test-app.spec.js --config=playwright.config.js",
       "plain_english": "After adding the teacher trust scorecard and linking it into the sample report and classroom test plan, Mission Control server syntax and mission-state JSON passed, and the app still loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.",
       "path_exercised": "Private Mission Control document list plus MacBook browser app-load smoke path"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Post-worksheet-promotion-checklist app smoke",
+      "result": "pass",
+      "command": "node --check mission-control/server.mjs; JSON parse mission state; npx playwright test test-app.spec.js --config=playwright.config.js",
+      "plain_english": "After adding the worksheet promotion checklist and linking it into the design system, TPT framework, and Mission Control docs, Mission Control server syntax and mission-state JSON passed, and the app still loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.",
+      "path_exercised": "Worksheet/TPT planning docs plus MacBook browser app-load smoke path"
     }
   ],
-  "updated_at": "2026-05-30T21:15:00.000Z"
+  "updated_at": "2026-05-30T21:30:00.000Z"
 }
