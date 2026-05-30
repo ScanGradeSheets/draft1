@@ -147,24 +147,40 @@ function renderDecisions(data) {
     .map((decision, index) => ({ decision, index }))
     .filter(({ decision }) => decision.status === 'answered');
 
-  $('decisionList').innerHTML = open.length ? open.map(({ decision, index }) => `
-    <article class="decision" data-index="${index}">
-      <div class="badge-row">
-        <span class="badge">${escapeHtml(decision.priority)}</span>
-        <span class="badge">${escapeHtml(decision.status)}</span>
+  const queueOrder = ['Must answer soon', 'Can defer', 'Codex recommends default'];
+  const groupedOpen = queueOrder
+    .map((queue) => ({
+      queue,
+      items: open.filter(({ decision }) => (decision.queue || 'Can defer') === queue),
+    }))
+    .filter((group) => group.items.length);
+
+  $('decisionList').innerHTML = groupedOpen.length ? groupedOpen.map((group) => `
+    <section class="decision-group">
+      <div class="decision-group-head">
+        <h3>${escapeHtml(group.queue)}</h3>
+        <span class="badge">${group.items.length} open</span>
       </div>
-      <h3>${escapeHtml(decision.question)}</h3>
-      <p><strong>Why it matters:</strong> ${escapeHtml(decision.why)}</p>
-      <p><strong>Codex recommendation:</strong> ${escapeHtml(decision.recommendation)}</p>
-      <div class="decision-controls">
-        <select data-role="option">
-          <option value="">Choose an answer...</option>
-          ${(decision.options || []).map((option) => `<option ${decision.answer === option ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('')}
-        </select>
-        <input data-role="answer" value="${escapeHtml(decision.answer || '')}" placeholder="Or type Tony's answer..." />
-        <button data-role="save-decision" type="button">Save</button>
-      </div>
-    </article>
+      ${group.items.map(({ decision, index }) => `
+        <article class="decision" data-index="${index}">
+          <div class="badge-row">
+            <span class="badge">${escapeHtml(decision.priority)}</span>
+            <span class="badge">${escapeHtml(decision.status)}</span>
+          </div>
+          <h3>${escapeHtml(decision.question)}</h3>
+          <p><strong>Why it matters:</strong> ${escapeHtml(decision.why)}</p>
+          <p><strong>Codex recommendation:</strong> ${escapeHtml(decision.recommendation)}</p>
+          <div class="decision-controls">
+            <select data-role="option">
+              <option value="">Choose an answer...</option>
+              ${(decision.options || []).map((option) => `<option ${decision.answer === option ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+            </select>
+            <input data-role="answer" value="${escapeHtml(decision.answer || '')}" placeholder="Or type Tony's answer..." />
+            <button data-role="save-decision" type="button">Save</button>
+          </div>
+        </article>
+      `).join('')}
+    </section>
   `).join('') : '<article class="panel empty-state"><h3>No open Tony questions.</h3><p>Answered questions are hidden below and can be reopened if needed.</p></article>';
 
   $('answeredDecisionList').innerHTML = answered.length ? answered.map(({ decision, index }) => `

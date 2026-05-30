@@ -467,6 +467,26 @@ ul {
   gap: 10px;
 }
 
+.decision-group {
+  display: grid;
+  gap: 9px;
+}
+
+.decision-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 2px 0;
+}
+
+.decision-group-head h3 {
+  color: var(--sg-green-dark);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .decision {
   display: grid;
   gap: 10px;

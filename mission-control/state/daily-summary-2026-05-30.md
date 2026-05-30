@@ -16,11 +16,13 @@
   - `docs/CLASSROOM_SAMPLE_COLLECTION_CARD.md`
   - `docs/STUDENT_SAMPLE_PRIVACY_AND_STORAGE.md`
   - `docs/STUDENT_SAMPLE_INTAKE.md`
+- Mission Control's Tony question queue now groups open decisions by urgency.
 
 ## What Got Tested
 
 - `test-app.spec.js` passed repeatedly after the UI polish and product/marketing documentation work.
 - `test-app.spec.js` passed again after adding the classroom sample collection and privacy docs.
+- Mission Control's updated question queue passed JS syntax, JSON parse, and local status endpoint checks.
 - Latest recorded smoke result: app loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.
 
 ## What Needs Tony

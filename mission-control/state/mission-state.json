@@ -163,6 +163,13 @@
           "detail": "Allowed work includes testing, Mission Control upkeep, docs, worksheet/TPT/marketing artifacts, market research, and minimal UI micro-polish. Tony still approves vision, brand, major UX, launch strategy, claims, pricing, worksheet-format decisions, and risky OCR/capture/model/backend changes."
         },
         {
+          "title": "Tony question queue clarified",
+          "type": "mission-control",
+          "owner": "Codex",
+          "summary": "Mission Control now groups open Tony questions by urgency so decisions can pile up without blocking safe adjacent work.",
+          "detail": "Open questions are grouped as Must answer soon, Can defer, or Codex recommends default. Answered questions stay hidden in their own section and can be reopened if needed."
+        },
+        {
           "title": "Student header polish published",
           "type": "app",
           "owner": "Codex",
