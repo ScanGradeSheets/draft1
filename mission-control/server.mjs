@@ -89,6 +89,7 @@ async function latestDocSummaries() {
     ['Benchmark Artifact Inventory', 'docs/BENCHMARK_ARTIFACT_INVENTORY.md'],
     ['Backend Readiness', 'docs/BACKEND_DEPLOYMENT_READINESS.md'],
     ['Model Artifact Inventory', 'docs/MODEL_ARTIFACT_INVENTORY.md'],
+    ['Mission Control Private Access', 'docs/MISSION_CONTROL_PRIVATE_ACCESS.md'],
     ['Operating Goals', 'docs/GOALS.md'],
     ['Prototype Roadmap', 'docs/PROTOTYPE_ROADMAP.md'],
     ['Student Mode UX', 'docs/SCAN_GRADE_STUDENT_MODE_UX_SPEC.md'],
