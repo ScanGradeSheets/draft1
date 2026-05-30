@@ -22,6 +22,14 @@ Current answer-key helper:
 
 - `docs/OPEN_DIVIDER_SAMPLE_ANSWER_KEYS.md`
 
+Tony-facing classroom card:
+
+- `docs/CLASSROOM_SAMPLE_COLLECTION_CARD.md`
+
+Privacy and storage guardrails:
+
+- `docs/STUDENT_SAMPLE_PRIVACY_AND_STORAGE.md`
+
 ## What Tony Should Send
 
 Minimum useful set:
@@ -72,6 +80,8 @@ worksheet photos/student-samples/open-divider-2026-05/
 ```
 
 Do not move or delete originals after importing. Keep the first received copies intact until results are summarized.
+
+If a student name is visible, preserve the original privately and use `docs/STUDENT_SAMPLE_PRIVACY_AND_STORAGE.md` before creating any shareable copy.
 
 ## First Codex Pass
 

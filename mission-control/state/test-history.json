@@ -127,7 +127,15 @@
       "command": "npx playwright test test-app.spec.js test-upload.spec.js --config=playwright.config.js",
       "plain_english": "After adding the student sample triage runbook and open-divider answer-key helper, the app health and Teacher/upload runtime path both passed. App load had 0 console/WASM/ONNX errors and 0 failed model/worker requests. Runtime Self-Test passed 6/6 and upload flow completed with 0 JS errors.",
       "path_exercised": "MacBook app-load path plus Teacher/debug upload runtime path"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Post-classroom-sample-card app smoke",
+      "result": "pass",
+      "command": "npx playwright test test-app.spec.js --config=playwright.config.js",
+      "plain_english": "After adding Tony's classroom sample collection card and student-sample privacy guardrails, the app still loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.",
+      "path_exercised": "MacBook browser app-load smoke path"
     }
   ],
-  "updated_at": "2026-05-30T20:30:00.000Z"
+  "updated_at": "2026-05-30T20:45:00.000Z"
 }

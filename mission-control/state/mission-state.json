@@ -100,6 +100,13 @@
           "detail": "See docs/STUDENT_SAMPLE_INTAKE.md for file naming, photo quality, first-pass procedure, verification commands, and report format."
         },
         {
+          "title": "Classroom sample collection card added",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "Tony now has a short internal card for collecting the first real open-divider student samples without overcomplicating the classroom moment.",
+          "detail": "See docs/CLASSROOM_SAMPLE_COLLECTION_CARD.md and docs/STUDENT_SAMPLE_PRIVACY_AND_STORAGE.md. They clarify what to print, how many samples are useful, what classroom observations matter, how to photograph pages, and how to keep student samples private."
+        },
+        {
           "title": "Classroom test plan created",
           "type": "validation",
           "owner": "Codex",
