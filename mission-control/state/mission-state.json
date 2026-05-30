@@ -114,6 +114,13 @@
           "detail": "See docs/WORKSHEET_DESIGN_SYSTEM.md. It documents open-divider guardrails, scan-safe rules, answer-key expectations, product packaging needs, and what Codex must not change without evidence."
         },
         {
+          "title": "Teacher workflow prototype drafted",
+          "type": "app",
+          "owner": "Codex",
+          "summary": "Teacher scan/review/override flow is now described in product language before UI implementation.",
+          "detail": "See docs/TEACHER_WORKFLOW_PROTOTYPE.md. It defines scan states, review behavior, confidence labels, class summary scope, and open UX decisions for Tony."
+        },
+        {
           "title": "Current worksheet packet preserved",
           "type": "worksheet",
           "owner": "Codex",
@@ -138,5 +145,5 @@
     }
   ],
   "codex_autonomy_rule": "Codex may do read-only inspection, organize Mission Control state, run non-destructive verification, and propose tiny patches. OCR/capture/homography/iPad behavior, cleanup, deployment, and product-direction changes need Tony or reproducible evidence.",
-  "updated_at": "2026-05-30T16:25:00.000Z"
+  "updated_at": "2026-05-30T16:39:00.000Z"
 }

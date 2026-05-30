@@ -99,6 +99,7 @@ async function latestDocSummaries() {
     ['Student Sample Eval Report Template', 'docs/STUDENT_SAMPLE_EVAL_REPORT_TEMPLATE.md'],
     ['Student Sample Intake', 'docs/STUDENT_SAMPLE_INTAKE.md'],
     ['Scratch File Inventory', 'docs/SCRATCH_FILE_INVENTORY.md'],
+    ['Teacher Workflow Prototype', 'docs/TEACHER_WORKFLOW_PROTOTYPE.md'],
     ['TPT First Product Plan', 'products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md'],
     ['Untracked Preservation', 'UNTRACKED_WORK_PRESERVATION_PLAN.md'],
     ['Worksheet Design System', 'docs/WORKSHEET_DESIGN_SYSTEM.md'],
