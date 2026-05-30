@@ -101,6 +101,7 @@ async function latestDocSummaries() {
     ['Scratch File Inventory', 'docs/SCRATCH_FILE_INVENTORY.md'],
     ['TPT First Product Plan', 'products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md'],
     ['Untracked Preservation', 'UNTRACKED_WORK_PRESERVATION_PLAN.md'],
+    ['Worksheet Design System', 'docs/WORKSHEET_DESIGN_SYSTEM.md'],
   ];
 
   return Promise.all(docs.map(async ([title, file]) => ({

@@ -107,6 +107,13 @@
           "detail": "See docs/CLASSROOM_TEST_PLAN.md. It defines what the open-divider classroom test should prove, how to rate results, and what not to claim before evidence exists."
         },
         {
+          "title": "Worksheet design system drafted",
+          "type": "worksheet",
+          "owner": "Codex",
+          "summary": "Worksheet rules now capture Tony's clean, paper-first, scan-safe direction for future artifacts.",
+          "detail": "See docs/WORKSHEET_DESIGN_SYSTEM.md. It documents open-divider guardrails, scan-safe rules, answer-key expectations, product packaging needs, and what Codex must not change without evidence."
+        },
+        {
           "title": "Current worksheet packet preserved",
           "type": "worksheet",
           "owner": "Codex",
@@ -131,5 +138,5 @@
     }
   ],
   "codex_autonomy_rule": "Codex may do read-only inspection, organize Mission Control state, run non-destructive verification, and propose tiny patches. OCR/capture/homography/iPad behavior, cleanup, deployment, and product-direction changes need Tony or reproducible evidence.",
-  "updated_at": "2026-05-30T16:12:00.000Z"
+  "updated_at": "2026-05-30T16:25:00.000Z"
 }
