@@ -28,6 +28,11 @@ Current packet:
 
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf`
 
+Current answer key:
+
+- `public/worksheets/open-divider-test/teacher-answer-key.html`
+- `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Teacher-Answer-Key.pdf`
+
 ## What Must Be True Before Publishing
 
 Do not publish until:
@@ -74,7 +79,6 @@ Draft package could include:
 
 Missing before productization:
 
-- Teacher answer key PDF
 - Cover/preview image
 - Terms-of-use page
 - TPT thumbnail/preview copy
@@ -114,7 +118,7 @@ It should not yet promise:
 - [ ] Real samples tested through current app
 - [ ] Failure modes summarized
 - [ ] Tony approves answer-box design
-- [ ] Teacher answer key generated
+- [x] Teacher answer key generated
 - [ ] Cover image generated
 - [ ] Preview PDF generated
 - [ ] TPT listing copy drafted
