@@ -33,6 +33,12 @@ Current answer key:
 - `public/worksheets/open-divider-test/teacher-answer-key.html`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Teacher-Answer-Key.pdf`
 
+Current terms and listing draft:
+
+- `public/worksheets/open-divider-test/terms-of-use.html`
+- `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Terms-of-Use.pdf`
+- `products/TPT_OPEN_DIVIDER_MINI_PACK_LISTING_DRAFT.md`
+
 ## What Must Be True Before Publishing
 
 Do not publish until:
@@ -80,7 +86,6 @@ Draft package could include:
 Missing before productization:
 
 - Cover/preview image
-- Terms-of-use page
 - TPT thumbnail/preview copy
 - Final product description
 - Final validation note from real samples
@@ -119,9 +124,10 @@ It should not yet promise:
 - [ ] Failure modes summarized
 - [ ] Tony approves answer-box design
 - [x] Teacher answer key generated
+- [x] Terms-of-use page generated
 - [ ] Cover image generated
 - [ ] Preview PDF generated
-- [ ] TPT listing copy drafted
+- [x] TPT listing copy drafted
 - [ ] Tony reviews final promise
 
 ## Relationship To Current Mission
