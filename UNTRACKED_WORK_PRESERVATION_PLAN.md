@@ -4,14 +4,36 @@ Created 2026-05-30 for `/Users/openclaw/Codex Projects/scan-grade-cursor`.
 
 This repo currently contains important modified and untracked work. Treat cleanup as risky until each item is inspected and backed up.
 
+## 2026-05-30 Safe Preservation Update
+
+Several items that were untracked when this plan was created have now been committed in small checkpoints:
+
+- Recovery/project docs and Mission Control checkpoint files.
+- Playwright HTTPS/baseURL and Teacher Mode test harness files.
+- Playwright worksheet fixture images.
+- Current open-divider worksheet test packet, SVGs, PDFs, and generator.
+- Answer-box option gallery and generator.
+- Backend scaffold: Cloudflare Pages Functions, D1 migration, and `wrangler.toml`.
+- Student sample intake docs and uploaded worksheet inspection/evaluation scripts.
+- Historical ScanGrade reports.
+- OCR/dataset utility scripts.
+
+Important current state:
+
+- The remaining modified tracked files are still the risky OCR/capture/model files listed below. Do not revert or commit them casually.
+- Passing Playwright fixes are now tracked, not only untracked.
+- Mission Control is now tracked.
+- Current worksheet assets and answer-box option assets are now tracked.
+- Model/runtime artifacts under `models/`, `public/models/`, and `public/ort*` are still untracked and should not be committed without a size/storage decision.
+- Stale scratch scripts such as `scripts/generate-test-image.py` and `scripts/tmp_debug_line.mjs` remain untracked intentionally because they contain old absolute paths or one-off debug assumptions.
+
 ## Critical Warnings
 
 - Do not run `git clean -fd`.
 - Do not run `git reset --hard`.
 - Do not delete untracked Playwright tests/configs.
 - Do not delete `public/models`, `models`, worksheet assets, `functions`, `migrations`, or recovery docs.
-- Passing Playwright fixes currently live in untracked test/config files.
-- The private Mission Control dashboard currently lives in untracked `mission-control/` files.
+- Passing Playwright fixes and Mission Control are now tracked, but must still be preserved.
 - Full project snapshot exists at:
   `/Volumes/Tony's Rugged HD/Codex Rescue Backups/scan-grade-project-snapshots/scan-grade-cursor-20260529`
 - Back up before any cleanup.
