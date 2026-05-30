@@ -168,10 +168,17 @@
           "owner": "Codex",
           "summary": "A conservative internal framework now maps the path from the current 3-sheet test packet to a small trustworthy TPT launch.",
           "detail": "See products/TPT_LAUNCH_FRAMEWORK.md. It defines readiness gates, safe promises, a first-20 product backlog, preview rules, and a market-research checklist while keeping the current classroom sample test as the gate."
+        },
+        {
+          "title": "TPT market scan captured",
+          "type": "marketing",
+          "owner": "Codex",
+          "summary": "Comparable Grade 2 math products suggest ScanGrade should lead with familiar no-prep worksheet language, then introduce ScanGrade compatibility only after classroom proof.",
+          "detail": "See products/TPT_MARKET_RESEARCH_NOTES.md. Key insight: the 3-sheet packet is useful for validation or a sampler, while a stronger first paid pack likely needs 10-20 polished pages after the answer-box format is proven."
         }
       ]
     }
   ],
   "codex_autonomy_rule": "Codex should keep moving every 30 minutes when useful: inspect repo state, choose the safest high-value work from the mission/kanban, and prefer small reversible packets. Safe autonomous lanes include tests, diagnosis, docs, Mission Control upkeep, worksheet/TPT/marketing drafts, market research, and minimal UI micro-polish that improves clarity, spacing, hierarchy, contrast, mobile fit, or visual calm. Tony remains final authority for vision, brand, major UX, launch/pricing/claims, worksheet-format decisions, and risky OCR/capture/homography/model/backend changes. Never delete/clean untracked work, never run git clean -fd or git reset --hard, and preserve paper-first teacher trust over feature expansion.",
-  "updated_at": "2026-05-30T19:30:00.000Z"
+  "updated_at": "2026-05-30T19:45:00.000Z"
 }

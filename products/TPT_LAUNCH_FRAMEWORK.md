@@ -41,6 +41,7 @@ Related files:
 
 - `products/TPT_FIRST_OPEN_DIVIDER_PRODUCT_PLAN.md`
 - `products/TPT_OPEN_DIVIDER_MINI_PACK_LISTING_DRAFT.md`
+- `products/TPT_MARKET_RESEARCH_NOTES.md`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Teacher-Answer-Key.pdf`
 
@@ -220,6 +221,10 @@ Before final listing copy, do a small market scan and summarize in internal note
 
 Use research to understand expectations, not to copy language.
 
+Current internal scan:
+
+- `products/TPT_MARKET_RESEARCH_NOTES.md`
+
 ## Relationship To App Work
 
 TPT work should not distract from the current app mission.
@@ -227,4 +232,3 @@ TPT work should not distract from the current app mission.
 If real student samples reveal answer-box or scan problems, pause launch expansion and fix the classroom loop first.
 
 The marketplace becomes valuable because the worksheets are both good paper products and part of a trustworthy ScanGrade workflow.
-
