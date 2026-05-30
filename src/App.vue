@@ -104,15 +104,15 @@
         ref="cameraWrapper"
       >
         <div v-if="showStudentCaptureUi" class="student-scan-bar">
+          <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
+            Home
+          </button>
           <div class="student-scan-identity">
             <strong>{{ activeStudentSession?.studentName || 'Guest' }}</strong>
             <button type="button" class="student-scan-login-inline" @click="beginStudentSignIn">
               Login
             </button>
           </div>
-          <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
-            Home
-          </button>
           <div class="student-scan-actions">
             <button
               v-if="ocrResult"
@@ -330,7 +330,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.05.30-stable-home-glow'
+const APP_BUILD_LABEL = '2026.05.30-mobile-scan-lift'
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -1624,8 +1624,10 @@ onMounted(() => {
 }
 
 .student-scan-identity {
+  justify-self: center;
   min-width: 64px;
   padding: 0 2px;
+  text-align: center;
 }
 
 .student-scan-bar strong {
@@ -1684,7 +1686,7 @@ onMounted(() => {
 }
 
 .student-scan-home {
-  justify-self: center;
+  justify-self: start;
 }
 
 .student-scan-reset {
@@ -1725,8 +1727,54 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .scan-grade--student {
-    padding: 56px 14px 14px;
-    padding-top: max(56px, calc(env(safe-area-inset-top, 0px) + 18px));
+    padding: 24px 14px 10px;
+    padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 6px));
+  }
+
+  .scan-grade--student .header {
+    margin-bottom: 8px;
+  }
+
+  .scan-grade--student .brand-logo {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 4px;
+  }
+
+  .scan-grade--student .header h1 {
+    font-size: 23px;
+  }
+
+  .build-label {
+    margin-top: 2px;
+    font-size: 9px;
+  }
+
+  .main {
+    gap: 12px;
+  }
+
+  .student-home {
+    padding-top: 0;
+  }
+
+  .student-home-actions,
+  .student-identity-actions {
+    gap: 8px;
+  }
+
+  .student-home-btn {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .teacher-link-btn {
+    margin-top: 10px;
+  }
+
+  .student-scan-bar {
+    margin-bottom: 8px;
+    padding: 7px 8px;
   }
 
   .review-stats {

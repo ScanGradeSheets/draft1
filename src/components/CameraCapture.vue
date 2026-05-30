@@ -3783,6 +3783,29 @@ onUnmounted(stopStream)
   cursor: pointer;
 }
 
+@media (max-width: 640px) {
+  .camera-capture--student .preview-area--portrait {
+    width: min(100%, calc(62svh * 8.5 / 11));
+    max-width: min(100%, calc(62svh * 8.5 / 11));
+    max-height: 62svh;
+    margin-bottom: 10px;
+  }
+
+  .controls--student {
+    width: min(100%, calc(62svh * 8.5 / 11));
+    max-width: min(100%, calc(62svh * 8.5 / 11));
+    gap: 8px;
+  }
+
+  .controls--student .btn {
+    padding: 12px 16px;
+  }
+
+  .file-btn--student {
+    padding: 6px 10px;
+  }
+}
+
 .error {
   margin-top: 12px;
   padding: 12px;
