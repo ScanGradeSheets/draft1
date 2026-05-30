@@ -6,6 +6,11 @@ This is an internal design guide for Codex agents. It should guide new worksheet
 
 This guide is intentionally incomplete on deeper worksheet taste. Tony identified worksheet design philosophy as a major follow-up interview topic.
 
+Companion documents:
+
+- `docs/WORKSHEET_QUALITY_RUBRIC.md`
+- `docs/WORKSHEET_DESIGN_INTERVIEW_GUIDE.md`
+
 ## Design Goal
 
 ScanGrade worksheets should preserve the simplicity of paper while making scanning and review reliable.

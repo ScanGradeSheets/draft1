@@ -110,7 +110,9 @@ async function latestDocSummaries() {
     ['TPT Launch Framework', 'products/TPT_LAUNCH_FRAMEWORK.md'],
     ['TPT Market Research Notes', 'products/TPT_MARKET_RESEARCH_NOTES.md'],
     ['Untracked Preservation', 'UNTRACKED_WORK_PRESERVATION_PLAN.md'],
+    ['Worksheet Design Interview Guide', 'docs/WORKSHEET_DESIGN_INTERVIEW_GUIDE.md'],
     ['Worksheet Design System', 'docs/WORKSHEET_DESIGN_SYSTEM.md'],
+    ['Worksheet Quality Rubric', 'docs/WORKSHEET_QUALITY_RUBRIC.md'],
   ];
 
   return Promise.all(docs.map(async ([title, file]) => ({

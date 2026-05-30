@@ -196,6 +196,13 @@
           "owner": "Codex",
           "summary": "A safe asset sequence now defines what preview, TPT, landing-page, and teacher-facing promotion materials can be prepared before and after classroom proof.",
           "detail": "See products/MARKETING_ASSET_PIPELINE.md. It separates safe pre-proof worksheet assets from later scan/demo assets so marketing does not outrun evidence."
+        },
+        {
+          "title": "Worksheet quality rubric drafted",
+          "type": "worksheet",
+          "owner": "Codex",
+          "summary": "A practical worksheet-quality rubric and future Tony interview guide now capture the biggest remaining design-taste gap.",
+          "detail": "See docs/WORKSHEET_QUALITY_RUBRIC.md and docs/WORKSHEET_DESIGN_INTERVIEW_GUIDE.md. These help Codex judge worksheet clarity, scan safety, visual calm, grade fit, product identity, and marketplace readiness before asking Tony for direction."
         }
       ]
     }
