@@ -60,7 +60,7 @@
     {
       "id": "mission-control-question-flow",
       "priority": "steering",
-      "status": "open",
+      "status": "answered",
       "question": "How should Mission Control batch questions so Codex can keep working without interrupting Tony constantly?",
       "why": "Tony wants one place for accumulated decisions, options, recommendations, and deferrable questions rather than scattered interruptions.",
       "options": [
@@ -68,7 +68,22 @@
         "Priority-only interruptions plus backlog queue",
         "Let Codex decide when to surface questions"
       ],
-      "recommendation": "Use priority-only interruptions plus a visible backlog queue; include a 'defer to Codex recommendation' option when safe."
+      "recommendation": "Use priority-only interruptions plus a visible backlog queue; include a 'defer to Codex recommendation' option when safe.",
+      "answer": "Use priority-only interruptions plus a visible backlog queue. Batch and rank questions as Must answer soon, Can defer, or Codex recommends default; keep working on safe adjacent tasks."
+    },
+    {
+      "id": "ui-micro-polish-autonomy",
+      "priority": "steering",
+      "status": "answered",
+      "question": "Can Codex make tiny UI polish improvements while Tony is away?",
+      "why": "Small visual improvements can make ScanGrade feel cleaner and more trustworthy without waiting for a full redesign conversation.",
+      "options": [
+        "Allow minimal reversible UI polish",
+        "Only prepare UI polish proposals",
+        "Ask Tony before any visual change"
+      ],
+      "recommendation": "Allow minimal reversible UI polish when it improves clarity, spacing, hierarchy, contrast, mobile fit, or visual calm, but require Tony approval for major redesigns, new workflows, or brand shifts.",
+      "answer": "Allow minimal reversible UI polish consistent with the clean ScanGrade teacher-trust aesthetic."
     },
     {
       "id": "trust-thresholds",

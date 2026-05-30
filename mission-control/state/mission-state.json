@@ -2,7 +2,7 @@
   "current_mission": "Collect real student samples from the 3 current worksheets, then use them to test ScanGrade honestly.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
   "next_best_move": "Tony: have students fill out the 3 current worksheets with the new answer boxes, then send clear photos/scans back for testing.",
-  "plain_english_status": "We have the current open-divider worksheet packet, reusable test fixtures, a preserved backend scaffold, and a working app/test path. The next truth test is still real student handwriting on the current sheets. Until those samples arrive, Codex should avoid changing OCR/capture logic and focus on safe verification, organization, and careful preservation.",
+  "plain_english_status": "We have the current open-divider worksheet packet, reusable test fixtures, a preserved backend scaffold, a working app/test path, and an active 30-minute Codex heartbeat for safe momentum work. The next truth test is still real student handwriting on the current sheets. Until those samples arrive, Codex should avoid changing OCR/capture logic and focus on safe verification, organization, UI micro-polish, market/product research, and careful preservation.",
   "needs_tony": [
     "Print or share the 3 current worksheets.",
     "Have students complete them naturally, using their normal pencil/spacing.",
@@ -147,10 +147,24 @@
           "owner": "Codex",
           "summary": "Cloudflare Pages Functions, D1 migration, and wrangler config are now committed as a checkpoint.",
           "detail": "This is preserved for later deployment work, but it still needs access-control decisions and a real deployment test before classroom use."
+        },
+        {
+          "title": "Codex mission heartbeat enabled",
+          "type": "mission-control",
+          "owner": "Codex",
+          "summary": "A 30-minute heartbeat now keeps ScanGrade moving with safe, reversible work while Tony is away.",
+          "detail": "Allowed work includes testing, Mission Control upkeep, docs, worksheet/TPT/marketing artifacts, market research, and minimal UI micro-polish. Tony still approves vision, brand, major UX, launch strategy, claims, pricing, worksheet-format decisions, and risky OCR/capture/model/backend changes."
+        },
+        {
+          "title": "Student header polish published",
+          "type": "app",
+          "owner": "Codex",
+          "summary": "The public app now uses a calmer ScanGrade.io header and quieter Login/Menu actions.",
+          "detail": "Build 2026.05.30-brand-header-polish passed the production build and app-load smoke test, then was pushed to the source branch and GitHub Pages. No OCR/capture/homography logic changed."
         }
       ]
     }
   ],
-  "codex_autonomy_rule": "Codex may do read-only inspection, organize Mission Control state, run non-destructive verification, and propose tiny patches. OCR/capture/homography/iPad behavior, cleanup, deployment, and product-direction changes need Tony or reproducible evidence.",
-  "updated_at": "2026-05-30T17:02:00.000Z"
+  "codex_autonomy_rule": "Codex should keep moving every 30 minutes when useful: inspect repo state, choose the safest high-value work from the mission/kanban, and prefer small reversible packets. Safe autonomous lanes include tests, diagnosis, docs, Mission Control upkeep, worksheet/TPT/marketing drafts, market research, and minimal UI micro-polish that improves clarity, spacing, hierarchy, contrast, mobile fit, or visual calm. Tony remains final authority for vision, brand, major UX, launch/pricing/claims, worksheet-format decisions, and risky OCR/capture/homography/model/backend changes. Never delete/clean untracked work, never run git clean -fd or git reset --hard, and preserve paper-first teacher trust over feature expansion.",
+  "updated_at": "2026-05-30T19:00:00.000Z"
 }

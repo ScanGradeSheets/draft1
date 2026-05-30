@@ -79,7 +79,15 @@
       "command": "Browser check of http://127.0.0.1:8787/ plus curl -sI http://127.0.0.1:8787/repo/docs/SCRATCH_FILE_INVENTORY.md",
       "plain_english": "Mission Control served the updated dashboard, showed 12 clickable document rows, included Scratch File Inventory and Mission Control Private Access, and served Markdown docs with the expected content type.",
       "path_exercised": "Private Mission Control dashboard and repo-backed document links"
+    },
+    {
+      "date": "2026-05-30",
+      "name": "Student header polish build and smoke",
+      "result": "pass",
+      "command": "npm run build; npx playwright test test-app.spec.js --config=playwright.config.js",
+      "plain_english": "After the ScanGrade.io header and student scan action polish, the production build passed and the app-load smoke test passed with 0 console errors, 0 WASM/ONNX errors, and 0 failed model/worker requests.",
+      "path_exercised": "Production build path plus MacBook browser app-load smoke path"
     }
   ],
-  "updated_at": "2026-05-30T14:36:00.000Z"
+  "updated_at": "2026-05-30T19:00:00.000Z"
 }
