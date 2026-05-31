@@ -14,9 +14,15 @@ Use the three open-divider worksheets:
 - Sheet B: Subtraction Within 20
 - Sheet C: Mixed Within 50
 
-Current packet:
+Current default public packet:
+
+- `public/worksheets/printables/ScanGrade-Grade2-Worksheets-A-B-C-Print-Packet.pdf`
+
+Explicit open-divider test packet:
 
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf`
+
+As of 2026-05-30, the default public packet and explicit open-divider test packet should use the same open/notch divider answer-box design. If they ever differ, stop and inspect before collecting more samples.
 
 Current answer-key helper:
 

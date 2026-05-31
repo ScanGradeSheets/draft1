@@ -22,6 +22,8 @@ Expected current sheets:
 - Sheet B: Subtraction Within 20
 - Sheet C: Mixed Within 50
 
+As of 2026-05-30, the default public worksheets and the explicit open-divider test worksheets should visually match: newer open/notch divider answer boxes plus lowered `ScanGrade.io` QR branding. If a submitted page has the older dashed center guide, record that as an outdated-sheet issue before evaluating OCR.
+
 Preferred folder:
 
 ```text

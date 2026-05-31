@@ -13,8 +13,16 @@ This is not a polished pilot yet. It is the truth-test before the next technical
 Use the current three-sheet packet:
 
 ```text
+public/worksheets/printables/ScanGrade-Grade2-Worksheets-A-B-C-Print-Packet.pdf
+```
+
+The explicit test-packet path should visually match it:
+
+```text
 public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf
 ```
+
+Both should show the newer open/notch divider answer boxes and the lowered `ScanGrade.io` QR branding.
 
 Sheets:
 
