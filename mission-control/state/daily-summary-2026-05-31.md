@@ -8,6 +8,11 @@
 - The main product blocker is still real student-completed worksheet samples.
 - OCR, capture, homography, model, and backend logic should remain untouched until sample evidence shows a clear failure mode.
 
+## What Got Tested
+
+- `npx playwright test test-app.spec.js --config=playwright.config.js` passed at the start of the day.
+- App load result: 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.
+
 ## Current Mission
 
 Collect real student samples from the three current worksheets, then test ScanGrade honestly against classroom handwriting and ordinary photo conditions.
