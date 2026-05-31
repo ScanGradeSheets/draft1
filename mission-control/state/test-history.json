@@ -191,7 +191,15 @@
       "command": "npx playwright test test-app.spec.js --config=playwright.config.js",
       "plain_english": "The app loaded over HTTPS with 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests after the May 31 Mission Control summary and worksheet-status updates.",
       "path_exercised": "MacBook browser app-load smoke path"
+    },
+    {
+      "date": "2026-05-31",
+      "name": "Teacher upload runtime smoke",
+      "result": "pass",
+      "command": "npx playwright test test-upload.spec.js --config=playwright.config.js",
+      "plain_english": "Teacher/debug upload path loaded in Teacher Mode, Runtime Self-Test passed all 6 checks, the camera capture area was visible, upload flow completed, and JS errors excluding expected messages were 0.",
+      "path_exercised": "Teacher/debug upload runtime path"
     }
   ],
-  "updated_at": "2026-05-31T00:29:22.045Z"
+  "updated_at": "2026-05-31T01:09:39.146Z"
 }

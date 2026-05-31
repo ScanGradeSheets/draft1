@@ -12,6 +12,8 @@
 
 - `npx playwright test test-app.spec.js --config=playwright.config.js` passed at the start of the day.
 - App load result: 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.
+- `npx playwright test test-upload.spec.js --config=playwright.config.js` passed.
+- Teacher/debug upload result: Runtime Self-Test passed 6/6, the camera capture area was visible, the upload flow completed, and JS errors excluding expected messages were 0.
 
 ## What Changed Today
 
