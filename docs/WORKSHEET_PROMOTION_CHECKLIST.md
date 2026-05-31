@@ -16,11 +16,19 @@ The goal is to keep ScanGrade honest. A worksheet can look good and still be too
 
 ## Current Candidate
 
-Active test packet:
+Active default public packet:
+
+```text
+public/worksheets/printables/ScanGrade-Grade2-Worksheets-A-B-C-Print-Packet.pdf
+```
+
+Explicit open-divider test packet:
 
 ```text
 public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf
 ```
+
+As of 2026-05-30, both packet paths should show the same open/notch divider answer-box design and lowered `ScanGrade.io` QR branding.
 
 Sheets:
 
@@ -33,6 +41,8 @@ Current status:
 ```text
 Awaiting real student samples
 ```
+
+The worksheet format has been promoted from a separate test-only visual variant into the default public Grade 2 worksheet files, but it has not been promoted past validation status. Keep marketplace and classroom-ready language gated on real student sample evidence.
 
 ## Promotion Levels
 

@@ -20,6 +20,7 @@
 ## What Changed Today
 
 - Mission Control's decision queue was corrected so the older "UI micro-polish autonomy" answer is marked as superseded by Tony's current app UI lock.
+- The worksheet promotion checklist and TPT launch framework were updated so the default public packet is listed alongside the explicit open-divider test packet, with both still gated on real student evidence.
 
 ## Current Mission
 

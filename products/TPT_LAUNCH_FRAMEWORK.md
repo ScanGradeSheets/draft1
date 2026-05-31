@@ -46,8 +46,11 @@ Related files:
 - `products/TPT_GRADE2_FIRST_PAID_PACK_BLUEPRINT.md`
 - `products/MARKETING_ASSET_PIPELINE.md`
 - `docs/WORKSHEET_PROMOTION_CHECKLIST.md`
+- `public/worksheets/printables/ScanGrade-Grade2-Worksheets-A-B-C-Print-Packet.pdf`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Worksheets-A-B-C-Open-Divider-Test-Packet.pdf`
 - `public/worksheets/open-divider-test/printables/ScanGrade-Grade2-Open-Divider-Teacher-Answer-Key.pdf`
+
+As of 2026-05-30, the default public packet and the explicit open-divider test packet should visually match. This is a file/promotional cleanup step, not evidence that the worksheets are classroom-ready or marketplace-ready.
 
 ## Readiness Gates
 
