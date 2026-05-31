@@ -32,9 +32,9 @@ marker.cyTop = marker.cxLeft
 marker.cyBottom = page.height - marker.cyTop
 
 const box = {
-  width: 15.8,
+  width: 14,
   height: 17.2,
-  gap: 1.15,
+  gap: 1,
   stroke: 0.58
 }
 const answerFrame = {
@@ -285,16 +285,17 @@ function answerGeometry(questionIndex) {
   const answerX = col === 0 ? 64 : 160
   const onesX = answerX + box.width + box.gap
   const tensX = answerX
+  const answerCenterY = top + answerFrame.height / 2
   return {
     col,
     row,
     top,
     xs: [tensX, onesX],
     answerX,
-    labelX: answerX - 38,
-    labelCenterY: top + 9.35,
-    problemX: answerX - 3.8,
-    baseline: top + 11.7,
+    labelX: answerX - 35.5,
+    labelCenterY: answerCenterY,
+    problemX: answerX - 1.6,
+    baseline: top + 11.05,
     seamX: tensX + box.width + box.gap / 2
   }
 }
@@ -404,13 +405,13 @@ function buildSvg(sheet, layout, qrBase64, payloadString) {
     const problemClass = needsCompactProblemText(problem) ? 'problem-text problem-text-compact' : 'problem-text'
     const dividerTopEnd = geometry.top + digitGuide.markLength
     const dividerBottomStart = geometry.top + box.height - digitGuide.markLength
-    const rects = `<rect class="answer-box answer-box-wide" data-question-boxes="${layout.question_groups[i].digit_box_ids.join(',')}" x="${geometry.answerX}" y="${geometry.top}" width="${answerFrame.width}" height="${answerFrame.height}" />
-      <line class="open-divider-guide" x1="${geometry.seamX}" y1="${geometry.top}" x2="${geometry.seamX}" y2="${dividerTopEnd}" />
-      <line class="open-divider-guide" x1="${geometry.seamX}" y1="${dividerBottomStart}" x2="${geometry.seamX}" y2="${geometry.top + box.height}" />`
+    const rects = `<line class="open-divider-guide" x1="${geometry.seamX}" y1="${geometry.top}" x2="${geometry.seamX}" y2="${dividerTopEnd}" />
+      <line class="open-divider-guide" x1="${geometry.seamX}" y1="${dividerBottomStart}" x2="${geometry.seamX}" y2="${geometry.top + box.height}" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="${layout.question_groups[i].digit_box_ids.join(',')}" x="${geometry.answerX}" y="${geometry.top}" width="${answerFrame.width}" height="${answerFrame.height}" />`
     rows.push(`
     <g class="question" data-question="${i + 1}">
       <g class="scantron-question-label" transform="translate(${geometry.labelX} ${geometry.labelCenterY})">
-        <ellipse class="scantron-bubble" cx="0" cy="0" rx="4.05" ry="3.15" />
+        <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">${escapeXml(questionLabel)}</text>
       </g>
       <text class="${problemClass}" x="${geometry.problemX}" y="${geometry.baseline}" text-anchor="end">${escapeXml(problemText)}</text>
@@ -454,8 +455,8 @@ ${worksheetFontCss()}
       .sheet-subtitle { font-size: 4px; font-weight: 400; fill: #555; }
       .problem-text { font-size: 6.75px; font-weight: 430; }
       .problem-text-compact { font-size: 6.35px; }
-      .scantron-bubble { fill: none; stroke: #b8bdc3; stroke-width: 0.42; }
-      .scantron-letter { font-size: 4.55px; font-weight: 600; fill: #4f575f; }
+      .scantron-bubble { fill: none; stroke: #c4c8ce; stroke-width: 0.34; }
+      .scantron-letter { font-size: 4.45px; font-weight: 600; fill: #626b74; }
       .answer-box { fill: none; stroke: #111; stroke-width: ${box.stroke}; shape-rendering: crispEdges; }
       .open-divider-guide { fill: none; stroke: #707780; stroke-width: ${digitGuide.stroke}; stroke-linecap: round; }
       .footer { font-size: 3.4px; fill: #555; }

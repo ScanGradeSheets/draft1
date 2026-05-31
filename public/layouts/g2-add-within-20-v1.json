@@ -33,9 +33,9 @@
       "question_num": 1,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.3696,
+      "x": 0.3613,
       "y": 0.3049,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -45,9 +45,9 @@
       "question_num": 1,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.4481,
+      "x": 0.4308,
       "y": 0.3049,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 5
@@ -57,9 +57,9 @@
       "question_num": 2,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.3696,
+      "x": 0.3613,
       "y": 0.4159,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -69,9 +69,9 @@
       "question_num": 2,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.4481,
+      "x": 0.4308,
       "y": 0.4159,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 5
@@ -81,9 +81,9 @@
       "question_num": 3,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.3696,
+      "x": 0.3613,
       "y": 0.5268,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -93,9 +93,9 @@
       "question_num": 3,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.4481,
+      "x": 0.4308,
       "y": 0.5268,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 7
@@ -105,9 +105,9 @@
       "question_num": 4,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.3696,
+      "x": 0.3613,
       "y": 0.6378,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -117,9 +117,9 @@
       "question_num": 4,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.4481,
+      "x": 0.4308,
       "y": 0.6378,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 3
@@ -129,9 +129,9 @@
       "question_num": 5,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.3696,
+      "x": 0.3613,
       "y": 0.7487,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -141,9 +141,9 @@
       "question_num": 5,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.4481,
+      "x": 0.4308,
       "y": 0.7487,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 9
@@ -153,9 +153,9 @@
       "question_num": 6,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.8143,
+      "x": 0.8059,
       "y": 0.3049,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -165,9 +165,9 @@
       "question_num": 6,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.8928,
+      "x": 0.8754,
       "y": 0.3049,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -177,9 +177,9 @@
       "question_num": 7,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.8143,
+      "x": 0.8059,
       "y": 0.4159,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -189,9 +189,9 @@
       "question_num": 7,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.8928,
+      "x": 0.8754,
       "y": 0.4159,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 2
@@ -201,9 +201,9 @@
       "question_num": 8,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.8143,
+      "x": 0.8059,
       "y": 0.5268,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -213,9 +213,9 @@
       "question_num": 8,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.8928,
+      "x": 0.8754,
       "y": 0.5268,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 7
@@ -225,9 +225,9 @@
       "question_num": 9,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.8143,
+      "x": 0.8059,
       "y": 0.6378,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -237,9 +237,9 @@
       "question_num": 9,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.8928,
+      "x": 0.8754,
       "y": 0.6378,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 3
@@ -249,9 +249,9 @@
       "question_num": 10,
       "digit_index": 0,
       "digit_place": "tens",
-      "x": 0.8143,
+      "x": 0.8059,
       "y": 0.7487,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 1
@@ -261,9 +261,9 @@
       "question_num": 10,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.8928,
+      "x": 0.8754,
       "y": 0.7487,
-      "width": 0.0732,
+      "width": 0.0648,
       "height": 0.0616,
       "expected_type": "digit",
       "expected_digit": 9
@@ -284,7 +284,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.3723,
+        "x": 0.3636,
         "y1": 0.2434,
         "y2": 0.3049,
         "printed": true
@@ -314,7 +314,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.3723,
+        "x": 0.3636,
         "y1": 0.3543,
         "y2": 0.4159,
         "printed": true
@@ -344,7 +344,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.3723,
+        "x": 0.3636,
         "y1": 0.4653,
         "y2": 0.5268,
         "printed": true
@@ -374,7 +374,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.3723,
+        "x": 0.3636,
         "y1": 0.5762,
         "y2": 0.6378,
         "printed": true
@@ -404,7 +404,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.3723,
+        "x": 0.3636,
         "y1": 0.6872,
         "y2": 0.7487,
         "printed": true
@@ -434,7 +434,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.8169,
+        "x": 0.8082,
         "y1": 0.2434,
         "y2": 0.3049,
         "printed": true
@@ -464,7 +464,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.8169,
+        "x": 0.8082,
         "y1": 0.3543,
         "y2": 0.4159,
         "printed": true
@@ -494,7 +494,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.8169,
+        "x": 0.8082,
         "y1": 0.4653,
         "y2": 0.5268,
         "printed": true
@@ -524,7 +524,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.8169,
+        "x": 0.8082,
         "y1": 0.5762,
         "y2": 0.6378,
         "printed": true
@@ -554,7 +554,7 @@
       ],
       "guide_line": {
         "type": "open_divider",
-        "x": 0.8169,
+        "x": 0.8082,
         "y1": 0.6872,
         "y2": 0.7487,
         "printed": true
@@ -606,7 +606,7 @@
     "required_font_files": [
       "public/fonts/Lexend-wght.ttf"
     ],
-    "digit_box_width_mm": 15.8,
+    "digit_box_width_mm": 14,
     "digit_box_height_mm": 17.2,
     "marker_size_mm": 11.4,
     "grading_policy": {
