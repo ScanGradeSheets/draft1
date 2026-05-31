@@ -84,7 +84,7 @@
         "Ask Tony before any visual change"
       ],
       "recommendation": "Allow minimal reversible UI polish when it improves clarity, spacing, hierarchy, contrast, mobile fit, or visual calm, but require Tony approval for major redesigns, new workflows, or brand shifts.",
-      "answer": "Allow minimal reversible UI polish consistent with the clean ScanGrade teacher-trust aesthetic."
+      "answer": "Superseded on 2026-05-30: Tony approved the current mobile/student UI and locked it for now. Do not make further app UI/style/layout changes autonomously unless Tony explicitly asks, or unless a serious app-breaking bug requires a clearly reported fix."
     },
     {
       "id": "tpt-prep-boundary",
@@ -129,5 +129,5 @@
       "recommendation": "Keep originals locally until the first pilot is complete, keep them out of git/public surfaces, and revisit retention after the first real sample report."
     }
   ],
-  "updated_at": "2026-05-30T21:00:00.000Z"
+  "updated_at": "2026-05-31T00:44:22.088Z"
 }

@@ -13,6 +13,10 @@
 - `npx playwright test test-app.spec.js --config=playwright.config.js` passed at the start of the day.
 - App load result: 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.
 
+## What Changed Today
+
+- Mission Control's decision queue was corrected so the older "UI micro-polish autonomy" answer is marked as superseded by Tony's current app UI lock.
+
 ## Current Mission
 
 Collect real student samples from the three current worksheets, then test ScanGrade honestly against classroom handwriting and ordinary photo conditions.

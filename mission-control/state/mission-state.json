@@ -167,7 +167,7 @@
           "type": "mission-control",
           "owner": "Codex",
           "summary": "A 15-minute heartbeat now keeps ScanGrade moving with safe, reversible work while Tony is away.",
-          "detail": "Allowed work includes testing, Mission Control upkeep, docs, worksheet/TPT/marketing artifacts, market research, and minimal UI micro-polish. Tony still approves vision, brand, major UX, launch strategy, claims, pricing, worksheet-format decisions, and risky OCR/capture/model/backend changes."
+          "detail": "Allowed work includes testing, Mission Control upkeep, docs, worksheet/TPT/marketing artifacts, market research, and careful planning. Tony has locked the current app UI for now, so autonomous runs should not make app UI/style/layout changes unless Tony explicitly asks. Tony still approves vision, brand, major UX, launch strategy, claims, pricing, worksheet-format decisions, and risky OCR/capture/model/backend changes."
         },
         {
           "title": "Tony question queue clarified",
