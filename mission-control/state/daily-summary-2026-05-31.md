@@ -14,6 +14,8 @@
 - App load result: 0 console errors, 0 WASM/ONNX errors, 2 model/worker requests, and 0 failed requests.
 - `npx playwright test test-upload.spec.js --config=playwright.config.js` passed.
 - Teacher/debug upload result: Runtime Self-Test passed 6/6, the camera capture area was visible, the upload flow completed, and JS errors excluding expected messages were 0.
+- `npx playwright test test-upload-real.spec.js --config=playwright.config.js` passed all three existing worksheet fixture cases.
+- Real fixture note: calibrated worksheet used alignment fallback and produced low-confidence all-1s, while typed and handwritten fixtures produced varied digit predictions. This is useful context, but not a reason to patch OCR/capture before Tony's real student samples arrive.
 
 ## What Changed Today
 

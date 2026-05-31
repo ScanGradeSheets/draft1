@@ -199,7 +199,15 @@
       "command": "npx playwright test test-upload.spec.js --config=playwright.config.js",
       "plain_english": "Teacher/debug upload path loaded in Teacher Mode, Runtime Self-Test passed all 6 checks, the camera capture area was visible, upload flow completed, and JS errors excluding expected messages were 0.",
       "path_exercised": "Teacher/debug upload runtime path"
+    },
+    {
+      "date": "2026-05-31",
+      "name": "Existing worksheet fixture upload smoke",
+      "result": "pass",
+      "command": "npx playwright test test-upload-real.spec.js --config=playwright.config.js",
+      "plain_english": "All three existing worksheet fixture checks passed. The calibrated worksheet path completed without JS errors but used alignment fallback and produced low-confidence all-1s; the typed worksheet and handwritten worksheet produced varied digit predictions. This confirms the existing fixture test path still runs, while reinforcing that real student samples are needed before OCR/capture tuning.",
+      "path_exercised": "Teacher/debug upload path with existing calibrated, typed, and handwritten worksheet fixtures"
     }
   ],
-  "updated_at": "2026-05-31T01:09:39.146Z"
+  "updated_at": "2026-05-31T01:24:52.324Z"
 }
