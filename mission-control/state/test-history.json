@@ -207,7 +207,15 @@
       "command": "npx playwright test test-upload-real.spec.js --config=playwright.config.js",
       "plain_english": "All three existing worksheet fixture checks passed. The calibrated worksheet path completed without JS errors but used alignment fallback and produced low-confidence all-1s; the typed worksheet and handwritten worksheet produced varied digit predictions. This confirms the existing fixture test path still runs, while reinforcing that real student samples are needed before OCR/capture tuning.",
       "path_exercised": "Teacher/debug upload path with existing calibrated, typed, and handwritten worksheet fixtures"
+    },
+    {
+      "date": "2026-05-31",
+      "name": "Production build",
+      "result": "pass",
+      "command": "npm run build",
+      "plain_english": "Vite production build completed successfully. It reported only the known large-chunk warning for the main app bundle.",
+      "path_exercised": "Production bundle build path"
     }
   ],
-  "updated_at": "2026-05-31T01:24:52.324Z"
+  "updated_at": "2026-05-31T01:54:52.432Z"
 }
