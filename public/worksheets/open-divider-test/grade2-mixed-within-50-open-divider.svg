@@ -30,7 +30,7 @@
       .problem-text-compact { font-size: 6.35px; }
       .scantron-bubble { fill: none; stroke: #c4c8ce; stroke-width: 0.34; }
       .scantron-letter { font-size: 4.45px; font-weight: 600; fill: #626b74; }
-      .answer-box { fill: none; stroke: #111; stroke-width: 0.58; shape-rendering: crispEdges; }
+      .answer-box { fill: none; stroke: #111; stroke-width: 0.54; shape-rendering: crispEdges; }
       .open-divider-guide { fill: none; stroke: #707780; stroke-width: 0.46; stroke-linecap: round; }
       .footer { font-size: 3.4px; fill: #555; }
       .qr-label { font-size: 3.2px; }
@@ -59,113 +59,113 @@
   <g id="questions">
 
     <g class="question" data-question="1">
-      <g class="scantron-question-label" transform="translate(28.5 76.6)">
+      <g class="scantron-question-label" transform="translate(29.5 76.60000000000001)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">A</text>
       </g>
-      <text class="problem-text" x="62.4" y="79.05" text-anchor="end">23 + 14 =</text>
-      <line class="open-divider-guide" x1="78.5" y1="68" x2="78.5" y2="72.35" />
-      <line class="open-divider-guide" x1="78.5" y1="80.85000000000001" x2="78.5" y2="85.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="0,1" x="64" y="68" width="29" height="17.2" />
+      <text class="problem-text" x="62.6" y="79.375" text-anchor="end">23 + 14 =</text>
+      <line class="open-divider-guide" x1="78.9" y1="68.325" x2="78.9" y2="72.505" />
+      <line class="open-divider-guide" x1="78.9" y1="80.695" x2="78.9" y2="84.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="0,1" x="65" y="68.325" width="27.8" height="16.55" />
     </g>
 
     <g class="question" data-question="2">
-      <g class="scantron-question-label" transform="translate(28.5 107.6)">
+      <g class="scantron-question-label" transform="translate(29.5 107.60000000000001)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">B</text>
       </g>
-      <text class="problem-text problem-text-compact" x="62.4" y="110.05" text-anchor="end">48 - 19 =</text>
-      <line class="open-divider-guide" x1="78.5" y1="99" x2="78.5" y2="103.35" />
-      <line class="open-divider-guide" x1="78.5" y1="111.85000000000001" x2="78.5" y2="116.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="2,3" x="64" y="99" width="29" height="17.2" />
+      <text class="problem-text problem-text-compact" x="62.6" y="110.375" text-anchor="end">48 - 19 =</text>
+      <line class="open-divider-guide" x1="78.9" y1="99.325" x2="78.9" y2="103.505" />
+      <line class="open-divider-guide" x1="78.9" y1="111.695" x2="78.9" y2="115.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="2,3" x="65" y="99.325" width="27.8" height="16.55" />
     </g>
 
     <g class="question" data-question="3">
-      <g class="scantron-question-label" transform="translate(28.5 138.6)">
+      <g class="scantron-question-label" transform="translate(29.5 138.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">C</text>
       </g>
-      <text class="problem-text" x="62.4" y="141.05" text-anchor="end">16 + 27 =</text>
-      <line class="open-divider-guide" x1="78.5" y1="130" x2="78.5" y2="134.35" />
-      <line class="open-divider-guide" x1="78.5" y1="142.85" x2="78.5" y2="147.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="4,5" x="64" y="130" width="29" height="17.2" />
+      <text class="problem-text" x="62.6" y="141.375" text-anchor="end">16 + 27 =</text>
+      <line class="open-divider-guide" x1="78.9" y1="130.325" x2="78.9" y2="134.505" />
+      <line class="open-divider-guide" x1="78.9" y1="142.695" x2="78.9" y2="146.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="4,5" x="65" y="130.325" width="27.8" height="16.55" />
     </g>
 
     <g class="question" data-question="4">
-      <g class="scantron-question-label" transform="translate(28.5 169.6)">
+      <g class="scantron-question-label" transform="translate(29.5 169.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">D</text>
       </g>
-      <text class="problem-text problem-text-compact" x="62.4" y="172.05" text-anchor="end">50 - 22 =</text>
-      <line class="open-divider-guide" x1="78.5" y1="161" x2="78.5" y2="165.35" />
-      <line class="open-divider-guide" x1="78.5" y1="173.85" x2="78.5" y2="178.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="6,7" x="64" y="161" width="29" height="17.2" />
+      <text class="problem-text problem-text-compact" x="62.6" y="172.375" text-anchor="end">50 - 22 =</text>
+      <line class="open-divider-guide" x1="78.9" y1="161.325" x2="78.9" y2="165.505" />
+      <line class="open-divider-guide" x1="78.9" y1="173.695" x2="78.9" y2="177.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="6,7" x="65" y="161.325" width="27.8" height="16.55" />
     </g>
 
     <g class="question" data-question="5">
-      <g class="scantron-question-label" transform="translate(28.5 200.6)">
+      <g class="scantron-question-label" transform="translate(29.5 200.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">E</text>
       </g>
-      <text class="problem-text" x="62.4" y="203.05" text-anchor="end">34 + 8 =</text>
-      <line class="open-divider-guide" x1="78.5" y1="192" x2="78.5" y2="196.35" />
-      <line class="open-divider-guide" x1="78.5" y1="204.85" x2="78.5" y2="209.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="8,9" x="64" y="192" width="29" height="17.2" />
+      <text class="problem-text" x="62.6" y="203.375" text-anchor="end">34 + 8 =</text>
+      <line class="open-divider-guide" x1="78.9" y1="192.325" x2="78.9" y2="196.505" />
+      <line class="open-divider-guide" x1="78.9" y1="204.695" x2="78.9" y2="208.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="8,9" x="65" y="192.325" width="27.8" height="16.55" />
     </g>
 
     <g class="question" data-question="6">
-      <g class="scantron-question-label" transform="translate(124.5 76.6)">
+      <g class="scantron-question-label" transform="translate(125.5 76.60000000000001)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">F</text>
       </g>
-      <text class="problem-text problem-text-compact" x="158.4" y="79.05" text-anchor="end">41 - 16 =</text>
-      <line class="open-divider-guide" x1="174.5" y1="68" x2="174.5" y2="72.35" />
-      <line class="open-divider-guide" x1="174.5" y1="80.85000000000001" x2="174.5" y2="85.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="10,11" x="160" y="68" width="29" height="17.2" />
+      <text class="problem-text problem-text-compact" x="158.6" y="79.375" text-anchor="end">41 - 16 =</text>
+      <line class="open-divider-guide" x1="174.9" y1="68.325" x2="174.9" y2="72.505" />
+      <line class="open-divider-guide" x1="174.9" y1="80.695" x2="174.9" y2="84.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="10,11" x="161" y="68.325" width="27.8" height="16.55" />
     </g>
 
     <g class="question" data-question="7">
-      <g class="scantron-question-label" transform="translate(124.5 107.6)">
+      <g class="scantron-question-label" transform="translate(125.5 107.60000000000001)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">G</text>
       </g>
-      <text class="problem-text" x="158.4" y="110.05" text-anchor="end">19 + 18 =</text>
-      <line class="open-divider-guide" x1="174.5" y1="99" x2="174.5" y2="103.35" />
-      <line class="open-divider-guide" x1="174.5" y1="111.85000000000001" x2="174.5" y2="116.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="12,13" x="160" y="99" width="29" height="17.2" />
+      <text class="problem-text" x="158.6" y="110.375" text-anchor="end">19 + 18 =</text>
+      <line class="open-divider-guide" x1="174.9" y1="99.325" x2="174.9" y2="103.505" />
+      <line class="open-divider-guide" x1="174.9" y1="111.695" x2="174.9" y2="115.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="12,13" x="161" y="99.325" width="27.8" height="16.55" />
     </g>
 
     <g class="question" data-question="8">
-      <g class="scantron-question-label" transform="translate(124.5 138.6)">
+      <g class="scantron-question-label" transform="translate(125.5 138.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">H</text>
       </g>
-      <text class="problem-text" x="158.4" y="141.05" text-anchor="end">45 - 7 =</text>
-      <line class="open-divider-guide" x1="174.5" y1="130" x2="174.5" y2="134.35" />
-      <line class="open-divider-guide" x1="174.5" y1="142.85" x2="174.5" y2="147.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="14,15" x="160" y="130" width="29" height="17.2" />
+      <text class="problem-text" x="158.6" y="141.375" text-anchor="end">45 - 7 =</text>
+      <line class="open-divider-guide" x1="174.9" y1="130.325" x2="174.9" y2="134.505" />
+      <line class="open-divider-guide" x1="174.9" y1="142.695" x2="174.9" y2="146.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="14,15" x="161" y="130.325" width="27.8" height="16.55" />
     </g>
 
     <g class="question" data-question="9">
-      <g class="scantron-question-label" transform="translate(124.5 169.6)">
+      <g class="scantron-question-label" transform="translate(125.5 169.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">I</text>
       </g>
-      <text class="problem-text" x="158.4" y="172.05" text-anchor="end">26 + 15 =</text>
-      <line class="open-divider-guide" x1="174.5" y1="161" x2="174.5" y2="165.35" />
-      <line class="open-divider-guide" x1="174.5" y1="173.85" x2="174.5" y2="178.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="16,17" x="160" y="161" width="29" height="17.2" />
+      <text class="problem-text" x="158.6" y="172.375" text-anchor="end">26 + 15 =</text>
+      <line class="open-divider-guide" x1="174.9" y1="161.325" x2="174.9" y2="165.505" />
+      <line class="open-divider-guide" x1="174.9" y1="173.695" x2="174.9" y2="177.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="16,17" x="161" y="161.325" width="27.8" height="16.55" />
     </g>
 
     <g class="question" data-question="10">
-      <g class="scantron-question-label" transform="translate(124.5 200.6)">
+      <g class="scantron-question-label" transform="translate(125.5 200.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
         <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">J</text>
       </g>
-      <text class="problem-text problem-text-compact" x="158.4" y="203.05" text-anchor="end">39 - 24 =</text>
-      <line class="open-divider-guide" x1="174.5" y1="192" x2="174.5" y2="196.35" />
-      <line class="open-divider-guide" x1="174.5" y1="204.85" x2="174.5" y2="209.2" />
-      <rect class="answer-box answer-box-wide" data-question-boxes="18,19" x="160" y="192" width="29" height="17.2" />
+      <text class="problem-text problem-text-compact" x="158.6" y="203.375" text-anchor="end">39 - 24 =</text>
+      <line class="open-divider-guide" x1="174.9" y1="192.325" x2="174.9" y2="196.505" />
+      <line class="open-divider-guide" x1="174.9" y1="204.695" x2="174.9" y2="208.875" />
+      <rect class="answer-box answer-box-wide" data-question-boxes="18,19" x="161" y="192.325" width="27.8" height="16.55" />
     </g>
   </g>
 

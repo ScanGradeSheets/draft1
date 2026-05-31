@@ -32,10 +32,10 @@ marker.cyTop = marker.cxLeft
 marker.cyBottom = page.height - marker.cyTop
 
 const box = {
-  width: 14,
-  height: 17.2,
+  width: 13.4,
+  height: 16.55,
   gap: 1,
-  stroke: 0.58
+  stroke: 0.54
 }
 const answerFrame = {
   width: box.width * 2 + box.gap,
@@ -44,7 +44,7 @@ const answerFrame = {
 const digitGuide = {
   insetY: 2.6,
   stroke: 0.46,
-  markLength: 4.35
+  markLength: 4.18
 }
 const qrSize = 25.8
 const qr = {
@@ -281,8 +281,9 @@ function needsCompactProblemText(problem) {
 function answerGeometry(questionIndex) {
   const col = questionIndex < 5 ? 0 : 1
   const row = questionIndex % 5
-  const top = 68 + row * 31
-  const answerX = col === 0 ? 64 : 160
+  const rowTop = 68 + row * 31
+  const top = rowTop + (17.2 - box.height) / 2
+  const answerX = col === 0 ? 65 : 161
   const onesX = answerX + box.width + box.gap
   const tensX = answerX
   const answerCenterY = top + answerFrame.height / 2
@@ -294,7 +295,7 @@ function answerGeometry(questionIndex) {
     answerX,
     labelX: answerX - 35.5,
     labelCenterY: answerCenterY,
-    problemX: answerX - 1.6,
+    problemX: answerX - 2.4,
     baseline: top + 11.05,
     seamX: tensX + box.width + box.gap / 2
   }
