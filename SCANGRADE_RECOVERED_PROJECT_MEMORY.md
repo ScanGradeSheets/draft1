@@ -202,12 +202,24 @@ Repo/process risks:
 - Verification included `npm run build`, `npx playwright test test-app.spec.js --config=playwright.config.js`, `npm run build:github`, a local SVG screenshot check, and a raw GitHub `gh-pages` check confirming `open-divider-guide` in the default mixed worksheet.
 - OCR/capture/homography/model/backend logic was not touched for this worksheet-design correction.
 
+2026-06-01 OCR reliability note:
+
+- Tony sent real completed two-digit worksheet samples, including a newly printed Subtraction Within 20 sheet that failed in the live app.
+- The current evidence shows a specific OCR trust issue, not a broad page-detection or worksheet-design failure.
+- New failed subtraction scan baseline: 5/10.
+- May 30 three-sheet benchmark baseline: 18/30.
+- Diagnosis: sheet and answer-box detection generally work; thin pencil `2`s and `7`s often degrade in model input and are read as `1` or `9`.
+- One narrow crop cleanup experiment did not improve the failed scan and was reverted.
+- No production OCR/capture/homography/model/backend behavior should be changed or pushed unless a candidate follows `docs/OCR_RELIABILITY_OPERATING_MAP.md` and clears `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md`.
+
 Safest next implementation action for the ScanGrade app:
 
-1. Wait for Tony's completed open-divider worksheet samples.
-2. Run the existing upload/OCR smoke tests against those real samples.
-3. Translate failures into plain-English causes before patching.
-4. Only after that, make narrow fixes to `CameraCapture.vue` or the OCR pipeline based on actual failure mode.
+1. Start with `docs/OCR_RELIABILITY_OPERATING_MAP.md`.
+2. If more evidence arrives, compare live-app scans with normal camera photos using `docs/CLASSROOM_OCR_RETEST_PROTOCOL.md`.
+3. Classify misses with `docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md`.
+4. Run any local OCR candidate through `docs/OCR_CANDIDATE_EXPERIMENT_PLAN.md`.
+5. Accept no production OCR/crop/model patch unless it improves the failed scan above 5/10 and does not reduce the May 30 benchmark below 18/30.
+6. Do not start model training unless `docs/OCR_LABELED_HANDWRITING_DATASET_PLAN.md` conditions are met.
 
 Safest next action for mission control:
 
