@@ -103,6 +103,7 @@ async function latestDocSummaries() {
     ['Mission Control Daily Summary 2026-05-30', 'mission-control/state/daily-summary-2026-05-30.md'],
     ['OCR Candidate Experiment Plan', 'docs/OCR_CANDIDATE_EXPERIMENT_PLAN.md'],
     ['OCR Debug Crop Review Checklist', 'docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md'],
+    ['OCR Labeled Handwriting Dataset Plan', 'docs/OCR_LABELED_HANDWRITING_DATASET_PLAN.md'],
     ['OCR Reliability Decision Record 2026-06-01', 'docs/OCR_RELIABILITY_DECISION_RECORD_2026-06-01.md'],
     ['Operating Goals', 'docs/GOALS.md'],
     ['Open-Divider Sample Answer Keys', 'docs/OPEN_DIVIDER_SAMPLE_ANSWER_KEYS.md'],

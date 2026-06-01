@@ -56,7 +56,7 @@ Safe next moves:
 - structure any local candidate run with `docs/OCR_CANDIDATE_EXPERIMENT_PLAN.md`
 - test narrow preprocessing or candidate-selection variants only against `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md`
 - improve review/refusal behavior only with reproducible evidence and Tony approval if product behavior changes
-- build a small labeled crop set only after privacy/storage boundaries are clear
+- build a small labeled crop set only after privacy/storage boundaries are clear, using `docs/OCR_LABELED_HANDWRITING_DATASET_PLAN.md`
 
 ## Current Gate
 

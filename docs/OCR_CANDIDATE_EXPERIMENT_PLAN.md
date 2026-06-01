@@ -70,6 +70,8 @@ Examples:
 - identify crop categories
 - design holdout split
 
+Use `docs/OCR_LABELED_HANDWRITING_DATASET_PLAN.md` before collecting labels or training a candidate model.
+
 Do not train on one failed photo and claim reliability.
 
 ## Required Experiment Report

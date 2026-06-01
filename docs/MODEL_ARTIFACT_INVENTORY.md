@@ -56,4 +56,5 @@ ONNX Runtime browser bundles:
 - First decide which one model path is the current browser default and which candidates are historical bake-off outputs.
 - Prefer a small follow-up decision: either track only the currently required runtime/model files, or move large candidate artifacts to external storage/Git LFS with a manifest.
 - Before promoting any model file, run the narrow Playwright smoke suite and a real-sample/bake-off command.
+- Before creating or promoting a new handwriting model, use `docs/OCR_LABELED_HANDWRITING_DATASET_PLAN.md` so labels, holdouts, privacy, and promotion criteria are explicit.
 - Keep the full project snapshot until these artifacts have a clear storage policy.
