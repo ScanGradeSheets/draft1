@@ -173,6 +173,8 @@ Preservation reason:
 These may be generated or bulky, but they document validation history and should not be deleted until reviewed:
 
 - `benchmarks/`
+- `benchmarks/uploaded_student_samples/fixtures/tony-20260530-two-digit-sheets/*`
+- `benchmarks/uploaded_student_samples/results-tony-20260530-repeatable/*`
 - `benchmarks/worksheet_bakeoff/*`
 - `benchmarks/holdout_student_samples_2026-05-15/*`
 - `docs/reports/*`
@@ -189,6 +191,13 @@ Possible later action:
 - Keep useful benchmark manifests, reports, and representative samples.
 - Move large/generated outputs to ignored artifact storage if they can be reproduced.
 - Add precise `.gitignore` rules only after preserving what matters.
+
+2026-06-01 note:
+
+- `benchmarks/` is currently about 8 GB.
+- It includes Tony-provided/student worksheet photos, debug crops, model-input images, and repeatable OCR benchmark outputs.
+- Do not commit the whole `benchmarks/` directory casually. Treat original worksheet photos as private/local evidence unless Tony explicitly approves a redacted or selected commit.
+- `scripts/eval_tony_20260530_samples.mjs` is useful and lightweight, but it depends on local benchmark fixtures. If committed later, commit it intentionally with clear fixture/privacy decisions.
 
 ## 4. Recovery And Context Files
 
