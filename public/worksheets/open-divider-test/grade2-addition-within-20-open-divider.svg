@@ -30,7 +30,7 @@
       .problem-text-compact { font-size: 6.35px; }
       .scantron-bubble { fill: none; stroke: #c4c8ce; stroke-width: 0.34; }
       .scantron-letter { font-size: 4.45px; font-weight: 600; fill: #626b74; }
-      .answer-box { fill: none; stroke: #111; stroke-width: 0.54; shape-rendering: crispEdges; }
+      .answer-box { fill: none; stroke: #111; stroke-width: 0.54; shape-rendering: geometricPrecision; }
       .open-divider-guide { fill: none; stroke: #707780; stroke-width: 0.46; stroke-linecap: round; }
       .footer { font-size: 3.4px; fill: #555; }
       .qr-label { font-size: 3.2px; }
