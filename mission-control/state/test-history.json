@@ -231,7 +231,15 @@
       "command": "node scripts/eval_tony_20260530_samples.mjs --out benchmarks/uploaded_student_samples/results-tony-20260530-repeatable-v2",
       "plain_english": "The May 30 three-sheet benchmark remains the comparison baseline at 18/30. Any narrow OCR patch should improve the new failed subtraction scan above 5/10 while keeping this benchmark at or above 18/30.",
       "path_exercised": "Repeatable two-digit worksheet benchmark path"
+    },
+    {
+      "date": "2026-06-01",
+      "name": "OCR reliability Mission Control docs check",
+      "result": "pass",
+      "command": "node --check mission-control/server.mjs; JSON parse mission-state/test-history/decisions",
+      "plain_english": "After adding the OCR operating map, acceptance gate, retest protocol, debug crop checklist, candidate experiment plan, dataset plan, and June 1 daily summary links, Mission Control server syntax passed and the key Mission Control JSON files parsed.",
+      "path_exercised": "Private Mission Control document list and state JSON path"
     }
   ],
-  "updated_at": "2026-06-01T17:25:02.470Z"
+  "updated_at": "2026-06-01T19:55:03.158Z"
 }
