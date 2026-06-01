@@ -61,6 +61,10 @@ function anchorsFormPlausiblePageQuad(anchors, cols, rows, layout) {
   const avgH = (leftH + rightH) / 2;
   const aspect = avgH > 0 ? avgW / avgH : 0;
   const targetAspect = layout?.page?.aspect_ratio || 0.773;
+  const rotatedTargetAspect = targetAspect > 0 ? 1 / targetAspect : 1.294;
+  const aspectOk =
+    (aspect >= targetAspect * 0.55 && aspect <= targetAspect * 1.45) ||
+    (aspect >= rotatedTargetAspect * 0.55 && aspect <= rotatedTargetAspect * 1.45);
   const cross =
     (tr.x - tl.x) * (bl.y - tl.y) -
     (tr.y - tl.y) * (bl.x - tl.x);
@@ -72,8 +76,7 @@ function anchorsFormPlausiblePageQuad(anchors, cols, rows, layout) {
     tr.y < br.y &&
     avgW > cols * 0.42 &&
     avgH > rows * 0.42 &&
-    aspect >= targetAspect * 0.55 &&
-    aspect <= targetAspect * 1.45
+    aspectOk
   );
 }
 
@@ -1026,6 +1029,26 @@ function answerFrameLooksLocal(candidate, expected) {
   );
 }
 
+function virtualAnswerFrameLooksLocal(candidate, expected) {
+  if (!candidate || !expected) return false;
+  const ec = rectCenter(expected);
+  const cc = rectCenter(candidate);
+  const dx = Math.abs(cc.x - ec.x);
+  const dy = Math.abs(cc.y - ec.y);
+  const areaRatio = rectSizeRatio(candidate, expected);
+  const aspect = candidate.h > 0 ? candidate.w / candidate.h : 0;
+  const expectedAspect = expected.h > 0 ? expected.w / expected.h : 1;
+
+  return (
+    dx <= expected.w * 0.54 &&
+    dy <= expected.h * 1.80 &&
+    areaRatio >= 0.58 &&
+    areaRatio <= 1.68 &&
+    aspect >= expectedAspect * 0.58 &&
+    aspect <= expectedAspect * 1.55
+  );
+}
+
 function digitRectLooksLocal(candidate, expected) {
   if (!candidate || !expected) return false;
   const ec = rectCenter(expected);
@@ -1043,6 +1066,26 @@ function digitRectLooksLocal(candidate, expected) {
     areaRatio <= 1.42 &&
     aspect >= expectedAspect * 0.70 &&
     aspect <= expectedAspect * 1.38
+  );
+}
+
+function virtualDigitRectLooksLocal(candidate, expected) {
+  if (!candidate || !expected) return false;
+  const ec = rectCenter(expected);
+  const cc = rectCenter(candidate);
+  const dx = Math.abs(cc.x - ec.x);
+  const dy = Math.abs(cc.y - ec.y);
+  const areaRatio = rectSizeRatio(candidate, expected);
+  const aspect = candidate.h > 0 ? candidate.w / candidate.h : 0;
+  const expectedAspect = expected.h > 0 ? expected.w / expected.h : 1;
+
+  return (
+    dx <= expected.w * 0.62 &&
+    dy <= expected.h * 0.72 &&
+    areaRatio >= 0.68 &&
+    areaRatio <= 1.42 &&
+    aspect >= expectedAspect * 0.68 &&
+    aspect <= expectedAspect * 1.45
   );
 }
 
@@ -1150,47 +1193,97 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
 
   const assignedFrames = detectAnswerBoxRects(warped, frameRects);
   const assignments = new Map();
+  const virtualFrameDebug = [];
 
   for (const expectedFrame of frameRects) {
     const detectedFrame = assignedFrames.get(expectedFrame.id);
-    const outlineFrameCandidate = answerFrameLooksLocal(detectedFrame, expectedFrame)
-      ? detectedFrame
-      : refineBoxRectFromOutline(warped, expectedFrame);
-    const lineFrameCandidate = refineAnswerFrameFromHorizontalLines(warped, expectedFrame);
-    const refinedFrameCandidate = lineFrameCandidate
-      ? {
-        ...(answerFrameLooksLocal(outlineFrameCandidate, expectedFrame) ? outlineFrameCandidate : expectedFrame),
-        y: lineFrameCandidate.y,
-        h: lineFrameCandidate.h
-      }
-      : outlineFrameCandidate;
+    const trustedPhysicalFrame = detectedFrame?.trustedPhysicalAnswerFrame === true;
+    const hasDetectedFrame = trustedPhysicalFrame || virtualAnswerFrameLooksLocal(detectedFrame, expectedFrame);
+    let refinedFrameCandidate = null;
+    let usedLineFrame = false;
+
     // Two-digit worksheet answer frames contain a printed center guide. The
-    // template gives stable row order, but older-device captures can leave the
-    // printed answer boxes shifted after the page homography. Trust the
-    // detected outline when it is still local to the expected slot so the OCR
-    // crops follow the real box instead of a stale template position.
-    const frameCandidateLooksSafe =
-      refinedFrameCandidate &&
-      Math.abs(rectCenter(refinedFrameCandidate).x - rectCenter(expectedFrame).x) <= expectedFrame.w * 0.12 &&
-      Math.abs(rectCenter(refinedFrameCandidate).y - rectCenter(expectedFrame).y) <= expectedFrame.h * 1.05 &&
-      rectSizeRatio(refinedFrameCandidate, expectedFrame) >= 0.88 &&
-      rectSizeRatio(refinedFrameCandidate, expectedFrame) <= 1.14;
+    // template gives stable row order, but phone/tablet captures can leave the
+    // printed answer boxes shifted after the page homography. When the physical
+    // answer frame is detected near the expected slot, trust it directly so OCR
+    // follows the real ink instead of a stale template position.
+    if (hasDetectedFrame) {
+      refinedFrameCandidate = detectedFrame;
+    } else {
+      const outlineFrameCandidate = refineBoxRectFromOutline(warped, expectedFrame);
+      const lineSearchFrame = virtualAnswerFrameLooksLocal(outlineFrameCandidate, expectedFrame)
+        ? outlineFrameCandidate
+        : expectedFrame;
+      const rawLineFrameCandidate = refineAnswerFrameFromHorizontalLines(warped, lineSearchFrame);
+      const lineFrameCandidate = rawLineFrameCandidate &&
+        virtualAnswerFrameLooksLocal(rawLineFrameCandidate, expectedFrame) &&
+        Math.abs(rectCenter(rawLineFrameCandidate).y - rectCenter(expectedFrame).y) <= expectedFrame.h * 0.95 &&
+        (!outlineFrameCandidate ||
+          Math.abs(rectCenter(rawLineFrameCandidate).y - rectCenter(outlineFrameCandidate).y) <= expectedFrame.h * 0.50)
+        ? rawLineFrameCandidate
+        : null;
+      refinedFrameCandidate = lineFrameCandidate
+        ? {
+          ...lineSearchFrame,
+          y: lineFrameCandidate.y,
+          h: lineFrameCandidate.h
+        }
+        : outlineFrameCandidate;
+      usedLineFrame = !!lineFrameCandidate;
+    }
+
+    const frameCandidateLooksSafe = hasDetectedFrame
+      ? (trustedPhysicalFrame || virtualAnswerFrameLooksLocal(refinedFrameCandidate, expectedFrame))
+      : (
+        refinedFrameCandidate &&
+        Math.abs(rectCenter(refinedFrameCandidate).x - rectCenter(expectedFrame).x) <= expectedFrame.w * 0.54 &&
+        Math.abs(rectCenter(refinedFrameCandidate).y - rectCenter(expectedFrame).y) <= expectedFrame.h * 0.86 &&
+        rectSizeRatio(refinedFrameCandidate, expectedFrame) >= 0.66 &&
+        rectSizeRatio(refinedFrameCandidate, expectedFrame) <= 1.46
+      );
     const refinedFrame = frameCandidateLooksSafe
       ? blendRectsByAxis(expectedFrame, refinedFrameCandidate, {
-        x: 0.78,
-        w: 0.78,
-        y: lineFrameCandidate ? 0.96 : 0.84,
-        h: lineFrameCandidate ? 0.90 : 0.65
+        x: trustedPhysicalFrame ? 0.98 : (hasDetectedFrame ? 0.92 : 0.38),
+        w: trustedPhysicalFrame ? 0.96 : (hasDetectedFrame ? 0.90 : 0.40),
+        y: trustedPhysicalFrame ? 0.98 : (hasDetectedFrame ? 0.94 : (usedLineFrame ? 0.42 : 0.36)),
+        h: trustedPhysicalFrame ? 0.94 : (hasDetectedFrame ? 0.86 : (usedLineFrame ? 0.38 : 0.34))
       })
       : expectedFrame;
 
     const guidedSplit = splitFrameByPrintedDigitGuide(refinedFrame, expectedFrame, expectedFrame.digitRects, expectedFrame);
+    if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+      virtualFrameDebug.push({
+        id: expectedFrame.id,
+        questionNum: expectedFrame.questionNum,
+        expectedFrame: { ...expectedFrame },
+        detectedFrame: detectedFrame ? { ...detectedFrame } : null,
+        trustedPhysicalFrame,
+        hasDetectedFrame,
+        usedLineFrame,
+        refinedFrameCandidate: refinedFrameCandidate ? { ...refinedFrameCandidate } : null,
+        frameCandidateLooksSafe,
+        refinedFrame: refinedFrame ? { ...refinedFrame } : null,
+        guidedSplit: guidedSplit
+          ? Array.from(guidedSplit.entries()).map(([id, rect]) => ({ id, rect: { ...rect } }))
+          : null
+      });
+    }
     if (guidedSplit) {
       for (const digitRect of expectedFrame.digitRects) {
         const guidedRect = guidedSplit.get(digitRect.id);
+        const trustedGuidedRect = guidedRect
+          ? {
+              ...guidedRect,
+              trustedPhysicalDigitBox: hasDetectedFrame && frameCandidateLooksSafe,
+              parentAnswerFrameId: expectedFrame.id,
+              answerFrameAssignmentMethod: detectedFrame?.answerFrameAssignmentMethod || null
+            }
+          : guidedRect;
         assignments.set(
           digitRect.id,
-          digitRectLooksLocal(guidedRect, digitRect) ? guidedRect : digitRect
+          hasDetectedFrame && frameCandidateLooksSafe
+            ? trustedGuidedRect
+            : (virtualDigitRectLooksLocal(guidedRect, digitRect) ? trustedGuidedRect : digitRect)
         );
       }
       continue;
@@ -1212,6 +1305,9 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
     }
   }
 
+  if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+    window.__SCANGRADE_DEBUG_VIRTUAL_FRAMES = virtualFrameDebug;
+  }
   return assignments;
 }
 
@@ -1232,6 +1328,44 @@ function binaryFillRatio(binary, rect, insetFrac = 0) {
     }
   }
   return total ? filled / total : 1;
+}
+
+function binaryBandFillRatio(binary, x0, y0, x1, y1) {
+  if (!binary) return 0;
+  const sx = clampNumber(Math.floor(x0), 0, binary.cols);
+  const sy = clampNumber(Math.floor(y0), 0, binary.rows);
+  const ex = clampNumber(Math.ceil(x1), sx, binary.cols);
+  const ey = clampNumber(Math.ceil(y1), sy, binary.rows);
+  let total = 0;
+  let filled = 0;
+  for (let y = sy; y < ey; y++) {
+    for (let x = sx; x < ex; x++) {
+      total++;
+      if (binary.ucharPtr(y, x)[0] > 0) filled++;
+    }
+  }
+  return total ? filled / total : 0;
+}
+
+function binaryFrameStrength(binary, rect, borderFrac = 0.12) {
+  if (!binary || !rect) return { all: 0, horizontal: 0, vertical: 0 };
+  const bw = Math.max(2, Math.round(rect.width * borderFrac));
+  const bh = Math.max(2, Math.round(rect.height * borderFrac));
+  const x0 = rect.x;
+  const y0 = rect.y;
+  const x1 = rect.x + rect.width;
+  const y1 = rect.y + rect.height;
+  const top = binaryBandFillRatio(binary, x0, y0, x1, y0 + bh);
+  const bottom = binaryBandFillRatio(binary, x0, y1 - bh, x1, y1);
+  const left = binaryBandFillRatio(binary, x0, y0 + bh, x0 + bw, y1 - bh);
+  const right = binaryBandFillRatio(binary, x1 - bw, y0 + bh, x1, y1 - bh);
+  const horizontal = (top + bottom) / 2;
+  const vertical = (left + right) / 2;
+  return {
+    all: (top + bottom + left + right) / 4,
+    horizontal,
+    vertical
+  };
 }
 
 function medianNumber(values) {
@@ -1268,7 +1402,8 @@ function chooseBestOrderedSubset(candidates, expectedRow, expW, expH) {
       sum + Math.abs(candidate.cy - yMedian) / Math.max(1, expH)
     ), 0) / targetCount;
     const sizeScore = subset.reduce((sum, candidate) => sum + candidate.sizeScore, 0) / targetCount;
-    return xResidual + yResidual * 0.35 + sizeScore * 0.12;
+    const frameStrength = subset.reduce((sum, candidate) => sum + (candidate.frameStrength || 0), 0) / targetCount;
+    return xResidual + yResidual * 0.35 + sizeScore * 0.12 - frameStrength * 0.10;
   };
 
   const walk = (start, picked) => {
@@ -1288,6 +1423,189 @@ function chooseBestOrderedSubset(candidates, expectedRow, expW, expH) {
   };
   walk(0, []);
   return best;
+}
+
+function countAxisClusters(values, threshold) {
+  const sorted = values.filter(Number.isFinite).slice().sort((a, b) => a - b);
+  if (sorted.length === 0) return 0;
+  let clusters = 1;
+  let center = sorted[0];
+  let count = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const value = sorted[i];
+    if (Math.abs(value - center) > threshold) {
+      clusters++;
+      center = value;
+      count = 1;
+    } else {
+      center = (center * count + value) / (count + 1);
+      count++;
+    }
+  }
+  return clusters;
+}
+
+function looksLikeTwoColumnWorksheetLayout(expectedRects, expW, expH) {
+  if (expectedRects.length !== 10) return false;
+  const centers = expectedRects.map(rectCenter);
+  const xClusters = countAxisClusters(centers.map((center) => center.x), expW * 1.35);
+  const yClusters = countAxisClusters(centers.map((center) => center.y), expH * 1.28);
+  return xClusters === 2 && yClusters >= 4;
+}
+
+function chooseBestOrderedSubsetByY(candidates, expectedColumn, expW, expH) {
+  if (candidates.length < expectedColumn.length) return null;
+  const sortedCandidates = candidates.slice().sort((a, b) => a.cy - b.cy);
+  const targetCount = expectedColumn.length;
+  let best = null;
+
+  const scoreSubset = (subset) => {
+    const expectedCenters = expectedColumn.map((rect) => rectCenter(rect).y);
+    const actualCenters = subset.map((candidate) => candidate.cy);
+    const meanExpected = expectedCenters.reduce((sum, y) => sum + y, 0) / targetCount;
+    const meanActual = actualCenters.reduce((sum, y) => sum + y, 0) / targetCount;
+    let numerator = 0;
+    let denominator = 0;
+    for (let i = 0; i < targetCount; i++) {
+      numerator += (expectedCenters[i] - meanExpected) * (actualCenters[i] - meanActual);
+      denominator += Math.pow(expectedCenters[i] - meanExpected, 2);
+    }
+    const scale = Math.abs(denominator) > 1e-6 ? numerator / denominator : 1;
+    const offset = meanActual - scale * meanExpected;
+    const yResidual = actualCenters.reduce((sum, y, idx) => {
+      const predicted = scale * expectedCenters[idx] + offset;
+      return sum + Math.abs(y - predicted) / Math.max(1, expH);
+    }, 0) / targetCount;
+    const expectedX = medianNumber(expectedColumn.map((rect) => rectCenter(rect).x));
+    const xResidual = subset.reduce((sum, candidate) => (
+      sum + Math.abs(candidate.cx - expectedX) / Math.max(1, expW)
+    ), 0) / targetCount;
+    const sizeScore = subset.reduce((sum, candidate) => sum + candidate.sizeScore, 0) / targetCount;
+    const frameStrength = subset.reduce((sum, candidate) => sum + (candidate.frameStrength || 0), 0) / targetCount;
+    const monotonicPenalty = scale <= 0 ? 3 : Math.abs(scale - 1) * 0.18;
+    return yResidual + xResidual * 0.28 + sizeScore * 0.14 + monotonicPenalty - frameStrength * 0.12;
+  };
+
+  const walk = (start, picked) => {
+    if (picked.length === targetCount) {
+      const score = scoreSubset(picked);
+      if (!best || score < best.score) {
+        best = { subset: picked.slice(), score };
+      }
+      return;
+    }
+    const remainingNeeded = targetCount - picked.length;
+    for (let i = start; i <= sortedCandidates.length - remainingNeeded; i++) {
+      picked.push(sortedCandidates[i]);
+      walk(i + 1, picked);
+      picked.pop();
+    }
+  };
+  walk(0, []);
+  return best;
+}
+
+function columnSubsetLooksPhysicallySane(subset, expectedColumn, expW, expH) {
+  if (!Array.isArray(subset) || !Array.isArray(expectedColumn)) return false;
+  if (subset.length !== expectedColumn.length || subset.length < 2) return false;
+
+  const sorted = subset.slice().sort((a, b) => a.cy - b.cy);
+  const xMedian = medianNumber(sorted.map((candidate) => candidate.cx));
+  const maxXDrift = sorted.reduce((max, candidate) => (
+    Math.max(max, Math.abs(candidate.cx - xMedian))
+  ), 0);
+  if (maxXDrift > expW * 0.72) return false;
+
+  const gaps = [];
+  for (let i = 1; i < sorted.length; i++) {
+    gaps.push(sorted[i].cy - sorted[i - 1].cy);
+  }
+  const medianGap = medianNumber(gaps);
+  if (!Number.isFinite(medianGap) || medianGap < expH * 0.74 || medianGap > expH * 2.25) return false;
+  const gapTolerance = Math.max(expH * 0.52, medianGap * 0.38);
+  if (gaps.some((gap) => Math.abs(gap - medianGap) > gapTolerance)) return false;
+
+  const expectedSorted = expectedColumn.slice().sort((a, b) => rectCenter(a).y - rectCenter(b).y);
+  const expectedGaps = [];
+  for (let i = 1; i < expectedSorted.length; i++) {
+    expectedGaps.push(rectCenter(expectedSorted[i]).y - rectCenter(expectedSorted[i - 1]).y);
+  }
+  const expectedMedianGap = medianNumber(expectedGaps);
+  if (Number.isFinite(expectedMedianGap) && expectedMedianGap > 0) {
+    const gapScale = medianGap / expectedMedianGap;
+    if (gapScale < 0.62 || gapScale > 1.62) return false;
+  }
+
+  return sorted.every((candidate) => (
+    candidate.rect &&
+    candidate.rect.w >= expW * 0.52 &&
+    candidate.rect.w <= expW * 1.62 &&
+    candidate.rect.h >= expH * 0.52 &&
+    candidate.rect.h <= expH * 1.72 &&
+    (candidate.frameStrength || 0) >= 0.018
+  ));
+}
+
+function assignmentsFromColumnSubsets(columnSubsets, expectedColumns, method = 'column-order') {
+  const assignments = new Map();
+  for (let columnIdx = 0; columnIdx < 2; columnIdx++) {
+    const subset = columnSubsets[columnIdx].slice().sort((a, b) => a.cy - b.cy);
+    const expectedColumn = expectedColumns[columnIdx].slice().sort((a, b) => rectCenter(a).y - rectCenter(b).y);
+    for (let i = 0; i < expectedColumn.length; i++) {
+      assignments.set(expectedColumn[i].id, {
+        ...subset[i].rect,
+        trustedPhysicalAnswerFrame: true,
+        answerFrameAssignmentMethod: method
+      });
+    }
+  }
+  return assignments;
+}
+
+function assignAnswerBoxesByColumnOrder(candidates, expectedRects, expW, expH) {
+  if (!looksLikeTwoColumnWorksheetLayout(expectedRects, expW, expH) || candidates.length < 10) return null;
+
+  const expectedSortedByX = expectedRects.slice().sort((a, b) => rectCenter(a).x - rectCenter(b).x);
+  const expectedColumns = [
+    expectedSortedByX.slice(0, 5).sort((a, b) => rectCenter(a).y - rectCenter(b).y),
+    expectedSortedByX.slice(5, 10).sort((a, b) => rectCenter(a).y - rectCenter(b).y)
+  ];
+  const expectedColumnCenters = expectedColumns.map((column) => (
+    medianNumber(column.map((rect) => rectCenter(rect).x))
+  ));
+  const boundary = (expectedColumnCenters[0] + expectedColumnCenters[1]) / 2;
+  const candidateColumns = [
+    candidates.filter((candidate) => candidate.cx < boundary),
+    candidates.filter((candidate) => candidate.cx >= boundary)
+  ];
+  if (candidateColumns[0].length < 5 || candidateColumns[1].length < 5) return null;
+
+  const directColumns = candidateColumns.map((column) => column.slice().sort((a, b) => a.cy - b.cy));
+  if (
+    directColumns[0].length === expectedColumns[0].length &&
+    directColumns[1].length === expectedColumns[1].length &&
+    columnSubsetLooksPhysicallySane(directColumns[0], expectedColumns[0], expW, expH) &&
+    columnSubsetLooksPhysicallySane(directColumns[1], expectedColumns[1], expW, expH)
+  ) {
+    return assignmentsFromColumnSubsets(directColumns, expectedColumns, 'column-direct');
+  }
+
+  const columnAssignments = [
+    chooseBestOrderedSubsetByY(candidateColumns[0], expectedColumns[0], expW, expH),
+    chooseBestOrderedSubsetByY(candidateColumns[1], expectedColumns[1], expW, expH)
+  ];
+  if (!columnAssignments[0] || !columnAssignments[1]) return null;
+  if (
+    !columnSubsetLooksPhysicallySane(columnAssignments[0].subset, expectedColumns[0], expW, expH) ||
+    !columnSubsetLooksPhysicallySane(columnAssignments[1].subset, expectedColumns[1], expW, expH)
+  ) return null;
+  if (columnAssignments[0].score > 4.25 || columnAssignments[1].score > 4.25) return null;
+
+  return assignmentsFromColumnSubsets(
+    columnAssignments.map((assignment) => assignment.subset),
+    expectedColumns,
+    'column-subset'
+  );
 }
 
 function assignAnswerBoxesByGridOrder(candidates, expectedRects, expW, expH) {
@@ -1393,6 +1711,8 @@ function detectAnswerBoxRects(warped, expectedRects) {
       const cy = rect.y + h / 2;
       const filledRatio = binaryFillRatio(binary, rect, 0);
       const innerFilledRatio = binaryFillRatio(binary, rect, 0.22);
+      const frameInk = binaryFrameStrength(binary, rect, 0.13);
+      const frameStrength = frameInk.horizontal * 2.2 + frameInk.vertical * 1.15 + frameInk.all * 0.75;
 
       const plausible =
         cx >= minX &&
@@ -1408,15 +1728,20 @@ function detectAnswerBoxRects(warped, expectedRects) {
         aspect >= 0.45 &&
         aspect <= 2.20 &&
         fillRatio >= 0.015 &&
-        fillRatio <= 0.95 &&
+        fillRatio <= 1.02 &&
         filledRatio >= 0.025 &&
         filledRatio <= 0.58 &&
-        innerFilledRatio <= 0.42;
+        innerFilledRatio <= 0.42 &&
+        frameInk.horizontal >= 0.025 &&
+        frameInk.all >= 0.020;
 
       if (plausible) {
         const sizeScore = Math.abs(Math.log(Math.max(0.01, areaRatio))) +
           Math.abs(Math.log(Math.max(0.01, aspect / (expW / expH)))) +
-          Math.max(0, innerFilledRatio - 0.22) * 1.8;
+          Math.max(0, innerFilledRatio - 0.22) * 1.8 +
+          Math.max(0, 0.13 - frameInk.horizontal) * 2.4 +
+          Math.max(0, 0.09 - frameInk.all) * 1.4 -
+          Math.min(0.45, frameStrength * 0.55);
         candidates.push({
           rect: { x: rect.x, y: rect.y, w, h },
           cx,
@@ -1425,6 +1750,8 @@ function detectAnswerBoxRects(warped, expectedRects) {
           fillRatio,
           filledRatio,
           innerFilledRatio,
+          frameInk,
+          frameStrength,
           sizeScore
         });
       }
@@ -1442,9 +1769,44 @@ function detectAnswerBoxRects(warped, expectedRects) {
       });
       if (!duplicate) deduped.push(candidate);
     }
+    if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+      window.__SCANGRADE_DEBUG_ANSWER_BOX_CANDIDATES = deduped.map((candidate) => ({
+        rect: candidate.rect,
+        cx: candidate.cx,
+        cy: candidate.cy,
+        areaRatio: candidate.areaRatio,
+        fillRatio: candidate.fillRatio,
+        filledRatio: candidate.filledRatio,
+        innerFilledRatio: candidate.innerFilledRatio,
+        frameInk: candidate.frameInk,
+        frameStrength: candidate.frameStrength,
+        sizeScore: candidate.sizeScore
+      }));
+    }
+
+    const columnAssignments = assignAnswerBoxesByColumnOrder(deduped, expectedRects, expW, expH);
+    if (columnAssignments) {
+      if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+        window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(columnAssignments.entries()).map(([id, rect]) => ({
+          id,
+          method: rect.answerFrameAssignmentMethod || 'column-order',
+          rect
+        }));
+      }
+      return columnAssignments;
+    }
 
     const gridAssignments = assignAnswerBoxesByGridOrder(deduped, expectedRects, expW, expH);
-    if (gridAssignments) return gridAssignments;
+    if (gridAssignments) {
+      if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+        window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(gridAssignments.entries()).map(([id, rect]) => ({
+          id,
+          method: rect.answerFrameAssignmentMethod || 'grid-order',
+          rect
+        }));
+      }
+      return gridAssignments;
+    }
 
     const pairs = [];
     for (const expected of expectedRects) {
@@ -1467,6 +1829,13 @@ function detectAnswerBoxRects(warped, expectedRects) {
       usedExpected.add(pair.expected.id);
       usedCandidates.add(pair.candidate);
     }
+    if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+      window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(assignments.entries()).map(([id, rect]) => ({
+        id,
+        method: rect.answerFrameAssignmentMethod || 'nearest-fallback',
+        rect
+      }));
+    }
     return assignments;
   } finally {
     gray.delete();
@@ -1475,6 +1844,83 @@ function detectAnswerBoxRects(warped, expectedRects) {
     contours.delete();
     hierarchy.delete();
   }
+}
+
+function virtualDigitLineEraseOptions(digitIndex, overrides = {}) {
+  const index = Number(digitIndex);
+  return {
+    digitIndex: index,
+    // Erase the printed answer-box frame and the faint center guide. The guide
+    // is useful for splitting two-digit boxes, but if it survives into the
+    // model input it can be read as a handwritten 1 on older-camera captures.
+    eraseLeft: index === 0,
+    eraseRight: index === 1,
+    eraseCenterGuide: true,
+    eraseHorizontal: true,
+    eraseHorizontalFullWidth: true,
+    ...overrides
+  };
+}
+
+function virtualDigitInnerRect(rect, digitIndex, options = {}) {
+  if (!rect) return null;
+  const index = Number(digitIndex);
+  const outerInsetFrac = options.outerInsetFrac ?? 0.08;
+  const centerInsetFrac = options.centerInsetFrac ?? 0.075;
+  const topInsetFrac = options.topInsetFrac ?? 0.09;
+  const bottomInsetFrac = options.bottomInsetFrac ?? 0.13;
+  const leftInsetFrac = index === 1 ? centerInsetFrac : outerInsetFrac;
+  const rightInsetFrac = index === 0 ? centerInsetFrac : outerInsetFrac;
+  const insetLeft = rect.w * leftInsetFrac;
+  const insetRight = rect.w * rightInsetFrac;
+  const insetTop = rect.h * topInsetFrac;
+  const insetBottom = rect.h * bottomInsetFrac;
+  return {
+    x: rect.x + insetLeft,
+    y: rect.y + insetTop,
+    w: Math.max(1, rect.w - insetLeft - insetRight),
+    h: Math.max(1, rect.h - insetTop - insetBottom)
+  };
+}
+
+function clampRectToMat(mat, rect) {
+  if (!mat || !rect) return null;
+  const x = Math.max(0, Math.floor(rect.x));
+  const y = Math.max(0, Math.floor(rect.y));
+  let w = Math.max(1, Math.ceil(rect.w));
+  let h = Math.max(1, Math.ceil(rect.h));
+  if (x + w > mat.cols) w = mat.cols - x;
+  if (y + h > mat.rows) h = mat.rows - y;
+  if (w < 1 || h < 1) return null;
+  return { x, y, w, h };
+}
+
+function cloneVirtualDigitCropVariant(warped, sourceRect, eraseDigitRect, digitIndex, name, options = {}) {
+  const cropRect = clampRectToMat(warped, sourceRect);
+  if (!cropRect) return null;
+  const image = warped.roi(new cv.Rect(cropRect.x, cropRect.y, cropRect.w, cropRect.h)).clone();
+  eraseKnownVirtualDigitLines(
+    image,
+    cropRect,
+    eraseDigitRect,
+    virtualDigitLineEraseOptions(digitIndex, options.eraseOptions || {})
+  );
+  return {
+    name,
+    image,
+    cropRect,
+    preprocessOptions: options.preprocessOptions || null
+  };
+}
+
+function roundDebugRect(rect) {
+  if (!rect) return null;
+  return {
+    x: Math.round(rect.x),
+    y: Math.round(rect.y),
+    w: Math.round(rect.w),
+    h: Math.round(rect.h)
+  };
 }
 
 /**
@@ -1509,8 +1955,10 @@ export function cropBoxes(warped, layout) {
   // for recognition so faint pencil strokes are not drowned out by dark borders.
   const BOX_OCR_INSET_X_FRAC = 0.12;
   const BOX_OCR_INSET_Y_FRAC = 0.12;
-  const VIRTUAL_DIGIT_OCR_INSET_TOP_FRAC = -0.50;
-  const VIRTUAL_DIGIT_OCR_INSET_BOTTOM_FRAC = 0.14;
+  const VIRTUAL_DIGIT_OCR_INSET_X_FRAC = 0.055;
+  const VIRTUAL_DIGIT_OCR_INSET_TOP_FRAC = 0.070;
+  const VIRTUAL_DIGIT_OCR_INSET_BOTTOM_FRAC = 0.105;
+  const VIRTUAL_DIGIT_EDGE_ERASE_FRAC = 0.032;
   const layoutBoxes = Array.isArray(layout.boxes) ? layout.boxes : [];
   const usesVirtualDigitBoxes = Array.isArray(layout.question_groups) &&
     layout.question_groups.some((group) => Array.isArray(group?.digit_box_ids) && group.digit_box_ids.length > 1) &&
@@ -1531,7 +1979,9 @@ export function cropBoxes(warped, layout) {
     const expectedRect = { x, y, w, h };
     const detectedRect = detectedRects.get(box.id);
     const refinedCandidate = usesVirtualDigitBoxes
-      ? (digitRectLooksLocal(detectedRect, expectedRect) ? detectedRect : expectedRect)
+      ? ((detectedRect?.trustedPhysicalDigitBox === true || virtualDigitRectLooksLocal(detectedRect, expectedRect))
+        ? detectedRect
+        : expectedRect)
       : (answerRectLooksLocal(detectedRect, expectedRect)
         ? detectedRect
         : refineBoxRectFromOutline(warped, expectedRect));
@@ -1543,38 +1993,167 @@ export function cropBoxes(warped, layout) {
     const ocrRect = refinedRect;
     const digitIndex = Number.isFinite(box?.digit_index) ? Number(box.digit_index) : null;
     // Two-digit worksheet frames use one wide printed answer box with a faint
-    // center guide. Crop mostly inside each half while leaving a tiny overlap
-    // across the guide for real handwriting that drifts toward the middle.
-    const virtualLeftInsetFrac = digitIndex === 0 ? 0.12 : -0.02;
-    const virtualRightInsetFrac = digitIndex === 0 ? -0.02 : 0.12;
-    const insetLeft = ocrRect.w * (usesVirtualDigitBoxes ? virtualLeftInsetFrac : BOX_OCR_INSET_X_FRAC);
-    const insetRight = ocrRect.w * (usesVirtualDigitBoxes ? virtualRightInsetFrac : BOX_OCR_INSET_X_FRAC);
-    const insetTop = ocrRect.h * (usesVirtualDigitBoxes ? VIRTUAL_DIGIT_OCR_INSET_TOP_FRAC : BOX_OCR_INSET_Y_FRAC);
-    const insetBottom = ocrRect.h * (usesVirtualDigitBoxes ? VIRTUAL_DIGIT_OCR_INSET_BOTTOM_FRAC : BOX_OCR_INSET_Y_FRAC);
-    const innerX = ocrRect.x + insetLeft;
-    const innerY = ocrRect.y + insetTop;
-    const innerW = Math.max(1, ocrRect.w - insetLeft - insetRight);
-    const innerH = Math.max(1, ocrRect.h - insetTop - insetBottom);
-    const xPx = Math.max(0, Math.floor(innerX));
-    const yPx = Math.max(0, Math.floor(innerY));
-    let widthPx = Math.max(1, Math.ceil(innerW));
-    let heightPx = Math.max(1, Math.ceil(innerH));
-    if (xPx + widthPx > warped.cols) widthPx = warped.cols - xPx;
-    if (yPx + heightPx > warped.rows) heightPx = warped.rows - yPx;
-    if (widthPx < 1 || heightPx < 1) continue;
+    // center guide. The split rect is already one digit slot, so keep the OCR
+    // crop inside that slot; pulling across borders feeds the model frame
+    // fragments instead of handwriting on older-camera captures.
+    const innerRect = usesVirtualDigitBoxes
+      ? virtualDigitInnerRect(ocrRect, digitIndex, {
+        outerInsetFrac: VIRTUAL_DIGIT_OCR_INSET_X_FRAC,
+        centerInsetFrac: 0.060,
+        topInsetFrac: VIRTUAL_DIGIT_OCR_INSET_TOP_FRAC,
+        bottomInsetFrac: VIRTUAL_DIGIT_OCR_INSET_BOTTOM_FRAC
+      })
+      : {
+        x: ocrRect.x + ocrRect.w * BOX_OCR_INSET_X_FRAC,
+        y: ocrRect.y + ocrRect.h * BOX_OCR_INSET_Y_FRAC,
+        w: Math.max(1, ocrRect.w * (1 - BOX_OCR_INSET_X_FRAC * 2)),
+        h: Math.max(1, ocrRect.h * (1 - BOX_OCR_INSET_Y_FRAC * 2))
+      };
+    const clampedInner = clampRectToMat(warped, innerRect);
+    if (!clampedInner) continue;
+    const { x: xPx, y: yPx, w: widthPx, h: heightPx } = clampedInner;
     const rect = new cv.Rect(xPx, yPx, widthPx, heightPx);
     const cropped = warped.roi(rect).clone();
+    let variantImages = [];
     if (usesVirtualDigitBoxes) {
       eraseKnownVirtualDigitLines(
         cropped,
         { x: xPx, y: yPx, w: widthPx, h: heightPx },
         ocrRect,
-        {
-          eraseLeft: true,
-          eraseRight: true,
-          eraseHorizontal: false
-        }
+        virtualDigitLineEraseOptions(digitIndex, {
+          edgeBandFrac: VIRTUAL_DIGIT_EDGE_ERASE_FRAC,
+          centerGuideThicknessMultiplier: 1.12,
+          horizontalThicknessMultiplier: 0.95
+        })
       );
+      const trustedVirtualSlot = detectedRect?.trustedPhysicalDigitBox === true;
+      const variantBaseRect = trustedVirtualSlot ? ocrRect : expectedRect;
+      variantImages = [
+        cloneVirtualDigitCropVariant(
+          warped,
+          virtualDigitInnerRect(variantBaseRect, digitIndex, {
+            outerInsetFrac: 0.060,
+            centerInsetFrac: 0.078,
+            topInsetFrac: 0.074,
+            bottomInsetFrac: 0.115
+          }),
+          variantBaseRect,
+          digitIndex,
+          'center-safe-slot',
+          {
+            eraseOptions: {
+              edgeBandFrac: 0.038,
+              thicknessMultiplier: 0.85,
+              centerGuideThicknessMultiplier: 1.1,
+              horizontalThicknessMultiplier: 0.85
+            },
+            preprocessOptions: {
+              protectInteriorStrokes: true,
+              strictLineRemoval: false,
+              ruleArtifactEraseBelow: 1.16
+            }
+          }
+        ),
+        cloneVirtualDigitCropVariant(
+          warped,
+          virtualDigitInnerRect(variantBaseRect, digitIndex, {
+            outerInsetFrac: 0.055,
+            centerInsetFrac: 0.065,
+            topInsetFrac: 0.065,
+            bottomInsetFrac: 0.105
+          }),
+          variantBaseRect,
+          digitIndex,
+          'expected-slot',
+          {
+            eraseOptions: {
+              edgeBandFrac: 0.034,
+              centerGuideThicknessMultiplier: 1.15,
+              horizontalThicknessMultiplier: 0.95
+            },
+            preprocessOptions: {
+              protectInteriorStrokes: true,
+              strictLineRemoval: false,
+              ruleArtifactEraseBelow: 1.12
+            }
+          }
+        ),
+        cloneVirtualDigitCropVariant(
+          warped,
+          virtualDigitInnerRect(variantBaseRect, digitIndex, {
+            outerInsetFrac: 0.065,
+            centerInsetFrac: 0.078,
+            topInsetFrac: 0.088,
+            bottomInsetFrac: 0.135
+          }),
+          variantBaseRect,
+          digitIndex,
+          'edge-band-slot',
+          {
+            eraseOptions: {
+              edgeBandFrac: 0.050,
+              centerGuideThicknessMultiplier: 1.25,
+              horizontalThicknessMultiplier: 1.15
+            },
+            preprocessOptions: {
+              protectInteriorStrokes: true,
+              strictLineRemoval: false,
+              ruleArtifactEraseBelow: 1.08
+            }
+          }
+        ),
+        cloneVirtualDigitCropVariant(
+          warped,
+          virtualDigitInnerRect(ocrRect, digitIndex, {
+            outerInsetFrac: 0.035,
+            centerInsetFrac: 0.055,
+            topInsetFrac: 0.055,
+            bottomInsetFrac: 0.095
+          }),
+          ocrRect,
+          digitIndex,
+          'wide-slot',
+          {
+            eraseOptions: {
+              edgeBandFrac: 0.028,
+              centerGuideThicknessMultiplier: 1.15,
+              horizontalThicknessMultiplier: 1.0
+            },
+            preprocessOptions: {
+              protectInteriorStrokes: true,
+              strictLineRemoval: false,
+              ruleArtifactEraseBelow: 1.12
+            }
+          }
+        ),
+        cloneVirtualDigitCropVariant(
+          warped,
+          virtualDigitInnerRect(ocrRect, digitIndex, {
+            outerInsetFrac: 0.045,
+            centerInsetFrac: 0.060,
+            topInsetFrac: 0.060,
+            bottomInsetFrac: 0.100
+          }),
+          ocrRect,
+          digitIndex,
+          'no-side-erase',
+          {
+            eraseOptions: {
+              edgeBandFrac: 0.026,
+              eraseLeft: false,
+              eraseRight: false,
+              centerGuideThicknessMultiplier: 1.25,
+              horizontalThicknessMultiplier: 1.15
+            },
+            preprocessOptions: {
+              protectInteriorStrokes: true,
+              strictLineRemoval: false,
+              skipRuleArtifactCleanup: true,
+              skipPrintedLineCleanup: true
+            }
+          }
+        )
+      ].filter(Boolean);
     }
     crops.push({
       id: box.id,
@@ -1590,17 +2169,252 @@ export function cropBoxes(warped, layout) {
       },
       /** Actual OCR ROI in warped pixel space (interior-only), for debug overlays */
       cropRect: { x: xPx, y: yPx, w: widthPx, h: heightPx },
-      isVirtualDigitBox: usesVirtualDigitBoxes
+      digitIndex,
+      expectedRect: roundDebugRect(expectedRect),
+      refinedRect: roundDebugRect(refinedRect),
+      isVirtualDigitBox: usesVirtualDigitBoxes,
+      variantImages
     });
   }
 
   return crops;
 }
 
+function expectedLayoutBoxRects(layout) {
+  const normalized = layout.page?.units === 'normalized';
+  const scaleX = normalized ? WARP_WIDTH : WARP_WIDTH / layout.page.width_mm;
+  const scaleY = normalized ? WARP_HEIGHT : WARP_HEIGHT / layout.page.height_mm;
+  const layoutBoxes = Array.isArray(layout.boxes) ? layout.boxes : [];
+
+  return layoutBoxes.map((box) => {
+    if (normalized) {
+      const left = (box.x - box.width) * scaleX;
+      const top = (box.y - box.height) * scaleY;
+      const w = box.width * scaleX;
+      const h = box.height * scaleY;
+      return { x: left, y: top, w, h, id: box.id };
+    }
+    const cx = box.cx * scaleX;
+    const cy = box.cy * scaleY;
+    const w = box.width * scaleX;
+    const h = box.height * scaleY;
+    return { x: cx - w / 2, y: cy - h / 2, w, h, id: box.id };
+  });
+}
+
+function expectedAnswerFrameRects(layout) {
+  const expectedRects = expectedLayoutBoxRects(layout);
+  const expectedById = new Map(expectedRects.map((rect) => [rect.id, rect]));
+  const groups = Array.isArray(layout.question_groups) ? layout.question_groups : [];
+  const usesVirtualDigitBoxes = groups.some((group) => (
+    Array.isArray(group?.digit_box_ids) && group.digit_box_ids.length > 1
+  ));
+
+  if (!usesVirtualDigitBoxes) return expectedRects;
+
+  return groups
+    .map((group) => {
+      const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : [];
+      const digitRects = ids.map((id) => expectedById.get(id)).filter(Boolean);
+      const expectedFrame = unionRects(digitRects);
+      if (!expectedFrame) return null;
+      return {
+        ...expectedFrame,
+        id: `question-${group.question_num}`,
+        questionNum: group.question_num
+      };
+    })
+    .filter(Boolean);
+}
+
+function scoreWarpedAnswerBoxAlignment(warped, layout) {
+  const expectedFrames = expectedAnswerFrameRects(layout);
+  if (!expectedFrames.length) return { score: -Infinity, localCount: 0, total: 0 };
+
+  const detected = detectAnswerBoxRects(warped, expectedFrames);
+  let localCount = 0;
+  let distancePenalty = 0;
+  let sizePenalty = 0;
+
+  for (const expected of expectedFrames) {
+    const candidate = detected.get(expected.id);
+    if (!candidate) {
+      distancePenalty += 3;
+      sizePenalty += 2;
+      continue;
+    }
+
+    const ec = rectCenter(expected);
+    const cc = rectCenter(candidate);
+    const distance = Math.hypot(cc.x - ec.x, cc.y - ec.y) / Math.max(1, Math.max(expected.w, expected.h));
+    const areaRatio = rectSizeRatio(candidate, expected);
+    distancePenalty += distance;
+    sizePenalty += Math.abs(Math.log(Math.max(0.01, areaRatio))) * 0.6;
+
+    if (
+      answerFrameLooksLocal(candidate, expected) ||
+      virtualAnswerFrameLooksLocal(candidate, expected)
+    ) {
+      localCount += 1;
+    }
+  }
+
+  return {
+    score: localCount * 12 - distancePenalty - sizePenalty,
+    localCount,
+    total: expectedFrames.length,
+    distancePenalty,
+    sizePenalty
+  };
+}
+
+function rotatedAnchorCandidates(anchors) {
+  const byId = new Map((anchors || []).map((anchor) => [anchor.id, anchor]));
+  const ids = ['tl', 'tr', 'br', 'bl'];
+  if (!ids.every((id) => byId.has(id))) return [];
+
+  return ids.map((_, shift) => ({
+    shift,
+    anchors: ids.map((id, idx) => {
+      const source = byId.get(ids[(idx + shift) % ids.length]);
+      return { id, x: source.x, y: source.y };
+    })
+  }));
+}
+
+function qrLocationCenter(qrLocation) {
+  if (!qrLocation || typeof qrLocation !== 'object') return null;
+  const names = ['topLeftCorner', 'topRightCorner', 'bottomRightCorner', 'bottomLeftCorner'];
+  const points = names
+    .map((name) => qrLocation[name])
+    .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y));
+  if (!points.length) return null;
+  return {
+    x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+    y: points.reduce((sum, point) => sum + point.y, 0) / points.length
+  };
+}
+
+function expectedQrCenter(layout) {
+  const qr = layout?.metadata?.qr_position;
+  if (
+    !qr ||
+    !Number.isFinite(qr.x) ||
+    !Number.isFinite(qr.y) ||
+    !Number.isFinite(qr.width) ||
+    !Number.isFinite(qr.height)
+  ) {
+    return null;
+  }
+  return {
+    x: (qr.x + qr.width / 2) * WARP_WIDTH,
+    y: (qr.y + qr.height / 2) * WARP_HEIGHT
+  };
+}
+
+function transformPointToTemplate(point, anchors, layout) {
+  if (!point || !Array.isArray(anchors) || anchors.length !== 4) return null;
+  const layoutAnchors = layout?.homography?.anchors;
+  if (!Array.isArray(layoutAnchors) || layoutAnchors.length < 4) return null;
+
+  const byId = new Map(anchors.map((anchor) => [anchor.id, anchor]));
+  const layoutById = new Map(layoutAnchors.map((anchor) => [anchor.id, anchor]));
+  const ids = ['tl', 'tr', 'br', 'bl'];
+  if (!ids.every((id) => byId.has(id) && layoutById.has(id))) return null;
+
+  const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, ids.flatMap((id) => {
+    const anchor = byId.get(id);
+    return [anchor.x, anchor.y];
+  }));
+  const dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, ids.flatMap((id) => {
+    const anchor = layoutById.get(id);
+    return [anchor.x * WARP_WIDTH, anchor.y * WARP_HEIGHT];
+  }));
+  const pointMat = cv.matFromArray(1, 1, cv.CV_32FC2, [point.x, point.y]);
+  const warpedPoint = new cv.Mat();
+  let H = null;
+  try {
+    H = cv.getPerspectiveTransform(srcPoints, dstPoints);
+    cv.perspectiveTransform(pointMat, warpedPoint, H);
+    return {
+      x: warpedPoint.data32F[0],
+      y: warpedPoint.data32F[1]
+    };
+  } finally {
+    srcPoints.delete();
+    dstPoints.delete();
+    pointMat.delete();
+    warpedPoint.delete();
+    if (H) H.delete();
+  }
+}
+
+function scoreQrPlacementForAnchors(anchors, layout, qrLocation) {
+  const detectedCenter = qrLocationCenter(qrLocation);
+  const expectedCenter = expectedQrCenter(layout);
+  if (!detectedCenter || !expectedCenter) {
+    return { qrScore: 0, qrDistance: null, warpedQrCenter: null };
+  }
+
+  const warpedQrCenter = transformPointToTemplate(detectedCenter, anchors, layout);
+  if (!warpedQrCenter || !Number.isFinite(warpedQrCenter.x) || !Number.isFinite(warpedQrCenter.y)) {
+    return { qrScore: -40, qrDistance: null, warpedQrCenter: null };
+  }
+
+  const normalizedDistance = Math.hypot(
+    (warpedQrCenter.x - expectedCenter.x) / WARP_WIDTH,
+    (warpedQrCenter.y - expectedCenter.y) / WARP_HEIGHT
+  );
+
+  return {
+    qrScore: Math.max(-80, 45 - normalizedDistance * 180),
+    qrDistance: normalizedDistance,
+    warpedQrCenter
+  };
+}
+
+function warpToBestTemplateOrientation(src, anchors, layout, options = {}) {
+  const candidates = rotatedAnchorCandidates(anchors);
+  if (candidates.length <= 1) return warpToTemplate(src, anchors, layout);
+
+  let best = null;
+  const debug = [];
+  for (const candidate of candidates) {
+    const warped = warpToTemplate(src, candidate.anchors, layout);
+    const alignment = scoreWarpedAnswerBoxAlignment(warped, layout);
+    const qrPlacement = scoreQrPlacementForAnchors(candidate.anchors, layout, options.qrLocation);
+    const combined = {
+      ...alignment,
+      score: alignment.score + qrPlacement.qrScore,
+      alignmentScore: alignment.score,
+      ...qrPlacement
+    };
+    debug.push({ shift: candidate.shift, anchors: candidate.anchors, ...combined });
+
+    if (!best || combined.score > best.combined.score) {
+      if (best?.warped) best.warped.delete();
+      best = { warped, combined, shift: candidate.shift };
+    } else {
+      warped.delete();
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.__SCANGRADE_DEBUG_WARP_ORIENTATION = {
+      selectedShift: best?.shift ?? 0,
+      detectedAnchors: anchors,
+      candidates: debug
+    };
+  }
+
+  return best?.warped || warpToTemplate(src, anchors, layout);
+}
+
 function eraseKnownVirtualDigitLines(crop, cropRect, digitRect, options = {}) {
   if (!crop || !cropRect || !digitRect) return;
-  const paper = new cv.Scalar(245, 245, 245, 255);
-  const thickness = Math.max(4, Math.round(Math.min(digitRect.w, digitRect.h) * 0.055));
+  const paper = new cv.Scalar(255, 255, 255, 255);
+  const baseThickness = Math.max(4, Math.round(Math.min(digitRect.w, digitRect.h) * 0.052));
+  const thickness = Math.max(3, Math.round(baseThickness * (options.thicknessMultiplier ?? 1)));
   const eraseRect = (x, y, w, h) => {
     const x0 = Math.max(0, Math.round(x));
     const y0 = Math.max(0, Math.round(y));
@@ -1616,24 +2430,51 @@ function eraseKnownVirtualDigitLines(crop, cropRect, digitRect, options = {}) {
     );
   };
 
+  const edgeBandFrac = Math.max(0, Math.min(0.12, options.edgeBandFrac || 0));
+  if (edgeBandFrac > 0) {
+    const edgeX = Math.max(1, Math.round(crop.cols * edgeBandFrac));
+    const edgeY = Math.max(1, Math.round(crop.rows * edgeBandFrac));
+    eraseRect(0, 0, edgeX, crop.rows);
+    eraseRect(crop.cols - edgeX, 0, edgeX, crop.rows);
+    eraseRect(0, 0, crop.cols, edgeY);
+    eraseRect(0, crop.rows - edgeY, crop.cols, edgeY);
+  }
+
   const left = digitRect.x - cropRect.x;
   const right = digitRect.x + digitRect.w - cropRect.x;
   const top = digitRect.y - cropRect.y;
   const bottom = digitRect.y + digitRect.h - cropRect.y;
-  // Suppress the printed answer-box frame, but leave the faint center guide
-  // mostly intact. Students often write across that guide; treating it like a
-  // hard border can erase the actual digit before the model sees it.
   if (options.eraseLeft !== false) {
     eraseRect(left - thickness / 2, top - thickness / 2, thickness, digitRect.h + thickness);
   }
   if (options.eraseRight !== false) {
     eraseRect(right - thickness / 2, top - thickness / 2, thickness, digitRect.h + thickness);
   }
+  if (options.eraseCenterGuide !== false) {
+    const digitIndex = Number(options.digitIndex);
+    const centerGuideX = digitIndex === 0 ? right : (digitIndex === 1 ? left : null);
+    if (Number.isFinite(centerGuideX)) {
+      const guideThickness = Math.max(
+        3,
+        Math.round(thickness * 0.65 * (options.centerGuideThicknessMultiplier ?? 1))
+      );
+      eraseRect(
+        centerGuideX - guideThickness / 2,
+        top - thickness / 2,
+        guideThickness,
+        digitRect.h + thickness
+      );
+    }
+  }
   if (options.eraseHorizontal !== false) {
+    const horizontalThickness = Math.max(
+      3,
+      Math.round(thickness * (options.horizontalThicknessMultiplier ?? 1))
+    );
     const horizontalLeft = options.eraseHorizontalFullWidth ? 0 : left - thickness / 2;
     const horizontalWidth = options.eraseHorizontalFullWidth ? crop.cols : digitRect.w + thickness;
-    eraseRect(horizontalLeft, top - thickness / 2, horizontalWidth, thickness);
-    eraseRect(horizontalLeft, bottom - thickness / 2, horizontalWidth, thickness);
+    eraseRect(horizontalLeft, top - horizontalThickness / 2, horizontalWidth, horizontalThickness);
+    eraseRect(horizontalLeft, bottom - horizontalThickness / 2, horizontalWidth, horizontalThickness);
   }
 }
 
@@ -1650,7 +2491,14 @@ function preprocessToMNISTCore(boxImg, withDebug = false, options = {}) {
   }
   const debug = withDebug ? {} : null;
   const extracted = extractWorksheetInk(boxImg, options);
-  const tensor = centerInkToMNIST(extracted.ink, extracted.width, extracted.height);
+  const preserveFaintInk = options.protectInteriorStrokes === true;
+  const tensor = centerInkToMNIST(
+    extracted.ink,
+    extracted.width,
+    extracted.height,
+    preserveFaintInk ? 0.075 : 0.16,
+    preserveFaintInk ? 21 : 20
+  );
 
   if (debug) {
     debug.gray = matFromUint8(extracted.gray, extracted.width, extracted.height);
@@ -1676,6 +2524,43 @@ function quantile(values, q) {
   return sorted[idx];
 }
 
+function computeLocalMean(values, width, height, radius) {
+  const out = new Float32Array(width * height);
+  const stride = width + 1;
+  const integral = new Float64Array((height + 1) * stride);
+
+  for (let y = 0; y < height; y++) {
+    let rowSum = 0;
+    const outRow = (y + 1) * stride;
+    const prevRow = y * stride;
+    const srcRow = y * width;
+    for (let x = 0; x < width; x++) {
+      rowSum += values[srcRow + x];
+      integral[outRow + x + 1] = integral[prevRow + x + 1] + rowSum;
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    const y0 = Math.max(0, y - radius);
+    const y1 = Math.min(height - 1, y + radius);
+    const top = y0 * stride;
+    const bottom = (y1 + 1) * stride;
+    const row = y * width;
+    for (let x = 0; x < width; x++) {
+      const x0 = Math.max(0, x - radius);
+      const x1 = Math.min(width - 1, x + radius);
+      const sum =
+        integral[bottom + x1 + 1] -
+        integral[top + x1 + 1] -
+        integral[bottom + x0] +
+        integral[top + x0];
+      out[row + x] = sum / Math.max(1, (x1 - x0 + 1) * (y1 - y0 + 1));
+    }
+  }
+
+  return out;
+}
+
 function extractWorksheetInk(boxImg, options = {}) {
   const pixelSource = getDisplayPixelSource(boxImg);
   const { width, height, channels, data } = pixelSource;
@@ -1697,16 +2582,36 @@ function extractWorksheetInk(boxImg, options = {}) {
     gray[i] = Math.max(0, Math.min(255, Math.round(lum)));
   }
 
-  const bg = quantile(luminance, 0.82);
+  const strict = options.strictLineRemoval === true;
+  const preserveFaintInk = options.protectInteriorStrokes === true;
+  const skipRuleArtifactCleanup = options.skipRuleArtifactCleanup === true;
+  const skipPrintedLineCleanup = options.skipPrintedLineCleanup === true;
+  const bg = quantile(luminance, strict ? (preserveFaintInk ? 0.82 : 0.76) : 0.82);
+  const localRadius = Math.max(
+    5,
+    Math.round(Math.min(width, height) * (strict ? (preserveFaintInk ? 0.30 : 0.22) : 0.16))
+  );
+  const localMean = computeLocalMean(luminance, width, height, localRadius);
+  const noiseFloor = strict ? (preserveFaintInk ? 1.35 : 3.6) : 2.6;
   const darkness = new Float32Array(total);
   const positives = [];
   for (let i = 0; i < total; i++) {
-    const value = Math.max(0, bg - luminance[i]) + Math.max(0, saturation[i] - 18) * 0.25;
+    const localDark = Math.max(0, localMean[i] - luminance[i] - noiseFloor);
+    const cappedGlobalBg = Math.min(bg, localMean[i] + (strict ? (preserveFaintInk ? 18 : 9) : 14));
+    const globalDark = Math.max(0, cappedGlobalBg - luminance[i] - noiseFloor);
+    const colorBoost = Math.max(0, saturation[i] - 18) * (strict ? 0.34 : 0.26);
+    const value =
+      localDark * (strict ? (preserveFaintInk ? 1.45 : 1.75) : 1.25) +
+      globalDark * (strict ? (preserveFaintInk ? 0.42 : 0.12) : 0.28) +
+      colorBoost;
     darkness[i] = value;
-    if (value > 2) positives.push(value);
+    if (value > 1.4) positives.push(value);
   }
 
-  const scale = Math.max(10, quantile(positives, 0.96));
+  const scale = Math.max(
+    strict ? (preserveFaintInk ? 4.6 : 7.5) : 9,
+    quantile(positives, strict ? (preserveFaintInk ? 0.86 : 0.90) : 0.94)
+  );
   const ink = new Float32Array(total);
   for (let i = 0; i < total; i++) {
     ink[i] = Math.max(0, Math.min(1, darkness[i] / scale));
@@ -1724,10 +2629,25 @@ function extractWorksheetInk(boxImg, options = {}) {
 
   removeLongEdgeLinesFromInk(ink, width, height);
   removeDashedEdgeGuidesFromInk(ink, width, height);
-  removePrintedLineComponentsFromInk(ink, width, height, {
-    protectInteriorStrokes: options.protectInteriorStrokes === true
+  if (!skipRuleArtifactCleanup && options.strictLineRemoval === true && preserveFaintInk) {
+    removeVirtualDigitRuleArtifactsFromInk(ink, width, height, {
+      eraseBelow: options.ruleArtifactEraseBelow
+    });
+  } else if (!skipRuleArtifactCleanup && options.strictLineRemoval === true) {
+    removeSlantedEdgeRulesFromInk(ink, width, height);
+    removeResidualEdgeRuleBandsFromInk(ink, width, height);
+  }
+  if (!skipPrintedLineCleanup) {
+    removePrintedLineComponentsFromInk(ink, width, height, {
+      protectInteriorStrokes: options.protectInteriorStrokes === true,
+      strictLineRemoval: options.strictLineRemoval === true
+    });
+  }
+  suppressWeakBackgroundInk(ink, strict ? (preserveFaintInk ? 0.065 : 0.19) : 0.15);
+  removeSmallInkComponents(ink, width, height, {
+    threshold: preserveFaintInk ? 0.14 : 0.24,
+    minValueToRemove: preserveFaintInk ? 0.74 : 0.82
   });
-  removeSmallInkComponents(ink, width, height);
   if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_PREPROCESS_STATS) {
     const alphaValues = [];
     if (channels >= 4) {
@@ -1738,6 +2658,7 @@ function extractWorksheetInk(boxImg, options = {}) {
       height,
       channels,
       bg,
+      localRadius,
       scale,
       inkMean: Array.from(ink).reduce((sum, value) => sum + value, 0) / Math.max(1, ink.length),
       inkMax: Math.max(...ink),
@@ -1857,16 +2778,301 @@ function removeDashedEdgeGuidesFromInk(ink, width, height) {
   }
 }
 
+function removeSlantedEdgeRulesFromInk(ink, width, height) {
+  if (!ink || width < 12 || height < 12) return;
+  const threshold = 0.18;
+  const centerX = (width - 1) / 2;
+  const minCoverage = Math.max(4, Math.round(width * 0.28));
+  const regions = [
+    {
+      minY: Math.max(0, Math.round(height * 0.02)),
+      maxY: Math.max(0, Math.round(height * 0.42))
+    },
+    {
+      minY: Math.min(height - 1, Math.round(height * 0.58)),
+      maxY: Math.min(height - 1, Math.round(height * 0.98))
+    }
+  ];
+
+  const sampleLine = (slope, centerY) => {
+    let hits = 0;
+    let sum = 0;
+    for (let x = 0; x < width; x++) {
+      const y = Math.round(centerY + slope * (x - centerX));
+      if (y < 0 || y >= height) continue;
+      let best = 0;
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(height - 1, y + 1); yy++) {
+        best = Math.max(best, ink[yy * width + x]);
+      }
+      if (best > threshold) {
+        hits += 1;
+        sum += best;
+      }
+    }
+    return { hits, mean: hits ? sum / hits : 0 };
+  };
+
+  const eraseLine = (slope, centerY) => {
+    const radius = Math.max(1, Math.round(height * 0.065));
+    for (let x = 0; x < width; x++) {
+      const y = Math.round(centerY + slope * (x - centerX));
+      for (let yy = Math.max(0, y - radius); yy <= Math.min(height - 1, y + radius); yy++) {
+        const idx = yy * width + x;
+        if (ink[idx] > 0.10) ink[idx] = 0;
+      }
+    }
+  };
+
+  for (const region of regions) {
+    const candidates = [];
+    for (let s = -24; s <= 24; s++) {
+      const slope = s * 0.035;
+      for (let y = region.minY; y <= region.maxY; y++) {
+        const sampled = sampleLine(slope, y);
+        if (sampled.hits < minCoverage || sampled.mean < 0.18) continue;
+        candidates.push({
+          slope,
+          centerY: y,
+          score: sampled.hits * (0.65 + sampled.mean),
+          hits: sampled.hits,
+          mean: sampled.mean
+        });
+      }
+    }
+    candidates.sort((a, b) => b.score - a.score);
+    const selected = [];
+    for (const candidate of candidates) {
+      const duplicate = selected.some((line) => (
+        Math.abs(line.centerY - candidate.centerY) <= Math.max(2, Math.round(height * 0.10)) &&
+        Math.abs(line.slope - candidate.slope) <= 0.08
+      ));
+      if (duplicate) continue;
+      selected.push(candidate);
+      eraseLine(candidate.slope, candidate.centerY);
+      if (selected.length >= 3) break;
+    }
+  }
+}
+
+function longestRunInRow(ink, width, y, threshold) {
+  let best = 0;
+  let current = 0;
+  const offset = y * width;
+  for (let x = 0; x < width; x++) {
+    if (ink[offset + x] > threshold) {
+      current += 1;
+      best = Math.max(best, current);
+    } else {
+      current = 0;
+    }
+  }
+  return best;
+}
+
+function removeResidualEdgeRuleBandsFromInk(ink, width, height) {
+  if (!ink || width < 12 || height < 12) return;
+  const threshold = 0.16;
+  const minRowCount = Math.max(4, Math.round(width * 0.28));
+  const minRowRun = Math.max(5, Math.round(width * 0.22));
+  const minColCount = Math.max(5, Math.round(height * 0.32));
+
+  for (let y = 0; y < height; y++) {
+    const nearHorizontalEdge = y <= height * 0.42 || y >= height * 0.58;
+    if (!nearHorizontalEdge) continue;
+    let count = 0;
+    const offset = y * width;
+    for (let x = 0; x < width; x++) {
+      if (ink[offset + x] > threshold) count += 1;
+    }
+    if (count < minRowCount && longestRunInRow(ink, width, y, threshold) < minRowRun) continue;
+    for (let yy = Math.max(0, y - 1); yy <= Math.min(height - 1, y + 1); yy++) {
+      const rowOffset = yy * width;
+      for (let x = 0; x < width; x++) {
+        if (ink[rowOffset + x] > 0.10) ink[rowOffset + x] = 0;
+      }
+    }
+  }
+
+  for (let x = 0; x < width; x++) {
+    const nearVerticalEdge = x <= width * 0.18 || x >= width * 0.82;
+    if (!nearVerticalEdge) continue;
+    let count = 0;
+    for (let y = 0; y < height; y++) {
+      if (ink[y * width + x] > threshold) count += 1;
+    }
+    if (count < minColCount) continue;
+    for (let y = 0; y < height; y++) {
+      const offset = y * width;
+      for (let xx = Math.max(0, x - 1); xx <= Math.min(width - 1, x + 1); xx++) {
+        if (ink[offset + xx] > 0.10) ink[offset + xx] = 0;
+      }
+    }
+  }
+}
+
+function removeVirtualDigitRuleArtifactsFromInk(ink, width, height, options = {}) {
+  if (!ink || width < 12 || height < 12) return;
+  const threshold = 0.13;
+  const eraseBelow = Number.isFinite(options.eraseBelow) ? options.eraseBelow : 0.98;
+  const minRowRun = Math.max(8, Math.round(width * 0.52));
+  const minColRun = Math.max(8, Math.round(height * 0.40));
+  const rowEdgeSpan = Math.max(3, Math.round(width * 0.12));
+  const colEdgeSpan = Math.max(3, Math.round(height * 0.12));
+  const minRowEdgeHits = Math.max(2, Math.round(rowEdgeSpan * 0.28));
+  const minColEdgeHits = Math.max(2, Math.round(colEdgeSpan * 0.28));
+
+  for (let y = 0; y < height; y++) {
+    const nearEdgeBand = y <= height * 0.30 || y >= height * 0.70;
+    let run = 0;
+    let bestRun = 0;
+    let edgeHits = 0;
+    const offset = y * width;
+    for (let x = 0; x < width; x++) {
+      if (ink[offset + x] > threshold) {
+        run += 1;
+        bestRun = Math.max(bestRun, run);
+        if (x < rowEdgeSpan || x >= width - rowEdgeSpan) edgeHits += 1;
+      } else {
+        run = 0;
+      }
+    }
+    if (!nearEdgeBand && bestRun < width * 0.68) continue;
+    if (bestRun < minRowRun) continue;
+    if (edgeHits < minRowEdgeHits && bestRun < width * 0.82) continue;
+    for (let yy = Math.max(0, y - 1); yy <= Math.min(height - 1, y + 1); yy++) {
+      const rowOffset = yy * width;
+      for (let x = 0; x < width; x++) {
+        const idx = rowOffset + x;
+        if (ink[idx] > 0.09 && ink[idx] < eraseBelow) ink[idx] = 0;
+      }
+    }
+  }
+
+  for (let x = 0; x < width; x++) {
+    const nearEdge = x <= width * 0.18 || x >= width * 0.82;
+    if (!nearEdge) continue;
+    let run = 0;
+    let bestRun = 0;
+    let edgeHits = 0;
+    for (let y = 0; y < height; y++) {
+      if (ink[y * width + x] > threshold) {
+        run += 1;
+        bestRun = Math.max(bestRun, run);
+        if (y < colEdgeSpan || y >= height - colEdgeSpan) edgeHits += 1;
+      } else {
+        run = 0;
+      }
+    }
+    if (bestRun < minColRun) continue;
+    if (edgeHits < minColEdgeHits && bestRun < height * 0.74) continue;
+    for (let y = 0; y < height; y++) {
+      const offset = y * width;
+      for (let xx = Math.max(0, x - 1); xx <= Math.min(width - 1, x + 1); xx++) {
+        const idx = offset + xx;
+        if (ink[idx] > 0.09 && ink[idx] < eraseBelow) ink[idx] = 0;
+      }
+    }
+  }
+
+  removeVirtualDigitSlantedRuleArtifacts(ink, width, height, threshold, eraseBelow);
+}
+
+function removeVirtualDigitSlantedRuleArtifacts(ink, width, height, threshold, eraseBelow) {
+  const centerX = (width - 1) / 2;
+  const minHits = Math.max(9, Math.round(width * 0.40));
+  const minEdgeHits = Math.max(1, Math.round(width * 0.05));
+  const edgeSpan = Math.max(2, Math.round(width * 0.16));
+  const regions = [
+    {
+      minY: Math.max(0, Math.round(height * 0.02)),
+      maxY: Math.max(0, Math.round(height * 0.45))
+    },
+    {
+      minY: Math.min(height - 1, Math.round(height * 0.55)),
+      maxY: Math.min(height - 1, Math.round(height * 0.98))
+    }
+  ];
+
+  const sampleLine = (slope, centerY) => {
+    let hits = 0;
+    let leftEdgeHits = 0;
+    let rightEdgeHits = 0;
+    let sum = 0;
+    for (let x = 0; x < width; x++) {
+      const y = Math.round(centerY + slope * (x - centerX));
+      if (y < 0 || y >= height) continue;
+      let best = 0;
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(height - 1, y + 1); yy++) {
+        best = Math.max(best, ink[yy * width + x]);
+      }
+      if (best > threshold) {
+        hits += 1;
+        sum += best;
+        if (x < edgeSpan) leftEdgeHits += 1;
+        if (x >= width - edgeSpan) rightEdgeHits += 1;
+      }
+    }
+    return {
+      hits,
+      leftEdgeHits,
+      rightEdgeHits,
+      mean: hits ? sum / hits : 0
+    };
+  };
+
+  const eraseLine = (slope, centerY) => {
+    const radius = Math.max(1, Math.round(height * 0.055));
+    for (let x = 0; x < width; x++) {
+      const y = Math.round(centerY + slope * (x - centerX));
+      for (let yy = Math.max(0, y - radius); yy <= Math.min(height - 1, y + radius); yy++) {
+        const idx = yy * width + x;
+        if (ink[idx] > 0.09 && ink[idx] < eraseBelow) ink[idx] = 0;
+      }
+    }
+  };
+
+  for (const region of regions) {
+    const candidates = [];
+    for (let s = -24; s <= 24; s++) {
+      const slope = s * 0.035;
+      for (let y = region.minY; y <= region.maxY; y++) {
+        const sampled = sampleLine(slope, y);
+        if (sampled.hits < minHits || sampled.mean < 0.14) continue;
+        if (sampled.leftEdgeHits < minEdgeHits && sampled.rightEdgeHits < minEdgeHits) continue;
+        candidates.push({
+          slope,
+          centerY: y,
+          score: sampled.hits * (0.7 + sampled.mean) +
+            (sampled.leftEdgeHits + sampled.rightEdgeHits) * 4
+        });
+      }
+    }
+    candidates.sort((a, b) => b.score - a.score);
+    const selected = [];
+    for (const candidate of candidates) {
+      const duplicate = selected.some((line) => (
+        Math.abs(line.centerY - candidate.centerY) <= Math.max(2, Math.round(height * 0.10)) &&
+        Math.abs(line.slope - candidate.slope) <= 0.08
+      ));
+      if (duplicate) continue;
+      selected.push(candidate);
+      eraseLine(candidate.slope, candidate.centerY);
+      if (selected.length >= 2) break;
+    }
+  }
+}
+
 function removePrintedLineComponentsFromInk(ink, width, height, options = {}) {
   const threshold = 0.24;
   const total = width * height;
   const visited = new Uint8Array(total);
   const stack = [];
   const pixels = [];
-  const minHorizontalSpan = Math.max(8, Math.round(width * 0.19));
-  const maxHorizontalThickness = Math.max(3, Math.round(height * 0.10));
-  const minVerticalSpan = Math.max(10, Math.round(height * 0.38));
-  const maxVerticalThickness = Math.max(3, Math.round(width * 0.10));
+  const strict = options.strictLineRemoval === true;
+  const minHorizontalSpan = Math.max(8, Math.round(width * (strict ? 0.16 : 0.19)));
+  const maxHorizontalThickness = Math.max(3, Math.round(height * (strict ? 0.13 : 0.10)));
+  const minVerticalSpan = Math.max(10, Math.round(height * (strict ? 0.34 : 0.38)));
+  const maxVerticalThickness = Math.max(3, Math.round(width * (strict ? 0.13 : 0.10)));
 
   for (let start = 0; start < total; start++) {
     if (visited[start] || ink[start] <= threshold) continue;
@@ -1914,18 +3120,21 @@ function removePrintedLineComponentsFromInk(ink, width, height, options = {}) {
     const horizontalRule =
       spanX >= minHorizontalSpan &&
       spanY <= maxHorizontalThickness &&
-      density >= 0.34 &&
+      density >= (strict ? 0.24 : 0.34) &&
       (
         touchesCropEdge ||
-        minY <= height * 0.14 ||
-        maxY >= height * 0.86 ||
+        minY <= height * (strict ? 0.22 : 0.14) ||
+        maxY >= height * (strict ? 0.78 : 0.86) ||
         (!options.protectInteriorStrokes && avg < 0.72)
       );
     const verticalRule =
       spanY >= minVerticalSpan &&
       spanX <= maxVerticalThickness &&
-      density >= 0.34 &&
-      touchesCropEdge;
+      density >= (strict ? 0.24 : 0.34) &&
+      (
+        touchesCropEdge ||
+        (strict && (minX <= width * 0.18 || maxX >= width * 0.82))
+      );
 
     if (horizontalRule || verticalRule) {
       for (const idx of pixels) {
@@ -1935,8 +3144,25 @@ function removePrintedLineComponentsFromInk(ink, width, height, options = {}) {
   }
 }
 
-function removeSmallInkComponents(ink, width, height) {
-  const threshold = 0.24;
+function suppressWeakBackgroundInk(ink, floor = 0.16) {
+  if (!ink) return;
+  const safeFloor = Math.max(0.04, Math.min(0.34, floor));
+  const range = Math.max(0.12, 1 - safeFloor);
+  for (let i = 0; i < ink.length; i++) {
+    const value = ink[i];
+    if (value <= safeFloor) {
+      ink[i] = 0;
+      continue;
+    }
+    // Re-expand real pencil strokes after dropping the low-level paper shadow
+    // haze that otherwise becomes a false digit in two-slot answer boxes.
+    ink[i] = Math.max(0, Math.min(1, ((value - safeFloor) / range) * 1.08));
+  }
+}
+
+function removeSmallInkComponents(ink, width, height, options = {}) {
+  const threshold = options.threshold ?? 0.24;
+  const minValueToRemove = options.minValueToRemove ?? 0.82;
   const total = width * height;
   const visited = new Uint8Array(total);
   const stack = [];
@@ -1984,7 +3210,7 @@ function removeSmallInkComponents(ink, width, height) {
     const spanY = maxY - minY + 1;
     const remove =
       area <= tinyArea ||
-      (area <= smallArea && Math.max(spanX, spanY) <= smallSpan && maxValue < 0.82);
+      (area <= smallArea && Math.max(spanX, spanY) <= smallSpan && maxValue < minValueToRemove);
     if (remove) {
       for (const idx of pixels) ink[idx] = 0;
     }
@@ -2144,8 +3370,8 @@ export function preprocessToMNIST(boxImg) {
  * Same preprocessing pipeline as preprocessToMNIST, but also returns intermediate Mats for inspection.
  * Caller must delete returned debug Mats when done.
  */
-export function preprocessToMNISTWithDebug(boxImg) {
-  return preprocessToMNISTCore(boxImg, true);
+export function preprocessToMNISTWithDebug(boxImg, options = {}) {
+  return preprocessToMNISTCore(boxImg, true, options);
 }
 
 /**
@@ -2154,7 +3380,7 @@ export function preprocessToMNISTWithDebug(boxImg) {
  * @param {Object} layout - Layout JSON
  * @returns {Object|null} - Pipeline results or null if detection failed
  */
-export function processWorksheet(input, layout) {
+export function processWorksheet(input, layout, options = {}) {
   // Convert input to cv.Mat if needed
   let src;
   if (input instanceof cv.Mat) {
@@ -2172,23 +3398,31 @@ export function processWorksheet(input, layout) {
     return null;
   }
 
-  // Step 2: Warp to template (destination from layout.homography.anchors when present)
-  const warped = warpToTemplate(src, anchors, layout);
+  // Step 2: Warp to template. Uploaded classroom photos may arrive rotated
+  // sideways, so choose the marker-label orientation whose answer boxes line
+  // up best with the template before cropping.
+  const warped = warpToBestTemplateOrientation(src, anchors, layout, options);
 
   // Step 3: Crop boxes
   const crops = cropBoxes(warped, layout);
 
-  // Step 4: Preprocess each crop
-  const processed = crops.map(crop => ({
-    id: crop.id,
-    questionNum: crop.questionNum,
-    rawImage: crop.image,
-    tensor: preprocessToMNISTCore(crop.image, false, {
-      protectInteriorStrokes: crop.isVirtualDigitBox === true
-    }),
-    centerX: crop.centerX,
-    centerY: crop.centerY
-  }));
+  // Step 4: Preprocess each crop. Two-digit worksheet cells are intentionally
+  // run through a small family of line-cleanup settings because old iPad
+  // captures can make the answer-box guide line look stronger than pencil.
+  const processed = crops.map(crop => {
+    const tensors = buildProcessedCropTensors(crop);
+    return {
+      id: crop.id,
+      questionNum: crop.questionNum,
+      rawImage: crop.image,
+      tensor: tensors.tensor,
+      tensorVariants: tensors.tensorVariants,
+      centerX: crop.centerX,
+      centerY: crop.centerY,
+      digitIndex: crop.digitIndex,
+      isVirtualDigitBox: crop.isVirtualDigitBox === true
+    };
+  });
 
   // Clean up source (warped kept for preview, caller must delete)
   src.delete();
@@ -2201,9 +3435,78 @@ export function processWorksheet(input, layout) {
       image: c.image,
       boxRect: c.boxRect,
       cropRect: c.cropRect,
+      digitIndex: c.digitIndex,
+      expectedRect: c.expectedRect,
+      refinedRect: c.refinedRect,
       isVirtualDigitBox: c.isVirtualDigitBox === true
     })),
     processedTensors: processed
+  };
+}
+
+function buildProcessedCropTensors(crop) {
+  const isVirtualDigitBox = crop.isVirtualDigitBox === true;
+  const baseOptions = {
+    protectInteriorStrokes: isVirtualDigitBox,
+    strictLineRemoval: isVirtualDigitBox
+  };
+  const tensor = preprocessToMNISTCore(crop.image, false, baseOptions);
+  if (!isVirtualDigitBox) {
+    return {
+      tensor,
+      tensorVariants: [{ name: 'base', tensor }]
+    };
+  }
+
+  const variantTensors = [];
+  for (const variant of crop.variantImages || []) {
+    if (!variant?.image) continue;
+    try {
+      variantTensors.push({
+        name: variant.name,
+        tensor: preprocessToMNISTCore(variant.image, false, variant.preprocessOptions || baseOptions)
+      });
+    } finally {
+      variant.image.delete();
+    }
+  }
+
+  return {
+    tensor,
+    tensorVariants: [
+      { name: 'strict', tensor },
+      {
+        name: 'edge-clean',
+        tensor: preprocessToMNISTCore(crop.image, false, {
+          ...baseOptions,
+          ruleArtifactEraseBelow: 1.01
+        })
+      },
+      {
+        name: 'no-rule-cleanup',
+        tensor: preprocessToMNISTCore(crop.image, false, {
+          ...baseOptions,
+          skipRuleArtifactCleanup: true
+        })
+      },
+      {
+        name: 'no-component-cleanup',
+        tensor: preprocessToMNISTCore(crop.image, false, {
+          ...baseOptions,
+          skipPrintedLineCleanup: true
+        })
+      },
+      {
+        name: 'gentle',
+        tensor: preprocessToMNISTCore(crop.image, false, {
+          protectInteriorStrokes: true,
+          strictLineRemoval: false,
+          skipRuleArtifactCleanup: true,
+          skipPrintedLineCleanup: true
+        })
+      },
+      ...variantTensors
+    ]
   };
 }
 

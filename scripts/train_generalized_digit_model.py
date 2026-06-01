@@ -254,6 +254,35 @@ def load_worksheet_samples(source_roots: list[Path], excluded_token: str = STRIC
     return samples
 
 
+def load_labeled_raw_samples(root: Path, cap_per_digit: int = 0, seed: int = 0) -> list[WorksheetSample]:
+    if not root.exists():
+        return []
+
+    rng = random.Random(seed)
+    samples: list[WorksheetSample] = []
+    for label in range(10):
+        class_dir = root / str(label)
+        if not class_dir.is_dir():
+            continue
+        files = sorted(class_dir.glob("*.png"))
+        if cap_per_digit > 0 and len(files) > cap_per_digit:
+            rng.shuffle(files)
+            files = sorted(files[:cap_per_digit])
+        for file in files:
+            img = Image.open(file).convert("L").resize((28, 28), Image.Resampling.NEAREST)
+            arr = np.asarray(img, dtype=np.float32) / 255.0
+            samples.append(
+                WorksheetSample(
+                    image=arr.astype(np.float32),
+                    label=label,
+                    group=root.parent.name,
+                    name=f"{root.parent.name}-{file.stem}",
+                    source=str(root.relative_to(PROJECT_ROOT) if root.is_relative_to(PROJECT_ROOT) else root),
+                )
+            )
+    return samples
+
+
 def load_external_balanced(root: Path, per_digit: int, seed: int) -> tuple[np.ndarray, np.ndarray, dict]:
     rng = random.Random(seed)
     arrays: list[np.ndarray] = []
@@ -445,6 +474,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--checkpoint-out", default=str(DEFAULT_CHECKPOINT_OUT))
     parser.add_argument("--metadata-out", default=str(DEFAULT_METADATA_OUT))
     parser.add_argument("--include-internal-val", action="store_true", help="Train on the internal worksheet validation groups too.")
+    parser.add_argument("--init-checkpoint", default="", help="Optional ScanGradeDigitCNN checkpoint to initialize from before training.")
+    parser.add_argument("--extra-labeled-raw", default="", help="Optional labeled raw digit directory with 0..9 class folders.")
+    parser.add_argument("--extra-labeled-raw-repeat", type=int, default=1, help="Repeat factor for extra labeled raw samples.")
+    parser.add_argument("--extra-labeled-raw-cap-per-digit", type=int, default=0, help="Optional per-digit cap for extra labeled raw samples.")
+    parser.add_argument("--no-augmentation", action="store_true", help="Disable synthetic camera augmentation during fine-tuning.")
     return parser.parse_args()
 
 
@@ -467,12 +501,21 @@ def main() -> None:
     if not train_ws:
         raise RuntimeError("No worksheet training samples found.")
 
+    extra_ws = load_labeled_raw_samples(
+        Path(args.extra_labeled_raw),
+        cap_per_digit=args.extra_labeled_raw_cap_per_digit,
+        seed=args.seed + 19,
+    ) if args.extra_labeled_raw else []
+
     ws_train_images = np.stack([sample.image for sample in train_ws]).astype(np.float32)
     ws_train_labels = np.asarray([sample.label for sample in train_ws], dtype=np.int64)
     ws_train_names = [sample.name for sample in train_ws]
     ws_val_images = np.stack([sample.image for sample in val_ws]).astype(np.float32) if val_ws else np.zeros((0, 28, 28), dtype=np.float32)
     ws_val_labels = np.asarray([sample.label for sample in val_ws], dtype=np.int64)
     ws_val_names = [sample.name for sample in val_ws]
+    extra_eval_images = np.stack([sample.image for sample in extra_ws]).astype(np.float32) if extra_ws else np.zeros((0, 28, 28), dtype=np.float32)
+    extra_eval_labels = np.asarray([sample.label for sample in extra_ws], dtype=np.int64)
+    extra_eval_names = [sample.name for sample in extra_ws]
 
     ext_images, ext_labels, external_counts = load_external_balanced(
         Path(args.external_root),
@@ -483,8 +526,15 @@ def main() -> None:
 
     repeated_ws_images = np.repeat(ws_train_images, args.worksheet_repeat, axis=0)
     repeated_ws_labels = np.repeat(ws_train_labels, args.worksheet_repeat, axis=0)
-    train_images = np.concatenate([ext_images, repeated_ws_images], axis=0).astype(np.float32)
-    train_labels = np.concatenate([ext_labels, repeated_ws_labels], axis=0).astype(np.int64)
+    train_image_parts = [ext_images, repeated_ws_images]
+    train_label_parts = [ext_labels, repeated_ws_labels]
+    if extra_ws:
+        extra_images = np.stack([sample.image for sample in extra_ws]).astype(np.float32)
+        extra_labels = np.asarray([sample.label for sample in extra_ws], dtype=np.int64)
+        train_image_parts.append(np.repeat(extra_images, max(1, args.extra_labeled_raw_repeat), axis=0))
+        train_label_parts.append(np.repeat(extra_labels, max(1, args.extra_labeled_raw_repeat), axis=0))
+    train_images = np.concatenate(train_image_parts, axis=0).astype(np.float32)
+    train_labels = np.concatenate(train_label_parts, axis=0).astype(np.int64)
 
     permutation = np.random.default_rng(args.seed).permutation(train_labels.size)
     train_images = train_images[permutation]
@@ -497,6 +547,11 @@ def main() -> None:
         drop_last=False,
     )
     model = ScanGradeDigitCNN().to(device)
+    if args.init_checkpoint:
+        checkpoint = torch.load(args.init_checkpoint, map_location=device)
+        state_dict = checkpoint.get("state_dict", checkpoint)
+        model.load_state_dict(state_dict)
+        print(f"Initialized from checkpoint: {args.init_checkpoint}", flush=True)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, args.epochs))
     aug_generator = torch.Generator(device=device).manual_seed(args.seed + 7000)
@@ -509,7 +564,7 @@ def main() -> None:
         running_loss = 0.0
         seen = 0
         for xb, yb in loader:
-            xb = augment_batch(xb.to(device), aug_generator)
+            xb = xb.to(device) if args.no_augmentation else augment_batch(xb.to(device), aug_generator)
             yb = yb.to(device)
             optimizer.zero_grad(set_to_none=True)
             logits = model(xb)
@@ -521,13 +576,20 @@ def main() -> None:
         scheduler.step()
         train_eval = evaluate_model(model, ws_train_images, ws_train_labels, ws_train_names, device)
         val_eval = evaluate_model(model, ws_val_images, ws_val_labels, ws_val_names, device)
+        extra_eval = evaluate_model(model, extra_eval_images, extra_eval_labels, extra_eval_names, device)
         ext_eval = evaluate_model(model, ext_eval_images, ext_eval_labels, ext_eval_names, device)
-        score = (val_eval.accuracy if val_eval.total else train_eval.accuracy) * 0.75 + ext_eval.accuracy * 0.25
+        base_ws_score = val_eval.accuracy if val_eval.total else train_eval.accuracy
+        score = (
+            base_ws_score * (0.55 if extra_eval.total else 0.75)
+            + ext_eval.accuracy * 0.25
+            + (extra_eval.accuracy * 0.20 if extra_eval.total else 0.0)
+        )
         row = {
             "epoch": epoch,
             "loss": running_loss / max(1, seen),
             "worksheetTrainAcc": train_eval.accuracy,
             "worksheetValAcc": val_eval.accuracy,
+            "extraLabeledRawAcc": extra_eval.accuracy,
             "externalEvalAcc": ext_eval.accuracy,
             "score": score,
             "lr": scheduler.get_last_lr()[0],
@@ -540,7 +602,7 @@ def main() -> None:
             print(
                 f"epoch {epoch:03d}/{args.epochs} loss={row['loss']:.4f} "
                 f"ws_train={train_eval.accuracy:.2%} ws_val={val_eval.accuracy:.2%} "
-                f"ext={ext_eval.accuracy:.2%}",
+                f"extra={extra_eval.accuracy:.2%} ext={ext_eval.accuracy:.2%}",
                 flush=True,
             )
 
@@ -551,6 +613,7 @@ def main() -> None:
 
     final_train = evaluate_model(model, ws_train_images, ws_train_labels, ws_train_names, device)
     final_val = evaluate_model(model, ws_val_images, ws_val_labels, ws_val_names, device)
+    final_extra = evaluate_model(model, extra_eval_images, extra_eval_labels, extra_eval_names, device)
     final_ext = evaluate_model(model, ext_eval_images, ext_eval_labels, ext_eval_names, device)
     holdout_images, holdout_labels, holdout_names = load_holdout_samples(Path(args.holdout_debug))
     holdout_eval = evaluate_model(model, holdout_images, holdout_labels, holdout_names, device)
@@ -577,6 +640,7 @@ def main() -> None:
         "worksheetSamples": {
             "train": len(train_ws),
             "internalVal": len(val_ws),
+            "extraLabeledRaw": len(extra_ws),
             "groupsTrain": sorted({sample.group for sample in train_ws}),
             "groupsInternalVal": sorted({sample.group for sample in val_ws}),
         },
@@ -586,6 +650,7 @@ def main() -> None:
         "eval": {
             "worksheetTrain": asdict(final_train),
             "worksheetInternalVal": asdict(final_val),
+            "extraLabeledRaw": asdict(final_extra),
             "externalEval": asdict(final_ext),
             "strictHoldout": asdict(holdout_eval),
         },
@@ -599,6 +664,7 @@ def main() -> None:
     print("")
     print(f"Worksheet train: {final_train.correct}/{final_train.total} ({final_train.accuracy:.2%})")
     print(f"Worksheet internal val: {final_val.correct}/{final_val.total} ({final_val.accuracy:.2%})")
+    print(f"Extra labeled raw: {final_extra.correct}/{final_extra.total} ({final_extra.accuracy:.2%})")
     print(f"External eval: {final_ext.correct}/{final_ext.total} ({final_ext.accuracy:.2%})")
     print(f"Strict holdout: {holdout_eval.correct}/{holdout_eval.total} ({holdout_eval.accuracy:.2%})")
     if holdout_eval.confusions:

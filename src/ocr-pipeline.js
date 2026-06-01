@@ -50,10 +50,15 @@ function getOrtRuntimeConfig() {
  */
 let digitSession = null;
 let ensembleDigitSession = null;
-const DEFAULT_MODEL_PATH = publicUrl('models/mnist-model.onnx');
+let rightSlotDigitSession = null;
+let rightSlotModelPathLoaded = null;
+const LEGACY_MNIST_MODEL_PATH = publicUrl('models/mnist-model.onnx');
+const DEFAULT_MODEL_PATH = publicUrl('models/worksheet-digit-tony-generalist-aug-strong-20260601.onnx');
+const DEFAULT_RIGHT_SLOT_MODEL_PATH = publicUrl('models/worksheet-digit-tony-generalist-noaug-20260601.onnx');
 const DEFAULT_ENSEMBLE_MODEL_PATH = publicUrl('models/worksheet-digit-generalist.onnx');
-const MODEL_CACHE_BUSTER = 'worksheet-generalist-ensemble-20260515a';
-const KNOWN_WORKSHEET_SHA256 = '1bb4991956f9539df2b49528eca005d6e40a96091969024747074f5fd3f9a270';
+const MODEL_CACHE_BUSTER = 'worksheet-slot-models-20260601a';
+const KNOWN_WORKSHEET_SHA256 = 'ce6fd271418c8fcffaa4c7a85107f73a2ae739f7901ed95742dc398659dd535d';
+const KNOWN_RIGHT_SLOT_SHA256 = 'e15751df23d9e88f4c103ff1c53f019a66a631dc4926d7091481ebdbacf518da';
 const KNOWN_ENSEMBLE_SHA256 = '50e82b5d5569198f326c4c4d127d668b1c4101e5e2aaacf71d07f85b4d193282';
 const PRIMARY_MODEL_WEIGHT = 0.75;
 const ENSEMBLE_MODEL_WEIGHT = 0.25;
@@ -93,8 +98,18 @@ function getModelPathFromUrl() {
   return modelUrlFromQuery(q, DEFAULT_MODEL_PATH);
 }
 
+function getRightSlotModelPathFromUrl() {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('rightSlotModelPath');
+    if (q === '0' || q === 'none' || q === 'off') return null;
+    return modelUrlFromQuery(q, DEFAULT_RIGHT_SLOT_MODEL_PATH);
+  }
+  return DEFAULT_RIGHT_SLOT_MODEL_PATH;
+}
+
 function shouldUseDefaultEnsemble(modelPath) {
-  return modelPath === DEFAULT_MODEL_PATH;
+  return modelPath === LEGACY_MNIST_MODEL_PATH;
 }
 
 /**
@@ -261,6 +276,117 @@ function gammaDigitTensor(src, gamma) {
   return out;
 }
 
+function stripRuleArtifactsDigitTensor(src, threshold = 0.10) {
+  const out = new Float32Array(src);
+  const size = MNIST_DIGIT_SIZE;
+  const edgeSpan = 3;
+  const rowRadius = 1;
+  const colRadius = 1;
+  const centerX = (size - 1) / 2;
+
+  const eraseRow = (y) => {
+    for (let yy = Math.max(0, y - rowRadius); yy <= Math.min(size - 1, y + rowRadius); yy++) {
+      const offset = yy * size;
+      for (let x = 0; x < size; x++) {
+        if (out[offset + x] > threshold) out[offset + x] = 0;
+      }
+    }
+  };
+
+  const eraseCol = (x) => {
+    for (let y = 0; y < size; y++) {
+      const offset = y * size;
+      for (let xx = Math.max(0, x - colRadius); xx <= Math.min(size - 1, x + colRadius); xx++) {
+        if (out[offset + xx] > threshold) out[offset + xx] = 0;
+      }
+    }
+  };
+
+  for (let y = 0; y < size; y++) {
+    const inRuleBand = y <= 8 || y >= size - 9;
+    if (!inRuleBand) continue;
+    let active = 0;
+    let minX = size;
+    let maxX = -1;
+    let leftEdge = 0;
+    let rightEdge = 0;
+    for (let x = 0; x < size; x++) {
+      if (out[y * size + x] <= threshold) continue;
+      active += 1;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      if (x < edgeSpan) leftEdge += 1;
+      if (x >= size - edgeSpan) rightEdge += 1;
+    }
+    const span = maxX >= minX ? maxX - minX + 1 : 0;
+    const edgeAnchored = leftEdge > 0 && rightEdge > 0;
+    if (active >= 8 && (edgeAnchored || span >= 21)) eraseRow(y);
+  }
+
+  for (let x = 0; x < size; x++) {
+    const nearEdge = x <= 4 || x >= size - 5;
+    if (!nearEdge) continue;
+    let active = 0;
+    let minY = size;
+    let maxY = -1;
+    for (let y = 0; y < size; y++) {
+      if (out[y * size + x] <= threshold) continue;
+      active += 1;
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+    const span = maxY >= minY ? maxY - minY + 1 : 0;
+    if (active >= 8 && span >= 13) eraseCol(x);
+  }
+
+  const slopes = [-0.32, -0.24, -0.16, -0.08, 0, 0.08, 0.16, 0.24, 0.32];
+  const bands = [
+    { minY: 0, maxY: 10 },
+    { minY: size - 11, maxY: size - 1 }
+  ];
+  for (const band of bands) {
+    const candidates = [];
+    for (const slope of slopes) {
+      for (let centerY = band.minY; centerY <= band.maxY; centerY++) {
+        let hits = 0;
+        let leftEdge = 0;
+        let rightEdge = 0;
+        for (let x = 0; x < size; x++) {
+          const y = Math.round(centerY + slope * (x - centerX));
+          if (y < 0 || y >= size) continue;
+          let best = 0;
+          for (let yy = Math.max(0, y - 1); yy <= Math.min(size - 1, y + 1); yy++) {
+            best = Math.max(best, out[yy * size + x]);
+          }
+          if (best <= threshold) continue;
+          hits += 1;
+          if (x < edgeSpan) leftEdge += 1;
+          if (x >= size - edgeSpan) rightEdge += 1;
+        }
+        if (hits >= 13 && (leftEdge > 0 || rightEdge > 0)) {
+          candidates.push({
+            slope,
+            centerY,
+            score: hits + (leftEdge + rightEdge) * 2
+          });
+        }
+      }
+    }
+    candidates.sort((a, b) => b.score - a.score);
+    for (const candidate of candidates.slice(0, 1)) {
+      for (let x = 0; x < size; x++) {
+        const y = Math.round(candidate.centerY + candidate.slope * (x - centerX));
+        for (let yy = Math.max(0, y - 1); yy <= Math.min(size - 1, y + 1); yy++) {
+          const idx = yy * size + x;
+          if (out[idx] > threshold) out[idx] = 0;
+        }
+      }
+    }
+  }
+
+  return out;
+}
+
 function denoiseDigitTensor(src, threshold = 0.12, minNeighborInk = 0.38) {
   const out = new Float32Array(src);
   for (let y = 0; y < MNIST_DIGIT_SIZE; y++) {
@@ -341,6 +467,8 @@ function uniqueDigitVariants(variants) {
 
 function makeRobustDigitVariants(src) {
   const floor08 = thresholdFloorDigitTensor(src, 0.08);
+  const ruleClean = stripRuleArtifactsDigitTensor(src, 0.10);
+  const ruleCleanFloor = thresholdFloorDigitTensor(ruleClean, 0.06);
   return uniqueDigitVariants([
     src,
     blurDigitTensor(src),
@@ -352,6 +480,10 @@ function makeRobustDigitVariants(src) {
     floor08,
     thresholdFloorDigitTensor(src, 0.12),
     thresholdFloorDigitTensor(src, 0.16),
+    ruleClean,
+    ruleCleanFloor,
+    recenterDigitTensor(ruleCleanFloor, 0.1, 20),
+    denoiseDigitTensor(ruleCleanFloor, 0.08, 0.28),
     denoiseDigitTensor(thresholdFloorDigitTensor(src, 0.06), 0.08, 0.28),
     denoiseDigitTensor(thresholdFloorDigitTensor(src, 0.1), 0.08, 0.28),
     recenterDigitTensor(src, 0.1, 18),
@@ -412,6 +544,8 @@ export async function initDigitModel() {
       if (aux.sha256 && aux.sha256 !== KNOWN_ENSEMBLE_SHA256) {
         digitSession = null;
         ensembleDigitSession = null;
+        rightSlotDigitSession = null;
+        rightSlotModelPathLoaded = null;
         throw new Error(
           `Loaded OCR ensemble model SHA ${aux.sha256.slice(0, 12)} does not match the expected model ` +
           `${KNOWN_ENSEMBLE_SHA256.slice(0, 12)}. Reload the page to clear the stale model cache.`
@@ -438,6 +572,12 @@ export async function initDigitModel() {
             auxiliary: ensembleInfo
           }
         : { enabled: false },
+      rightSlot: {
+        enabled: !!getRightSlotModelPathFromUrl(),
+        modelPath: getRightSlotModelPathFromUrl(),
+        loaded: false,
+        routing: 'digitIndex === 1'
+      },
       inputNames: digitSession.inputNames || [],
       outputNames: digitSession.outputNames || [],
       inputType,
@@ -462,6 +602,8 @@ export async function initDigitModel() {
     if (modelPath === DEFAULT_MODEL_PATH && primary.sha256 && primary.sha256 !== KNOWN_WORKSHEET_SHA256) {
       digitSession = null;
       ensembleDigitSession = null;
+      rightSlotDigitSession = null;
+      rightSlotModelPathLoaded = null;
       throw new Error(
         `Loaded OCR model SHA ${primary.sha256.slice(0, 12)} does not match the expected worksheet model ` +
         `${KNOWN_WORKSHEET_SHA256.slice(0, 12)}. Reload the page to clear the stale model cache.`
@@ -473,6 +615,41 @@ export async function initDigitModel() {
     console.error('❌ Failed to load ONNX model:', err);
     throw new Error('ONNX model not found at ' + getModelPathFromUrl() + ': ' + (err?.message || String(err)));
   }
+}
+
+async function getRightSlotDigitSession() {
+  const modelPath = getRightSlotModelPathFromUrl();
+  if (!modelPath) return null;
+  if (rightSlotDigitSession && rightSlotModelPathLoaded === modelPath) return rightSlotDigitSession;
+
+  const loaded = await loadDigitSession(modelPath);
+  if (modelPath === DEFAULT_RIGHT_SLOT_MODEL_PATH && loaded.sha256 && loaded.sha256 !== KNOWN_RIGHT_SLOT_SHA256) {
+    rightSlotDigitSession = null;
+    rightSlotModelPathLoaded = null;
+    throw new Error(
+      `Loaded OCR right-slot model SHA ${loaded.sha256.slice(0, 12)} does not match the expected model ` +
+      `${KNOWN_RIGHT_SLOT_SHA256.slice(0, 12)}. Reload the page to clear the stale model cache.`
+    );
+  }
+
+  rightSlotDigitSession = loaded.session;
+  rightSlotModelPathLoaded = modelPath;
+  if (modelRuntimeInfo) {
+    modelRuntimeInfo.rightSlot = {
+      enabled: true,
+      modelPath,
+      requestedUrl: loaded.modelUrl,
+      fetchedUrl: loaded.fetchedUrl,
+      byteLength: loaded.byteLength,
+      sha256: loaded.sha256,
+      sha256Short: loaded.sha256 ? loaded.sha256.slice(0, 12) : null,
+      knownSha256: KNOWN_RIGHT_SLOT_SHA256,
+      matchesKnownModel: !!loaded.sha256 && loaded.sha256 === KNOWN_RIGHT_SLOT_SHA256,
+      loaded: true,
+      routing: 'digitIndex === 1'
+    };
+  }
+  return rightSlotDigitSession;
 }
 
 async function loadDigitSession(modelPath) {
@@ -520,16 +697,17 @@ export async function recognizeDigits(inputTensor) {
   }
 }
 
-export async function recognizeDigitsRobust(inputTensor, baseResult = null) {
+export async function recognizeDigitsRobust(inputTensor, baseResult = null, options = {}) {
   if (!digitSession) {
     await initDigitModel();
   }
 
   const data = copyDigitTensorData(inputTensor);
   const base = baseResult || (await recognizeDigits(data))[0];
+  const force = options.force === true;
   const baseTopK = base.topK || [];
   const baseGap = baseTopK.length >= 2 ? (baseTopK[0].confidence - baseTopK[1].confidence) : 1;
-  if (base.confidence >= ROBUST_RECOGNITION_CONFIDENCE_THRESHOLD && baseGap >= ROBUST_RECOGNITION_MARGIN_THRESHOLD) {
+  if (!force && base.confidence >= ROBUST_RECOGNITION_CONFIDENCE_THRESHOLD && baseGap >= ROBUST_RECOGNITION_MARGIN_THRESHOLD) {
     return [{
       ...base,
       robust: false,
@@ -579,6 +757,669 @@ export async function recognizeDigitsRobust(inputTensor, baseResult = null) {
     ...commonExtra,
     robustOverride: null
   })];
+}
+
+function preprocessVariantWeight(name) {
+  switch (name) {
+    case 'strict':
+      return 1.08;
+    case 'edge-clean':
+      return 1.0;
+    case 'line-masked-slot':
+      return 0.35;
+    case 'center-safe-slot':
+      return 1.05;
+    case 'expected-slot':
+      return 1.02;
+    case 'edge-band-slot':
+      return 1.04;
+    case 'wide-slot':
+      return 0.58;
+    case 'no-rule-cleanup':
+      return 0.96;
+    case 'no-component-cleanup':
+      return 0.96;
+    case 'no-side-erase':
+      return 0.42;
+    case 'gentle':
+      return 0.58;
+    default:
+      return 0.9;
+  }
+}
+
+function digitTopGap(result) {
+  const topK = result?.topK || [];
+  return topK.length >= 2 ? topK[0].confidence - topK[1].confidence : 1;
+}
+
+function compactVariantDetails(variantResults) {
+  return variantResults.map((variant) => ({
+    name: variant.name,
+    digit: variant.result.digit,
+    confidence: variant.result.confidence,
+    topGap: digitTopGap(variant.result),
+    topK: (variant.result.topK || []).slice(0, 3)
+  }));
+}
+
+function capDigitResultForReview(result, reason, variantDetails) {
+  const chosenDigit = result.digit;
+  const ranked = result.topK || [];
+  const runner = ranked.find((item) => item.digit !== chosenDigit) || { digit: (chosenDigit + 1) % 10, confidence: 0.18 };
+  const third = ranked.find((item) => item.digit !== chosenDigit && item.digit !== runner.digit) || { digit: (chosenDigit + 2) % 10, confidence: 0.1 };
+  const topConfidence = Math.min(result.confidence || 0.55, 0.55);
+  const reviewTopK = [
+    { digit: chosenDigit, confidence: topConfidence },
+    { digit: runner.digit, confidence: Math.max(0.01, topConfidence - 0.03) },
+    { digit: third.digit, confidence: Math.max(0.01, topConfidence - 0.12) }
+  ];
+  return {
+    ...result,
+    confidence: reviewTopK[0].confidence,
+    topK: reviewTopK,
+    preprocessDisagreement: true,
+    preprocessReviewReason: reason,
+    preprocessVariants: variantDetails
+  };
+}
+
+function makeWeightedVoteSummary(variantResults) {
+  const votes = new Array(10).fill(0);
+  let total = 0;
+  for (const variant of variantResults) {
+    const result = variant.result;
+    const weight = preprocessVariantWeight(variant.name) * Math.max(0.35, Math.min(1, result.confidence || 0));
+    votes[result.digit] += weight;
+    total += weight;
+  }
+  const ranked = votes
+    .map((vote, digit) => ({ digit, vote, share: total ? vote / total : 0 }))
+    .sort((a, b) => b.vote - a.vote);
+  return {
+    ranked,
+    total,
+    top: ranked[0],
+    runnerUp: ranked[1],
+    margin: (ranked[0]?.share || 0) - (ranked[1]?.share || 0)
+  };
+}
+
+function averageVariantProbsWeighted(variantResults, names = null) {
+  const nameSet = names ? new Set(names) : null;
+  const summed = new Float32Array(10);
+  let totalWeight = 0;
+  for (const variant of variantResults) {
+    if (nameSet && !nameSet.has(variant.name)) continue;
+    const weight = preprocessVariantWeight(variant.name);
+    const probs = variant.result.probs || [];
+    for (let i = 0; i < 10; i++) summed[i] += (probs[i] || 0) * weight;
+    totalWeight += weight;
+  }
+  if (totalWeight <= 0) return null;
+  for (let i = 0; i < 10; i++) summed[i] /= totalWeight;
+  return summed;
+}
+
+function findVariant(variantResults, name) {
+  return variantResults.find((variant) => variant.name === name) || null;
+}
+
+function variantMeets(variant, minConfidence, minGap) {
+  return Boolean(
+    variant &&
+    (variant.result.confidence || 0) >= minConfidence &&
+    digitTopGap(variant.result) >= minGap
+  );
+}
+
+function findVariantAgreement(variantResults, names, minConfidence, minGap) {
+  const variants = names.map((name) => findVariant(variantResults, name));
+  if (variants.some((variant) => !variant)) return null;
+  const digit = variants[0].result.digit;
+  if (!variants.every((variant) => variant.result.digit === digit)) return null;
+  if (!variants.every((variant) => variantMeets(variant, minConfidence, minGap))) return null;
+  return { digit, variants };
+}
+
+function hasStrongAlternativeCleanupConsensus(variantResults, candidateDigit) {
+  const alternatives = [
+    { names: ['edge-clean', 'no-rule-cleanup'], minConfidence: 0.52, minGap: 0.22 },
+    { names: ['no-rule-cleanup', 'gentle'], minConfidence: 0.58, minGap: 0.30 },
+    { names: ['no-rule-cleanup', 'center-safe-slot'], minConfidence: 0.58, minGap: 0.30 },
+    { names: ['gentle', 'center-safe-slot'], minConfidence: 0.60, minGap: 0.34 },
+    { names: ['gentle', 'edge-band-slot'], minConfidence: 0.78, minGap: 0.70 },
+    { names: ['edge-band-slot', 'wide-slot'], minConfidence: 0.70, minGap: 0.55 },
+    { names: ['edge-band-slot', 'no-side-erase'], minConfidence: 0.60, minGap: 0.34 },
+    { names: ['expected-slot', 'edge-band-slot'], minConfidence: 0.70, minGap: 0.50 },
+    { names: ['expected-slot', 'no-side-erase'], minConfidence: 0.62, minGap: 0.35 },
+    { names: ['gentle', 'expected-slot'], minConfidence: 0.78, minGap: 0.65 }
+  ];
+
+  return alternatives.some((alternative) => {
+    const agreement = findVariantAgreement(
+      variantResults,
+      alternative.names,
+      alternative.minConfidence,
+      alternative.minGap
+    );
+    return agreement && agreement.digit !== candidateDigit;
+  });
+}
+
+function buildVariantConsensus(variantResults, names, digit, reason, alwaysReview = true) {
+  const probs = averageVariantProbsWeighted(variantResults, names);
+  if (!probs) return null;
+  return {
+    digit,
+    probs,
+    reason,
+    alwaysReview
+  };
+}
+
+function choosePreprocessConsensus(variantResults, options = {}) {
+  const strict = findVariant(variantResults, 'strict') || variantResults[0] || null;
+  const strictGap = digitTopGap(strict?.result);
+  const strictWeak =
+    !strict ||
+    (strict.result.confidence || 0) < 0.76 ||
+    strictGap < 0.24;
+  const digitIndex = Number(options.digitIndex);
+  const isLeftVirtualDigit = Number.isFinite(digitIndex) && digitIndex === 0;
+
+  const strictNoComponentWide = findVariantAgreement(
+    variantResults,
+    ['strict', 'no-component-cleanup', 'wide-slot'],
+    0.80,
+    0.60
+  );
+  if (strictNoComponentWide) {
+    return buildVariantConsensus(
+      variantResults,
+      ['strict', 'no-component-cleanup', 'wide-slot'],
+      strictNoComponentWide.digit,
+      'strict-no-component-wide-consensus',
+      true
+    );
+  }
+
+  const trustedCleanupQuad = findVariantAgreement(
+    variantResults,
+    ['strict', 'edge-clean', 'no-rule-cleanup', 'no-component-cleanup'],
+    0.70,
+    0.40
+  );
+  if (trustedCleanupQuad && isLeftVirtualDigit) {
+    return buildVariantConsensus(
+      variantResults,
+      ['strict', 'edge-clean', 'no-rule-cleanup', 'no-component-cleanup'],
+      trustedCleanupQuad.digit,
+      'trusted-cleanup-quad-consensus',
+      true
+    );
+  }
+
+  const slotTriple = findVariantAgreement(
+    variantResults,
+    ['expected-slot', 'wide-slot', 'no-side-erase'],
+    0.48,
+    0.18
+  );
+  if (
+    slotTriple &&
+    variantMeets(findVariant(variantResults, 'wide-slot'), 0.82, 0.68) &&
+    variantMeets(findVariant(variantResults, 'no-side-erase'), 0.82, 0.68)
+  ) {
+    return buildVariantConsensus(
+      variantResults,
+      ['expected-slot', 'wide-slot', 'no-side-erase'],
+      slotTriple.digit,
+      'expected-wide-no-side-slot-consensus',
+      true
+    );
+  }
+
+  const noComponentExpectedPair = findVariantAgreement(
+    variantResults,
+    ['no-component-cleanup', 'expected-slot'],
+    0.58,
+    0.35
+  );
+  if (noComponentExpectedPair) {
+    return buildVariantConsensus(
+      variantResults,
+      ['no-component-cleanup', 'expected-slot'],
+      noComponentExpectedPair.digit,
+      'no-component-expected-slot-consensus',
+      true
+    );
+  }
+
+  const edgeCleanCenterPair = findVariantAgreement(
+    variantResults,
+    ['edge-clean', 'center-safe-slot'],
+    0.62,
+    0.40
+  );
+  if (edgeCleanCenterPair) {
+    return buildVariantConsensus(
+      variantResults,
+      ['edge-clean', 'center-safe-slot'],
+      edgeCleanCenterPair.digit,
+      'edge-clean-center-slot-consensus',
+      true
+    );
+  }
+
+  const gentleEdgeNoSide = findVariantAgreement(
+    variantResults,
+    ['gentle', 'edge-band-slot', 'no-side-erase'],
+    0.78,
+    0.70
+  );
+  if (gentleEdgeNoSide) {
+    return buildVariantConsensus(
+      variantResults,
+      ['gentle', 'edge-band-slot', 'no-side-erase'],
+      gentleEdgeNoSide.digit,
+      'gentle-edge-no-side-slot-consensus',
+      true
+    );
+  }
+
+  const edgeBandWideStrong = findVariantAgreement(
+    variantResults,
+    ['edge-band-slot', 'wide-slot'],
+    0.70,
+    0.55
+  );
+  const edgeBandWideNoSide = findVariant(variantResults, 'no-side-erase');
+  const edgeBandWideHasNoSideSupport =
+    edgeBandWideStrong &&
+    edgeBandWideNoSide &&
+    edgeBandWideNoSide.result.digit === edgeBandWideStrong.digit &&
+    (edgeBandWideNoSide.result.confidence || 0) >= 0.45 &&
+    digitTopGap(edgeBandWideNoSide.result) >= 0.10;
+  if (edgeBandWideStrong && edgeBandWideHasNoSideSupport) {
+    return buildVariantConsensus(
+      variantResults,
+      ['edge-band-slot', 'wide-slot'],
+      edgeBandWideStrong.digit,
+      'edge-band-wide-slot-consensus',
+      true
+    );
+  }
+
+  const edgeBandNoSidePair = findVariantAgreement(
+    variantResults,
+    ['edge-band-slot', 'no-side-erase'],
+    0.60,
+    0.34
+  );
+  if (edgeBandNoSidePair) {
+    return buildVariantConsensus(
+      variantResults,
+      ['edge-band-slot', 'no-side-erase'],
+      edgeBandNoSidePair.digit,
+      'edge-band-no-side-slot-consensus',
+      true
+    );
+  }
+
+  const expectedNoSideLoose = findVariantAgreement(
+    variantResults,
+    ['expected-slot', 'no-side-erase'],
+    0.46,
+    0.16
+  );
+  const strictBlocksExpectedNoSide =
+    expectedNoSideLoose &&
+    strict &&
+    strict.result.digit !== expectedNoSideLoose.digit &&
+    (strict.result.confidence || 0) >= 0.70 &&
+    digitTopGap(strict.result) >= 0.42;
+  if (expectedNoSideLoose && !strictBlocksExpectedNoSide) {
+    return buildVariantConsensus(
+      variantResults,
+      ['expected-slot', 'no-side-erase'],
+      expectedNoSideLoose.digit,
+      'expected-no-side-loose-slot-consensus',
+      true
+    );
+  }
+
+  const edgeBandSlotTriple = findVariantAgreement(
+    variantResults,
+    ['center-safe-slot', 'expected-slot', 'edge-band-slot'],
+    0.44,
+    0.08
+  );
+  if (edgeBandSlotTriple && strictWeak) {
+    return buildVariantConsensus(
+      variantResults,
+      ['center-safe-slot', 'expected-slot', 'edge-band-slot'],
+      edgeBandSlotTriple.digit,
+      'center-expected-edge-band-slot-consensus',
+      true
+    );
+  }
+
+  const strongCenterEdgeSlotPair = findVariantAgreement(
+    variantResults,
+    ['center-safe-slot', 'edge-band-slot'],
+    0.60,
+    0.45
+  );
+  if (strongCenterEdgeSlotPair) {
+    return buildVariantConsensus(
+      variantResults,
+      ['center-safe-slot', 'edge-band-slot'],
+      strongCenterEdgeSlotPair.digit,
+      'strong-center-edge-slot-consensus',
+      true
+    );
+  }
+
+  const cleanupConsensus = findVariantAgreement(
+    variantResults,
+    ['edge-clean', 'no-rule-cleanup'],
+    0.52,
+    0.22
+  );
+  if (cleanupConsensus && !hasStrongAlternativeCleanupConsensus(variantResults, cleanupConsensus.digit)) {
+    return buildVariantConsensus(
+      variantResults,
+      ['edge-clean', 'no-rule-cleanup'],
+      cleanupConsensus.digit,
+      'edge-no-rule-cleanup-consensus',
+      true
+    );
+  }
+
+  const cleanupTriple = findVariantAgreement(
+    variantResults,
+    ['no-rule-cleanup', 'gentle', 'center-safe-slot'],
+    0.56,
+    0.30
+  );
+  if (cleanupTriple) {
+    return buildVariantConsensus(
+      variantResults,
+      ['no-rule-cleanup', 'gentle', 'center-safe-slot'],
+      cleanupTriple.digit,
+      'no-rule-gentle-center-consensus',
+      true
+    );
+  }
+
+  const pairs = [
+    {
+      names: ['edge-clean', 'no-component-cleanup'],
+      reason: 'edge-clean-no-component-consensus',
+      minConfidence: 0.38,
+      minGap: 0.035,
+      respectCleanupAlternative: true
+    },
+    {
+      names: ['no-rule-cleanup', 'no-component-cleanup'],
+      reason: 'cleanup-skip-consensus',
+      minConfidence: 0.40,
+      minGap: 0.04,
+      respectCleanupAlternative: true
+    },
+    {
+      names: ['no-rule-cleanup', 'gentle'],
+      reason: 'gentle-no-rule-consensus',
+      minConfidence: 0.34,
+      minGap: 0.025,
+      alwaysReview: true
+    },
+    {
+      names: ['expected-slot', 'wide-slot'],
+      reason: 'expected-wide-slot-consensus',
+      minConfidence: 0.45,
+      minGap: 0.10,
+      allowStrictOverride: true,
+      overrideMinConfidence: 0.58,
+      overrideMinGap: 0.22,
+      alwaysReview: true,
+      respectCleanupAlternative: true
+    },
+    {
+      names: ['expected-slot', 'edge-band-slot'],
+      reason: 'expected-edge-band-slot-consensus',
+      minConfidence: 0.42,
+      minGap: 0.07,
+      allowStrictOverride: true,
+      overrideMinConfidence: 0.56,
+      overrideMinGap: 0.18,
+      alwaysReview: true,
+      respectCleanupAlternative: true
+    },
+    {
+      names: ['center-safe-slot', 'edge-band-slot'],
+      reason: 'center-edge-band-slot-consensus',
+      minConfidence: 0.46,
+      minGap: 0.09,
+      allowStrictOverride: true,
+      overrideMinConfidence: 0.58,
+      overrideMinGap: 0.20,
+      alwaysReview: true,
+      respectCleanupAlternative: true
+    },
+    {
+      names: ['expected-slot', 'no-side-erase'],
+      reason: 'expected-no-side-slot-consensus',
+      minConfidence: 0.54,
+      minGap: 0.18,
+      allowStrictOverride: true,
+      overrideMinConfidence: 0.62,
+      overrideMinGap: 0.26,
+      alwaysReview: true,
+      respectCleanupAlternative: true
+    },
+    {
+      names: ['wide-slot', 'no-side-erase'],
+      reason: 'wide-no-side-slot-consensus',
+      minConfidence: 0.54,
+      minGap: 0.18,
+      allowStrictOverride: true,
+      overrideMinConfidence: 0.62,
+      overrideMinGap: 0.26,
+      alwaysReview: true,
+      respectCleanupAlternative: true
+    }
+  ];
+
+  for (const pair of pairs) {
+    const variants = pair.names.map((name) => findVariant(variantResults, name));
+    if (variants.some((variant) => !variant)) continue;
+    const digits = variants.map((variant) => variant.result.digit);
+    if (!digits.every((digit) => digit === digits[0])) continue;
+    const allStrongEnough = variants.every((variant) => (
+      (variant.result.confidence || 0) >= pair.minConfidence &&
+      digitTopGap(variant.result) >= pair.minGap
+    ));
+    if (!allStrongEnough) continue;
+    if (pair.respectCleanupAlternative && hasStrongAlternativeCleanupConsensus(variantResults, digits[0])) {
+      continue;
+    }
+    if (!strictWeak && strict.result.digit !== digits[0]) {
+      if (!pair.allowStrictOverride) continue;
+      const overrideStrongEnough = variants.every((variant) => (
+        (variant.result.confidence || 0) >= (pair.overrideMinConfidence || pair.minConfidence) &&
+        digitTopGap(variant.result) >= (pair.overrideMinGap || pair.minGap)
+      ));
+      if (!overrideStrongEnough) continue;
+    }
+    const probs = averageVariantProbsWeighted(variantResults, pair.names);
+    if (!probs) continue;
+    return {
+      digit: digits[0],
+      probs,
+      reason: pair.reason,
+      alwaysReview: pair.alwaysReview === true || (strict && strict.result.digit !== digits[0])
+    };
+  }
+
+  return null;
+}
+
+function chooseDominantPreprocessVariant(variantResults) {
+  const ranked = variantResults
+    .map((variant) => ({
+      variant,
+      confidence: variant.result.confidence || 0,
+      gap: digitTopGap(variant.result)
+    }))
+    .filter((item) => item.confidence >= 0.72 && item.gap >= 0.55)
+    .sort((a, b) => (b.confidence - a.confidence) || (b.gap - a.gap));
+
+  const best = ranked[0];
+  if (!best) return null;
+
+  const next = ranked.find((item) => item.variant.result.digit !== best.variant.result.digit) || ranked[1] || null;
+  const confidenceLead = best.confidence - (next?.confidence || 0);
+  const gapLead = best.gap - (next?.gap || 0);
+  const clearLead =
+    confidenceLead >= 0.18 ||
+    (confidenceLead >= 0.10 && gapLead >= 0.24) ||
+    (best.confidence >= 0.92 && best.gap >= 0.80 && confidenceLead >= 0.08);
+
+  if (!clearLead) return null;
+
+  const strict = findVariant(variantResults, 'strict') || variantResults[0] || null;
+  const highRiskDominantNames = new Set(['line-masked-slot', 'center-safe-slot', 'edge-band-slot', 'wide-slot', 'no-side-erase', 'gentle']);
+  if (highRiskDominantNames.has(best.variant.name)) {
+    const trustedSupportCount = variantResults.filter((variant) => (
+      ['strict', 'edge-clean', 'expected-slot', 'edge-band-slot', 'no-rule-cleanup', 'no-component-cleanup'].includes(variant.name) &&
+      variant.result.digit === best.variant.result.digit &&
+      (variant.result.confidence || 0) >= 0.50 &&
+      digitTopGap(variant.result) >= 0.16
+    )).length;
+    if (trustedSupportCount < 2) return null;
+  }
+  const strongDisagreements = variantResults.filter((variant) => (
+    variant.result.digit !== best.variant.result.digit &&
+    ((variant.result.confidence || 0) >= 0.70 || digitTopGap(variant.result) >= 0.50)
+  ));
+
+  if (
+    strict &&
+    strict.result.digit !== best.variant.result.digit &&
+    (strict.result.confidence || 0) >= 0.86 &&
+    digitTopGap(strict.result) >= 0.72
+  ) {
+    return null;
+  }
+
+  return {
+    digit: best.variant.result.digit,
+    probs: best.variant.result.probs,
+    reason: `dominant-${best.variant.name}`,
+    alwaysReview: strongDisagreements.length > 0
+  };
+}
+
+export async function recognizeDigitsWithPreprocessVariants(tensorVariants, baseResult = null, options = {}) {
+  if (!digitSession) {
+    await initDigitModel();
+  }
+
+  const variants = Array.isArray(tensorVariants)
+    ? tensorVariants.filter((variant) => variant && (variant.tensor || variant.data || variant.length))
+    : [];
+  if (variants.length <= 1) {
+    const tensor = variants[0]?.tensor || variants[0]?.data || variants[0] || tensorVariants;
+    return recognizeDigitsRobust(tensor, baseResult, { force: options.force === true });
+  }
+
+  const variantResults = [];
+  for (const variant of variants) {
+    const name = variant.name || `variant-${variantResults.length + 1}`;
+    const data = copyDigitTensorData(variant.tensor || variant.data || variant);
+    const probs = await runDigitDataAsProbs(data, options);
+    variantResults.push({
+      name,
+      result: digitResultFromProbs(probs, { preprocessVariantName: name })
+    });
+  }
+
+  const variantDetails = compactVariantDetails(variantResults);
+  const consensus = choosePreprocessConsensus(variantResults, options);
+  const dominant = chooseDominantPreprocessVariant(variantResults);
+  const votes = makeWeightedVoteSummary(variantResults);
+  const averagedProbs = averageVariantProbsWeighted(variantResults) || new Float32Array(10);
+  const strict = findVariant(variantResults, 'strict') || variantResults[0] || null;
+  let result;
+  let selectionReason = 'weighted-average';
+
+  if (consensus) {
+    result = digitResultFromVotedDigit(consensus.probs, consensus.digit, {
+      robust: true,
+      variantCount: variants.length,
+      robustOverride: consensus.reason
+    });
+    selectionReason = consensus.reason;
+  } else if (dominant) {
+    result = digitResultFromVotedDigit(dominant.probs, dominant.digit, {
+      robust: true,
+      variantCount: variants.length,
+      robustOverride: dominant.reason
+    });
+    selectionReason = dominant.reason;
+  } else if (votes.top && votes.top.share >= 0.62 && votes.margin >= 0.18) {
+    result = digitResultFromVotedDigit(averagedProbs, votes.top.digit, {
+      robust: true,
+      variantCount: variants.length,
+      robustOverride: 'preprocess-weighted-vote'
+    });
+    selectionReason = 'preprocess-weighted-vote';
+  } else {
+    result = digitResultFromProbs(averagedProbs, {
+      robust: true,
+      variantCount: variants.length,
+      robustOverride: null
+    });
+  }
+
+  const uniqueStrongDigits = new Set(
+    variantResults
+      .filter((variant) => (variant.result.confidence || 0) >= 0.34 || digitTopGap(variant.result) >= 0.03)
+      .map((variant) => variant.result.digit)
+  );
+  const strictDisagrees = strict && strict.result.digit !== result.digit;
+  const resultGap = digitTopGap(result);
+  const shouldForceReview =
+    options.forceReviewOnDisagreement !== false &&
+    (
+      consensus?.alwaysReview === true ||
+      dominant?.alwaysReview === true ||
+      uniqueStrongDigits.size >= 3 ||
+      (votes.top?.share || 0) < 0.62 ||
+      resultGap < 0.12 ||
+      result.confidence < 0.78 ||
+      (strictDisagrees && digitTopGap(strict.result) >= 0.06)
+    );
+
+  const withDetails = {
+    ...result,
+    preprocessDisagreement: shouldForceReview,
+    preprocessReviewReason: shouldForceReview ? selectionReason : null,
+    preprocessVariants: variantDetails,
+    preprocessVoteSummary: {
+      top: votes.top || null,
+      runnerUp: votes.runnerUp || null,
+      margin: votes.margin
+    }
+  };
+
+  return [
+    shouldForceReview
+      ? capDigitResultForReview(withDetails, selectionReason, variantDetails)
+      : withDetails
+  ];
 }
 
 function averageDigitProbs(variantProbs, indexes) {
@@ -649,12 +1490,15 @@ function maybeApplyLowConfidenceSixVoteOverride(averagedProbs, variantProbs) {
   return null;
 }
 
-async function runDigitDataAsProbs(data) {
+async function runDigitDataAsProbs(data, options = {}) {
   // Copy to a new Float32Array so buffer is not neutered by WASM transfer. Prefer array over ort.Tensor
   // because onnxruntime-web can detach/replace Tensor.data, yielding zeros when read.
   const tensor = new ort.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
-  const probs = await runDigitSessionAsProbs(digitSession, tensor);
-  if (ensembleDigitSession) {
+  const digitIndex = Number(options.digitIndex);
+  const rightSlotSession = digitIndex === 1 ? await getRightSlotDigitSession() : null;
+  const activeSession = rightSlotSession || digitSession;
+  const probs = await runDigitSessionAsProbs(activeSession, tensor);
+  if (!rightSlotSession && ensembleDigitSession) {
     const ensembleTensor = new ort.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
     const auxProbs = await runDigitSessionAsProbs(ensembleDigitSession, ensembleTensor);
     for (let i = 0; i < probs.length; i++) {

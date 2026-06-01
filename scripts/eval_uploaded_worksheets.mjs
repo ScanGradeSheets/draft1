@@ -9,7 +9,9 @@ const DEFAULT_EXPECTED = [8, 4, 1, 9, 2, 7, 0, 5, 3, 6];
 const DEFAULT_URL = process.env.SG_EVAL_URL || 'https://localhost:5174';
 const DEFAULT_OUT = path.join(ROOT, 'benchmarks', 'uploaded_student_samples', 'results');
 const OUT_DIR = process.env.SG_EVAL_OUT || DEFAULT_OUT;
-const MODEL_PATH = process.env.SG_EVAL_MODEL_PATH || '/models/mnist-model.onnx';
+const MODEL_PATH = process.env.SG_EVAL_MODEL_PATH || '/models/worksheet-digit-tony-generalist-aug-strong-20260601.onnx';
+const RIGHT_SLOT_MODEL_PATH = process.env.SG_EVAL_RIGHT_SLOT_MODEL_PATH || '/models/worksheet-digit-tony-generalist-noaug-20260601.onnx';
+const IGNORE_QR_HOMOGRAPHY = process.env.SG_IGNORE_QR_HOMOGRAPHY !== '0';
 const EXPECTED = (process.env.SG_EXPECTED_DIGITS || '')
   .split(',')
   .map((value) => Number(value.trim()))
@@ -74,6 +76,7 @@ function parseArgs(argv) {
     url: DEFAULT_URL,
     outDir: OUT_DIR,
     modelPath: MODEL_PATH,
+    rightSlotModelPath: RIGHT_SLOT_MODEL_PATH,
     files: []
   };
   for (let i = 0; i < argv.length; i++) {
@@ -84,6 +87,8 @@ function parseArgs(argv) {
       opts.outDir = path.resolve(argv[++i]);
     } else if (arg === '--model') {
       opts.modelPath = argv[++i];
+    } else if (arg === '--right-slot-model') {
+      opts.rightSlotModelPath = argv[++i];
     } else {
       opts.files.push(path.resolve(arg));
     }
@@ -158,6 +163,7 @@ function summarize(rows, opts) {
     generatedAt: new Date().toISOString(),
     url: opts.url,
     modelPath: opts.modelPath,
+    rightSlotModelPath: opts.rightSlotModelPath || null,
     expectedDigits: firstExpected,
     sheetsTotal: rows.length,
     sheetsProcessed: processed.length,
@@ -182,6 +188,7 @@ function toMarkdown(summary, rows) {
   lines.push('');
   lines.push(`- URL: ${summary.url}`);
   lines.push(`- Model: \`${summary.modelPath}\``);
+  if (summary.rightSlotModelPath) lines.push(`- Right-slot model: \`${summary.rightSlotModelPath}\``);
   lines.push(`- Expected digits: ${summary.expectedDigits.join(', ')}`);
   lines.push(`- Sheets processed: ${summary.sheetsProcessed}/${summary.sheetsTotal}`);
   lines.push(`- Perfect sheets: ${summary.perfectSheets}/${summary.sheetsProcessed}`);
@@ -245,7 +252,10 @@ for (const file of files) {
   const id = worksheetId(file);
   const debugDir = path.join(opts.outDir, 'debug', id);
   await fs.mkdir(debugDir, { recursive: true });
-  const url = `${opts.url}/?mode=teacher&ocrdebug=1&ignoreQrHomography=1&modelPath=${encodeURIComponent(opts.modelPath)}`;
+  const rightSlotQuery = opts.rightSlotModelPath
+    ? `&rightSlotModelPath=${encodeURIComponent(opts.rightSlotModelPath)}`
+    : '';
+  const url = `${opts.url}/?mode=teacher&ocrdebug=1&ignoreQrHomography=${IGNORE_QR_HOMOGRAPHY ? '1' : '0'}&modelPath=${encodeURIComponent(opts.modelPath)}${rightSlotQuery}`;
   try {
     await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
     await page.waitForFunction(

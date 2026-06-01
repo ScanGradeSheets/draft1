@@ -108,5 +108,15 @@ export function decodeQrFromCanvas(canvas) {
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
   if (!code || !code.data) return null;
-  return parseQrPayloadString(code.data);
+  const payload = parseQrPayloadString(code.data);
+  if (!payload || typeof payload !== 'object') return payload;
+  if (code.location && typeof code.location === 'object') {
+    payload.qr_location = {
+      topLeftCorner: code.location.topLeftCorner || null,
+      topRightCorner: code.location.topRightCorner || null,
+      bottomRightCorner: code.location.bottomRightCorner || null,
+      bottomLeftCorner: code.location.bottomLeftCorner || null
+    };
+  }
+  return payload;
 }

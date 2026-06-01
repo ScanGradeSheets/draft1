@@ -407,7 +407,13 @@
 <script setup>
 import { ref, computed, onUnmounted, nextTick, watch } from 'vue'
 import { processWorksheet, detectCornerMarkers } from '../homography.js'
-import { initDigitModel, recognizeDigits, recognizeDigitsRobust, getDigitModelInfo } from '../ocr-pipeline.js'
+import {
+  initDigitModel,
+  recognizeDigits,
+  recognizeDigitsRobust,
+  recognizeDigitsWithPreprocessVariants,
+  getDigitModelInfo
+} from '../ocr-pipeline.js'
 import { decodeQrFromCanvas } from '../qr-decode.js'
 import { publicUrl } from '../public-paths.js'
 
@@ -424,8 +430,8 @@ const LOW_CONFIDENCE_THRESHOLD = 0.78
 const LOW_MARGIN_THRESHOLD = 0.08
 const AUTO_CHECK_CONFIDENCE_THRESHOLD = 0.45
 const AUTO_CHECK_MARGIN_THRESHOLD = 0.06
-const AUTO_X_CONFIDENCE_THRESHOLD = 0.995
-const AUTO_X_MARGIN_THRESHOLD = 0.75
+const AUTO_X_CONFIDENCE_THRESHOLD = LOW_CONFIDENCE_THRESHOLD
+const AUTO_X_MARGIN_THRESHOLD = LOW_MARGIN_THRESHOLD
 
 /** Golden digits for the primary printed test worksheet (index = box id 0–9 = questions 1–10). */
 const DEBUG_REAL_WORKSHEET_EXPECTED = Object.freeze([8, 4, 1, 9, 2, 7, 0, 5, 3, 6])
@@ -2567,12 +2573,18 @@ function tensorInkQuality(tensor, id = null) {
   let minY = 28
   let maxX = -1
   let maxY = -1
+  const rowCounts = Array(28).fill(0)
+  const colCounts = Array(28).fill(0)
+  let edgeInkPixels = 0
   for (let i = 0; i < Math.min(values.length, 28 * 28); i++) {
     const value = Number(values[i]) || 0
     if (value <= 0.16) continue
     const y = Math.floor(i / 28)
     const x = i - y * 28
     inkPixels += 1
+    rowCounts[y] += 1
+    colCounts[x] += 1
+    if (x <= 1 || x >= 26 || y <= 1 || y >= 26) edgeInkPixels += 1
     minX = Math.min(minX, x)
     minY = Math.min(minY, y)
     maxX = Math.max(maxX, x)
@@ -2581,20 +2593,137 @@ function tensorInkQuality(tensor, id = null) {
   const inkW = maxX >= minX ? maxX - minX + 1 : 0
   const inkH = maxY >= minY ? maxY - minY + 1 : 0
   const density = inkW > 0 && inkH > 0 ? inkPixels / (inkW * inkH) : 0
-  const lineArtifactLikely =
+  const maxRowCount = rowCounts.length ? Math.max(...rowCounts) : 0
+  const maxColCount = colCounts.length ? Math.max(...colCounts) : 0
+  const edgeInkRatio = inkPixels ? edgeInkPixels / inkPixels : 0
+  const horizontalArtifactLikely =
+    inkPixels >= 8 &&
+    inkW >= 11 &&
+    (
+      inkH <= 6 ||
+      maxRowCount >= Math.max(9, Math.round(inkPixels * 0.42))
+    )
+  const verticalEdgeArtifactLikely =
     inkPixels >= 10 &&
     inkPixels <= 90 &&
     inkW <= 7 &&
     inkH >= 12 &&
-    density <= 0.72
+    density <= 0.72 &&
+    edgeInkRatio >= 0.30
+  const edgeArtifactLikely =
+    inkPixels >= 8 &&
+    edgeInkRatio >= 0.48 &&
+    (inkW <= 8 || inkH <= 8 || density <= 0.46)
+  const lineArtifactLikely =
+    horizontalArtifactLikely ||
+    verticalEdgeArtifactLikely ||
+    edgeArtifactLikely
+  const plausibleDigitShape =
+    inkPixels >= 14 &&
+    inkW >= 3 &&
+    inkH >= 8 &&
+    !horizontalArtifactLikely &&
+    !edgeArtifactLikely
   return {
     id,
     inkPixels,
     inkW,
     inkH,
     density,
+    maxRowCount,
+    maxColCount,
+    edgeInkRatio,
+    horizontalArtifactLikely,
+    verticalEdgeArtifactLikely,
+    edgeArtifactLikely,
     lineArtifactLikely,
-    ok: inkPixels >= 14 && inkW >= 3 && inkH >= 8
+    ok: plausibleDigitShape
+  }
+}
+
+function tensorQualityScore(quality) {
+  if (!quality) return -Infinity
+  let score = 0
+  if (quality.ok) score += 1000
+  if (!quality.lineArtifactLikely) score += 220
+  if (quality.horizontalArtifactLikely) score -= 220
+  if (quality.edgeArtifactLikely) score -= 160
+  if (quality.verticalEdgeArtifactLikely) score -= 120
+  score += Math.min(quality.inkPixels || 0, 120)
+  score += Math.min(quality.inkW || 0, 20) * 4
+  score += Math.min(quality.inkH || 0, 24) * 4
+  score -= Math.round((quality.edgeInkRatio || 0) * 90)
+  return score
+}
+
+function bestTensorInkQuality(proc) {
+  const candidates = [
+    { name: 'base', tensor: proc?.tensor },
+    ...(Array.isArray(proc?.tensorVariants) ? proc.tensorVariants : [])
+  ].filter((candidate) => candidate?.tensor)
+
+  let best = null
+  let base = null
+  let strict = null
+  const variantQualities = []
+  for (const candidate of candidates) {
+    const quality = {
+      ...tensorInkQuality(candidate.tensor, proc?.id),
+      variantName: candidate.name || 'variant'
+    }
+    variantQualities.push(quality)
+    if (quality.variantName === 'base') base = quality
+    if (quality.variantName === 'strict') strict = quality
+    if (!best || tensorQualityScore(quality) > tensorQualityScore(best)) {
+      best = quality
+    }
+  }
+
+  const summaryQualities = variantQualities.some((quality) => quality.variantName !== 'base')
+    ? variantQualities.filter((quality) => quality.variantName !== 'base')
+    : variantQualities
+  const variantCount = summaryQualities.length
+  const usableVariantCount = summaryQualities.filter((quality) => (
+    quality.ok &&
+    !quality.lineArtifactLikely &&
+    !quality.horizontalArtifactLikely &&
+    !quality.edgeArtifactLikely &&
+    (quality.inkPixels || 0) >= 14 &&
+    (quality.inkH || 0) >= 7
+  )).length
+  const artifactVariantCount = summaryQualities.filter((quality) => (
+    quality.lineArtifactLikely ||
+    quality.horizontalArtifactLikely ||
+    quality.edgeArtifactLikely ||
+    quality.verticalEdgeArtifactLikely
+  )).length
+  const weakVariantCount = summaryQualities.filter((quality) => (
+    !quality.ok ||
+    (quality.inkPixels || 0) < 12 ||
+    (quality.inkH || 0) < 6 ||
+    quality.horizontalArtifactLikely ||
+    quality.edgeArtifactLikely
+  )).length
+  const artifactVariantRatio = variantCount ? artifactVariantCount / variantCount : 0
+  const weakVariantRatio = variantCount ? weakVariantCount / variantCount : 0
+  const allVariantsWeak = variantCount > 0 && usableVariantCount === 0
+  const guard = strict || base || best || tensorInkQuality(proc?.tensor, proc?.id)
+  return {
+    ...guard,
+    id: proc?.id,
+    guardVariantName: guard.variantName || 'guard',
+    bestVariantName: best?.variantName || guard.variantName || 'guard',
+    bestQuality: best,
+    baseQuality: base,
+    strictQuality: strict,
+    variantQualities,
+    variantCount,
+    usableVariantCount,
+    artifactVariantCount,
+    weakVariantCount,
+    artifactVariantRatio,
+    weakVariantRatio,
+    allVariantsWeak
   }
 }
 
@@ -2605,6 +2734,9 @@ function detectTwoDigitCropFailure(questionGroups, cropQuality) {
   let missingLeft = 0
   let missingRight = 0
   let oneSidedGroups = 0
+  let artifactGroups = 0
+  let variantWeakGroups = 0
+  let variantArtifactGroups = 0
 
   for (const group of questionGroups) {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
@@ -2614,10 +2746,21 @@ function detectTwoDigitCropFailure(questionGroups, cropQuality) {
     const left = qualityById.get(ids[0])
     const right = qualityById.get(ids[1])
     if (!left || !right) continue
-    if (!left.ok && right.ok) {
+    const leftVariantWeak = left.allVariantsWeak || (left.weakVariantRatio || 0) >= 0.78
+    const rightVariantWeak = right.allVariantsWeak || (right.weakVariantRatio || 0) >= 0.78
+    const leftVariantArtifact = (left.artifactVariantRatio || 0) >= 0.50
+    const rightVariantArtifact = (right.artifactVariantRatio || 0) >= 0.50
+    const leftArtifact = left.horizontalArtifactLikely || left.edgeArtifactLikely || leftVariantArtifact
+    const rightArtifact = right.horizontalArtifactLikely || right.edgeArtifactLikely || rightVariantArtifact
+    if (leftVariantWeak || rightVariantWeak) variantWeakGroups += 1
+    if (leftVariantArtifact || rightVariantArtifact) variantArtifactGroups += 1
+    if (!left.ok || !right.ok || leftArtifact || rightArtifact || leftVariantWeak || rightVariantWeak) {
+      artifactGroups += 1
+    }
+    if ((!left.ok || leftVariantWeak) && right.ok && !rightVariantWeak) {
       missingLeft += 1
       oneSidedGroups += 1
-    } else if (left.ok && !right.ok) {
+    } else if (left.ok && !leftVariantWeak && (!right.ok || rightVariantWeak)) {
       missingRight += 1
       oneSidedGroups += 1
     }
@@ -2626,12 +2769,18 @@ function detectTwoDigitCropFailure(questionGroups, cropQuality) {
   if (expectedTwoDigitGroups < 4) return null
   const repeatedOneSided = oneSidedGroups >= Math.max(3, Math.ceil(expectedTwoDigitGroups * 0.35))
   const sidePattern = Math.max(missingLeft, missingRight) >= Math.max(3, Math.ceil(expectedTwoDigitGroups * 0.3))
-  if (!repeatedOneSided || !sidePattern) return null
+  const repeatedArtifacts = artifactGroups >= Math.max(5, Math.ceil(expectedTwoDigitGroups * 0.55))
+  const repeatedVariantWeak = variantWeakGroups >= Math.max(4, Math.ceil(expectedTwoDigitGroups * 0.45))
+  const repeatedVariantArtifacts = variantArtifactGroups >= Math.max(4, Math.ceil(expectedTwoDigitGroups * 0.45))
+  if (!(repeatedArtifacts || repeatedVariantWeak || repeatedVariantArtifacts || (repeatedOneSided && sidePattern))) return null
   return {
     expectedTwoDigitGroups,
     missingLeft,
     missingRight,
-    oneSidedGroups
+    oneSidedGroups,
+    artifactGroups,
+    variantWeakGroups,
+    variantArtifactGroups
   }
 }
 
@@ -2692,7 +2841,7 @@ function detectTwoDigitRecognitionFailure(questionGroups, cropQuality, predictio
   }
 }
 
-function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, questionCorrect, questionReview) {
+function analyzeTwoDigitScanSignals(questionGroups, cropQuality, predictions, questionCorrect, questionReview) {
   if (
     !Array.isArray(questionGroups) ||
     !Array.isArray(cropQuality) ||
@@ -2711,36 +2860,220 @@ function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, qu
   let expectedTwoDigitGroups = 0
   let suspiciousTwoDigitGroups = 0
   let oneOrBlankDominatedGroups = 0
+  let artifactDominatedGroups = 0
+  let lowInkGroups = 0
+  let lowGapGroups = 0
+  let mismatchGroups = 0
+  let reviewMismatchGroups = 0
+  let signalMismatchGroups = 0
+  let reviewSignalGroups = 0
+  const usablePredictions = predictions.filter((prediction) => prediction && Number.isFinite(Number(prediction.confidence)))
+  const avgConfidence = usablePredictions.length
+    ? usablePredictions.reduce((sum, prediction) => sum + (Number(prediction.confidence) || 0), 0) / usablePredictions.length
+    : 0
+  const avgTopGap = usablePredictions.length
+    ? usablePredictions.reduce((sum, prediction) => sum + (Number(prediction.topGap) || 0), 0) / usablePredictions.length
+    : 0
 
-  for (const group of questionGroups) {
+  for (const [index, group] of questionGroups.entries()) {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
     const answer = group?.answer == null ? '' : String(group.answer).trim()
     if (ids.length !== 2 || !/^\d{2,}$/.test(answer)) continue
     expectedTwoDigitGroups += 1
     let suspiciousCells = 0
     let oneOrBlankCells = 0
+    let artifactCells = 0
+    let lowInkCells = 0
+    let lowGapCells = 0
     for (const id of ids) {
       const quality = qualityById.get(id)
       const prediction = predictionById.get(id)
       if (!quality || !prediction) continue
       const confidence = Number(prediction.confidence) || 0
       const topGap = Number(prediction.topGap) || 0
+      const variantWeak = quality.allVariantsWeak || (quality.weakVariantRatio || 0) >= 0.75
+      const variantArtifact = (quality.artifactVariantRatio || 0) >= 0.50
       const skinnySignal =
+        variantArtifact ||
         quality.lineArtifactLikely ||
         (quality.inkPixels <= 115 && quality.inkW <= 8 && quality.inkH >= 10 && quality.density <= 0.78)
       if (skinnySignal && (prediction.reviewNeeded || confidence < 0.92 || topGap < 0.5)) suspiciousCells += 1
-      if (prediction.digit === 1 || !quality.ok || quality.inkPixels < 18) oneOrBlankCells += 1
+      if (prediction.digit === 1 || !quality.ok || quality.inkPixels < 18 || variantWeak) oneOrBlankCells += 1
+      if (!quality.ok || quality.horizontalArtifactLikely || quality.edgeArtifactLikely || variantArtifact) artifactCells += 1
+      if (quality.inkPixels < 24 || quality.inkW <= 4 || quality.inkH < 8 || variantWeak) lowInkCells += 1
+      if (topGap < 0.22 || confidence < 0.62) lowGapCells += 1
     }
+    const predictionCells = predictionCellsForIds(ids, predictionById)
+    const acceptedResponses = acceptedResponsesForGroup(group, ids.length)
+    const groupMatches = predictionCells && acceptedResponses.length > 0
+      ? acceptedResponses.some((response) => gradingCellsMatch(predictionCells, response))
+      : questionCorrect[index] === true
+    const groupHasReview = questionReview[index] === true
+    const groupHasSignal = suspiciousCells > 0 || artifactCells > 0 || lowInkCells > 0 || lowGapCells > 0
     if (suspiciousCells > 0) suspiciousTwoDigitGroups += 1
     if (oneOrBlankCells >= 1) oneOrBlankDominatedGroups += 1
+    if (artifactCells >= 1) artifactDominatedGroups += 1
+    if (lowInkCells >= 1) lowInkGroups += 1
+    if (lowGapCells >= 1) lowGapGroups += 1
+    if (!groupMatches) mismatchGroups += 1
+    if (!groupMatches && groupHasReview) reviewMismatchGroups += 1
+    if (!groupMatches && groupHasSignal) signalMismatchGroups += 1
+    if (groupHasReview && groupHasSignal) reviewSignalGroups += 1
   }
 
   if (expectedTwoDigitGroups < 5 || total < 8) return null
+  return {
+    total,
+    score,
+    reviewCount,
+    expectedTwoDigitGroups,
+    suspiciousTwoDigitGroups,
+    oneOrBlankDominatedGroups,
+    artifactDominatedGroups,
+    lowInkGroups,
+    lowGapGroups,
+    mismatchGroups,
+    reviewMismatchGroups,
+    signalMismatchGroups,
+    reviewSignalGroups,
+    avgConfidence,
+    avgTopGap
+  }
+}
+
+function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, questionCorrect, questionReview) {
+  const signals = analyzeTwoDigitScanSignals(questionGroups, cropQuality, predictions, questionCorrect, questionReview)
+  if (!signals) return null
+
+  const {
+    total,
+    score,
+    reviewCount,
+    expectedTwoDigitGroups,
+    suspiciousTwoDigitGroups,
+    oneOrBlankDominatedGroups,
+    artifactDominatedGroups,
+    lowInkGroups,
+    lowGapGroups,
+    mismatchGroups,
+    reviewMismatchGroups,
+    signalMismatchGroups,
+    reviewSignalGroups,
+    avgConfidence,
+    avgTopGap
+  } = signals
+
   const catastrophicLowScore = score <= Math.max(1, Math.floor(total * 0.15))
+  const veryLowScore = score <= Math.floor(total * 0.35)
   const mostlyReview = reviewCount >= Math.ceil(total * 0.72)
+  const almostAllReview = reviewCount >= Math.ceil(total * 0.88)
   const repeatedSuspicious = suspiciousTwoDigitGroups >= Math.ceil(expectedTwoDigitGroups * 0.35)
   const repeatedOneOrBlank = oneOrBlankDominatedGroups >= Math.ceil(expectedTwoDigitGroups * 0.65)
-  if (!(catastrophicLowScore && mostlyReview && (repeatedSuspicious || repeatedOneOrBlank))) return null
+  const repeatedArtifacts = artifactDominatedGroups >= Math.ceil(expectedTwoDigitGroups * 0.55)
+  const lowSignalCapture = avgConfidence < 0.68 || avgTopGap < 0.34
+  const mostlyTwoDigitWorksheet = expectedTwoDigitGroups >= Math.ceil(total * 0.75)
+  const allReviewLowSignalCapture =
+    score <= Math.max(1, Math.floor(total * 0.22)) &&
+    reviewCount >= Math.ceil(total * 0.9) &&
+    avgConfidence < 0.62 &&
+    avgTopGap < 0.32
+  const broadLowSignalTwoDigitCapture =
+    mostlyTwoDigitWorksheet &&
+    score <= Math.max(2, Math.floor(total * 0.30)) &&
+    reviewCount >= Math.ceil(total * 0.75) &&
+    avgConfidence < 0.74 &&
+    avgTopGap < 0.43
+  const allReviewWrongTwoDigitCapture =
+    mostlyTwoDigitWorksheet &&
+    score <= Math.max(2, Math.floor(total * 0.35)) &&
+    reviewCount >= Math.ceil(total * 0.85) &&
+    avgConfidence < 0.72 &&
+    avgTopGap < 0.36
+  const allReviewUnstableTwoDigitCapture =
+    mostlyTwoDigitWorksheet &&
+    reviewCount >= Math.ceil(total * 0.95) &&
+    lowGapGroups >= Math.ceil(expectedTwoDigitGroups * 0.90) &&
+    avgConfidence < 0.66 &&
+    avgTopGap < 0.16 &&
+    (
+      lowInkGroups >= Math.ceil(expectedTwoDigitGroups * 0.10) ||
+      oneOrBlankDominatedGroups >= Math.ceil(expectedTwoDigitGroups * 0.20) ||
+      mismatchGroups >= 1 ||
+      reviewSignalGroups >= Math.ceil(expectedTwoDigitGroups * 0.85)
+    )
+  const severeLowSignalTwoDigitCapture =
+    mostlyTwoDigitWorksheet &&
+    score <= Math.max(1, Math.floor(total * 0.22)) &&
+    reviewCount >= Math.ceil(total * 0.65) &&
+    avgConfidence < 0.80 &&
+    avgTopGap < 0.50
+  const lowConfidenceReviewPileup =
+    mostlyTwoDigitWorksheet &&
+    score <= Math.max(3, Math.floor(total * 0.35)) &&
+    reviewCount >= Math.ceil(total * 0.70) &&
+    avgConfidence < 0.70 &&
+    (repeatedSuspicious || repeatedArtifacts)
+  const mismatchReviewPileup =
+    mostlyTwoDigitWorksheet &&
+    mismatchGroups >= Math.ceil(total * 0.45) &&
+    reviewCount >= Math.ceil(total * 0.45) &&
+    (
+      reviewMismatchGroups >= Math.ceil(total * 0.35) ||
+      signalMismatchGroups >= Math.ceil(expectedTwoDigitGroups * 0.35) ||
+      reviewSignalGroups >= Math.ceil(expectedTwoDigitGroups * 0.45)
+    ) &&
+    (
+      lowGapGroups >= Math.ceil(expectedTwoDigitGroups * 0.45) ||
+      lowInkGroups >= Math.ceil(expectedTwoDigitGroups * 0.30) ||
+      avgConfidence < 0.80 ||
+      avgTopGap < 0.62
+    )
+  const broadMismatchLowSignalCapture =
+    mostlyTwoDigitWorksheet &&
+    mismatchGroups >= Math.ceil(total * 0.50) &&
+    reviewCount >= Math.ceil(total * 0.40) &&
+    signalMismatchGroups >= Math.ceil(expectedTwoDigitGroups * 0.40) &&
+    (lowGapGroups >= Math.ceil(expectedTwoDigitGroups * 0.50) || avgConfidence < 0.82)
+  const weakTwoDigitReviewPileup =
+    mostlyTwoDigitWorksheet &&
+    reviewCount >= Math.ceil(total * 0.50) &&
+    avgConfidence < 0.70 &&
+    avgTopGap < 0.56 &&
+    lowGapGroups >= Math.ceil(expectedTwoDigitGroups * 0.65) &&
+    lowInkGroups >= Math.ceil(expectedTwoDigitGroups * 0.60) &&
+    artifactDominatedGroups >= Math.ceil(expectedTwoDigitGroups * 0.25)
+  const repeatedSlotCollapse =
+    mostlyTwoDigitWorksheet &&
+    oneOrBlankDominatedGroups >= Math.ceil(expectedTwoDigitGroups * 0.85) &&
+    lowInkGroups >= Math.ceil(expectedTwoDigitGroups * 0.65) &&
+    (
+      mismatchGroups >= Math.ceil(total * 0.30) ||
+      signalMismatchGroups >= Math.ceil(expectedTwoDigitGroups * 0.30) ||
+      reviewSignalGroups >= Math.ceil(expectedTwoDigitGroups * 0.30) ||
+      lowGapGroups >= Math.ceil(expectedTwoDigitGroups * 0.45)
+    )
+  const highReviewLowGapCapture =
+    mostlyTwoDigitWorksheet &&
+    score <= Math.floor(total * 0.70) &&
+    reviewCount >= Math.ceil(total * 0.70) &&
+    lowGapGroups >= Math.ceil(expectedTwoDigitGroups * 0.70) &&
+    avgConfidence < 0.74 &&
+    avgTopGap < 0.42
+  if (!(
+    (catastrophicLowScore && mostlyReview && (repeatedSuspicious || repeatedOneOrBlank || repeatedArtifacts)) ||
+    (veryLowScore && almostAllReview && lowSignalCapture && (repeatedSuspicious || repeatedArtifacts)) ||
+    allReviewLowSignalCapture ||
+    broadLowSignalTwoDigitCapture ||
+    allReviewWrongTwoDigitCapture ||
+    allReviewUnstableTwoDigitCapture ||
+    severeLowSignalTwoDigitCapture ||
+    lowConfidenceReviewPileup ||
+    mismatchReviewPileup ||
+    broadMismatchLowSignalCapture ||
+    weakTwoDigitReviewPileup ||
+    repeatedSlotCollapse ||
+    highReviewLowGapCapture
+  )) return null
 
   return {
     total,
@@ -2748,7 +3081,27 @@ function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, qu
     reviewCount,
     expectedTwoDigitGroups,
     suspiciousTwoDigitGroups,
-    oneOrBlankDominatedGroups
+    oneOrBlankDominatedGroups,
+    artifactDominatedGroups,
+    lowInkGroups,
+    lowGapGroups,
+    mismatchGroups,
+    reviewMismatchGroups,
+    signalMismatchGroups,
+    reviewSignalGroups,
+    avgConfidence,
+    avgTopGap,
+    allReviewLowSignalCapture,
+    broadLowSignalTwoDigitCapture,
+    allReviewWrongTwoDigitCapture,
+    allReviewUnstableTwoDigitCapture,
+    severeLowSignalTwoDigitCapture,
+    lowConfidenceReviewPileup,
+    mismatchReviewPileup,
+    broadMismatchLowSignalCapture,
+    weakTwoDigitReviewPileup,
+    repeatedSlotCollapse,
+    highReviewLowGapCapture
   }
 }
 
@@ -2841,6 +3194,9 @@ function buildLiveOcrErrorDebugPackage(err, partialDebug) {
     layoutId: partialDebug?.layoutId || null,
     qrPayload: partialDebug?.qrPayload || null,
     activeHomography: partialDebug?.activeHomography || null,
+    warpOrientation: typeof window !== 'undefined'
+      ? (window.__SCANGRADE_DEBUG_WARP_ORIENTATION || null)
+      : null,
     ignoreQrHomography: !!partialDebug?.ignoreQrHomography,
     imageSize: partialDebug?.imageSize || null,
     warpedDataUrl: partialDebug?.warpedDataUrl || null,
@@ -3052,7 +3408,9 @@ const runRealOCR = async () => {
 
     // Run homography + crops with normalized layout
     partialDebug.stage = 'finding worksheet markers'
-    const result = processWorksheet(src, layout)
+    const result = processWorksheet(src, layout, {
+      qrLocation: qrPayload?.qr_location || null
+    })
 
     if (!result) {
       if (ocrDebugEnabled.value || liveOcrDebugExportEnabled.value) {
@@ -3065,7 +3423,7 @@ const runRealOCR = async () => {
     const annotationGeometry = buildAnnotationGeometry(rawCrops, warpedImage.cols, warpedImage.rows, layout)
     const layoutSnapshot = buildLayoutSnapshot(layout)
     partialDebug.stage = 'preparing OCR crops'
-    const cropQuality = processedTensors.map((proc) => tensorInkQuality(proc.tensor, proc.id))
+    const cropQuality = processedTensors.map((proc) => bestTensorInkQuality(proc))
     partialDebug.cropQuality = cropQuality
     const twoDigitCropFailure = detectTwoDigitCropFailure(layout.question_groups, cropQuality)
     partialDebug.twoDigitCropFailure = twoDigitCropFailure
@@ -3079,6 +3437,14 @@ const runRealOCR = async () => {
       try {
         window.__SCANGRADE_DEBUG_RAW_CROPS = rawCrops.map((c, i) => matToDataURL(c.image, `box-${i + 1}`))
         window.__SCANGRADE_DEBUG_PREPROCESSED = processedTensors.map((p, i) => tensorToDataURL(p.tensor, `box-${i + 1}`))
+        window.__SCANGRADE_DEBUG_PREPROCESSED_VARIANTS = processedTensors.map((p, i) => ({
+          id: p.id,
+          box: `box-${i + 1}`,
+          variants: (p.tensorVariants || []).map((variant) => ({
+            name: variant.name || 'variant',
+            dataUrl: tensorToDataURL(variant.tensor, `${p.id}-${variant.name || 'variant'}`)
+          }))
+        }))
         window.__SCANGRADE_DEBUG_WARPED = matToDataURL(warpedImage, 'warped')
         console.log('[ScanGrade] OCR inputs debug: raw crops in __SCANGRADE_DEBUG_RAW_CROPS, preprocessed in __SCANGRADE_DEBUG_PREPROCESSED, warped in __SCANGRADE_DEBUG_WARPED')
       } catch (e) {
@@ -3112,7 +3478,12 @@ const runRealOCR = async () => {
         partialDebug.tensors = processedTensors.map((p) => ({
           id: p.id,
           questionNum: p.questionNum,
-          tensor: Array.from(p.tensor)
+          digitIndex: p.digitIndex,
+          tensor: Array.from(p.tensor),
+          tensorVariants: (p.tensorVariants || []).map((variant) => ({
+            name: variant.name || 'variant',
+            tensor: Array.from(variant.tensor)
+          }))
         }))
       } catch (e) {
         console.warn('[ScanGrade] tensor debug export failed:', e)
@@ -3137,12 +3508,25 @@ const runRealOCR = async () => {
       if (src && src.length >= MNIST_LEN) {
         data.set(typeof src.subarray === 'function' ? src.subarray(0, MNIST_LEN) : src.slice(0, MNIST_LEN))
       }
-      // Pass the Float32Array so inference copies it; passing ort.Tensor can expose neutered .data in onnxruntime-web
-      let digitResult = await recognizeDigits(data)
-      const baseTopK = digitResult[0].topK || []
-      const baseTopGap = baseTopK.length >= 2 ? (baseTopK[0].confidence - baseTopK[1].confidence) : 1
-      if (digitResult[0].confidence < ROBUST_RETRY_CONFIDENCE_THRESHOLD || baseTopGap < ROBUST_RETRY_MARGIN_THRESHOLD) {
-        digitResult = await recognizeDigitsRobust(data, digitResult[0])
+      // Pass Float32Arrays so inference copies the data; passing ort.Tensor can expose neutered .data in onnxruntime-web.
+      let digitResult
+      const hasPreprocessVariants =
+        proc.isVirtualDigitBox === true &&
+        Array.isArray(proc.tensorVariants) &&
+        proc.tensorVariants.length > 1
+      if (hasPreprocessVariants) {
+        digitResult = await recognizeDigitsWithPreprocessVariants(proc.tensorVariants, null, {
+          digitIndex: proc.digitIndex,
+          forceReviewOnDisagreement: false
+        })
+      } else {
+        digitResult = await recognizeDigits(data)
+        const baseTopK = digitResult[0].topK || []
+        const baseTopGap = baseTopK.length >= 2 ? (baseTopK[0].confidence - baseTopK[1].confidence) : 1
+        const forceRobust = proc.isVirtualDigitBox === true
+        if (forceRobust || digitResult[0].confidence < ROBUST_RETRY_CONFIDENCE_THRESHOLD || baseTopGap < ROBUST_RETRY_MARGIN_THRESHOLD) {
+          digitResult = await recognizeDigitsRobust(data, digitResult[0], { force: forceRobust })
+        }
       }
       const digit = digitResult[0].digit
       const topK = digitResult[0].topK || []
@@ -3167,6 +3551,7 @@ const runRealOCR = async () => {
       predictions.push({
         id: proc.id,
         questionNum: proc.questionNum,
+        digitIndex: proc.digitIndex,
         digit,
         confidence: digitResult[0].confidence,
         topK,
@@ -3180,6 +3565,10 @@ const runRealOCR = async () => {
         baseDigit: digitResult[0].baseDigit ?? null,
         baseConfidence: digitResult[0].baseConfidence ?? null,
         baseTopK: digitResult[0].baseTopK || null,
+        preprocessDisagreement: digitResult[0].preprocessDisagreement === true,
+        preprocessReviewReason: digitResult[0].preprocessReviewReason || null,
+        preprocessVariants: digitResult[0].preprocessVariants || null,
+        preprocessVoteSummary: digitResult[0].preprocessVoteSummary || null,
         ...(correct !== undefined && { correct })
       })
     }
@@ -3306,6 +3695,7 @@ const runRealOCR = async () => {
         layoutId: layout.layout_id || null,
         qrPayload: partialDebug.qrPayload,
         activeHomography: partialDebug.activeHomography,
+        warpOrientation: window.__SCANGRADE_DEBUG_WARP_ORIENTATION || null,
         imageSize: partialDebug.imageSize,
         markerDebugSnapshot: markerDebugSnapshot.value || null,
         modelInfo: modelInfoSnapshot.value,

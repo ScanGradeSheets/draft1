@@ -1,0 +1,1744 @@
+{
+  "generatedAt": "2026-06-01T22:44:07.582653Z",
+  "arch": "ScanGradeDigitCNN",
+  "preprocessing": "worksheet RGB darkness/saturation ink extraction + centered 28x28 digit normalization",
+  "strictHoldoutPolicy": "Paths containing 7DE72F2C are excluded from training and used only for evaluation.",
+  "args": {
+    "epochs": 14,
+    "batch_size": 256,
+    "lr": 8e-05,
+    "seed": 83,
+    "external_per_digit": 2600,
+    "worksheet_repeat": 24,
+    "external_root": "/Users/openclaw/Codex Projects/scan-grade-cursor/datasets/external",
+    "holdout_debug": "/Users/openclaw/Codex Projects/scan-grade-cursor/benchmarks/holdout_student_samples_2026-05-15/results/debug",
+    "onnx_out": "public/models/worksheet-digit-tony-generalist-aug-strong-20260601.onnx",
+    "checkpoint_out": "models/worksheet-digit-tony-generalist-aug-strong-20260601.pt",
+    "metadata_out": "models/worksheet-digit-tony-generalist-aug-strong-20260601-metadata.json",
+    "include_internal_val": true,
+    "init_checkpoint": "models/worksheet-digit-generalist-final.pt",
+    "extra_labeled_raw": "datasets/worksheet_digits_tony_20260601_variants/raw",
+    "extra_labeled_raw_repeat": 16,
+    "extra_labeled_raw_cap_per_digit": 0,
+    "no_augmentation": false
+  },
+  "worksheetSources": [
+    "/Users/openclaw/Codex Projects/scan-grade-cursor/datasets/worksheet_digits_current_pipeline/debug",
+    "/Users/openclaw/Codex Projects/scan-grade-cursor/benchmarks/uploaded_student_samples/results-student-bakeoff-final-default/debug",
+    "/Users/openclaw/Codex Projects/scan-grade-cursor/benchmarks/worksheet_bakeoff/results-final-default-debug/debug"
+  ],
+  "worksheetSamples": {
+    "train": 860,
+    "internalVal": 50,
+    "extraLabeledRaw": 1580,
+    "groupsTrain": [
+      "71D954DC-1-Photo-1",
+      "71D954DC-2-Photo-2",
+      "71D954DC-3-Photo-3",
+      "71D954DC-4-Photo-4",
+      "71D954DC-5-Photo-5",
+      "71D954DC-6-Photo-6",
+      "71D954DC-7-Photo-7",
+      "71D954DC-8-Photo-8",
+      "71D954DC-9-Photo-9",
+      "AFAA58CF-1-Photo-1",
+      "AFAA58CF-10-Photo-10",
+      "AFAA58CF-2-Photo-2",
+      "AFAA58CF-3-Photo-3",
+      "AFAA58CF-4-Photo-4",
+      "AFAA58CF-5-Photo-5",
+      "AFAA58CF-6-Photo-6",
+      "AFAA58CF-7-Photo-7",
+      "AFAA58CF-8-Photo-8",
+      "AFAA58CF-9-Photo-9",
+      "F0613532-1-Photo-1",
+      "F0613532-10-Photo-10",
+      "F0613532-2-Photo-2",
+      "F0613532-3-Photo-3",
+      "F0613532-4-Photo-4",
+      "F0613532-5-Photo-5",
+      "F0613532-6-Photo-6",
+      "F0613532-7-Photo-7",
+      "F0613532-8-Photo-8",
+      "F0613532-9-Photo-9",
+      "bakeoff-sheet01",
+      "bakeoff-sheet02",
+      "bakeoff-sheet03",
+      "bakeoff-sheet04",
+      "bakeoff-sheet05",
+      "bakeoff-sheet06",
+      "bakeoff-sheet07",
+      "bakeoff-sheet08",
+      "images-sheet01",
+      "images-sheet02",
+      "images-sheet03",
+      "images-sheet04",
+      "images-sheet05",
+      "images-sheet06",
+      "images-sheet07",
+      "images-sheet08",
+      "live-1777078893756",
+      "live-1777078910809",
+      "live-1777078922228",
+      "live-1777078940580",
+      "live-1777078952571",
+      "live-1777078964618",
+      "live-1777078976262",
+      "live-1777082936495",
+      "live-1777082960040",
+      "live-1777082984994",
+      "live-1777083018314",
+      "live-1777083067891",
+      "live-1777083088943",
+      "live-1777087456664",
+      "live-1777087478934",
+      "live-1777091371292",
+      "live-1777091405812",
+      "live-1777091425597",
+      "live-1777091460971",
+      "live-1777091479134",
+      "live-1777091527019",
+      "live-1777091547562",
+      "live-1777091557729",
+      "live-1777286903860",
+      "live-1777286925200",
+      "live-1777290129497",
+      "live-1777290161926",
+      "live-1777290180431",
+      "live-1777290209455",
+      "live-1777549525161",
+      "live-1777587518598",
+      "live-1777587530699",
+      "live-1777587539941",
+      "live-1777587550920",
+      "live-1777587560752",
+      "live-1777587571279",
+      "live-1777587580862",
+      "live-1777587598614",
+      "live-1777587608535",
+      "live-1777587618293",
+      "live-1777587627416"
+    ],
+    "groupsInternalVal": [
+      "71D954DC-5-Photo-5",
+      "71D954DC-8-Photo-8",
+      "AFAA58CF-6-Photo-6",
+      "AFAA58CF-9-Photo-9",
+      "F0613532-7-Photo-7"
+    ]
+  },
+  "externalCounts": {
+    "mnist": 8660,
+    "emnist": 26000
+  },
+  "expandedTrainSamples": 80580,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 0.5908526638936511,
+      "worksheetTrainAcc": 0.9965116279069768,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.7082278481012658,
+      "externalEvalAcc": 0.995,
+      "score": 0.9403955696202533,
+      "lr": 7.899711648727294e-05
+    },
+    {
+      "epoch": 2,
+      "loss": 0.558991699672627,
+      "worksheetTrainAcc": 0.9965116279069768,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.7329113924050633,
+      "externalEvalAcc": 0.995625,
+      "score": 0.9454885284810127,
+      "lr": 7.603875471609677e-05
+    },
+    {
+      "epoch": 3,
+      "loss": 0.5409430304660073,
+      "worksheetTrainAcc": 0.9965116279069768,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.7417721518987341,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9470263053797469,
+      "lr": 7.12732592987212e-05
+    },
+    {
+      "epoch": 4,
+      "loss": 0.5316909728910646,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.7531645569620253,
+      "externalEvalAcc": 0.9953125,
+      "score": 0.9494610363924051,
+      "lr": 6.493959207434936e-05
+    },
+    {
+      "epoch": 5,
+      "loss": 0.5223559571868819,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.7658227848101266,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9518364319620254,
+      "lr": 5.7355349564702335e-05
+    },
+    {
+      "epoch": 6,
+      "loss": 0.5180825699541461,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.7772151898734178,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9541149129746835,
+      "lr": 4.8900837358252584e-05
+    },
+    {
+      "epoch": 7,
+      "loss": 0.5135897577593006,
+      "worksheetTrainAcc": 0.9953488372093023,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.779113924050633,
+      "externalEvalAcc": 0.995,
+      "score": 0.9545727848101266,
+      "lr": 4e-05
+    },
+    {
+      "epoch": 8,
+      "loss": 0.507591960639627,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.7854430379746835,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9557604825949367,
+      "lr": 3.109916264174743e-05
+    },
+    {
+      "epoch": 9,
+      "loss": 0.5035108863745236,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.7936708860759494,
+      "externalEvalAcc": 0.995,
+      "score": 0.95748417721519,
+      "lr": 2.2644650435297682e-05
+    },
+    {
+      "epoch": 10,
+      "loss": 0.5022915215712973,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.8006329113924051,
+      "externalEvalAcc": 0.994375,
+      "score": 0.958720332278481,
+      "lr": 1.5060407925650664e-05
+    },
+    {
+      "epoch": 11,
+      "loss": 0.5020422406544547,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.7987341772151899,
+      "externalEvalAcc": 0.994375,
+      "score": 0.958340585443038,
+      "lr": 8.726740701278823e-06
+    },
+    {
+      "epoch": 12,
+      "loss": 0.5001051134005703,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.8025316455696202,
+      "externalEvalAcc": 0.995,
+      "score": 0.9592563291139241,
+      "lr": 3.961245283903239e-06
+    },
+    {
+      "epoch": 13,
+      "loss": 0.49746523619171523,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.8063291139240506,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9599376977848102,
+      "lr": 1.0028835127270508e-06
+    },
+    {
+      "epoch": 14,
+      "loss": 0.49705123908468263,
+      "worksheetTrainAcc": 0.9976744186046511,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.8037974683544303,
+      "externalEvalAcc": 0.994375,
+      "score": 0.959353243670886,
+      "lr": 0.0
+    }
+  ],
+  "eval": {
+    "worksheetTrain": {
+      "correct": 858,
+      "total": 860,
+      "accuracy": 0.9976744186046511,
+      "confusions": [
+        {
+          "pair": "5->1",
+          "count": 1
+        },
+        {
+          "pair": "9->1",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "bakeoff-sheet03-q8",
+          "expected": 5,
+          "predicted": 1,
+          "confidence": 0.3609638512134552,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.3609638512134552
+            },
+            {
+              "digit": 3,
+              "confidence": 0.15097038447856903
+            },
+            {
+              "digit": 2,
+              "confidence": 0.12571172416210175
+            }
+          ]
+        },
+        {
+          "name": "bakeoff-sheet04-q4",
+          "expected": 9,
+          "predicted": 1,
+          "confidence": 0.8139715194702148,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.8139715194702148
+            },
+            {
+              "digit": 7,
+              "confidence": 0.09037092328071594
+            },
+            {
+              "digit": 9,
+              "confidence": 0.06292425096035004
+            }
+          ]
+        }
+      ]
+    },
+    "worksheetInternalVal": {
+      "correct": 50,
+      "total": 50,
+      "accuracy": 1.0,
+      "confusions": [],
+      "misses": []
+    },
+    "extraLabeledRaw": {
+      "correct": 1274,
+      "total": 1580,
+      "accuracy": 0.8063291139240506,
+      "confusions": [
+        {
+          "pair": "3->1",
+          "count": 43
+        },
+        {
+          "pair": "4->1",
+          "count": 28
+        },
+        {
+          "pair": "2->1",
+          "count": 27
+        },
+        {
+          "pair": "7->1",
+          "count": 20
+        },
+        {
+          "pair": "5->1",
+          "count": 17
+        },
+        {
+          "pair": "2->3",
+          "count": 16
+        },
+        {
+          "pair": "1->3",
+          "count": 15
+        },
+        {
+          "pair": "4->3",
+          "count": 15
+        },
+        {
+          "pair": "9->1",
+          "count": 15
+        },
+        {
+          "pair": "6->1",
+          "count": 14
+        },
+        {
+          "pair": "8->1",
+          "count": 14
+        },
+        {
+          "pair": "7->2",
+          "count": 9
+        },
+        {
+          "pair": "6->2",
+          "count": 8
+        },
+        {
+          "pair": "7->3",
+          "count": 8
+        },
+        {
+          "pair": "5->3",
+          "count": 7
+        },
+        {
+          "pair": "2->7",
+          "count": 6
+        },
+        {
+          "pair": "3->2",
+          "count": 5
+        },
+        {
+          "pair": "9->2",
+          "count": 5
+        },
+        {
+          "pair": "3->5",
+          "count": 4
+        },
+        {
+          "pair": "8->2",
+          "count": 4
+        },
+        {
+          "pair": "8->3",
+          "count": 4
+        },
+        {
+          "pair": "9->3",
+          "count": 3
+        },
+        {
+          "pair": "2->5",
+          "count": 2
+        },
+        {
+          "pair": "3->7",
+          "count": 2
+        },
+        {
+          "pair": "7->5",
+          "count": 2
+        },
+        {
+          "pair": "0->5",
+          "count": 1
+        },
+        {
+          "pair": "1->4",
+          "count": 1
+        },
+        {
+          "pair": "1->5",
+          "count": 1
+        },
+        {
+          "pair": "1->7",
+          "count": 1
+        },
+        {
+          "pair": "3->6",
+          "count": 1
+        },
+        {
+          "pair": "4->2",
+          "count": 1
+        },
+        {
+          "pair": "4->5",
+          "count": 1
+        },
+        {
+          "pair": "5->2",
+          "count": 1
+        },
+        {
+          "pair": "5->9",
+          "count": 1
+        },
+        {
+          "pair": "6->3",
+          "count": 1
+        },
+        {
+          "pair": "6->7",
+          "count": 1
+        },
+        {
+          "pair": "7->0",
+          "count": 1
+        },
+        {
+          "pair": "8->7",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "worksheet_digits_tony_20260601_variants-base-live-1777078964618-q7",
+          "expected": 0,
+          "predicted": 5,
+          "confidence": 0.8314635753631592,
+          "topK": [
+            {
+              "digit": 5,
+              "confidence": 0.8314635753631592
+            },
+            {
+              "digit": 0,
+              "confidence": 0.16299298405647278
+            },
+            {
+              "digit": 6,
+              "confidence": 0.0027664643712341785
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-student-AFAA58CF-10-Photo-10-q3",
+          "expected": 1,
+          "predicted": 4,
+          "confidence": 0.7797228097915649,
+          "topK": [
+            {
+              "digit": 4,
+              "confidence": 0.7797228097915649
+            },
+            {
+              "digit": 1,
+              "confidence": 0.169224813580513
+            },
+            {
+              "digit": 9,
+              "confidence": 0.02795824408531189
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-student-F0613532-2-Photo-2-q3",
+          "expected": 1,
+          "predicted": 7,
+          "confidence": 0.7275117039680481,
+          "topK": [
+            {
+              "digit": 7,
+              "confidence": 0.7275117039680481
+            },
+            {
+              "digit": 1,
+              "confidence": 0.25581255555152893
+            },
+            {
+              "digit": 2,
+              "confidence": 0.007229234557598829
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q1-cell0-base",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.5399603247642517,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.5399603247642517
+            },
+            {
+              "digit": 2,
+              "confidence": 0.12470190972089767
+            },
+            {
+              "digit": 1,
+              "confidence": 0.11538030952215195
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q1-cell0-edge-clean",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.5399603247642517,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.5399603247642517
+            },
+            {
+              "digit": 2,
+              "confidence": 0.12470190972089767
+            },
+            {
+              "digit": 1,
+              "confidence": 0.11538030952215195
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q1-cell0-no-component-cleanup",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.5399603247642517,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.5399603247642517
+            },
+            {
+              "digit": 2,
+              "confidence": 0.12470190972089767
+            },
+            {
+              "digit": 1,
+              "confidence": 0.11538030952215195
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q1-cell0-no-rule-cleanup",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.5399603247642517,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.5399603247642517
+            },
+            {
+              "digit": 2,
+              "confidence": 0.12470190972089767
+            },
+            {
+              "digit": 1,
+              "confidence": 0.11538030952215195
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q1-cell0-strict",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.5399603247642517,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.5399603247642517
+            },
+            {
+              "digit": 2,
+              "confidence": 0.12470190972089767
+            },
+            {
+              "digit": 1,
+              "confidence": 0.11538030952215195
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q5-cell8-base",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.2949431240558624,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.2949431240558624
+            },
+            {
+              "digit": 1,
+              "confidence": 0.22633704543113708
+            },
+            {
+              "digit": 8,
+              "confidence": 0.10100701451301575
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q5-cell8-no-component-cleanup",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.2949431240558624,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.2949431240558624
+            },
+            {
+              "digit": 1,
+              "confidence": 0.22633704543113708
+            },
+            {
+              "digit": 8,
+              "confidence": 0.10100701451301575
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q5-cell8-no-rule-cleanup",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.35637789964675903,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.35637789964675903
+            },
+            {
+              "digit": 1,
+              "confidence": 0.19753967225551605
+            },
+            {
+              "digit": 4,
+              "confidence": 0.10603915899991989
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q5-cell8-strict",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.2949431240558624,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.2949431240558624
+            },
+            {
+              "digit": 1,
+              "confidence": 0.22633704543113708
+            },
+            {
+              "digit": 8,
+              "confidence": 0.10100701451301575
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q6-cell10-base",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.39894530177116394,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.39894530177116394
+            },
+            {
+              "digit": 1,
+              "confidence": 0.3206227719783783
+            },
+            {
+              "digit": 4,
+              "confidence": 0.1058710590004921
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q6-cell10-edge-clean",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.39894530177116394,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.39894530177116394
+            },
+            {
+              "digit": 1,
+              "confidence": 0.3206227719783783
+            },
+            {
+              "digit": 4,
+              "confidence": 0.1058710590004921
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q6-cell10-no-component-cleanup",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.4315160810947418,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.4315160810947418
+            },
+            {
+              "digit": 1,
+              "confidence": 0.288089394569397
+            },
+            {
+              "digit": 4,
+              "confidence": 0.1060836911201477
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q6-cell10-no-rule-cleanup",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.39894530177116394,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.39894530177116394
+            },
+            {
+              "digit": 1,
+              "confidence": 0.3206227719783783
+            },
+            {
+              "digit": 4,
+              "confidence": 0.1058710590004921
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q6-cell10-strict",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.39894530177116394,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.39894530177116394
+            },
+            {
+              "digit": 1,
+              "confidence": 0.3206227719783783
+            },
+            {
+              "digit": 4,
+              "confidence": 0.1058710590004921
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-sub-q8-cell14-edge-clean",
+          "expected": 1,
+          "predicted": 5,
+          "confidence": 0.26135995984077454,
+          "topK": [
+            {
+              "digit": 5,
+              "confidence": 0.26135995984077454
+            },
+            {
+              "digit": 1,
+              "confidence": 0.25117236375808716
+            },
+            {
+              "digit": 2,
+              "confidence": 0.10370823740959167
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-sub-q8-cell14-gentle",
+          "expected": 1,
+          "predicted": 3,
+          "confidence": 0.28475823998451233,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.28475823998451233
+            },
+            {
+              "digit": 1,
+              "confidence": 0.20903567969799042
+            },
+            {
+              "digit": 7,
+              "confidence": 0.12423797696828842
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q14",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.8298355937004089,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.8298355937004089
+            },
+            {
+              "digit": 2,
+              "confidence": 0.14418388903141022
+            },
+            {
+              "digit": 5,
+              "confidence": 0.009448795579373837
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q7-cell13-edge-band-slot",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.35204049944877625,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.35204049944877625
+            },
+            {
+              "digit": 2,
+              "confidence": 0.24242408573627472
+            },
+            {
+              "digit": 1,
+              "confidence": 0.16931839287281036
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q7-cell13-expected-slot",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.27755287289619446,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.27755287289619446
+            },
+            {
+              "digit": 2,
+              "confidence": 0.227031409740448
+            },
+            {
+              "digit": 3,
+              "confidence": 0.20282886922359467
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q7-cell13-gentle",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.27830779552459717,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.27830779552459717
+            },
+            {
+              "digit": 2,
+              "confidence": 0.22619791328907013
+            },
+            {
+              "digit": 3,
+              "confidence": 0.20244303345680237
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q7-cell13-no-side-erase",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.4257167875766754,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.4257167875766754
+            },
+            {
+              "digit": 2,
+              "confidence": 0.18043190240859985
+            },
+            {
+              "digit": 3,
+              "confidence": 0.16454730927944183
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-add-q7-cell13-wide-slot",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.8333175182342529,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.8333175182342529
+            },
+            {
+              "digit": 2,
+              "confidence": 0.056767746806144714
+            },
+            {
+              "digit": 7,
+              "confidence": 0.04296170920133591
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q2-cell2-base",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.34833818674087524,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.34833818674087524
+            },
+            {
+              "digit": 1,
+              "confidence": 0.2367941439151764
+            },
+            {
+              "digit": 2,
+              "confidence": 0.17933939397335052
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q2-cell2-edge-clean",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.34833818674087524,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.34833818674087524
+            },
+            {
+              "digit": 1,
+              "confidence": 0.2367941439151764
+            },
+            {
+              "digit": 2,
+              "confidence": 0.17933939397335052
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q2-cell2-no-component-cleanup",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.34833818674087524,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.34833818674087524
+            },
+            {
+              "digit": 1,
+              "confidence": 0.2367941439151764
+            },
+            {
+              "digit": 2,
+              "confidence": 0.17933939397335052
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q2-cell2-no-rule-cleanup",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.34833818674087524,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.34833818674087524
+            },
+            {
+              "digit": 1,
+              "confidence": 0.2367941439151764
+            },
+            {
+              "digit": 2,
+              "confidence": 0.17933939397335052
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q2-cell2-no-side-erase",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.4447336196899414,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.4447336196899414
+            },
+            {
+              "digit": 2,
+              "confidence": 0.2813105285167694
+            },
+            {
+              "digit": 7,
+              "confidence": 0.08215384185314178
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q2-cell2-strict",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.34833818674087524,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.34833818674087524
+            },
+            {
+              "digit": 1,
+              "confidence": 0.2367941439151764
+            },
+            {
+              "digit": 2,
+              "confidence": 0.17933939397335052
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q4-cell6-center-safe-slot",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.3961372971534729,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.3961372971534729
+            },
+            {
+              "digit": 2,
+              "confidence": 0.2028803676366806
+            },
+            {
+              "digit": 3,
+              "confidence": 0.1390770524740219
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q4-cell6-edge-band-slot",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.3013574182987213,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.3013574182987213
+            },
+            {
+              "digit": 2,
+              "confidence": 0.2279571145772934
+            },
+            {
+              "digit": 3,
+              "confidence": 0.2067227065563202
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q4-cell6-wide-slot",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.2992343604564667,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.2992343604564667
+            },
+            {
+              "digit": 2,
+              "confidence": 0.2618021070957184
+            },
+            {
+              "digit": 3,
+              "confidence": 0.18422842025756836
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q6-cell10-base",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.3699863851070404,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.3699863851070404
+            },
+            {
+              "digit": 3,
+              "confidence": 0.2741234004497528
+            },
+            {
+              "digit": 2,
+              "confidence": 0.18442296981811523
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q6-cell10-center-safe-slot",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.30853649973869324,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.30853649973869324
+            },
+            {
+              "digit": 4,
+              "confidence": 0.16317997872829437
+            },
+            {
+              "digit": 1,
+              "confidence": 0.16191509366035461
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q6-cell10-edge-band-slot",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.30500689148902893,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.30500689148902893
+            },
+            {
+              "digit": 4,
+              "confidence": 0.1568329781293869
+            },
+            {
+              "digit": 2,
+              "confidence": 0.13432268798351288
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q6-cell10-edge-clean",
+          "expected": 2,
+          "predicted": 1,
+          "confidence": 0.3699863851070404,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.3699863851070404
+            },
+            {
+              "digit": 3,
+              "confidence": 0.2741234004497528
+            },
+            {
+              "digit": 2,
+              "confidence": 0.18442296981811523
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q6-cell10-expected-slot",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.33287346363067627,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.33287346363067627
+            },
+            {
+              "digit": 2,
+              "confidence": 0.15592530369758606
+            },
+            {
+              "digit": 4,
+              "confidence": 0.13498304784297943
+            }
+          ]
+        },
+        {
+          "name": "worksheet_digits_tony_20260601_variants-tony-20260601-mixed-q6-cell10-gentle",
+          "expected": 2,
+          "predicted": 3,
+          "confidence": 0.32492712140083313,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.32492712140083313
+            },
+            {
+              "digit": 2,
+              "confidence": 0.17003370821475983
+            },
+            {
+              "digit": 4,
+              "confidence": 0.1154145821928978
+            }
+          ]
+        }
+      ]
+    },
+    "externalEval": {
+      "correct": 3183,
+      "total": 3200,
+      "accuracy": 0.9946875,
+      "confusions": [
+        {
+          "pair": "4->9",
+          "count": 2
+        },
+        {
+          "pair": "7->4",
+          "count": 2
+        },
+        {
+          "pair": "7->9",
+          "count": 2
+        },
+        {
+          "pair": "1->6",
+          "count": 1
+        },
+        {
+          "pair": "2->9",
+          "count": 1
+        },
+        {
+          "pair": "3->0",
+          "count": 1
+        },
+        {
+          "pair": "3->5",
+          "count": 1
+        },
+        {
+          "pair": "4->7",
+          "count": 1
+        },
+        {
+          "pair": "6->5",
+          "count": 1
+        },
+        {
+          "pair": "8->0",
+          "count": 1
+        },
+        {
+          "pair": "8->2",
+          "count": 1
+        },
+        {
+          "pair": "9->4",
+          "count": 1
+        },
+        {
+          "pair": "9->7",
+          "count": 1
+        },
+        {
+          "pair": "9->8",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "mnist-test-2280",
+          "expected": 3,
+          "predicted": 0,
+          "confidence": 0.28763526678085327,
+          "topK": [
+            {
+              "digit": 0,
+              "confidence": 0.28763526678085327
+            },
+            {
+              "digit": 3,
+              "confidence": 0.27643871307373047
+            },
+            {
+              "digit": 5,
+              "confidence": 0.2690800130367279
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-8527",
+          "expected": 4,
+          "predicted": 9,
+          "confidence": 0.9106939435005188,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.9106939435005188
+            },
+            {
+              "digit": 4,
+              "confidence": 0.0606839545071125
+            },
+            {
+              "digit": 2,
+              "confidence": 0.01165846548974514
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-4860",
+          "expected": 4,
+          "predicted": 9,
+          "confidence": 0.5268244743347168,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.5268244743347168
+            },
+            {
+              "digit": 4,
+              "confidence": 0.4530072510242462
+            },
+            {
+              "digit": 0,
+              "confidence": 0.00572275510057807
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-1014",
+          "expected": 6,
+          "predicted": 5,
+          "confidence": 0.3675837516784668,
+          "topK": [
+            {
+              "digit": 5,
+              "confidence": 0.3675837516784668
+            },
+            {
+              "digit": 6,
+              "confidence": 0.16876398026943207
+            },
+            {
+              "digit": 0,
+              "confidence": 0.1434505581855774
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-2523",
+          "expected": 7,
+          "predicted": 4,
+          "confidence": 0.5456222891807556,
+          "topK": [
+            {
+              "digit": 4,
+              "confidence": 0.5456222891807556
+            },
+            {
+              "digit": 7,
+              "confidence": 0.361769437789917
+            },
+            {
+              "digit": 9,
+              "confidence": 0.08824953436851501
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-1039",
+          "expected": 7,
+          "predicted": 4,
+          "confidence": 0.44862100481987,
+          "topK": [
+            {
+              "digit": 4,
+              "confidence": 0.44862100481987
+            },
+            {
+              "digit": 7,
+              "confidence": 0.20978780090808868
+            },
+            {
+              "digit": 1,
+              "confidence": 0.1162170022726059
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-582",
+          "expected": 8,
+          "predicted": 2,
+          "confidence": 0.5705670118331909,
+          "topK": [
+            {
+              "digit": 2,
+              "confidence": 0.5705670118331909
+            },
+            {
+              "digit": 8,
+              "confidence": 0.29336869716644287
+            },
+            {
+              "digit": 6,
+              "confidence": 0.06537267565727234
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-2093",
+          "expected": 8,
+          "predicted": 0,
+          "confidence": 0.6165759563446045,
+          "topK": [
+            {
+              "digit": 0,
+              "confidence": 0.6165759563446045
+            },
+            {
+              "digit": 8,
+              "confidence": 0.33025863766670227
+            },
+            {
+              "digit": 2,
+              "confidence": 0.023902542889118195
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-3859",
+          "expected": 9,
+          "predicted": 8,
+          "confidence": 0.3728642165660858,
+          "topK": [
+            {
+              "digit": 8,
+              "confidence": 0.3728642165660858
+            },
+            {
+              "digit": 9,
+              "confidence": 0.27297428250312805
+            },
+            {
+              "digit": 3,
+              "confidence": 0.12750853598117828
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-4163",
+          "expected": 9,
+          "predicted": 7,
+          "confidence": 0.3895534873008728,
+          "topK": [
+            {
+              "digit": 7,
+              "confidence": 0.3895534873008728
+            },
+            {
+              "digit": 9,
+              "confidence": 0.37456580996513367
+            },
+            {
+              "digit": 2,
+              "confidence": 0.07764860987663269
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-2767",
+          "expected": 1,
+          "predicted": 6,
+          "confidence": 0.2762550711631775,
+          "topK": [
+            {
+              "digit": 6,
+              "confidence": 0.2762550711631775
+            },
+            {
+              "digit": 2,
+              "confidence": 0.20624615252017975
+            },
+            {
+              "digit": 1,
+              "confidence": 0.18793465197086334
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-14753",
+          "expected": 2,
+          "predicted": 9,
+          "confidence": 0.6433903574943542,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.6433903574943542
+            },
+            {
+              "digit": 5,
+              "confidence": 0.11958646029233932
+            },
+            {
+              "digit": 0,
+              "confidence": 0.08087457716464996
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-10052",
+          "expected": 3,
+          "predicted": 5,
+          "confidence": 0.6140755414962769,
+          "topK": [
+            {
+              "digit": 5,
+              "confidence": 0.6140755414962769
+            },
+            {
+              "digit": 3,
+              "confidence": 0.28024670481681824
+            },
+            {
+              "digit": 1,
+              "confidence": 0.039663709700107574
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-5421",
+          "expected": 4,
+          "predicted": 7,
+          "confidence": 0.9982936978340149,
+          "topK": [
+            {
+              "digit": 7,
+              "confidence": 0.9982936978340149
+            },
+            {
+              "digit": 4,
+              "confidence": 0.0007473041769117117
+            },
+            {
+              "digit": 1,
+              "confidence": 0.0002777836343739182
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-26125",
+          "expected": 7,
+          "predicted": 9,
+          "confidence": 0.479932963848114,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.479932963848114
+            },
+            {
+              "digit": 7,
+              "confidence": 0.25694072246551514
+            },
+            {
+              "digit": 4,
+              "confidence": 0.07629141211509705
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-29754",
+          "expected": 7,
+          "predicted": 9,
+          "confidence": 0.49592915177345276,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.49592915177345276
+            },
+            {
+              "digit": 7,
+              "confidence": 0.32985034584999084
+            },
+            {
+              "digit": 0,
+              "confidence": 0.05713275074958801
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-12160",
+          "expected": 9,
+          "predicted": 4,
+          "confidence": 0.5370811223983765,
+          "topK": [
+            {
+              "digit": 4,
+              "confidence": 0.5370811223983765
+            },
+            {
+              "digit": 9,
+              "confidence": 0.40620413422584534
+            },
+            {
+              "digit": 1,
+              "confidence": 0.012216147035360336
+            }
+          ]
+        }
+      ]
+    },
+    "strictHoldout": {
+      "correct": 49,
+      "total": 50,
+      "accuracy": 0.98,
+      "confusions": [
+        {
+          "pair": "3->6",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "7DE72F2C-1-Photo-1-q9",
+          "expected": 3,
+          "predicted": 6,
+          "confidence": 0.26983192563056946,
+          "topK": [
+            {
+              "digit": 6,
+              "confidence": 0.26983192563056946
+            },
+            {
+              "digit": 0,
+              "confidence": 0.24430841207504272
+            },
+            {
+              "digit": 8,
+              "confidence": 0.17465567588806152
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "checkpoint": "models/worksheet-digit-tony-generalist-aug-strong-20260601.pt",
+  "onnx": "public/models/worksheet-digit-tony-generalist-aug-strong-20260601.onnx"
+}

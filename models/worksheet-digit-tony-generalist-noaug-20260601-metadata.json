@@ -1,0 +1,790 @@
+{
+  "generatedAt": "2026-06-01T22:14:46.549247Z",
+  "arch": "ScanGradeDigitCNN",
+  "preprocessing": "worksheet RGB darkness/saturation ink extraction + centered 28x28 digit normalization",
+  "strictHoldoutPolicy": "Paths containing 7DE72F2C are excluded from training and used only for evaluation.",
+  "args": {
+    "epochs": 18,
+    "batch_size": 256,
+    "lr": 8e-05,
+    "seed": 73,
+    "external_per_digit": 2600,
+    "worksheet_repeat": 24,
+    "external_root": "/Users/openclaw/Codex Projects/scan-grade-cursor/datasets/external",
+    "holdout_debug": "/Users/openclaw/Codex Projects/scan-grade-cursor/benchmarks/holdout_student_samples_2026-05-15/results/debug",
+    "onnx_out": "public/models/worksheet-digit-tony-generalist-noaug-20260601.onnx",
+    "checkpoint_out": "models/worksheet-digit-tony-generalist-noaug-20260601.pt",
+    "metadata_out": "models/worksheet-digit-tony-generalist-noaug-20260601-metadata.json",
+    "include_internal_val": true,
+    "init_checkpoint": "models/worksheet-digit-generalist-final.pt",
+    "extra_labeled_raw": "datasets/worksheet_digits_tony_20260601_variants/raw",
+    "extra_labeled_raw_repeat": 18,
+    "extra_labeled_raw_cap_per_digit": 180,
+    "no_augmentation": true
+  },
+  "worksheetSources": [
+    "/Users/openclaw/Codex Projects/scan-grade-cursor/datasets/worksheet_digits_current_pipeline/debug",
+    "/Users/openclaw/Codex Projects/scan-grade-cursor/benchmarks/uploaded_student_samples/results-student-bakeoff-final-default/debug",
+    "/Users/openclaw/Codex Projects/scan-grade-cursor/benchmarks/worksheet_bakeoff/results-final-default-debug/debug"
+  ],
+  "worksheetSamples": {
+    "train": 860,
+    "internalVal": 50,
+    "extraLabeledRaw": 1370,
+    "groupsTrain": [
+      "71D954DC-1-Photo-1",
+      "71D954DC-2-Photo-2",
+      "71D954DC-3-Photo-3",
+      "71D954DC-4-Photo-4",
+      "71D954DC-5-Photo-5",
+      "71D954DC-6-Photo-6",
+      "71D954DC-7-Photo-7",
+      "71D954DC-8-Photo-8",
+      "71D954DC-9-Photo-9",
+      "AFAA58CF-1-Photo-1",
+      "AFAA58CF-10-Photo-10",
+      "AFAA58CF-2-Photo-2",
+      "AFAA58CF-3-Photo-3",
+      "AFAA58CF-4-Photo-4",
+      "AFAA58CF-5-Photo-5",
+      "AFAA58CF-6-Photo-6",
+      "AFAA58CF-7-Photo-7",
+      "AFAA58CF-8-Photo-8",
+      "AFAA58CF-9-Photo-9",
+      "F0613532-1-Photo-1",
+      "F0613532-10-Photo-10",
+      "F0613532-2-Photo-2",
+      "F0613532-3-Photo-3",
+      "F0613532-4-Photo-4",
+      "F0613532-5-Photo-5",
+      "F0613532-6-Photo-6",
+      "F0613532-7-Photo-7",
+      "F0613532-8-Photo-8",
+      "F0613532-9-Photo-9",
+      "bakeoff-sheet01",
+      "bakeoff-sheet02",
+      "bakeoff-sheet03",
+      "bakeoff-sheet04",
+      "bakeoff-sheet05",
+      "bakeoff-sheet06",
+      "bakeoff-sheet07",
+      "bakeoff-sheet08",
+      "images-sheet01",
+      "images-sheet02",
+      "images-sheet03",
+      "images-sheet04",
+      "images-sheet05",
+      "images-sheet06",
+      "images-sheet07",
+      "images-sheet08",
+      "live-1777078893756",
+      "live-1777078910809",
+      "live-1777078922228",
+      "live-1777078940580",
+      "live-1777078952571",
+      "live-1777078964618",
+      "live-1777078976262",
+      "live-1777082936495",
+      "live-1777082960040",
+      "live-1777082984994",
+      "live-1777083018314",
+      "live-1777083067891",
+      "live-1777083088943",
+      "live-1777087456664",
+      "live-1777087478934",
+      "live-1777091371292",
+      "live-1777091405812",
+      "live-1777091425597",
+      "live-1777091460971",
+      "live-1777091479134",
+      "live-1777091527019",
+      "live-1777091547562",
+      "live-1777091557729",
+      "live-1777286903860",
+      "live-1777286925200",
+      "live-1777290129497",
+      "live-1777290161926",
+      "live-1777290180431",
+      "live-1777290209455",
+      "live-1777549525161",
+      "live-1777587518598",
+      "live-1777587530699",
+      "live-1777587539941",
+      "live-1777587550920",
+      "live-1777587560752",
+      "live-1777587571279",
+      "live-1777587580862",
+      "live-1777587598614",
+      "live-1777587608535",
+      "live-1777587618293",
+      "live-1777587627416"
+    ],
+    "groupsInternalVal": [
+      "71D954DC-5-Photo-5",
+      "71D954DC-8-Photo-8",
+      "AFAA58CF-6-Photo-6",
+      "AFAA58CF-9-Photo-9",
+      "F0613532-7-Photo-7"
+    ]
+  },
+  "externalCounts": {
+    "mnist": 8660,
+    "emnist": 26000
+  },
+  "expandedTrainSamples": 79960,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 0.3127214250175758,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.9817518248175182,
+      "externalEvalAcc": 0.9934375,
+      "score": 0.9947097399635036,
+      "lr": 7.939231012048833e-05
+    },
+    {
+      "epoch": 2,
+      "loss": 0.1784052350957612,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.9985401459854014,
+      "externalEvalAcc": 0.994375,
+      "score": 0.9983017791970803,
+      "lr": 7.758770483143634e-05
+    },
+    {
+      "epoch": 3,
+      "loss": 0.15945539487905058,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 0.9992700729927008,
+      "externalEvalAcc": 0.9940625,
+      "score": 0.9983696395985402,
+      "lr": 7.464101615137755e-05
+    },
+    {
+      "epoch": 4,
+      "loss": 0.15327472201343056,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9928125,
+      "score": 0.9982031250000001,
+      "lr": 7.064177772475911e-05
+    },
+    {
+      "epoch": 5,
+      "loss": 0.14995490176758808,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9986718750000001,
+      "lr": 6.571150438746156e-05
+    },
+    {
+      "epoch": 6,
+      "loss": 0.14762991967351513,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9940625,
+      "score": 0.998515625,
+      "lr": 5.999999999999999e-05
+    },
+    {
+      "epoch": 7,
+      "loss": 0.1460537331977327,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.994375,
+      "score": 0.99859375,
+      "lr": 5.368080573302675e-05
+    },
+    {
+      "epoch": 8,
+      "loss": 0.14474528085267085,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9940625,
+      "score": 0.998515625,
+      "lr": 4.6945927106677214e-05
+    },
+    {
+      "epoch": 9,
+      "loss": 0.14391054859037336,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9940625,
+      "score": 0.998515625,
+      "lr": 3.9999999999999996e-05
+    },
+    {
+      "epoch": 10,
+      "loss": 0.14302001835227668,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9986718750000001,
+      "lr": 3.3054072893322785e-05
+    },
+    {
+      "epoch": 11,
+      "loss": 0.14237476995046167,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9986718750000001,
+      "lr": 2.6319194266973263e-05
+    },
+    {
+      "epoch": 12,
+      "loss": 0.14198581912834804,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9953125,
+      "score": 0.998828125,
+      "lr": 2.000000000000001e-05
+    },
+    {
+      "epoch": 13,
+      "loss": 0.14149094602505882,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.994375,
+      "score": 0.99859375,
+      "lr": 1.4288495612538425e-05
+    },
+    {
+      "epoch": 14,
+      "loss": 0.1413680317775794,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.995,
+      "score": 0.99875,
+      "lr": 9.358222275240884e-06
+    },
+    {
+      "epoch": 15,
+      "loss": 0.14106257143558532,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.994375,
+      "score": 0.99859375,
+      "lr": 5.3589838486224605e-06
+    },
+    {
+      "epoch": 16,
+      "loss": 0.140919401131015,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9986718750000001,
+      "lr": 2.4122951685636674e-06
+    },
+    {
+      "epoch": 17,
+      "loss": 0.1409010760199135,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.995,
+      "score": 0.99875,
+      "lr": 6.076898795116792e-07
+    },
+    {
+      "epoch": 18,
+      "loss": 0.1407314592835425,
+      "worksheetTrainAcc": 0.9988372093023256,
+      "worksheetValAcc": 1.0,
+      "extraLabeledRawAcc": 1.0,
+      "externalEvalAcc": 0.9946875,
+      "score": 0.9986718750000001,
+      "lr": 0.0
+    }
+  ],
+  "eval": {
+    "worksheetTrain": {
+      "correct": 859,
+      "total": 860,
+      "accuracy": 0.9988372093023256,
+      "confusions": [
+        {
+          "pair": "5->1",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "bakeoff-sheet03-q8",
+          "expected": 5,
+          "predicted": 1,
+          "confidence": 0.6524165272712708,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.6524165272712708
+            },
+            {
+              "digit": 5,
+              "confidence": 0.2769618034362793
+            },
+            {
+              "digit": 7,
+              "confidence": 0.02011077292263508
+            }
+          ]
+        }
+      ]
+    },
+    "worksheetInternalVal": {
+      "correct": 50,
+      "total": 50,
+      "accuracy": 1.0,
+      "confusions": [],
+      "misses": []
+    },
+    "extraLabeledRaw": {
+      "correct": 1370,
+      "total": 1370,
+      "accuracy": 1.0,
+      "confusions": [],
+      "misses": []
+    },
+    "externalEval": {
+      "correct": 3185,
+      "total": 3200,
+      "accuracy": 0.9953125,
+      "confusions": [
+        {
+          "pair": "4->9",
+          "count": 2
+        },
+        {
+          "pair": "0->6",
+          "count": 1
+        },
+        {
+          "pair": "0->9",
+          "count": 1
+        },
+        {
+          "pair": "1->7",
+          "count": 1
+        },
+        {
+          "pair": "1->8",
+          "count": 1
+        },
+        {
+          "pair": "3->5",
+          "count": 1
+        },
+        {
+          "pair": "4->6",
+          "count": 1
+        },
+        {
+          "pair": "5->3",
+          "count": 1
+        },
+        {
+          "pair": "5->6",
+          "count": 1
+        },
+        {
+          "pair": "6->0",
+          "count": 1
+        },
+        {
+          "pair": "8->3",
+          "count": 1
+        },
+        {
+          "pair": "8->9",
+          "count": 1
+        },
+        {
+          "pair": "9->5",
+          "count": 1
+        },
+        {
+          "pair": "9->7",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "mnist-test-1438",
+          "expected": 0,
+          "predicted": 6,
+          "confidence": 0.5590541958808899,
+          "topK": [
+            {
+              "digit": 6,
+              "confidence": 0.5590541958808899
+            },
+            {
+              "digit": 0,
+              "confidence": 0.2962251901626587
+            },
+            {
+              "digit": 5,
+              "confidence": 0.0676892027258873
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-4201",
+          "expected": 1,
+          "predicted": 7,
+          "confidence": 0.7477870583534241,
+          "topK": [
+            {
+              "digit": 7,
+              "confidence": 0.7477870583534241
+            },
+            {
+              "digit": 9,
+              "confidence": 0.08228780329227448
+            },
+            {
+              "digit": 3,
+              "confidence": 0.06128609925508499
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-449",
+          "expected": 3,
+          "predicted": 5,
+          "confidence": 0.5926122665405273,
+          "topK": [
+            {
+              "digit": 5,
+              "confidence": 0.5926122665405273
+            },
+            {
+              "digit": 3,
+              "confidence": 0.2604399025440216
+            },
+            {
+              "digit": 1,
+              "confidence": 0.03997296467423439
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-3941",
+          "expected": 4,
+          "predicted": 6,
+          "confidence": 0.821090817451477,
+          "topK": [
+            {
+              "digit": 6,
+              "confidence": 0.821090817451477
+            },
+            {
+              "digit": 4,
+              "confidence": 0.08976192027330399
+            },
+            {
+              "digit": 2,
+              "confidence": 0.039043817669153214
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-8527",
+          "expected": 4,
+          "predicted": 9,
+          "confidence": 0.6246402859687805,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.6246402859687805
+            },
+            {
+              "digit": 4,
+              "confidence": 0.2991432249546051
+            },
+            {
+              "digit": 6,
+              "confidence": 0.02723795548081398
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-2836",
+          "expected": 4,
+          "predicted": 9,
+          "confidence": 0.4985184669494629,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.4985184669494629
+            },
+            {
+              "digit": 4,
+              "confidence": 0.33679428696632385
+            },
+            {
+              "digit": 2,
+              "confidence": 0.09819066524505615
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-2040",
+          "expected": 5,
+          "predicted": 6,
+          "confidence": 0.5327251553535461,
+          "topK": [
+            {
+              "digit": 6,
+              "confidence": 0.5327251553535461
+            },
+            {
+              "digit": 5,
+              "confidence": 0.25323688983917236
+            },
+            {
+              "digit": 8,
+              "confidence": 0.11155286431312561
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-3422",
+          "expected": 6,
+          "predicted": 0,
+          "confidence": 0.940105676651001,
+          "topK": [
+            {
+              "digit": 0,
+              "confidence": 0.940105676651001
+            },
+            {
+              "digit": 6,
+              "confidence": 0.03354806452989578
+            },
+            {
+              "digit": 5,
+              "confidence": 0.007638001814484596
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-1878",
+          "expected": 8,
+          "predicted": 3,
+          "confidence": 0.8442586660385132,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.8442586660385132
+            },
+            {
+              "digit": 8,
+              "confidence": 0.08804401755332947
+            },
+            {
+              "digit": 6,
+              "confidence": 0.019385166466236115
+            }
+          ]
+        },
+        {
+          "name": "mnist-test-4731",
+          "expected": 8,
+          "predicted": 9,
+          "confidence": 0.3713744878768921,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.3713744878768921
+            },
+            {
+              "digit": 8,
+              "confidence": 0.24399210512638092
+            },
+            {
+              "digit": 7,
+              "confidence": 0.1897551715373993
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-14771",
+          "expected": 0,
+          "predicted": 9,
+          "confidence": 0.9071670174598694,
+          "topK": [
+            {
+              "digit": 9,
+              "confidence": 0.9071670174598694
+            },
+            {
+              "digit": 0,
+              "confidence": 0.048034802079200745
+            },
+            {
+              "digit": 8,
+              "confidence": 0.020925667136907578
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-14696",
+          "expected": 1,
+          "predicted": 8,
+          "confidence": 0.9898430705070496,
+          "topK": [
+            {
+              "digit": 8,
+              "confidence": 0.9898430705070496
+            },
+            {
+              "digit": 5,
+              "confidence": 0.004602778237313032
+            },
+            {
+              "digit": 4,
+              "confidence": 0.0015123835764825344
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-31917",
+          "expected": 5,
+          "predicted": 3,
+          "confidence": 0.8139258027076721,
+          "topK": [
+            {
+              "digit": 3,
+              "confidence": 0.8139258027076721
+            },
+            {
+              "digit": 5,
+              "confidence": 0.1521812528371811
+            },
+            {
+              "digit": 9,
+              "confidence": 0.007821675390005112
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-7451",
+          "expected": 9,
+          "predicted": 5,
+          "confidence": 0.5960499048233032,
+          "topK": [
+            {
+              "digit": 5,
+              "confidence": 0.5960499048233032
+            },
+            {
+              "digit": 9,
+              "confidence": 0.35620296001434326
+            },
+            {
+              "digit": 8,
+              "confidence": 0.014461562968790531
+            }
+          ]
+        },
+        {
+          "name": "emnist-test-1436",
+          "expected": 9,
+          "predicted": 7,
+          "confidence": 0.8076211810112,
+          "topK": [
+            {
+              "digit": 7,
+              "confidence": 0.8076211810112
+            },
+            {
+              "digit": 9,
+              "confidence": 0.1309642493724823
+            },
+            {
+              "digit": 0,
+              "confidence": 0.01476805005222559
+            }
+          ]
+        }
+      ]
+    },
+    "strictHoldout": {
+      "correct": 48,
+      "total": 50,
+      "accuracy": 0.96,
+      "confusions": [
+        {
+          "pair": "2->7",
+          "count": 1
+        },
+        {
+          "pair": "4->1",
+          "count": 1
+        }
+      ],
+      "misses": [
+        {
+          "name": "7DE72F2C-4-Photo-4-q2",
+          "expected": 4,
+          "predicted": 1,
+          "confidence": 0.42379575967788696,
+          "topK": [
+            {
+              "digit": 1,
+              "confidence": 0.42379575967788696
+            },
+            {
+              "digit": 8,
+              "confidence": 0.17201463878154755
+            },
+            {
+              "digit": 9,
+              "confidence": 0.16026470065116882
+            }
+          ]
+        },
+        {
+          "name": "7DE72F2C-4-Photo-4-q5",
+          "expected": 2,
+          "predicted": 7,
+          "confidence": 0.4397824704647064,
+          "topK": [
+            {
+              "digit": 7,
+              "confidence": 0.4397824704647064
+            },
+            {
+              "digit": 2,
+              "confidence": 0.2929415702819824
+            },
+            {
+              "digit": 4,
+              "confidence": 0.06703151762485504
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "checkpoint": "models/worksheet-digit-tony-generalist-noaug-20260601.pt",
+  "onnx": "public/models/worksheet-digit-tony-generalist-noaug-20260601.onnx"
+}
