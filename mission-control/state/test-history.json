@@ -215,7 +215,23 @@
       "command": "npm run build",
       "plain_english": "Vite production build completed successfully. It reported only the known large-chunk warning for the main app bundle.",
       "path_exercised": "Production bundle build path"
+    },
+    {
+      "date": "2026-06-01",
+      "name": "Two-digit OCR failed subtraction repro",
+      "result": "diagnosis",
+      "command": "SG_EXPECTED_ANSWERS=17,15,12,12,12,12,12,12,14,11 node scripts/eval_uploaded_worksheets.mjs --url https://localhost:5174 --model /models/mnist-model.onnx --out benchmarks/uploaded_student_samples/results-20260601-sean-subtraction-v3 /tmp/codex-remote-attachments/019e760b-4e8f-7751-be8b-40baddcb8e58/B72FD2B7-43D1-48CC-8C7D-D1959F2F10A9/1-Photo-1.jpg",
+      "plain_english": "Tony's newly printed Subtraction Within 20 student scan reproduced the live failure. The app found the sheet and answer boxes, but thin pencil 2s and 7s were often read as 1s or 9s, producing a valid answer score of 5/10. Do not push OCR changes until a candidate improves this without weakening the benchmark set.",
+      "path_exercised": "Classroom worksheet upload/OCR path"
+    },
+    {
+      "date": "2026-06-01",
+      "name": "Two-digit OCR benchmark gate baseline",
+      "result": "baseline",
+      "command": "node scripts/eval_tony_20260530_samples.mjs --out benchmarks/uploaded_student_samples/results-tony-20260530-repeatable-v2",
+      "plain_english": "The May 30 three-sheet benchmark remains the comparison baseline at 18/30. Any narrow OCR patch should improve the new failed subtraction scan above 5/10 while keeping this benchmark at or above 18/30.",
+      "path_exercised": "Repeatable two-digit worksheet benchmark path"
     }
   ],
-  "updated_at": "2026-05-31T01:54:52.432Z"
+  "updated_at": "2026-06-01T17:25:02.470Z"
 }

@@ -109,6 +109,7 @@ Before any code changes, Codex should:
 For the operational step-by-step, use:
 
 - `docs/STUDENT_SAMPLE_TRIAGE_RUNBOOK.md`
+- `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md`
 
 ## Verification Commands
 
@@ -140,6 +141,7 @@ Use `inspect:uploaded-worksheet` first for a small number of samples so failures
 
 - Do not tune OCR blind.
 - Do not change `src/homography.js`, `src/ocr-pipeline.js`, or `src/components/CameraCapture.vue` until a real failure mode is described.
+- For the current two-digit worksheet work, do not accept an OCR patch unless it clears `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md`.
 - Prefer a short report before a patch.
 - If a patch is needed, make one tiny change and rerun the relevant sample.
 - Preserve all sample images and test outputs until Tony reviews the summary.

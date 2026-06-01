@@ -14,6 +14,7 @@ const PUBLIC_ROOT = resolve(MC_ROOT, 'public');
 const STATE_ROOT = resolve(MC_ROOT, 'state');
 const PORT = Number(process.env.SG_MISSION_CONTROL_PORT || 8787);
 const HOST = process.env.SG_MISSION_CONTROL_HOST || '127.0.0.1';
+const ROUTE_PREFIX = '/mission-control';
 
 const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -109,6 +110,7 @@ async function latestDocSummaries() {
     ['Student Sample Privacy And Storage', 'docs/STUDENT_SAMPLE_PRIVACY_AND_STORAGE.md'],
     ['Student Sample Triage Runbook', 'docs/STUDENT_SAMPLE_TRIAGE_RUNBOOK.md'],
     ['Teacher Trust Scorecard', 'docs/TEACHER_TRUST_SCORECARD.md'],
+    ['Two-Digit OCR Acceptance Gate', 'docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md'],
     ['Scratch File Inventory', 'docs/SCRATCH_FILE_INVENTORY.md'],
     ['Teacher Workflow Prototype', 'docs/TEACHER_WORKFLOW_PROTOTYPE.md'],
     ['Trust Threshold Decision Framework', 'docs/TRUST_THRESHOLD_DECISION_FRAMEWORK.md'],
@@ -166,11 +168,18 @@ function sendJson(res, code, payload) {
   res.end(`${JSON.stringify(payload, null, 2)}\n`);
 }
 
+function stripRoutePrefix(pathname) {
+  if (pathname === ROUTE_PREFIX) return '/';
+  if (pathname.startsWith(`${ROUTE_PREFIX}/`)) return pathname.slice(ROUTE_PREFIX.length) || '/';
+  return pathname;
+}
+
 async function serveStatic(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = stripRoutePrefix(url.pathname);
 
-  if (url.pathname.startsWith('/repo/')) {
-    const repoPath = url.pathname.replace(/^\/repo\//, '');
+  if (pathname.startsWith('/repo/')) {
+    const repoPath = pathname.replace(/^\/repo\//, '');
     const target = normalize(resolve(ROOT, repoPath));
     if (!target.startsWith(ROOT)) {
       res.writeHead(403);
@@ -191,8 +200,8 @@ async function serveStatic(req, res) {
     return;
   }
 
-  const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
-  const target = normalize(resolve(PUBLIC_ROOT, `.${pathname}`));
+  const staticPathname = pathname === '/' ? '/index.html' : pathname;
+  const target = normalize(resolve(PUBLIC_ROOT, `.${staticPathname}`));
   if (!target.startsWith(PUBLIC_ROOT)) {
     res.writeHead(403);
     res.end('Forbidden');
@@ -221,24 +230,25 @@ const server = createServer(async (req, res) => {
 
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const pathname = stripRoutePrefix(url.pathname);
 
-    if (req.method === 'GET' && url.pathname === '/api/status') {
+    if (req.method === 'GET' && pathname === '/api/status') {
       return sendJson(res, 200, await statusPayload());
     }
 
-    if (req.method === 'POST' && url.pathname === '/api/mission') {
+    if (req.method === 'POST' && pathname === '/api/mission') {
       const body = await collectBody(req);
       const current = await readJson(resolve(STATE_ROOT, 'mission-state.json'), {});
       return sendJson(res, 200, await writeJson(resolve(STATE_ROOT, 'mission-state.json'), { ...current, ...body }));
     }
 
-    if (req.method === 'POST' && url.pathname === '/api/decisions') {
+    if (req.method === 'POST' && pathname === '/api/decisions') {
       const body = await collectBody(req);
       if (!Array.isArray(body.decisions)) return sendJson(res, 400, { error: 'decisions must be an array' });
       return sendJson(res, 200, await writeJson(resolve(STATE_ROOT, 'decisions.json'), body));
     }
 
-    if (req.method === 'POST' && url.pathname === '/api/strategic-backlog') {
+    if (req.method === 'POST' && pathname === '/api/strategic-backlog') {
       const body = await collectBody(req);
       if (!Array.isArray(body.cards)) return sendJson(res, 400, { error: 'cards must be an array' });
       return sendJson(res, 200, await writeJson(resolve(STATE_ROOT, 'strategic-backlog.json'), body));

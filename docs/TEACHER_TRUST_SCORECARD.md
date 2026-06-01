@@ -57,6 +57,12 @@ Proceed toward that next milestone only if:
 - teacher review seems faster than marking the whole sheet
 - Tony feels the next classroom try would not waste class time
 
+For current two-digit worksheet OCR work, also use:
+
+- `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md`
+
+That gate keeps a narrow OCR patch from being accepted just because it improves one example while weakening the broader real-sample set.
+
 ## What To Say In The Report
 
 Use teacher-facing language:
