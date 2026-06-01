@@ -28,6 +28,7 @@
       .sheet-subtitle { font-size: 4px; font-weight: 400; fill: #555; }
       .problem-text { font-size: 6.75px; font-weight: 430; }
       .problem-text-compact { font-size: 6.35px; }
+      .problem-text, .scantron-letter { dominant-baseline: middle; }
       .scantron-bubble { fill: none; stroke: #c4c8ce; stroke-width: 0.34; }
       .scantron-letter { font-size: 4.45px; font-weight: 600; fill: #626b74; }
       .answer-box { fill: none; stroke: #111; stroke-width: 0.54; shape-rendering: geometricPrecision; }
@@ -61,9 +62,9 @@
     <g class="question" data-question="1">
       <g class="scantron-question-label" transform="translate(29.5 76.60000000000001)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">A</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">A</text>
       </g>
-      <text class="problem-text" x="62.6" y="79.375" text-anchor="end">8 + 7 =</text>
+      <text class="problem-text" x="62.6" y="76.60000000000001" text-anchor="end">8 + 7 =</text>
       <line class="open-divider-guide" x1="78.9" y1="68.325" x2="78.9" y2="72.505" />
       <line class="open-divider-guide" x1="78.9" y1="80.695" x2="78.9" y2="84.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="0,1" x="65" y="68.325" width="27.8" height="16.55" />
@@ -72,9 +73,9 @@
     <g class="question" data-question="2">
       <g class="scantron-question-label" transform="translate(29.5 107.60000000000001)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">B</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">B</text>
       </g>
-      <text class="problem-text" x="62.6" y="110.375" text-anchor="end">9 + 6 =</text>
+      <text class="problem-text" x="62.6" y="107.60000000000001" text-anchor="end">9 + 6 =</text>
       <line class="open-divider-guide" x1="78.9" y1="99.325" x2="78.9" y2="103.505" />
       <line class="open-divider-guide" x1="78.9" y1="111.695" x2="78.9" y2="115.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="2,3" x="65" y="99.325" width="27.8" height="16.55" />
@@ -83,9 +84,9 @@
     <g class="question" data-question="3">
       <g class="scantron-question-label" transform="translate(29.5 138.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">C</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">C</text>
       </g>
-      <text class="problem-text" x="62.6" y="141.375" text-anchor="end">12 + 5 =</text>
+      <text class="problem-text" x="62.6" y="138.6" text-anchor="end">12 + 5 =</text>
       <line class="open-divider-guide" x1="78.9" y1="130.325" x2="78.9" y2="134.505" />
       <line class="open-divider-guide" x1="78.9" y1="142.695" x2="78.9" y2="146.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="4,5" x="65" y="130.325" width="27.8" height="16.55" />
@@ -94,9 +95,9 @@
     <g class="question" data-question="4">
       <g class="scantron-question-label" transform="translate(29.5 169.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">D</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">D</text>
       </g>
-      <text class="problem-text" x="62.6" y="172.375" text-anchor="end">4 + 9 =</text>
+      <text class="problem-text" x="62.6" y="169.6" text-anchor="end">4 + 9 =</text>
       <line class="open-divider-guide" x1="78.9" y1="161.325" x2="78.9" y2="165.505" />
       <line class="open-divider-guide" x1="78.9" y1="173.695" x2="78.9" y2="177.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="6,7" x="65" y="161.325" width="27.8" height="16.55" />
@@ -105,9 +106,9 @@
     <g class="question" data-question="5">
       <g class="scantron-question-label" transform="translate(29.5 200.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">E</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">E</text>
       </g>
-      <text class="problem-text" x="62.6" y="203.375" text-anchor="end">11 + 8 =</text>
+      <text class="problem-text" x="62.6" y="200.6" text-anchor="end">11 + 8 =</text>
       <line class="open-divider-guide" x1="78.9" y1="192.325" x2="78.9" y2="196.505" />
       <line class="open-divider-guide" x1="78.9" y1="204.695" x2="78.9" y2="208.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="8,9" x="65" y="192.325" width="27.8" height="16.55" />
@@ -116,9 +117,9 @@
     <g class="question" data-question="6">
       <g class="scantron-question-label" transform="translate(125.5 76.60000000000001)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">F</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">F</text>
       </g>
-      <text class="problem-text" x="158.6" y="79.375" text-anchor="end">7 + 4 =</text>
+      <text class="problem-text" x="158.6" y="76.60000000000001" text-anchor="end">7 + 4 =</text>
       <line class="open-divider-guide" x1="174.9" y1="68.325" x2="174.9" y2="72.505" />
       <line class="open-divider-guide" x1="174.9" y1="80.695" x2="174.9" y2="84.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="10,11" x="161" y="68.325" width="27.8" height="16.55" />
@@ -127,9 +128,9 @@
     <g class="question" data-question="7">
       <g class="scantron-question-label" transform="translate(125.5 107.60000000000001)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">G</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">G</text>
       </g>
-      <text class="problem-text" x="158.6" y="110.375" text-anchor="end">6 + 6 =</text>
+      <text class="problem-text" x="158.6" y="107.60000000000001" text-anchor="end">6 + 6 =</text>
       <line class="open-divider-guide" x1="174.9" y1="99.325" x2="174.9" y2="103.505" />
       <line class="open-divider-guide" x1="174.9" y1="111.695" x2="174.9" y2="115.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="12,13" x="161" y="99.325" width="27.8" height="16.55" />
@@ -138,9 +139,9 @@
     <g class="question" data-question="8">
       <g class="scantron-question-label" transform="translate(125.5 138.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">H</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">H</text>
       </g>
-      <text class="problem-text" x="158.6" y="141.375" text-anchor="end">13 + 4 =</text>
+      <text class="problem-text" x="158.6" y="138.6" text-anchor="end">13 + 4 =</text>
       <line class="open-divider-guide" x1="174.9" y1="130.325" x2="174.9" y2="134.505" />
       <line class="open-divider-guide" x1="174.9" y1="142.695" x2="174.9" y2="146.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="14,15" x="161" y="130.325" width="27.8" height="16.55" />
@@ -149,9 +150,9 @@
     <g class="question" data-question="9">
       <g class="scantron-question-label" transform="translate(125.5 169.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">I</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">I</text>
       </g>
-      <text class="problem-text" x="158.6" y="172.375" text-anchor="end">5 + 8 =</text>
+      <text class="problem-text" x="158.6" y="169.6" text-anchor="end">5 + 8 =</text>
       <line class="open-divider-guide" x1="174.9" y1="161.325" x2="174.9" y2="165.505" />
       <line class="open-divider-guide" x1="174.9" y1="173.695" x2="174.9" y2="177.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="16,17" x="161" y="161.325" width="27.8" height="16.55" />
@@ -160,9 +161,9 @@
     <g class="question" data-question="10">
       <g class="scantron-question-label" transform="translate(125.5 200.6)">
         <ellipse class="scantron-bubble" cx="0" cy="0" rx="3.88" ry="3.02" />
-        <text class="scantron-letter" x="0" y="1.55" text-anchor="middle">J</text>
+        <text class="scantron-letter" x="0" y="0.25" text-anchor="middle">J</text>
       </g>
-      <text class="problem-text" x="158.6" y="203.375" text-anchor="end">10 + 9 =</text>
+      <text class="problem-text" x="158.6" y="200.6" text-anchor="end">10 + 9 =</text>
       <line class="open-divider-guide" x1="174.9" y1="192.325" x2="174.9" y2="196.505" />
       <line class="open-divider-guide" x1="174.9" y1="204.695" x2="174.9" y2="208.875" />
       <rect class="answer-box answer-box-wide" data-question-boxes="18,19" x="161" y="192.325" width="27.8" height="16.55" />
