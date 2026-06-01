@@ -105,6 +105,7 @@ async function latestDocSummaries() {
     ['OCR Debug Crop Review Checklist', 'docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md'],
     ['OCR Labeled Handwriting Dataset Plan', 'docs/OCR_LABELED_HANDWRITING_DATASET_PLAN.md'],
     ['OCR Reliability Decision Record 2026-06-01', 'docs/OCR_RELIABILITY_DECISION_RECORD_2026-06-01.md'],
+    ['OCR Reliability Operating Map', 'docs/OCR_RELIABILITY_OPERATING_MAP.md'],
     ['Operating Goals', 'docs/GOALS.md'],
     ['Open-Divider Sample Answer Keys', 'docs/OPEN_DIVIDER_SAMPLE_ANSWER_KEYS.md'],
     ['Prototype Roadmap', 'docs/PROTOTYPE_ROADMAP.md'],

@@ -8,6 +8,8 @@ Use this gate before accepting or pushing OCR, crop-preprocessing, homography, o
 
 The goal is not to make one photo pass. The goal is to avoid shipping a change that improves one worksheet while weakening teacher trust elsewhere.
 
+For the full document map, start with `docs/OCR_RELIABILITY_OPERATING_MAP.md`.
+
 ## Current Evidence Set
 
 Minimum gate:

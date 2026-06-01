@@ -51,6 +51,7 @@
 - Added `docs/OCR_RELIABILITY_DECISION_RECORD_2026-06-01.md` to preserve the current engineering decision: do not ship a production OCR tweak from one failed scan alone.
 - Added `docs/OCR_CANDIDATE_EXPERIMENT_PLAN.md` so any local OCR candidate has fixed baseline commands, rejection rules, and a required report before production consideration.
 - Added `docs/OCR_LABELED_HANDWRITING_DATASET_PLAN.md` so any future model work has privacy, label, holdout, and promotion rules before training starts.
+- Added `docs/OCR_RELIABILITY_OPERATING_MAP.md` so future sessions can find the OCR decision record, gate, retest protocol, crop checklist, experiment plan, and dataset plan in the right order.
 - Fixed the Grade 2 worksheet generator so the A-J letter bubble, equation text, and answer box share the same row centerline.
 - Regenerated and published the A/B/C worksheet SVGs and print PDFs.
 - The answer-box layout geometry stayed unchanged; this was a print-layout alignment fix, not an OCR-region redesign.

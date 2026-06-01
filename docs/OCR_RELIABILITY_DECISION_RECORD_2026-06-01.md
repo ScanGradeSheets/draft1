@@ -6,6 +6,8 @@ Do not push OCR, crop-preprocessing, homography, or model changes as a productio
 
 Use the failed 2026-06-01 subtraction scan plus the May 30 three-sheet benchmark as the minimum gate for any future OCR-related patch.
 
+For the full OCR reliability document map, start with `docs/OCR_RELIABILITY_OPERATING_MAP.md`.
+
 ## Why
 
 Tony's failed live scan is real and important, but the failure pattern is specific:
