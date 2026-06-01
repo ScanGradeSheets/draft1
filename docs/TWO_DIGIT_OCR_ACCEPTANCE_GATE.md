@@ -20,6 +20,8 @@ Minimum gate:
 
 When Tony can recapture the same or similar physical page, use `docs/CLASSROOM_OCR_RETEST_PROTOCOL.md` to compare live app scans against normal camera photos before deciding whether the weak point is capture quality, crop preprocessing, candidate selection, or model training.
 
+Use `docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md` when reviewing wrong or low-confidence answers so crop failures, preprocessing failures, and model-recognition failures are not mixed together.
+
 Current baseline:
 
 | Evidence | Current result | Notes |

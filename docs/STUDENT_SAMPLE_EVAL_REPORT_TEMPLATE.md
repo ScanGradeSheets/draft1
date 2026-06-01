@@ -18,6 +18,8 @@ Sample folder:
 
 Use `docs/TEACHER_TRUST_SCORECARD.md` to keep the rating focused on classroom trust instead of raw OCR numbers.
 
+Use `docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md` for wrong or low-confidence answers before recommending OCR, crop, homography, or model changes.
+
 ## Inputs
 
 | File | Sheet | Photo quality | Student writing notes | Included in test? |
@@ -60,6 +62,14 @@ Mark each category as `none`, `minor`, or `major`.
 | Multi-digit answer handling | | |
 | iPad-specific capture issue | | |
 | Teacher review/export issue | | |
+
+## Debug Crop Review Summary
+
+Use this when OCR misses or low-confidence answers appear.
+
+| Sheet | Question | Expected | Predicted | Crop category | Likely next action |
+| --- | --- | --- | --- | --- | --- |
+| | | | | | |
 
 ## Evidence To Preserve
 

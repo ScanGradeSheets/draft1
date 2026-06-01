@@ -128,6 +128,12 @@ Use these categories:
 
 Do not collapse everything into "OCR failed."
 
+For wrong or low-confidence OCR answers, use:
+
+- `docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md`
+
+That checklist separates good-crop recognition failures from shifted crops, damaged preprocessing, and student writing outside the answer box.
+
 Examples:
 
 - If the page is cropped and markers are missing, this is photo/page detection first.
