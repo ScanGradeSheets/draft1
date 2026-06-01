@@ -32,12 +32,16 @@
 ## What Changed Today
 
 - Added the 2026-06-01 repeatable benchmark and diagnosis to `OCR_TWO_DIGIT_FINDINGS_2026-05-30.md`.
-- No app UI, OCR, capture, homography, model, backend, or worksheet-generation code was changed during this summary pass.
+- Fixed the Grade 2 worksheet generator so the A-J letter bubble, equation text, and answer box share the same row centerline.
+- Regenerated and published the A/B/C worksheet SVGs and print PDFs.
+- The answer-box layout geometry stayed unchanged; this was a print-layout alignment fix, not an OCR-region redesign.
+- No app UI, OCR, capture, homography, model, or backend code was changed during these documentation and worksheet-layout updates.
 
 ## Current Interpretation
 
 - The app and test harness are healthy.
 - The current worksheet packet is available for student testing.
+- The newly aligned worksheet packet is available for future prints, while Tony's already-printed packet remains valid for the current student test.
 - The OCR problem is now more specific: recognition/candidate confidence on real two-digit handwriting, not a general app crash or gross layout mismatch.
 
 ## Next Best Move
