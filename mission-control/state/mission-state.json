@@ -1,7 +1,7 @@
 {
   "current_mission": "Use Tony's real student worksheet scans to make two-digit OCR trustworthy before expanding ScanGrade.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
-  "next_best_move": "Codex: use the reproduced 5/10 subtraction scan plus the May 30 three-sheet benchmark as the gate for any narrow OCR/crop-preprocessing fix.",
+  "next_best_move": "Codex: start with docs/OCR_RELIABILITY_OPERATING_MAP.md, then use the reproduced 5/10 subtraction scan plus the May 30 three-sheet benchmark as the gate for any narrow OCR/crop-preprocessing fix.",
   "plain_english_status": "We have the current Grade 2 worksheet packet published, the app/test path working, and real student handwriting evidence. Tony's newest subtraction scan reproduced a real OCR failure: the sheet and boxes are found, but thin pencil 2s and 7s are often read as 1 or 9, yielding 5/10 on that sheet. The May 30 benchmark remains 18/30 across three sheets. The next work should be evidence-based OCR diagnosis and narrow fixes only; Tony has locked the current app UI for now, so autonomous work should not make further app UI/style/layout changes unless he asks.",
   "needs_tony": [
     "Send any additional completed Addition, Subtraction, or Mixed sheets as clear full-page photos when available.",
@@ -47,7 +47,7 @@
           "type": "app",
           "owner": "Codex",
           "summary": "Any crop-preprocessing or candidate-selection fix must improve Tony's failed subtraction scan without reducing the May 30 benchmark.",
-          "detail": "Current baseline: newest subtraction sample 5/10; May 30 benchmark 18/30. Do not push OCR changes as improvements until they clear this gate."
+          "detail": "Start with docs/OCR_RELIABILITY_OPERATING_MAP.md. Current baseline: newest subtraction sample 5/10; May 30 benchmark 18/30. Do not push OCR changes as improvements until they clear this gate."
         }
       ]
     },
