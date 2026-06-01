@@ -101,6 +101,7 @@ async function latestDocSummaries() {
     ['Mission Control Private Access', 'docs/MISSION_CONTROL_PRIVATE_ACCESS.md'],
     ['Mission Control Daily Summary 2026-05-31', 'mission-control/state/daily-summary-2026-05-31.md'],
     ['Mission Control Daily Summary 2026-05-30', 'mission-control/state/daily-summary-2026-05-30.md'],
+    ['OCR Candidate Experiment Plan', 'docs/OCR_CANDIDATE_EXPERIMENT_PLAN.md'],
     ['OCR Debug Crop Review Checklist', 'docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md'],
     ['OCR Reliability Decision Record 2026-06-01', 'docs/OCR_RELIABILITY_DECISION_RECORD_2026-06-01.md'],
     ['Operating Goals', 'docs/GOALS.md'],

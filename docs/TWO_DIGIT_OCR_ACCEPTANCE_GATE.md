@@ -24,6 +24,8 @@ Use `docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md` when reviewing wrong or low-confid
 
 The current do-not-ship decision is recorded in `docs/OCR_RELIABILITY_DECISION_RECORD_2026-06-01.md`.
 
+Use `docs/OCR_CANDIDATE_EXPERIMENT_PLAN.md` before trying local OCR candidates so candidate runs stay reversible and comparable.
+
 Current baseline:
 
 | Evidence | Current result | Notes |

@@ -174,6 +174,10 @@ Only patch app logic if:
 - baseline tests are green before the patch
 - the same sample can be rerun after the patch
 
+Before running even a local OCR candidate, use:
+
+- `docs/OCR_CANDIDATE_EXPERIMENT_PLAN.md`
+
 Do not patch:
 
 - OCR/capture/homography based on vibes

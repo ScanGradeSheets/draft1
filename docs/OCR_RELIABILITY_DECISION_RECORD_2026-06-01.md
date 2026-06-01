@@ -53,6 +53,7 @@ Safe next moves:
 
 - classify wrong answers with `docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md`
 - compare failed live-app scans against normal camera photos using `docs/CLASSROOM_OCR_RETEST_PROTOCOL.md`
+- structure any local candidate run with `docs/OCR_CANDIDATE_EXPERIMENT_PLAN.md`
 - test narrow preprocessing or candidate-selection variants only against `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md`
 - improve review/refusal behavior only with reproducible evidence and Tony approval if product behavior changes
 - build a small labeled crop set only after privacy/storage boundaries are clear
