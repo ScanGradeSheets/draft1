@@ -45,6 +45,8 @@
 - Added the 2026-06-01 repeatable benchmark and diagnosis to `OCR_TWO_DIGIT_FINDINGS_2026-05-30.md`.
 - Updated `scripts/eval_uploaded_worksheets.mjs` so future uploaded-photo evaluations report valid two-digit answer scores.
 - Updated Mission Control state: the project is no longer just waiting for samples; it has a reproduced classroom OCR failure to diagnose.
+- Added `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md` so OCR/crop/model patches must improve the 5/10 failed subtraction scan without regressing the 18/30 May 30 benchmark.
+- Added `docs/CLASSROOM_OCR_RETEST_PROTOCOL.md` so the next failed live scan can be compared against a normal camera photo of the same physical page when convenient.
 - Fixed the Grade 2 worksheet generator so the A-J letter bubble, equation text, and answer box share the same row centerline.
 - Regenerated and published the A/B/C worksheet SVGs and print PDFs.
 - The answer-box layout geometry stayed unchanged; this was a print-layout alignment fix, not an OCR-region redesign.

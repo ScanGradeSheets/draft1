@@ -123,3 +123,11 @@ Codex should:
 7. Recommend the smallest next fix only after the failure mode is clear.
 
 Use `docs/STUDENT_SAMPLE_TRIAGE_RUNBOOK.md` for the operational pass.
+
+## After A Failed Live Scan
+
+If a completed worksheet fails in the live app, use the narrower retest protocol:
+
+- `docs/CLASSROOM_OCR_RETEST_PROTOCOL.md`
+
+That protocol asks for the same physical page when possible as both a live app scan and a normal camera photo, plus quick notes about writing tool, lighting, and whether the student stayed inside the boxes. This keeps the next OCR fix grounded in evidence instead of guessing.

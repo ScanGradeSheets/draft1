@@ -32,6 +32,12 @@ worksheet photos/student-samples/open-divider-2026-05/
 
 Preserve original filenames and original files.
 
+If Tony sends a page that already failed in the live app, also use:
+
+- `docs/CLASSROOM_OCR_RETEST_PROTOCOL.md`
+
+That protocol helps compare live app capture against normal camera photos before changing OCR or crop logic.
+
 ## Step 1: Inventory
 
 List the files:

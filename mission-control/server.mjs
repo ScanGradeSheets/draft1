@@ -93,6 +93,7 @@ async function latestDocSummaries() {
     ['Benchmark Artifact Inventory', 'docs/BENCHMARK_ARTIFACT_INVENTORY.md'],
     ['Backend Readiness', 'docs/BACKEND_DEPLOYMENT_READINESS.md'],
     ['Classroom Test Plan', 'docs/CLASSROOM_TEST_PLAN.md'],
+    ['Classroom OCR Retest Protocol', 'docs/CLASSROOM_OCR_RETEST_PROTOCOL.md'],
     ['Classroom Sample Collection Card', 'docs/CLASSROOM_SAMPLE_COLLECTION_CARD.md'],
     ['Model Artifact Inventory', 'docs/MODEL_ARTIFACT_INVENTORY.md'],
     ['Legacy iPad Compatibility', 'docs/LEGACY_IPAD_COMPATIBILITY.md'],

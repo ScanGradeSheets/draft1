@@ -5,6 +5,7 @@
   "plain_english_status": "We have the current Grade 2 worksheet packet published, the app/test path working, and real student handwriting evidence. Tony's newest subtraction scan reproduced a real OCR failure: the sheet and boxes are found, but thin pencil 2s and 7s are often read as 1 or 9, yielding 5/10 on that sheet. The May 30 benchmark remains 18/30 across three sheets. The next work should be evidence-based OCR diagnosis and narrow fixes only; Tony has locked the current app UI for now, so autonomous work should not make further app UI/style/layout changes unless he asks.",
   "needs_tony": [
     "Send any additional completed Addition, Subtraction, or Mixed sheets as clear full-page photos when available.",
+    "For any sheet that fails in the live app, also send one normal camera photo of the same physical page if convenient.",
     "Keep using normal student pencil/spacing; imperfect handwriting is the useful test.",
     "If possible, note whether a scan was from the live app, a phone photo, or an iPad photo."
   ],
@@ -34,7 +35,7 @@
           "type": "tony",
           "owner": "Tony",
           "summary": "More real completed A/B/C sheets will make OCR tuning less likely to overfit one student or one photo.",
-          "detail": "Good enough: full page visible, corners included, not badly blurred. Perfect lighting is not required."
+          "detail": "Good enough: full page visible, corners included, not badly blurred. Perfect lighting is not required. If a live app scan fails, a normal camera photo of the same page helps separate capture issues from OCR recognition."
         }
       ]
     },

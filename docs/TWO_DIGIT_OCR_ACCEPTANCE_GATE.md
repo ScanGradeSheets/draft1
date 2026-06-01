@@ -18,6 +18,8 @@ Minimum gate:
   - Subtraction Within 20
   - Mixed Within 50
 
+When Tony can recapture the same or similar physical page, use `docs/CLASSROOM_OCR_RETEST_PROTOCOL.md` to compare live app scans against normal camera photos before deciding whether the weak point is capture quality, crop preprocessing, candidate selection, or model training.
+
 Current baseline:
 
 | Evidence | Current result | Notes |
