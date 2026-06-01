@@ -198,6 +198,9 @@ Possible later action:
 - It includes Tony-provided/student worksheet photos, debug crops, model-input images, and repeatable OCR benchmark outputs.
 - Do not commit the whole `benchmarks/` directory casually. Treat original worksheet photos as private/local evidence unless Tony explicitly approves a redacted or selected commit.
 - `scripts/eval_tony_20260530_samples.mjs` is useful and lightweight, but it depends on local benchmark fixtures. If committed later, commit it intentionally with clear fixture/privacy decisions.
+- The current OCR gate evidence is the 2026-06-01 failed subtraction scan at 5/10 plus the May 30 three-sheet benchmark at 18/30.
+- Preserve local result folders tied to those runs until the OCR reliability decision is revisited.
+- Start with `docs/OCR_RELIABILITY_OPERATING_MAP.md` before moving, deleting, committing, or interpreting OCR benchmark artifacts.
 
 ## 4. Recovery And Context Files
 

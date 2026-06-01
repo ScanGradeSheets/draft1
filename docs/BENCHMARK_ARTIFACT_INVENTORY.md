@@ -38,4 +38,21 @@ This is an inventory only. The `benchmarks/` folder is about 7.4 GB and should n
 - Preserve it in the existing external project snapshot before any cleanup.
 - If evidence is needed in Git, commit only small summary files such as README/COMPARISON/summary.md/summary.json after checking for student privacy.
 - Keep the holdout set separated from training data.
-- Use these benchmark notes as background until Tony sends the new open-divider student worksheet samples.
+- Use `docs/OCR_RELIABILITY_OPERATING_MAP.md` before running or interpreting current two-digit OCR benchmark artifacts.
+
+## 2026-06-01 OCR Gate Evidence
+
+Tony has now sent real two-digit worksheet samples, including a newly printed Subtraction Within 20 page that reproduced a live app failure.
+
+Current key benchmark facts:
+
+- failed 2026-06-01 subtraction scan: `5/10`
+- May 30 three-sheet benchmark: `18/30`
+- issue type: answer-box detection generally works; recognition/preprocessing is weak on thin pencil `2`s and `7`s
+
+Preservation guidance:
+
+- Treat original worksheet photos, debug crops, and model-input images as private/local evidence.
+- Do not commit raw photos or crop images unless Tony explicitly approves a selected/redacted fixture.
+- Do not delete result folders tied to the 5/10 failed scan or 18/30 benchmark until the OCR reliability decision is revisited.
+- If summaries are committed later, keep them non-identifying and link them to `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md`.
