@@ -60,6 +60,7 @@ Proceed toward that next milestone only if:
 For current two-digit worksheet OCR work, also use:
 
 - `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md`
+- `docs/OCR_RELIABILITY_DECISION_RECORD_2026-06-01.md`
 
 That gate keeps a narrow OCR patch from being accepted just because it improves one example while weakening the broader real-sample set.
 

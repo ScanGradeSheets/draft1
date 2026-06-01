@@ -48,6 +48,7 @@
 - Added `docs/TWO_DIGIT_OCR_ACCEPTANCE_GATE.md` so OCR/crop/model patches must improve the 5/10 failed subtraction scan without regressing the 18/30 May 30 benchmark.
 - Added `docs/CLASSROOM_OCR_RETEST_PROTOCOL.md` so the next failed live scan can be compared against a normal camera photo of the same physical page when convenient.
 - Added `docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md` so wrong or low-confidence answers are categorized as crop alignment, preprocessing, model recognition, confidence/review, or student writing behavior before patching.
+- Added `docs/OCR_RELIABILITY_DECISION_RECORD_2026-06-01.md` to preserve the current engineering decision: do not ship a production OCR tweak from one failed scan alone.
 - Fixed the Grade 2 worksheet generator so the A-J letter bubble, equation text, and answer box share the same row centerline.
 - Regenerated and published the A/B/C worksheet SVGs and print PDFs.
 - The answer-box layout geometry stayed unchanged; this was a print-layout alignment fix, not an OCR-region redesign.

@@ -22,6 +22,8 @@ When Tony can recapture the same or similar physical page, use `docs/CLASSROOM_O
 
 Use `docs/OCR_DEBUG_CROP_REVIEW_CHECKLIST.md` when reviewing wrong or low-confidence answers so crop failures, preprocessing failures, and model-recognition failures are not mixed together.
 
+The current do-not-ship decision is recorded in `docs/OCR_RELIABILITY_DECISION_RECORD_2026-06-01.md`.
+
 Current baseline:
 
 | Evidence | Current result | Notes |
