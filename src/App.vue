@@ -327,7 +327,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.05.30-login-bar-simplify'
+const APP_BUILD_LABEL = '2026.06.01-1926-EDT-ocr-redesign'
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
