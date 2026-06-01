@@ -99,6 +99,7 @@ async function latestDocSummaries() {
     ['Legacy iPad Compatibility', 'docs/LEGACY_IPAD_COMPATIBILITY.md'],
     ['Marketing Asset Pipeline', 'products/MARKETING_ASSET_PIPELINE.md'],
     ['Mission Control Private Access', 'docs/MISSION_CONTROL_PRIVATE_ACCESS.md'],
+    ['Mission Control Daily Summary 2026-06-01', 'mission-control/state/daily-summary-2026-06-01.md'],
     ['Mission Control Daily Summary 2026-05-31', 'mission-control/state/daily-summary-2026-05-31.md'],
     ['Mission Control Daily Summary 2026-05-30', 'mission-control/state/daily-summary-2026-05-30.md'],
     ['OCR Candidate Experiment Plan', 'docs/OCR_CANDIDATE_EXPERIMENT_PLAN.md'],
