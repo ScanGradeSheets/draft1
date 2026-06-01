@@ -466,6 +466,15 @@ const PAGE_ASPECT_MAX = 2.6
 const PAGE_MIN_AREA_FRAC = 0.1
 const PAGE_CENTER_MARGIN = 0.15
 
+function hasDebugQueryFlag(...names) {
+  if (typeof window === 'undefined') return false
+  const params = new URLSearchParams(window.location.search)
+  return names.some((name) => {
+    const value = params.get(name)
+    return value === '1' || value === 'true' || value === 'yes'
+  })
+}
+
 const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done'])
 
 const videoRef = ref(null)
@@ -480,14 +489,10 @@ const ocrResult = ref(null)
 const lastProcessedTensors = ref(null)
 const lastLiveOcrDebug = ref(null)
 const autoStartCameraBlocked = ref(false)
-const ocrDebugEnabled = ref(
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('ocrdebug') === '1'
+const ocrDebugEnabled = ref(hasDebugQueryFlag('ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug'))
+const liveOcrDebugExportEnabled = computed(() =>
+  hasDebugQueryFlag('ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug')
 )
-const liveOcrDebugExportEnabled = computed(() => {
-  if (typeof window === 'undefined') return false
-  const params = new URLSearchParams(window.location.search)
-  return params.get('ocrdebug') === '1' || params.get('liveOcrDebug') === '1'
-})
 const ocrDebugSnapshot = ref(null)
 const markerDebugSnapshot = ref(null)
 const modelInfoSnapshot = ref(null)
@@ -516,8 +521,14 @@ const lowCount = computed(() =>
   ocrResult.value?.predictions?.filter((p) => p.reviewNeeded).length || 0
 )
 
+const showAnnotatedResultImage = computed(() =>
+  !props.studentMode || liveOcrDebugExportEnabled.value
+)
+
 const displayedResultImage = computed(() =>
-  ocrResult.value?.annotatedImageUrl || capturedImage.value
+  showAnnotatedResultImage.value && ocrResult.value?.annotatedImageUrl
+    ? ocrResult.value.annotatedImageUrl
+    : (ocrResult.value?.annotationBaseUrl || capturedImage.value)
 )
 
 const studentAnswerGroups = computed(() => {
@@ -4329,39 +4340,58 @@ onUnmounted(stopStream)
 .student-answer-pills {
   display: inline-grid;
   grid-auto-flow: column;
-  grid-auto-columns: 34px;
+  grid-auto-columns: 31px;
   align-items: center;
   justify-content: start;
-  gap: 5px;
+  gap: 0;
+  width: max-content;
+  overflow: hidden;
+  border: 2px solid #2e3338;
+  border-radius: 1px;
+  background: #ffffff;
 }
 
 .student-answer-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
+  width: 31px;
   height: 34px;
-  border-radius: 50%;
-  background: white;
-  border: 1.25px solid #cfd3d8;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
   font-size: 17px;
   font-weight: 750;
   color: #202124;
 }
 
-.student-answer-item--correct .student-answer-pill {
-  border-color: #a8d8b5;
-  background: #f7fff8;
+.student-answer-pill + .student-answer-pill {
+  border-left: 1.5px solid #6f747a;
 }
 
-.student-answer-item--incorrect .student-answer-pill {
+.student-answer-item--correct {
+  border-color: #c7e3ce;
+  background: #fbfdfb;
+}
+
+.student-answer-item--incorrect {
   border-color: #ffd0cc;
-  background: #fff6f5;
+  background: #fff8f7;
 }
 
-.student-answer-item--review .student-answer-pill {
-  border-color: #e7c13d;
-  background: #fffdf4;
+.student-answer-item--review {
+  border-color: #eadcae;
+  background: #fffdf7;
+}
+
+.student-answer-item--correct .student-answer-pills,
+.student-answer-item--incorrect .student-answer-pills,
+.student-answer-item--review .student-answer-pills {
+  border-color: #2e3338;
+}
+
+.student-answer-pill--blank {
+  color: transparent;
 }
 
 .student-correction-panel {
