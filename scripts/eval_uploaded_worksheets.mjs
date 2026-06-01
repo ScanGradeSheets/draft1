@@ -15,6 +15,59 @@ const EXPECTED = (process.env.SG_EXPECTED_DIGITS || '')
   .map((value) => Number(value.trim()))
   .filter((value) => Number.isInteger(value));
 const EXPECTED_DIGITS = EXPECTED.length === 10 ? EXPECTED : DEFAULT_EXPECTED;
+const EXPECTED_ANSWERS = (process.env.SG_EXPECTED_ANSWERS || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+function expectedAnswersForRow(row) {
+  if (EXPECTED_ANSWERS.length > 0) return EXPECTED_ANSWERS;
+  const groups = Array.isArray(row.questionGroups) ? row.questionGroups : [];
+  const answers = groups
+    .map((group) => group?.answer)
+    .filter((answer) => answer !== undefined && answer !== null)
+    .map((answer) => String(answer).trim());
+  return answers.length > 0 ? answers : EXPECTED_DIGITS.map((digit) => String(digit));
+}
+
+function predictedAnswersForRow(row) {
+  const groups = Array.isArray(row.questionGroups) ? row.questionGroups : [];
+  const byId = new Map((row.predictions || []).map((prediction) => [prediction.id, prediction]));
+  if (groups.length > 0) {
+    return groups.map((group) => {
+      const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : [];
+      return ids.map((id) => byId.get(id)?.digit ?? '').join('');
+    });
+  }
+  const expected = expectedAnswersForRow(row);
+  if (expected.length > 0 && row.predictions.length > expected.length) {
+    const groupedByQuestion = [];
+    for (const prediction of row.predictions) {
+      const idx = Number(prediction.questionNum) - 1;
+      if (!Number.isInteger(idx) || idx < 0) continue;
+      groupedByQuestion[idx] = `${groupedByQuestion[idx] || ''}${prediction.digit ?? ''}`;
+    }
+    const compact = groupedByQuestion.filter((value) => value !== undefined);
+    if (compact.length === expected.length) return compact;
+  }
+  return (row.predictions || []).map((prediction) => String(prediction.digit));
+}
+
+function rowQuestionScore(row) {
+  const predicted = predictedAnswersForRow(row);
+  const expected = expectedAnswersForRow(row);
+  const total = Math.min(predicted.length, expected.length);
+  let correct = 0;
+  for (let i = 0; i < total; i++) {
+    if (String(predicted[i]) === String(expected[i])) correct++;
+  }
+  return {
+    correct,
+    total,
+    predicted,
+    expected
+  };
+}
 
 function parseArgs(argv) {
   const opts = {
@@ -65,35 +118,36 @@ function pct(value) {
 function summarize(rows, opts) {
   const processed = rows.filter((row) => row.ok);
   const failed = rows.filter((row) => !row.ok);
-  const totalCells = processed.length * 10;
+  const questionScores = processed.map(rowQuestionScore);
+  const totalCells = questionScores.reduce((sum, score) => sum + score.total, 0);
   const confidences = processed.flatMap((row) => row.predictions.map((pred) => pred.confidence));
-  const correctCells = processed.reduce((sum, row) => {
-    return sum + row.predictions.reduce((inner, pred, idx) => inner + Number(pred.digit === row.expectedDigits[idx]), 0);
-  }, 0);
-  const perfectSheets = processed.filter((row) =>
-    row.predictions.every((pred, idx) => pred.digit === row.expectedDigits[idx])
-  ).length;
+  const correctCells = questionScores.reduce((sum, score) => sum + score.correct, 0);
+  const perfectSheets = questionScores.filter((score) => score.total > 0 && score.correct === score.total).length;
   const lowConfidenceCells = processed.flatMap((row) =>
     row.predictions
       .filter((pred) => pred.confidence < 0.86 || pred.topGap < 0.18)
       .map((pred) => ({ sheet: row.id, questionNum: pred.questionNum, digit: pred.digit, confidence: pred.confidence, topGap: pred.topGap }))
   );
   const confusions = new Map();
-  for (const row of processed) {
-    row.predictions.forEach((pred, idx) => {
-      const expected = row.expectedDigits[idx];
-      if (pred.digit !== expected) {
-        const key = `${expected}->${pred.digit}`;
+  processed.forEach((row, rowIdx) => {
+    const score = questionScores[rowIdx];
+    score.predicted.forEach((predicted, idx) => {
+      const expected = score.expected[idx];
+      if (String(predicted) !== String(expected)) {
+        const key = `${expected}->${predicted}`;
         confusions.set(key, (confusions.get(key) || 0) + 1);
       }
     });
-  }
-  const perDigit = EXPECTED_DIGITS.map((digit, idx) => {
+  });
+  const firstExpected = questionScores[0]?.expected || EXPECTED_DIGITS.map((digit) => String(digit));
+  const perDigit = firstExpected.map((answer, idx) => {
     const total = processed.length;
-    const correct = processed.reduce((sum, row) => sum + Number(row.predictions[idx]?.digit === digit), 0);
+    const correct = questionScores.reduce((sum, score) => (
+      sum + Number(String(score.predicted[idx]) === String(answer))
+    ), 0);
     return {
       questionNum: idx + 1,
-      expected: digit,
+      expected: answer,
       correct,
       total,
       accuracy: total ? correct / total : 0,
@@ -104,7 +158,7 @@ function summarize(rows, opts) {
     generatedAt: new Date().toISOString(),
     url: opts.url,
     modelPath: opts.modelPath,
-    expectedDigits: EXPECTED_DIGITS,
+    expectedDigits: firstExpected,
     sheetsTotal: rows.length,
     sheetsProcessed: processed.length,
     sheetsFailed: failed.length,
@@ -141,13 +195,16 @@ function toMarkdown(summary, rows) {
       lines.push(`| ${row.id} | fail | - | - | ${row.error.replace(/\|/g, '/')} |`);
       continue;
     }
-    const correct = row.predictions.reduce((sum, pred, idx) => sum + Number(pred.digit === row.expectedDigits[idx]), 0);
+    const score = rowQuestionScore(row);
     const minConf = Math.min(...row.predictions.map((pred) => pred.confidence));
-    const notes = row.predictions
-      .map((pred, idx) => pred.digit === row.expectedDigits[idx] ? null : `Q${idx + 1} ${row.expectedDigits[idx]}→${pred.digit} (${pct(pred.confidence)})`)
+    const notes = score.predicted
+      .map((predicted, idx) => String(predicted) === String(score.expected[idx])
+        ? null
+        : `Q${idx + 1} ${score.expected[idx]}→${predicted}`
+      )
       .filter(Boolean)
       .join('; ') || 'ok';
-    lines.push(`| ${row.id} | ${correct}/10 | ${row.predictions.map((pred) => pred.digit).join(' ')} | ${pct(minConf)} | ${notes} |`);
+    lines.push(`| ${row.id} | ${score.correct}/${score.total} | ${score.predicted.join(' ')} | ${pct(minConf)} | ${notes} |`);
   }
   if (summary.topConfusions.length) {
     lines.push('');
@@ -233,6 +290,7 @@ for (const file of files) {
         topGap: pred.topGap,
         topK: pred.topK
       })),
+      questionGroups: data.debug.questionGroups || null,
       modelInfo: data.debug.modelInfo || null,
       layoutId: data.debug.layoutId || null
     };
@@ -252,8 +310,8 @@ for (const file of files) {
         await fs.writeFile(path.join(debugDir, suffix), buffer);
       }
     }
-    const correct = row.predictions.reduce((sum, pred, idx) => sum + Number(pred.digit === EXPECTED_DIGITS[idx]), 0);
-    console.log(`[ok] ${id}: ${correct}/10 pred=${row.predictions.map((pred) => pred.digit).join('')}`);
+    const score = rowQuestionScore(row);
+    console.log(`[ok] ${id}: ${score.correct}/${score.total} pred=${score.predicted.join(',')}`);
   } catch (error) {
     const message = String(error?.message || error);
     rows.push({ id, file, ok: false, error: message });

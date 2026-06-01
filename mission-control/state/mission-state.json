@@ -1,17 +1,16 @@
 {
-  "current_mission": "Collect real student samples from the 3 current worksheets, then use them to test ScanGrade honestly.",
+  "current_mission": "Use Tony's real student worksheet scans to make two-digit OCR trustworthy before expanding ScanGrade.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
-  "next_best_move": "Tony: have students fill out the 3 current worksheets with the new answer boxes, then send clear photos/scans back for testing.",
-  "plain_english_status": "We have the current open-divider worksheet packet promoted into the default public Grade 2 worksheets, reusable test fixtures, a preserved backend scaffold, a working app/test path, and an active 15-minute Codex heartbeat for safe momentum work. The next truth test is still real student handwriting on the current sheets. Until those samples arrive, Codex should avoid changing OCR/capture logic and focus on safe verification, organization, Mission Control upkeep, market/product research, and careful preservation. Tony has locked the current app UI for now, so autonomous work should not make further app UI/style/layout changes unless he asks.",
+  "next_best_move": "Codex: use the reproduced 5/10 subtraction scan plus the May 30 three-sheet benchmark as the gate for any narrow OCR/crop-preprocessing fix.",
+  "plain_english_status": "We have the current Grade 2 worksheet packet published, the app/test path working, and real student handwriting evidence. Tony's newest subtraction scan reproduced a real OCR failure: the sheet and boxes are found, but thin pencil 2s and 7s are often read as 1 or 9, yielding 5/10 on that sheet. The May 30 benchmark remains 18/30 across three sheets. The next work should be evidence-based OCR diagnosis and narrow fixes only; Tony has locked the current app UI for now, so autonomous work should not make further app UI/style/layout changes unless he asks.",
   "needs_tony": [
-    "Print or share the 3 current worksheets.",
-    "Have students complete them naturally, using their normal pencil/spacing.",
-    "Send the completed sheets back as clear photos/scans for OCR and iPad-path testing.",
-    "If possible, name files like sheet-a-student-01.jpg, sheet-b-student-01.jpg, and sheet-c-student-01.jpg."
+    "Send any additional completed Addition, Subtraction, or Mixed sheets as clear full-page photos when available.",
+    "Keep using normal student pencil/spacing; imperfect handwriting is the useful test.",
+    "If possible, note whether a scan was from the live app, a phone photo, or an iPad photo."
   ],
   "blocked_or_risky": [
-    "Main validation is blocked until real completed student sheets arrive.",
-    "OCR/capture/homography files contain large tracked modifications and should not be changed casually.",
+    "Two-digit OCR is not yet classroom-trustworthy: newest subtraction sample scores 5/10 despite correct sheet detection.",
+    "OCR/capture/homography files contain large tracked modifications and should not be changed or pushed casually.",
     "Debug crop export specs create local artifacts when run, so only run them intentionally."
   ],
   "focus_board": [
@@ -19,11 +18,11 @@
       "column": "Now",
       "cards": [
         {
-          "title": "Collect 3 completed worksheets",
+          "title": "Diagnose failed subtraction scan",
           "type": "validation",
-          "owner": "Tony",
-          "summary": "Students fill out Addition Within 20, Subtraction Within 20, and Mixed Within 50 using the new answer boxes.",
-          "detail": "These samples become the honest test set for the next OCR/capture pass. Normal student handwriting is more valuable than perfect samples."
+          "owner": "Codex",
+          "summary": "Tony's newest student scan is a reproducible two-digit OCR failure: 5/10 on Subtraction Within 20.",
+          "detail": "The app finds the sheet and answer boxes, but thin pencil 2s and 7s are degraded in the 28x28 model inputs and misread as 1 or 9. Use this sample with the May 30 benchmark before accepting any OCR change."
         }
       ]
     },
@@ -31,10 +30,10 @@
       "column": "Waiting on Tony",
       "cards": [
         {
-          "title": "Send photos/scans back to Codex",
+          "title": "Send more student sheets when convenient",
           "type": "tony",
           "owner": "Tony",
-          "summary": "Clear images of each completed sheet, preferably including a few natural imperfections.",
+          "summary": "More real completed A/B/C sheets will make OCR tuning less likely to overfit one student or one photo.",
           "detail": "Good enough: full page visible, corners included, not badly blurred. Perfect lighting is not required."
         }
       ]
@@ -43,11 +42,11 @@
       "column": "Codex Next",
       "cards": [
         {
-          "title": "Test real student samples",
+          "title": "Gate any OCR fix against real samples",
           "type": "app",
           "owner": "Codex",
-          "summary": "Run the uploaded sheets through the current pipeline and report what works, what fails, and why.",
-          "detail": "Use docs/STUDENT_SAMPLE_INTAKE.md. Codex should translate failures into plain English and avoid patching OCR/capture until the failure mode is clear."
+          "summary": "Any crop-preprocessing or candidate-selection fix must improve Tony's failed subtraction scan without reducing the May 30 benchmark.",
+          "detail": "Current baseline: newest subtraction sample 5/10; May 30 benchmark 18/30. Do not push OCR changes as improvements until they clear this gate."
         }
       ]
     },

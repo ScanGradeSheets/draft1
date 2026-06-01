@@ -88,6 +88,40 @@ Read-only diagnosis:
 - Several wrong answers are low-margin recognition choices where the correct digit appears as the second choice with a small probability gap, often about `0.03`.
 - The safest next OCR step is evidence-based review-flag/candidate-selection work against these saved debug crops, not a broad rewrite.
 
+## 2026-06-01 New Student Subtraction Scan
+
+Tony sent a newly printed, student-completed Subtraction Within 20 sheet after the worksheet alignment updates. The live app showed "Try again / Scan saved for teacher review."
+
+Repro command:
+
+```bash
+SG_EXPECTED_ANSWERS=17,15,12,12,12,12,12,12,14,11 \
+node scripts/eval_uploaded_worksheets.mjs \
+  --url https://localhost:5174 \
+  --model /models/mnist-model.onnx \
+  --out benchmarks/uploaded_student_samples/results-20260601-sean-subtraction-v3 \
+  /tmp/codex-remote-attachments/019e760b-4e8f-7751-be8b-40baddcb8e58/B72FD2B7-43D1-48CC-8C7D-D1959F2F10A9/1-Photo-1.jpg
+```
+
+Result:
+
+| Sheet | Score | Predicted | Expected |
+|---|---:|---|---|
+| Subtraction Within 20 | 5/10 | 11, 15, 11, 19, 12, 11, 11, 12, 14, 11 | 17, 15, 12, 12, 12, 12, 12, 12, 14, 11 |
+
+Diagnosis:
+
+- Sheet detection and answer-box geometry worked; this is not a QR/page-detection crash.
+- The debug overlay puts the digit crop boxes over the intended handwriting.
+- The weak point is recognition/preprocessing: thin pencil `2`s and `7`s often degrade in the 28x28 model input and are read as `1` or `9`.
+- Average confidence was about 54%, and all cells were low-margin/review-worthy.
+- A narrow experiment increasing virtual digit edge cleanup did not improve the result, so it was reverted.
+
+Evaluator note:
+
+- `scripts/eval_uploaded_worksheets.mjs` now supports `SG_EXPECTED_ANSWERS` and groups predictions by `questionNum` so current two-digit worksheets report valid 10-answer scores.
+- Older digit-level summaries are still useful for crop/model debugging, but not for teacher-facing worksheet accuracy.
+
 ## Interpretation
 
 The answer-box geometry is much better after the homography patch. On the mixed worksheet, debug output showed:
@@ -109,8 +143,8 @@ Do not push this OCR patch to the main app as a finished fix yet.
 
 Next safe step:
 
-1. Test the same patch against Tony's newest redesigned worksheet boxes when completed student samples are available.
-2. If the redesigned boxes improve results clearly, deploy first to a test build.
-3. If recognition still fails, build a small labeled training set from real student handwriting and retrain/fine-tune the worksheet digit model.
+1. Use the new 5/10 subtraction scan and the May 30 three-sheet benchmark as the minimum gate for any OCR change.
+2. Prefer narrow crop-preprocessing or candidate-selection experiments before model retraining.
+3. If recognition still fails on thin pencil `2`s and `7`s, build a small labeled training set from real student handwriting and retrain/fine-tune the worksheet digit model.
 
 This evidence supports keeping the current local patch preserved, but it does not yet support claiming reliable two-digit OCR for classroom use.
