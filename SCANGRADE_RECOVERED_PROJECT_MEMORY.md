@@ -238,6 +238,23 @@ Safest next implementation action for the ScanGrade app:
   - Future OCR benchmarking should label actual handwritten answers separately from answer-key correctness before tuning more aggressively.
 - One shadow-clean preprocess experiment was tried locally because raw crops for some `2`/`3` failures were visibly clearer than the model inputs, but it did not improve the measured benchmark and was reverted before commit.
 
+2026-06-02 early OCR trust-gating note:
+
+- Tony rescanned the current worksheets on the live `2026.06.01-2338-EDT-ocr-slot-vote-review` build and reported that processing felt slower and the results looked worse.
+- Hard evidence from the screenshots and replay:
+  - The build label was current, so Tony was testing the intended slot-vote build.
+  - The visible one-digit result cards on a two-digit mixed sheet are consistent with QR/layout fallback to the old single-digit `sg-10-box-v1` layout, not with a normal Grade 2 grouped layout.
+  - Several low scores are legitimate grading of wrong student answers; answer-key score alone is still not OCR truth.
+  - The real trust problem is false red-X confidence on ambiguous two-digit mismatches, especially when the model sees divider/box artifacts.
+- Patch applied:
+  - Current classroom scans now require a readable QR payload unless `?allowDefaultLayout=1` is explicitly set for legacy/debug testing.
+  - Two-digit virtual slots now require a stronger confidence/margin gate before a mismatch can become an automatic X; internally disagreeing slot votes become teacher review instead.
+- Verification:
+  - `npm run build` passed.
+  - May 30 repeatable benchmark stayed at `22/30`; subtraction stayed `10/10`.
+  - All wrong OCR reads on the May 30 hard mixed/addition samples were review-gated instead of becoming confident red Xs.
+  - B4230 raw classroom photos still decoded QR and used the correct Grade 2 layouts; the QR gate did not block current printed sheets.
+
 Safest next action for mission control:
 
 1. Inspect the May 27+ raw session files listed in `CODEX_RECOVERY_STATUS_KANBAN_PATHS.txt` using targeted searches only.

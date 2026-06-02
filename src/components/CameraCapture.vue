@@ -432,6 +432,10 @@ const AUTO_CHECK_CONFIDENCE_THRESHOLD = 0.45
 const AUTO_CHECK_MARGIN_THRESHOLD = 0.06
 const AUTO_X_CONFIDENCE_THRESHOLD = LOW_CONFIDENCE_THRESHOLD
 const AUTO_X_MARGIN_THRESHOLD = LOW_MARGIN_THRESHOLD
+const TWO_DIGIT_AUTO_X_CONFIDENCE_THRESHOLD = 0.88
+const TWO_DIGIT_AUTO_X_MARGIN_THRESHOLD = 0.20
+const TWO_DIGIT_RIGHT_SLOT_AUTO_X_CONFIDENCE_THRESHOLD = 0.92
+const TWO_DIGIT_RIGHT_SLOT_AUTO_X_MARGIN_THRESHOLD = 0.28
 
 /** Golden digits for the primary printed test worksheet (index = box id 0–9 = questions 1–10). */
 const DEBUG_REAL_WORKSHEET_EXPECTED = Object.freeze([8, 4, 1, 9, 2, 7, 0, 5, 3, 6])
@@ -500,6 +504,38 @@ function highRiskRightSlotPreprocessReview(proc, result) {
     alternativeSignals >= 3 ||
     (alternativeSignals >= 2 && (confidence < 0.86 || topGap < 0.52))
   )
+}
+
+function autoXAllowedForDigit(proc, result, topGap) {
+  const confidence = Number(result?.confidence) || 0
+  const gap = Number.isFinite(topGap) ? topGap : 0
+  if (!proc?.isVirtualDigitBox) {
+    return confidence >= AUTO_X_CONFIDENCE_THRESHOLD && gap >= AUTO_X_MARGIN_THRESHOLD
+  }
+
+  const isRightSlot = Number(proc.digitIndex) === 1
+  const minConfidence = isRightSlot
+    ? TWO_DIGIT_RIGHT_SLOT_AUTO_X_CONFIDENCE_THRESHOLD
+    : TWO_DIGIT_AUTO_X_CONFIDENCE_THRESHOLD
+  const minGap = isRightSlot
+    ? TWO_DIGIT_RIGHT_SLOT_AUTO_X_MARGIN_THRESHOLD
+    : TWO_DIGIT_AUTO_X_MARGIN_THRESHOLD
+
+  const runnerShare = Number(result?.preprocessVoteSummary?.runnerUp?.share) || 0
+  const variants = Array.isArray(result?.preprocessVariants) ? result.preprocessVariants : []
+  const digit = Number(result?.digit)
+  const alternativeSignals = variants.filter((variant) => {
+    const variantDigit = Number(variant?.digit)
+    if (!Number.isFinite(variantDigit) || variantDigit === digit) return false
+    const variantConfidence = Number(variant?.confidence) || 0
+    const variantGap = Number(variant?.topGap) || 0
+    return variantConfidence >= 0.34 || variantGap >= 0.06
+  }).length
+
+  // A two-digit mismatch should only become an automatic X when the model is
+  // genuinely settled; otherwise it belongs in teacher review.
+  if (runnerShare >= 0.12 || alternativeSignals >= 3) return false
+  return confidence >= minConfidence && gap >= minGap
 }
 
 function structuralTwoDigitReview(proc, result, expectedDigit) {
@@ -3620,6 +3656,13 @@ const runRealOCR = async () => {
     partialDebug.stage = 'decoding QR'
     const qrPayload = decodeQrFromCanvas(canvas)
     partialDebug.qrPayload = qrPayload || null
+    const allowDefaultLayout =
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('allowDefaultLayout') === '1'
+    partialDebug.allowDefaultLayout = allowDefaultLayout
+    if (!qrPayload && !allowDefaultLayout) {
+      throw new Error('QR code was not read. Keep the QR code visible and scan again.')
+    }
     let layoutUrl = qrPayload?.layout_id
       ? publicUrl(`layouts/${qrPayload.layout_id}.json`)
       : DEFAULT_LAYOUT_URL
@@ -3816,9 +3859,7 @@ const runRealOCR = async () => {
       const autoCheckAllowed =
         digitResult[0].confidence >= AUTO_CHECK_CONFIDENCE_THRESHOLD &&
         topGap >= AUTO_CHECK_MARGIN_THRESHOLD
-      const autoXAllowed =
-        digitResult[0].confidence >= AUTO_X_CONFIDENCE_THRESHOLD &&
-        topGap >= AUTO_X_MARGIN_THRESHOLD
+      const autoXAllowed = autoXAllowedForDigit(proc, digitResult[0], topGap)
       const lowSignal =
         digitResult[0].confidence < LOW_CONFIDENCE_THRESHOLD ||
         topGap < LOW_MARGIN_THRESHOLD

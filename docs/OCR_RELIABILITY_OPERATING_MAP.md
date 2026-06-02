@@ -87,7 +87,10 @@ If a clean failed-scan OCR truth set remains at its original score, reject the
 candidate. Do not use answer-key score as OCR truth when the student may have
 written wrong answers.
 
-If the benchmark drops below `18/30`, reject the candidate.
+The current active floor for this scoped OCR path is `22/30` on the May 30
+repeatable benchmark. If a candidate drops below `22/30`, reject it unless Tony
+explicitly chooses a more conservative review-first behavior despite lower
+automatic score.
 
 If wrong answers become more confident, reject or require explicit Tony review.
 
@@ -106,3 +109,21 @@ For future OCR tuning, separate these two targets:
 
 Do not optimize future OCR toward the answer key unless the actual handwritten
 truth for that sample is labeled.
+
+## 2026-06-02 Early Update
+
+Tony's newest live rescans showed two important trust patterns:
+
+- a two-digit sheet can still appear as one-digit result cards when QR/layout
+  detection falls back to the old `sg-10-box-v1` layout;
+- ambiguous two-digit mismatches should become teacher review, not confident
+  red Xs, unless confidence and internal variant agreement are both strong.
+
+The current scoped patch therefore:
+
+- requires a QR payload for normal classroom scans, with `?allowDefaultLayout=1`
+  reserved for legacy/debug testing;
+- tightens automatic-X thresholds for virtual two-digit boxes, especially the
+  weaker right/ones slot;
+- keeps the May 30 benchmark at `22/30`, while turning uncertain hard-sample
+  mismatches into review flags instead of overconfident wrong marks.
