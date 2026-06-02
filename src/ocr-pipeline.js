@@ -927,6 +927,7 @@ function choosePreprocessConsensus(variantResults, options = {}) {
     strictGap < 0.24;
   const digitIndex = Number(options.digitIndex);
   const isLeftVirtualDigit = Number.isFinite(digitIndex) && digitIndex === 0;
+  const isRightVirtualDigit = Number.isFinite(digitIndex) && digitIndex === 1;
 
   const strictNoComponentWide = findVariantAgreement(
     variantResults,
@@ -1002,6 +1003,24 @@ function choosePreprocessConsensus(variantResults, options = {}) {
     0.62,
     0.40
   );
+  const rightSlotShapeTriple = isRightVirtualDigit && edgeCleanCenterPair?.digit === 1
+    ? findVariantAgreement(
+      variantResults,
+      ['strict', 'no-component-cleanup', 'wide-slot'],
+      0.30,
+      0.04
+    )
+    : null;
+  if (rightSlotShapeTriple && rightSlotShapeTriple.digit !== 1) {
+    return buildVariantConsensus(
+      variantResults,
+      ['strict', 'no-component-cleanup', 'wide-slot'],
+      rightSlotShapeTriple.digit,
+      'right-slot-shape-triple-review-consensus',
+      true
+    );
+  }
+
   if (edgeCleanCenterPair) {
     return buildVariantConsensus(
       variantResults,

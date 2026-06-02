@@ -475,6 +475,33 @@ function hasDebugQueryFlag(...names) {
   })
 }
 
+function highRiskRightSlotPreprocessReview(proc, result) {
+  if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 1 || !result) return false
+  const digit = Number(result.digit)
+  if (digit !== 1 && digit !== 9) return false
+  const variants = Array.isArray(result.preprocessVariants) ? result.preprocessVariants : []
+  if (variants.length === 0) return false
+
+  const runnerShare = Number(result.preprocessVoteSummary?.runnerUp?.share) || 0
+  const confidence = Number(result.confidence) || 0
+  const topGap = Array.isArray(result.topK) && result.topK.length >= 2
+    ? (Number(result.topK[0]?.confidence) || 0) - (Number(result.topK[1]?.confidence) || 0)
+    : 1
+  const alternativeSignals = variants.filter((variant) => {
+    const variantDigit = Number(variant?.digit)
+    if (!Number.isFinite(variantDigit) || variantDigit === digit) return false
+    const variantConfidence = Number(variant?.confidence) || 0
+    const variantGap = Number(variant?.topGap) || 0
+    return variantConfidence >= 0.30 || variantGap >= 0.05
+  }).length
+
+  return (
+    runnerShare >= 0.14 ||
+    alternativeSignals >= 3 ||
+    (alternativeSignals >= 2 && (confidence < 0.86 || topGap < 0.52))
+  )
+}
+
 const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done'])
 
 const videoRef = ref(null)
@@ -3785,8 +3812,10 @@ const runRealOCR = async () => {
       const lowSignal =
         digitResult[0].confidence < LOW_CONFIDENCE_THRESHOLD ||
         topGap < LOW_MARGIN_THRESHOLD
+      const highRiskPreprocessReview = highRiskRightSlotPreprocessReview(proc, digitResult[0])
       const reviewNeeded = correct === true
         ? !autoCheckAllowed
+        : highRiskPreprocessReview ? true
         : correct === false
           ? !autoXAllowed
           : lowSignal
@@ -3808,7 +3837,10 @@ const runRealOCR = async () => {
         baseConfidence: digitResult[0].baseConfidence ?? null,
         baseTopK: digitResult[0].baseTopK || null,
         preprocessDisagreement: digitResult[0].preprocessDisagreement === true,
-        preprocessReviewReason: digitResult[0].preprocessReviewReason || null,
+        preprocessReviewReason: reviewNeeded && highRiskPreprocessReview
+          ? 'right-slot-preprocess-disagreement'
+          : (digitResult[0].preprocessReviewReason || null),
+        highRiskPreprocessReview,
         preprocessVariants: digitResult[0].preprocessVariants || null,
         preprocessVoteSummary: digitResult[0].preprocessVoteSummary || null,
         ...(correct !== undefined && { correct })
