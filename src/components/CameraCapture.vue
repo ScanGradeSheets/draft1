@@ -1892,8 +1892,8 @@ function composeStudentAnnotatedImage(
         const rx = Math.max(rect.h * 0.72, rect.w * (0.54 + seededUnit(seed + 211) * 0.05))
         const ry = Math.max(rect.h * 0.46, rect.h * (0.52 + seededUnit(seed + 213) * 0.08))
         const angle = jitter(seed + 193, 0.055)
-        const pointsPerLoop = 34
-        const highlighter = 'rgb(222, 238, 54)'
+        const pointsPerLoop = 40
+        const highlighter = 'rgb(234, 255, 32)'
 
         ctx.save()
         ctx.globalCompositeOperation = 'multiply'
@@ -1921,28 +1921,10 @@ function composeStudentAnnotatedImage(
             }
           }
           ctx.strokeStyle = highlighter
-          ctx.globalAlpha = pass === 0 ? 0.32 : pass === 1 ? 0.22 : 0.16
-          ctx.lineWidth = Math.max(12, Math.min(22, rect.h * (0.18 + seededUnit(passSeed + 29) * 0.045)))
+          ctx.globalAlpha = pass === 0 ? 0.42 : pass === 1 ? 0.28 : 0.2
+          ctx.lineWidth = Math.max(10, Math.min(18, rect.h * (0.15 + seededUnit(passSeed + 29) * 0.035)))
           ctx.stroke()
         }
-        const sweepY = rect.y + rect.h * (0.58 + jitter(seed + 301, 0.06))
-        drawHandStroke(
-          [[
-            [rect.x + rect.w * 0.08, sweepY + jitter(seed + 303, rect.h * 0.03)],
-            [rect.x + rect.w * 0.38, sweepY + jitter(seed + 307, rect.h * 0.05)],
-            [rect.x + rect.w * 0.7, sweepY + jitter(seed + 311, rect.h * 0.04)],
-            [rect.x + rect.w * 0.93, sweepY + jitter(seed + 313, rect.h * 0.03)]
-          ]],
-          {
-            color: highlighter,
-            width: Math.max(10, rect.h * 0.18),
-            seed: seed + 317,
-            passes: [
-              { alpha: 0.18, widthScale: 1.25, spread: 0.12 },
-              { alpha: 0.22, widthScale: 0.86, spread: 0.07 }
-            ]
-          }
-        )
         ctx.restore()
       }
 
@@ -2075,9 +2057,9 @@ function composeStudentAnnotatedImage(
           ? safeRight - estimatedW - warpedW * (0.008 + seededUnit(stampSeed + 5) * 0.026)
           : warpedW - estimatedW - warpedW * (0.06 + seededUnit(stampSeed + 7) * 0.08)
         const x = Math.max(warpedW * 0.53, Math.min(desiredX, warpedW - estimatedW - warpedW * 0.05))
-        const minStampY = topRightAnchor ? markerBottom + fontSize * (1.05 + seededUnit(stampSeed + 11) * 0.22) : null
-        const targetStampY = topRightAnchor ? markerBottom + fontSize * (1.35 + seededUnit(stampSeed + 13) * 0.52) : null
-        const maxStampY = topRightAnchor ? Math.max(minStampY, topQuestionY - fontSize * 0.6) : null
+        const minStampY = topRightAnchor ? markerBottom + fontSize * (1.7 + seededUnit(stampSeed + 11) * 0.22) : null
+        const targetStampY = topRightAnchor ? markerBottom + fontSize * (2.05 + seededUnit(stampSeed + 13) * 0.5) : null
+        const maxStampY = topRightAnchor ? Math.max(minStampY, topQuestionY - fontSize * 0.28) : null
         const y = topRightAnchor
           ? Math.min(maxStampY, Math.max(minStampY, targetStampY))
           : Math.max(warpedH * 0.068, Math.min(warpedH * 0.145, topQuestionY - warpedH * 0.09))
@@ -2165,8 +2147,8 @@ function composeStudentAnnotatedImage(
         const tapeY1 = Math.max(...validRects.map((rect) => rect.y + rect.h))
         const tapeW = tapeX1 - tapeX0
         const tapeH = tapeY1 - tapeY0
-        const tapeInsetX = tapeW * 0.05
-        const tapeInsetY = tapeH * 0.18
+        const tapeInsetX = -tapeW * 0.035
+        const tapeInsetY = tapeH * 0.045
         const centerX = tapeX0 + tapeW / 2 + jitter(seed + 401, tapeW * 0.01)
         const centerY = tapeY0 + tapeH / 2 + jitter(seed + 403, tapeH * 0.012)
         const stripW = tapeW - tapeInsetX * 2
