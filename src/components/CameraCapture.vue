@@ -45,7 +45,7 @@
             <span class="student-correction-label" :aria-label="activeCorrectionQuestion.label">
               {{ scantronAnswerLabel(activeCorrectionQuestion.label) }}
             </span>
-            <strong>Fix</strong>
+            <strong>{{ activeCorrectionFixLabel }}</strong>
             <span class="student-correction-current">{{ activeCorrectionCurrentText }}</span>
             <button
               type="button"
@@ -262,26 +262,26 @@
             v-for="group in studentAnswerGroups"
             :key="group.key"
             class="student-answer-item"
-            :class="[
-              `student-answer-item--${group.status}`,
-              { 'student-answer-item--clickable': isAnswerGroupEditable(group) }
-            ]"
-            :role="isAnswerGroupEditable(group) ? 'button' : undefined"
-            :tabindex="isAnswerGroupEditable(group) ? 0 : undefined"
-            @click="openCorrectionByGroup(group)"
-            @keydown.enter.prevent="openCorrectionByGroup(group)"
-            @keydown.space.prevent="openCorrectionByGroup(group)"
+            :class="`student-answer-item--${group.status}`"
           >
             <span class="student-answer-label" :aria-label="group.label">{{ scantronAnswerLabel(group.label) }}</span>
             <span class="student-answer-pills" :class="{ 'student-answer-pills--double': group.displayDigits.length > 1 }">
-              <span
+              <button
                 v-for="(digit, digitIndex) in group.displayDigits"
                 :key="digitIndex"
+                type="button"
                 class="student-answer-pill"
-                :class="{ 'student-answer-pill--blank': digit === null || digit === undefined || digit === '' }"
+                :class="[
+                  { 'student-answer-pill--blank': digit === null || digit === undefined || digit === '' },
+                  `student-answer-pill--${group.slotStatuses?.[digitIndex] || group.status}`,
+                  { 'student-answer-pill--clickable': isAnswerGroupEditable(group) }
+                ]"
+                :disabled="!isAnswerGroupEditable(group)"
+                :aria-label="`Fix ${group.label} digit ${digitIndex + 1}`"
+                @click.stop="openCorrectionByGroupSlot(group, digitIndex)"
               >
                 {{ digit === null || digit === undefined || digit === '' ? '' : digit }}
-              </span>
+              </button>
             </span>
           </div>
         </div>
@@ -636,6 +636,7 @@ const studentAnswerGroups = computed(() => {
       key: `digit-${index}`,
       label: `${questionLetter(index)})`,
       displayDigits: [digit],
+      slotStatuses: [status],
       status
     }
   })
@@ -651,20 +652,20 @@ const correctionRegions = computed(() => {
   const regions = Array.isArray(ocrResult.value?.annotationRegions)
     ? ocrResult.value.annotationRegions
     : []
-  const seenQuestions = new Set()
-  return regions.filter((region) => {
-    if (!isCorrectionRegionEditable(region)) return false
-    const key = region.questionNum ?? region.key
-    if (seenQuestions.has(key)) return false
-    seenQuestions.add(key)
-    return true
-  })
+  return regions.filter((region) => isCorrectionRegionEditable(region))
 })
 
 const activeCorrectionRegion = computed(() => {
   const question = activeCorrectionQuestion.value
   if (!question) return null
-  return allAnnotationRegions.value.find((region) => region.questionNum === question.questionNum) || question
+  return allAnnotationRegions.value.find((region) =>
+    region.questionNum === question.questionNum &&
+    (
+      question.slotIndex == null ||
+      region.slotIndex == null ||
+      region.slotIndex === question.slotIndex
+    )
+  ) || question
 })
 
 const correctionPanelStyle = computed(() => {
@@ -699,10 +700,28 @@ const activeCorrectionPredictions = computed(() => {
   const group = activeCorrectionGroup.value
   if (!group) return []
   const byId = new Map((ocrResult.value?.predictions || []).map((prediction) => [prediction.id, prediction]))
-  return (group.digit_box_ids || []).map((id) => byId.get(id)).filter(Boolean)
+  return (group.digit_box_ids || []).map((id) => byId.get(id) || null)
+})
+
+const activeCorrectionSlotIndex = computed(() => {
+  const slotIndex = activeCorrectionQuestion.value?.slotIndex
+  return Number.isInteger(slotIndex) && slotIndex >= 0 ? slotIndex : null
+})
+
+const activeCorrectionSlotPrediction = computed(() => {
+  const slotIndex = activeCorrectionSlotIndex.value
+  const predictions = activeCorrectionPredictions.value
+  if (slotIndex == null || slotIndex >= predictions.length) return null
+  return predictions[slotIndex]
 })
 
 const activeCorrectionCurrentText = computed(() => {
+  if (activeCorrectionSlotIndex.value != null) {
+    const prediction = activeCorrectionSlotPrediction.value
+    if (!prediction) return 'not sure'
+    if (prediction.blank === true || prediction.empty === true) return 'blank'
+    return prediction.digit == null ? 'not sure' : String(prediction.digit)
+  }
   const predictions = activeCorrectionPredictions.value
   if (!predictions.length) return 'not sure'
   const text = predictions
@@ -715,12 +734,24 @@ const activeCorrectionCurrentText = computed(() => {
 })
 
 const activeCorrectionChoices = computed(() => {
+  if (activeCorrectionSlotIndex.value != null) {
+    const prediction = activeCorrectionSlotPrediction.value
+    return predictionDigitCandidates(prediction)
+      .slice(0, 3)
+      .filter((candidate) => candidate.digit !== null && candidate.digit !== undefined)
+      .map((candidate, index) => ({
+        key: `${activeCorrectionQuestion.value?.questionNum ?? 'q'}-${activeCorrectionSlotIndex.value}-${index}-${candidate.digit}`,
+        text: String(candidate.digit),
+        cells: [candidate.digit]
+      }))
+  }
   const group = activeCorrectionGroup.value
   if (!group) return []
   return topAnswerChoicesForGroup(group, ocrResult.value?.predictions || [], 2)
 })
 
 const activeCorrectionMaxLength = computed(() => {
+  if (activeCorrectionSlotIndex.value != null) return 1
   const group = activeCorrectionGroup.value
   const count = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids.length : 1
   return Math.max(1, count)
@@ -729,6 +760,14 @@ const activeCorrectionMaxLength = computed(() => {
 const activeCorrectionPlaceholder = computed(() =>
   activeCorrectionMaxLength.value > 1 ? '37' : '8'
 )
+
+const activeCorrectionFixLabel = computed(() => {
+  const slotIndex = activeCorrectionSlotIndex.value
+  if (slotIndex == null) return 'Fix'
+  const group = activeCorrectionGroup.value
+  const total = Math.max(1, Array.isArray(group?.digit_box_ids) ? group.digit_box_ids.length : 1)
+  return total > 1 ? `Fix digit ${slotIndex + 1}` : 'Fix digit'
+})
 
 const studentScoreText = computed(() => {
   if (ocrResult.value?.predictions?.some((p) => p.reviewNeeded)) return ''
@@ -815,18 +854,52 @@ function isAnswerGroupEditable(group) {
   return !!(group && !ocrResult.value?.error && Array.isArray(group.digitBoxIds) && group.digitBoxIds.length)
 }
 
+function groupForQuestionNum(questionNum) {
+  const groups = Array.isArray(ocrResult.value?.layoutSnapshot?.question_groups)
+    ? ocrResult.value.layoutSnapshot.question_groups
+    : []
+  return groups.find((group, index) => (group?.question_num ?? index + 1) === questionNum) || null
+}
+
+function preferredCorrectionSlotIndex(group, region = null) {
+  const ids = Array.isArray(group?.digit_box_ids)
+    ? group.digit_box_ids
+    : Array.isArray(region?.digitBoxIds)
+      ? region.digitBoxIds
+      : []
+  if (!ids.length) return 0
+  const byId = new Map((ocrResult.value?.predictions || []).map((prediction) => [prediction.id, prediction]))
+  const reviewIndex = ids.findIndex((id) => byId.get(id)?.reviewNeeded)
+  if (reviewIndex >= 0) return reviewIndex
+  const manualIndex = ids.findIndex((id) => byId.get(id)?.manualCorrected)
+  if (manualIndex >= 0) return manualIndex
+  return 0
+}
+
 function openCorrection(region) {
   if (!isCorrectionRegionEditable(region)) return
-  activeCorrectionQuestion.value = region
+  const group = groupForQuestionNum(region.questionNum)
+  activeCorrectionQuestion.value = {
+    ...region,
+    slotIndex: Number.isInteger(region.slotIndex)
+      ? region.slotIndex
+      : preferredCorrectionSlotIndex(group, region)
+  }
   const currentText = activeCorrectionCurrentText.value
   manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
   normalizeManualCorrectionInput()
   correctionError.value = ''
 }
 
-function openCorrectionByGroup(group) {
+function openCorrectionByGroupSlot(group, slotIndex = null) {
   if (!isAnswerGroupEditable(group)) return
-  const region = allAnnotationRegions.value.find((item) => item.questionNum === group.questionNum) || {
+  const selectedSlotIndex = Number.isInteger(slotIndex)
+    ? slotIndex
+    : preferredCorrectionSlotIndex(group)
+  const region = allAnnotationRegions.value.find((item) =>
+    item.questionNum === group.questionNum &&
+    item.slotIndex === selectedSlotIndex
+  ) || allAnnotationRegions.value.find((item) => item.questionNum === group.questionNum) || {
     key: `question-region-${group.questionNum}`,
     label: group.label,
     questionNum: group.questionNum,
@@ -834,7 +907,7 @@ function openCorrectionByGroup(group) {
     manualCorrected: group.manualCorrected,
     correct: group.correct
   }
-  activeCorrectionQuestion.value = region
+  activeCorrectionQuestion.value = { ...region, slotIndex: selectedSlotIndex }
   const currentText = activeCorrectionCurrentText.value
   manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
   normalizeManualCorrectionInput()
@@ -851,13 +924,15 @@ function cancelCorrection() {
 }
 
 async function applyCorrectionChoice(choice) {
-  await applyManualCorrectionCells(choice.cells)
+  await applyManualCorrectionCells(choice.cells, { slotIndex: activeCorrectionSlotIndex.value })
 }
 
 async function applyManualCorrectionText() {
   normalizeManualCorrectionInput()
   const group = activeCorrectionGroup.value
-  const slotCount = Math.max(1, Array.isArray(group?.digit_box_ids) ? group.digit_box_ids.length : 1)
+  const slotCount = activeCorrectionSlotIndex.value != null
+    ? 1
+    : Math.max(1, Array.isArray(group?.digit_box_ids) ? group.digit_box_ids.length : 1)
   const cells = parseManualAnswerText(manualCorrectionText.value, slotCount)
   if (!cells) {
     correctionError.value = slotCount > 1
@@ -865,7 +940,7 @@ async function applyManualCorrectionText() {
       : 'Enter one digit.'
     return
   }
-  await applyManualCorrectionCells(cells)
+  await applyManualCorrectionCells(cells, { slotIndex: activeCorrectionSlotIndex.value })
 }
 
 function normalizeManualCorrectionInput(event) {
@@ -879,7 +954,7 @@ function normalizeManualCorrectionInput(event) {
   if (correctionError.value) correctionError.value = ''
 }
 
-async function applyManualCorrectionCells(cells) {
+async function applyManualCorrectionCells(cells, { slotIndex = null } = {}) {
   const result = ocrResult.value
   const group = activeCorrectionGroup.value
   const layoutSnapshot = result?.layoutSnapshot
@@ -889,17 +964,39 @@ async function applyManualCorrectionCells(cells) {
 
   const ids = Array.isArray(group.digit_box_ids) ? group.digit_box_ids : []
   if (!ids.length) return
-  const normalizedCells = cells.slice(0, ids.length)
-  while (normalizedCells.length < ids.length) normalizedCells.unshift(null)
-  const answerText = cellsToAnswerText(normalizedCells)
   const predictionIndexById = new Map(result.predictions.map((prediction, index) => [prediction.id, index]))
   const nextPredictions = result.predictions.map((prediction) => ({
     ...prediction,
     topK: clonePlain(prediction.topK || []),
     probs: clonePlain(prediction.probs || [])
   }))
+  const normalizedSlotIndex = Number.isInteger(slotIndex) && slotIndex >= 0 && slotIndex < ids.length
+    ? slotIndex
+    : null
+  const normalizedCells = ids.map((id) => {
+    const predictionIndex = predictionIndexById.get(id)
+    const prediction = predictionIndex == null ? null : nextPredictions[predictionIndex]
+    const normalized = normalizeGradingDigit(
+      prediction?.blank === true || prediction?.empty === true ? null : prediction?.digit
+    )
+    return normalized === undefined ? null : normalized
+  })
+  const correctionCells = cells.slice(0, normalizedSlotIndex == null ? ids.length : 1)
+  if (normalizedSlotIndex == null) {
+    while (correctionCells.length < ids.length) correctionCells.unshift(null)
+    correctionCells.forEach((cell, index) => {
+      normalizedCells[index] = cell
+    })
+  } else {
+    normalizedCells[normalizedSlotIndex] = correctionCells[0] ?? null
+  }
+  const answerText = cellsToAnswerText(normalizedCells)
+  const slotsToUpdate = normalizedSlotIndex == null
+    ? ids.map((_, index) => index)
+    : [normalizedSlotIndex]
 
-  ids.forEach((id, slotIndex) => {
+  slotsToUpdate.forEach((slotIndex) => {
+    const id = ids[slotIndex]
     const predictionIndex = predictionIndexById.get(id)
     if (predictionIndex == null) return
     const previous = nextPredictions[predictionIndex]
@@ -932,13 +1029,23 @@ async function applyManualCorrectionCells(cells) {
   const questionReview = buildQuestionReviewFlags(questionGroups, nextPredictions)
   const answerGroups = buildAnswerGroups(questionGroups, nextPredictions, questionCorrect)
   const correctionKey = String(group.question_num ?? activeCorrectionQuestion.value?.questionNum ?? 'question')
+  const previousCorrection = result.manualCorrections?.[correctionKey] || {}
+  const correctedSlots = new Set(
+    Array.isArray(previousCorrection.correctedSlots)
+      ? previousCorrection.correctedSlots.filter((index) => Number.isInteger(index))
+      : Array.isArray(previousCorrection.cells)
+        ? previousCorrection.cells.map((_, index) => index)
+        : []
+  )
+  slotsToUpdate.forEach((index) => correctedSlots.add(index))
   const manualCorrections = {
     ...(result.manualCorrections || {}),
     [correctionKey]: {
       questionNum: group.question_num ?? activeCorrectionQuestion.value?.questionNum ?? null,
       label: activeCorrectionQuestion.value?.label || '',
       cells: normalizedCells,
-      text: answerText
+      text: answerText,
+      correctedSlots: Array.from(correctedSlots).sort((a, b) => a - b)
     }
   }
 
@@ -2255,27 +2362,44 @@ function composeStudentAnnotatedImage(
           const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
           const rect = questionRectsByIndex[index]
           if (!rect) return
+          const slotRects = ids.map((id) => {
+            const crop = cropById.get(id)
+            return annotationRectForCrop(crop)
+          })
           const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
           const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
           const hasReview =
             groupPredictions.some((prediction) => prediction.reviewNeeded) ||
             groupHasRequiredSlotReview(group, ids, predictionById)
+          const reviewSlotRects = slotRects
+            .map((slotRect, slotIndex) => ({
+              slotRect,
+              slotIndex,
+              needsReview: slotNeedsReview(group, ids, slotIndex, predictionById)
+            }))
+            .filter((slot) => slot.slotRect && slot.needsReview)
           const seed = (index + 1) * 131
           const correction = manualCorrections[String(group?.question_num ?? index + 1)]
 
           ctx.save()
           if (correction?.cells) {
+            const correctedSlots = Array.isArray(correction.correctedSlots)
+              ? correction.correctedSlots.filter((slotIndex) =>
+                  Number.isInteger(slotIndex) &&
+                  slotIndex >= 0 &&
+                  slotIndex < slotRects.length
+                )
+              : correction.cells.map((_, slotIndex) => slotIndex)
             drawManualAnswer(
-              ids.map((id) => {
-                const crop = cropById.get(id)
-                return annotationRectForCrop(crop)
-              }),
-              correction.cells,
+              correctedSlots.map((slotIndex) => slotRects[slotIndex]),
+              correctedSlots.map((slotIndex) => correction.cells[slotIndex]),
               seed + 47
             )
           }
           if (hasReview) {
-            drawReviewMark(rect, seed)
+            reviewSlotRects.forEach(({ slotRect, slotIndex }) => {
+              drawReviewMark(slotRect, seed + slotIndex * 19)
+            })
           } else if (correct === true) {
             drawCheck(rect, seed)
           } else if (correct === false) {
@@ -2302,7 +2426,11 @@ function composeStudentAnnotatedImage(
           ctx.save()
 
           if (hasReview) {
-            drawReviewMark(rect, seed)
+            items.forEach(({ crop, prediction }, slotIndex) => {
+              if (!prediction?.reviewNeeded) return
+              const slotRect = annotationRectForCrop(crop)
+              if (slotRect) drawReviewMark(slotRect, seed + slotIndex * 19)
+            })
           } else if (correctPredictions.length > 0) {
             if (correctPredictions.every((prediction) => prediction.correct === true)) drawCheck(rect, seed)
             else if (correctPredictions.some((prediction) => prediction.correct === false)) drawX(rect, seed)
@@ -2517,6 +2645,19 @@ function groupHasRequiredSlotReview(group, ids, predictionById) {
   })
 }
 
+function slotNeedsReview(group, ids, slotIndex, predictionById) {
+  if (!Array.isArray(ids) || slotIndex < 0 || slotIndex >= ids.length) return true
+  const id = ids[slotIndex]
+  const prediction = predictionById.get(id)
+  if (prediction?.reviewNeeded) return true
+  const expectedDigitCount = answerDigitCount(group?.answer)
+  if (expectedDigitCount < ids.length) return false
+  const normalized = normalizeGradingDigit(
+    prediction?.blank === true || prediction?.empty === true ? null : prediction?.digit
+  )
+  return normalized === null || normalized === undefined
+}
+
 function displaySlotCountForGroup(group, layoutGroup = null) {
   const ids = Array.isArray(group?.digitBoxIds)
     ? group.digitBoxIds
@@ -2562,6 +2703,7 @@ function normalizeAnswerGroupsForDisplay(answerGroups, questionGroups = []) {
       label: group?.label || `${questionLetter(index)})`,
       digitBoxIds,
       displayDigits: normalizeDisplayDigits(group?.displayDigits, slotCount),
+      slotStatuses: normalizeDisplayDigits(group?.slotStatuses, slotCount),
       status: group?.status || 'review'
     }
   })
@@ -2696,6 +2838,13 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) 
       'review'
     const displayDigits = normalizeDisplayDigits(predictionCells, slotCount)
     const predictedAnswerText = cellsToAnswerText(predictionCells)
+    const slotStatuses = normalizeDisplayDigits(ids.map((id, slotIndex) => {
+      const prediction = byId.get(id)
+      if (prediction?.reviewNeeded || slotNeedsReview(group, ids, slotIndex, byId)) return 'review'
+      if (prediction?.correct === true) return 'correct'
+      if (prediction?.correct === false) return 'incorrect'
+      return status
+    }), slotCount)
 
     return {
       key: `question-${group?.question_num ?? index + 1}`,
@@ -2705,6 +2854,7 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) 
       answer: group?.answer ?? null,
       digitBoxIds: ids,
       displayDigits,
+      slotStatuses,
       answerText: predictedAnswerText,
       correct,
       reviewNeeded: hasReview || correct !== true,
@@ -2923,43 +3073,55 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
   const predictionById = new Map((predictions || []).map((prediction, index) => [prediction.id ?? index, prediction]))
   if (!Array.isArray(questionGroups) || !questionGroups.length) return []
 
-  return questionGroups.map((group, index) => {
+  return questionGroups.flatMap((group, index) => {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
     const rect = unionRects(ids.map((id) => {
       const crop = cropById.get(id)
       return annotationRectForCrop(crop)
     }))
-    if (!rect) return null
+    if (!rect) return []
     const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
     const hasReview =
       groupPredictions.some((prediction) => prediction?.reviewNeeded) ||
       groupHasRequiredSlotReview(group, ids, predictionById)
-    const manualCorrected = groupPredictions.some((prediction) => prediction?.manualCorrected)
     const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
-    const padX = Math.max(rect.h * 0.42, rect.w * 0.14)
-    const padY = Math.max(rect.h * 0.38, rect.w * 0.06)
-    const target = {
-      x: Math.max(0, rect.x - padX),
-      y: Math.max(0, rect.y - padY),
-      w: Math.min(warpedW, rect.x + rect.w + padX) - Math.max(0, rect.x - padX),
-      h: Math.min(warpedH, rect.y + rect.h + padY) - Math.max(0, rect.y - padY)
-    }
-    return {
-      key: `question-region-${group?.question_num ?? index + 1}`,
-      label: `${questionLetter(index)})`,
-      questionNum: group?.question_num ?? index + 1,
-      reviewNeeded: hasReview,
-      correct,
-      x: target.x,
-      y: target.y,
-      w: target.w,
-      h: target.h,
-      leftPct: (target.x / warpedW) * 100,
-      topPct: (target.y / warpedH) * 100,
-      widthPct: (target.w / warpedW) * 100,
-      heightPct: (target.h / warpedH) * 100,
-      manualCorrected
-    }
+    const questionNum = group?.question_num ?? index + 1
+    return ids.map((id, slotIndex) => {
+      const crop = cropById.get(id)
+      const slotRect = annotationRectForCrop(crop)
+      const prediction = predictionById.get(id)
+      if (!slotRect) return null
+      const slotManualCorrected = !!prediction?.manualCorrected
+      const slotReviewNeeded = slotNeedsReview(group, ids, slotIndex, predictionById)
+      const padX = Math.max(slotRect.h * 0.52, slotRect.w * 0.22)
+      const padY = Math.max(slotRect.h * 0.45, slotRect.w * 0.08)
+      const target = {
+        x: Math.max(0, slotRect.x - padX),
+        y: Math.max(0, slotRect.y - padY),
+        w: Math.min(warpedW, slotRect.x + slotRect.w + padX) - Math.max(0, slotRect.x - padX),
+        h: Math.min(warpedH, slotRect.y + slotRect.h + padY) - Math.max(0, slotRect.y - padY)
+      }
+      return {
+        key: `question-region-${questionNum}-slot-${slotIndex}`,
+        label: `${questionLetter(index)})`,
+        questionNum,
+        slotIndex,
+        digitBoxId: id,
+        digitBoxIds: ids,
+        reviewNeeded: slotReviewNeeded,
+        questionReviewNeeded: hasReview,
+        correct,
+        x: target.x,
+        y: target.y,
+        w: target.w,
+        h: target.h,
+        leftPct: (target.x / warpedW) * 100,
+        topPct: (target.y / warpedH) * 100,
+        widthPct: (target.w / warpedW) * 100,
+        heightPct: (target.h / warpedH) * 100,
+        manualCorrected: slotManualCorrected
+      }
+    }).filter(Boolean)
   }).filter(Boolean)
 }
 
@@ -4824,6 +4986,7 @@ onUnmounted(stopStream)
 }
 
 .student-answer-pill {
+  appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4835,10 +4998,32 @@ onUnmounted(stopStream)
   font-size: 17px;
   font-weight: 750;
   color: #202124;
+  font-family: inherit;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
 }
 
 .student-answer-pill + .student-answer-pill {
   border-left: 0;
+}
+
+.student-answer-pill--clickable {
+  cursor: pointer;
+}
+
+.student-answer-pill--clickable:active {
+  background: #f7f7f3;
+}
+
+.student-answer-pill:disabled {
+  opacity: 1;
+  color: #202124;
+}
+
+.student-answer-pill:focus-visible {
+  outline: 3px solid rgba(240, 199, 68, 0.34);
+  outline-offset: -3px;
 }
 
 .student-answer-pills--double::before,
