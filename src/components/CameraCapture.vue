@@ -38,6 +38,7 @@
         <div
           v-if="activeCorrectionQuestion"
           class="student-correction-panel student-correction-panel--image"
+          :class="correctionPanelClass"
           :style="correctionPanelStyle"
           @click.stop
         >
@@ -241,7 +242,7 @@
         <span></span>
         <span></span>
       </div>
-      <p>{{ studentMode ? 'Checking your scan...' : 'Processing with real OCR...' }}</p>
+      <p>{{ studentMode ? 'Grading' : 'Processing with real OCR...' }}</p>
     </div>
 
     <!-- Student Mode: show grade outcome or teacher-review outcome, never a dead-end "all set" screen -->
@@ -669,20 +670,79 @@ const activeCorrectionRegion = computed(() => {
 })
 
 const correctionPanelStyle = computed(() => {
+  const placement = correctionPanelPlacement.value
+  if (!placement) return {}
+  return {
+    left: `${placement.left}%`,
+    top: `${placement.top}%`,
+    width: `${placement.width}%`,
+    transform: placement.transform,
+    '--correction-arrow-x': `${placement.arrowX}%`,
+    '--correction-arrow-y': `${placement.arrowY}%`
+  }
+})
+
+const correctionPanelPlacement = computed(() => {
   const region = activeCorrectionRegion.value
-  if (!region) return {}
-  const panelWidthPct = 48
+  if (!region) return null
+  const panelWidthPct = 28
+  const panelHeightEstimatePct = 27
+  const gapPct = 1.6
+  const centerX = region.leftPct + region.widthPct / 2
   const centerY = region.topPct + region.heightPct / 2
   const spaceRight = 100 - (region.leftPct + region.widthPct)
-  const placeRight = spaceRight >= panelWidthPct + 4 || region.leftPct < 48
-  const left = placeRight
-    ? Math.min(100 - panelWidthPct - 2, region.leftPct + region.widthPct + 2.5)
-    : Math.max(2, region.leftPct - panelWidthPct - 2.5)
+  const spaceLeft = region.leftPct
+  const rawSlotIndex = activeCorrectionQuestion.value?.slotIndex
+  const slotIndex = Number.isInteger(rawSlotIndex) && rawSlotIndex >= 0 ? rawSlotIndex : null
+  const preferredSide = slotIndex == null
+    ? (centerX < 50 ? 'right' : 'left')
+    : (slotIndex > 0 ? 'right' : 'left')
+  const canPlacePreferredRight = preferredSide === 'right' && spaceRight >= panelWidthPct + gapPct
+  const canPlacePreferredLeft = preferredSide === 'left' && spaceLeft >= panelWidthPct + gapPct
 
-  return {
-    left: `${left}%`,
-    top: `${Math.min(88, Math.max(12, centerY))}%`
+  if (canPlacePreferredRight) {
+    return {
+      placement: 'right',
+      left: Math.min(98 - panelWidthPct, region.leftPct + region.widthPct + gapPct),
+      top: Math.min(86, Math.max(14, centerY)),
+      width: panelWidthPct,
+      transform: 'translateY(-50%)',
+      arrowX: 0,
+      arrowY: 50
+    }
   }
+
+  if (canPlacePreferredLeft) {
+    return {
+      placement: 'left',
+      left: Math.max(2, region.leftPct - panelWidthPct - gapPct),
+      top: Math.min(86, Math.max(14, centerY)),
+      width: panelWidthPct,
+      transform: 'translateY(-50%)',
+      arrowX: 100,
+      arrowY: 50
+    }
+  }
+
+  const placeAbove = region.topPct > panelHeightEstimatePct + 5
+  const left = Math.max(2, Math.min(98 - panelWidthPct, centerX - panelWidthPct / 2))
+  const top = placeAbove
+    ? Math.max(4, region.topPct - gapPct)
+    : Math.min(88, region.topPct + region.heightPct + gapPct)
+  return {
+    placement: placeAbove ? 'above' : 'below',
+    left,
+    top,
+    width: panelWidthPct,
+    transform: placeAbove ? 'translateY(-100%)' : 'none',
+    arrowX: Math.min(88, Math.max(12, ((centerX - left) / panelWidthPct) * 100)),
+    arrowY: placeAbove ? 100 : 0
+  }
+})
+
+const correctionPanelClass = computed(() => {
+  const placement = correctionPanelPlacement.value?.placement
+  return placement ? `student-correction-panel--${placement}` : ''
 })
 
 const activeCorrectionGroup = computed(() => {
@@ -1994,13 +2054,13 @@ function composeStudentAnnotatedImage(
       }
 
       const drawReviewMark = (rect, seed) => {
-        const cx = rect.x + rect.w * (0.5 + jitter(seed + 205, 0.012))
-        const cy = rect.y + rect.h * (0.52 + jitter(seed + 207, 0.018))
-        const rx = Math.max(rect.h * 0.72, rect.w * (0.54 + seededUnit(seed + 211) * 0.05))
-        const ry = Math.max(rect.h * 0.46, rect.h * (0.52 + seededUnit(seed + 213) * 0.08))
-        const angle = jitter(seed + 193, 0.055)
-        const pointsPerLoop = 40
-        const highlighter = 'rgb(234, 255, 32)'
+        const cx = rect.x + rect.w * (0.5 + jitter(seed + 205, 0.025))
+        const cy = rect.y + rect.h * (0.52 + jitter(seed + 207, 0.035))
+        const rx = Math.max(rect.w * (0.38 + seededUnit(seed + 211) * 0.075), rect.h * 0.36)
+        const ry = Math.max(rect.h * (0.78 + seededUnit(seed + 213) * 0.17), rect.w * 0.62)
+        const angle = jitter(seed + 193, 0.13)
+        const pointsPerLoop = 34 + Math.floor(seededUnit(seed + 215) * 11)
+        const highlighter = 'rgb(252, 255, 0)'
 
         ctx.save()
         ctx.globalCompositeOperation = 'multiply'
@@ -2008,28 +2068,33 @@ function composeStudentAnnotatedImage(
         ctx.lineJoin = 'round'
         for (let pass = 0; pass < 3; pass++) {
           const passSeed = seed + pass * 97
-          const start = -Math.PI * (0.12 + seededUnit(passSeed + 5) * 0.08)
-          const end = Math.PI * (1.86 + seededUnit(passSeed + 7) * 0.18)
+          const passCx = cx + jitter(passSeed + 37, rect.w * 0.025)
+          const passCy = cy + jitter(passSeed + 41, rect.h * 0.035)
+          const passRx = rx * (0.96 + seededUnit(passSeed + 43) * 0.11)
+          const passRy = ry * (0.95 + seededUnit(passSeed + 47) * 0.12)
+          const passAngle = angle + jitter(passSeed + 53, 0.045)
+          const start = -Math.PI * (0.1 + seededUnit(passSeed + 5) * 0.1)
+          const end = Math.PI * (1.82 + seededUnit(passSeed + 7) * 0.2)
           ctx.beginPath()
           for (let i = 0; i <= pointsPerLoop; i++) {
             const t = start + ((end - start) * i) / pointsPerLoop
             const wobbleX = 1 + jitter(passSeed + i * 7, 0.065)
             const wobbleY = 1 + jitter(passSeed + i * 11, 0.07)
-            const localX = Math.cos(t) * rx * wobbleX
-            const localY = Math.sin(t) * ry * wobbleY
-            const x = cx + localX * Math.cos(angle) - localY * Math.sin(angle) + jitter(passSeed + i * 13, 1.05)
-            const y = cy + localX * Math.sin(angle) + localY * Math.cos(angle) + jitter(passSeed + i * 17, 1.05)
+            const localX = Math.cos(t) * passRx * wobbleX
+            const localY = Math.sin(t) * passRy * wobbleY
+            const x = passCx + localX * Math.cos(passAngle) - localY * Math.sin(passAngle) + jitter(passSeed + i * 13, 1.05)
+            const y = passCy + localX * Math.sin(passAngle) + localY * Math.cos(passAngle) + jitter(passSeed + i * 17, 1.05)
             if (i === 0) ctx.moveTo(x, y)
             else {
               const prevT = start + ((end - start) * (i - 1)) / pointsPerLoop
-              const prevX = cx + Math.cos(prevT) * rx * Math.cos(angle) - Math.sin(prevT) * ry * Math.sin(angle)
-              const prevY = cy + Math.cos(prevT) * rx * Math.sin(angle) + Math.sin(prevT) * ry * Math.cos(angle)
+              const prevX = passCx + Math.cos(prevT) * passRx * Math.cos(passAngle) - Math.sin(prevT) * passRy * Math.sin(passAngle)
+              const prevY = passCy + Math.cos(prevT) * passRx * Math.sin(passAngle) + Math.sin(prevT) * passRy * Math.cos(passAngle)
               ctx.quadraticCurveTo(prevX, prevY, x, y)
             }
           }
           ctx.strokeStyle = highlighter
-          ctx.globalAlpha = pass === 0 ? 0.42 : pass === 1 ? 0.28 : 0.2
-          ctx.lineWidth = Math.max(10, Math.min(18, rect.h * (0.15 + seededUnit(passSeed + 29) * 0.035)))
+          ctx.globalAlpha = pass === 0 ? 0.54 : pass === 1 ? 0.36 : 0.24
+          ctx.lineWidth = Math.max(12, Math.min(21, rect.h * (0.18 + seededUnit(passSeed + 29) * 0.055)))
           ctx.stroke()
         }
         ctx.restore()
@@ -2146,7 +2211,7 @@ function composeStudentAnnotatedImage(
         const text = `${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()}`
         const topQuestionY = Math.min(...questionRects.map((rect) => rect.y))
         const stampSeed = annotationJitterSeed + 701
-        const fontSize = Math.max(32, Math.min(48, warpedW * 0.024))
+        const fontSize = Math.max(36, Math.min(52, warpedW * 0.026))
         const spacing = Math.max(2.2, fontSize * 0.18)
         const estimatedW = text.length * fontSize * 0.62 + (text.length - 1) * spacing
         const topRightAnchor = Array.isArray(layout?.homography?.anchors)
@@ -2164,9 +2229,9 @@ function composeStudentAnnotatedImage(
           ? safeRight - estimatedW - warpedW * (0.008 + seededUnit(stampSeed + 5) * 0.026)
           : warpedW - estimatedW - warpedW * (0.06 + seededUnit(stampSeed + 7) * 0.08)
         const x = Math.max(warpedW * 0.53, Math.min(desiredX, warpedW - estimatedW - warpedW * 0.05))
-        const minStampY = topRightAnchor ? markerBottom + fontSize * (1.7 + seededUnit(stampSeed + 11) * 0.22) : null
-        const targetStampY = topRightAnchor ? markerBottom + fontSize * (2.05 + seededUnit(stampSeed + 13) * 0.5) : null
-        const maxStampY = topRightAnchor ? Math.max(minStampY, topQuestionY - fontSize * 0.28) : null
+        const minStampY = topRightAnchor ? markerBottom + fontSize * (2.38 + seededUnit(stampSeed + 11) * 0.18) : null
+        const targetStampY = topRightAnchor ? markerBottom + fontSize * (2.7 + seededUnit(stampSeed + 13) * 0.36) : null
+        const maxStampY = topRightAnchor ? Math.max(minStampY, topQuestionY - fontSize * 0.72) : null
         const y = topRightAnchor
           ? Math.min(maxStampY, Math.max(minStampY, targetStampY))
           : Math.max(warpedH * 0.068, Math.min(warpedH * 0.145, topQuestionY - warpedH * 0.09))
@@ -4498,6 +4563,7 @@ onUnmounted(stopStream)
 
 <style scoped>
 .camera-capture {
+  --teacher-highlighter-rgb: 252, 255, 0;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -4807,6 +4873,32 @@ onUnmounted(stopStream)
   color: #6e6e73;
 }
 
+.camera-capture--student .processing {
+  position: fixed;
+  top: max(88px, calc(env(safe-area-inset-top, 0px) + 94px));
+  right: max(14px, calc(50vw - 178px));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 10px 6px 7px;
+  border: 1px solid rgba(224, 210, 139, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #202124;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+  text-align: left;
+  pointer-events: none;
+}
+
+.camera-capture--student .processing p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 800;
+}
+
 .marking-loader {
   position: relative;
   width: 76px;
@@ -4833,10 +4925,40 @@ onUnmounted(stopStream)
   width: 44px;
   height: 12px;
   border-radius: 999px;
-  background: rgba(222, 238, 54, 0.72);
+  background: rgba(var(--teacher-highlighter-rgb), 0.76);
   mix-blend-mode: multiply;
   transform-origin: left center;
   animation: highlighter-swipe 1.15s ease-in-out infinite;
+}
+
+.camera-capture--student .marking-loader {
+  width: 38px;
+  height: 20px;
+  margin: 0;
+}
+
+.camera-capture--student .marking-loader::before {
+  left: 6px;
+  right: 5px;
+  top: 10px;
+  height: 1.5px;
+}
+
+.camera-capture--student .marking-loader span {
+  left: 3px;
+  top: 4px;
+  width: 24px;
+  height: 7px;
+}
+
+.camera-capture--student .marking-loader span:nth-child(2) {
+  top: 8px;
+  width: 30px;
+}
+
+.camera-capture--student .marking-loader span:nth-child(3) {
+  top: 12px;
+  width: 19px;
 }
 
 .marking-loader span:nth-child(2) {
@@ -4954,19 +5076,19 @@ onUnmounted(stopStream)
 }
 
 .student-answer-label {
-  width: 26px;
-  height: 19px;
+  width: 25.7px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1.35px solid #bdc3c9;
+  border: 1.1px solid #c4c8ce;
   border-radius: 999px;
-  color: #505861;
+  color: #626b74;
   background: #ffffff;
-  box-shadow: inset 0 0 0 0.5px rgba(215, 219, 224, 0.5);
-  font-size: 12.5px;
+  box-shadow: none;
+  font-size: 12.1px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 650;
   justify-self: center;
 }
 
@@ -5084,35 +5206,98 @@ onUnmounted(stopStream)
 .student-correction-panel--image {
   position: absolute;
   z-index: 4;
-  width: min(236px, 44%);
-  min-width: 186px;
-  max-width: calc(100% - 20px);
-  max-height: min(76%, 286px);
-  overflow: auto;
+  min-width: 136px;
+  max-width: calc(100% - 12px);
+  max-height: min(62%, 232px);
+  overflow: visible;
   margin: 0;
-  padding: 10px 10px 11px;
-  transform: translateY(-50%);
+  padding: 8px;
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
 }
 
+.student-correction-panel--image::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.student-correction-panel--right::after {
+  left: -8px;
+  top: var(--correction-arrow-y, 50%);
+  transform: translateY(-50%);
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid rgba(255, 253, 244, 0.96);
+  filter: drop-shadow(-1px 1px 0 rgba(240, 199, 68, 0.72));
+}
+
+.student-correction-panel--left::after {
+  right: -8px;
+  top: var(--correction-arrow-y, 50%);
+  transform: translateY(-50%);
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 8px solid rgba(255, 253, 244, 0.96);
+  filter: drop-shadow(1px 1px 0 rgba(240, 199, 68, 0.72));
+}
+
+.student-correction-panel--above::after {
+  left: var(--correction-arrow-x, 50%);
+  bottom: -8px;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid rgba(255, 253, 244, 0.96);
+  filter: drop-shadow(1px 1px 0 rgba(240, 199, 68, 0.72));
+}
+
+.student-correction-panel--below::after {
+  left: var(--correction-arrow-x, 50%);
+  top: -8px;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid rgba(255, 253, 244, 0.96);
+  filter: drop-shadow(1px -1px 0 rgba(240, 199, 68, 0.72));
+}
+
 .student-correction-panel--image .student-correction-title {
-  font-size: 15px;
+  gap: 5px;
+  margin-bottom: 7px;
+  font-size: 13px;
+}
+
+.student-correction-panel--image .student-correction-title strong {
+  line-height: 1.05;
+}
+
+.student-correction-panel--image .student-correction-current {
+  margin-left: 0;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.student-correction-panel--image .student-correction-close {
+  margin-left: auto;
+  font-size: 18px;
 }
 
 .student-correction-panel--image .student-correction-choices,
 .student-correction-panel--image .student-correction-actions {
-  gap: 6px;
+  gap: 5px;
 }
 
 .student-correction-panel--image .correction-choice-btn {
   flex: 1 1 calc(50% - 3px);
   min-width: 0;
-  padding: 8px 12px;
+  padding: 7px 9px;
 }
 
 .student-correction-panel--image .student-correction-manual input {
-  padding: 8px 9px;
-  font-size: 20px;
+  padding: 7px 8px;
+  font-size: 18px;
 }
 
 .student-correction-title {
@@ -5126,20 +5311,20 @@ onUnmounted(stopStream)
 }
 
 .student-correction-label {
-  width: 26px;
-  height: 19px;
+  width: 25.7px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  border: 1.35px solid #bdc3c9;
+  border: 1.1px solid #c4c8ce;
   border-radius: 999px;
-  color: #505861;
+  color: #626b74;
   background: #fff;
-  box-shadow: inset 0 0 0 0.5px rgba(215, 219, 224, 0.5);
-  font-size: 12.5px;
+  box-shadow: none;
+  font-size: 12.1px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .student-correction-current {
@@ -5215,14 +5400,13 @@ onUnmounted(stopStream)
 
 .student-correction-panel--image .student-correction-save {
   flex: 0 0 auto;
-  min-width: 64px;
-  padding: 8px 11px;
+  min-width: 56px;
+  padding: 7px 10px;
 }
 
 @media (max-width: 430px) {
   .student-correction-panel--image {
-    width: min(232px, 50%);
-    min-width: 178px;
+    min-width: 128px;
   }
 
   .student-correction-panel--image .student-correction-manual {
