@@ -882,6 +882,66 @@ function findVariantAgreement(variantResults, names, minConfidence, minGap) {
   return { digit, variants };
 }
 
+function findStrongSlotMajority(variantResults, options = {}) {
+  const slotNames = new Set([
+    'gentle',
+    'center-safe-slot',
+    'expected-slot',
+    'edge-band-slot',
+    'wide-slot',
+    'no-side-erase'
+  ]);
+  const minConfidence = options.minConfidence ?? 0.70;
+  const minGap = options.minGap ?? 0.45;
+  const minCount = options.minCount ?? 5;
+  const byDigit = new Map();
+
+  for (const variant of variantResults) {
+    const name = variant?.name || '';
+    if (!slotNames.has(name)) continue;
+    if (!variantMeets(variant, minConfidence, minGap)) continue;
+    const digit = variant.result.digit;
+    if (!byDigit.has(digit)) byDigit.set(digit, []);
+    byDigit.get(digit).push(variant);
+  }
+
+  const candidates = Array.from(byDigit.entries())
+    .filter(([, variants]) => variants.length >= minCount)
+    .map(([digit, variants]) => {
+      const meanConfidence = variants.reduce((sum, variant) => sum + (variant.result.confidence || 0), 0) / variants.length;
+      const meanGap = variants.reduce((sum, variant) => sum + digitTopGap(variant.result), 0) / variants.length;
+      return {
+        digit,
+        variants,
+        names: variants.map((variant) => variant.name),
+        meanConfidence,
+        meanGap,
+        score: variants.length * 3 + meanConfidence + meanGap
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return candidates[0] || null;
+}
+
+function findCleanupQuad(variantResults) {
+  return ['strict', 'edge-clean', 'no-rule-cleanup', 'no-component-cleanup']
+    .map((name) => findVariant(variantResults, name))
+    .filter(Boolean);
+}
+
+function cleanupQuadAgreesOnDigit(cleanupVariants) {
+  if (cleanupVariants.length < 4) return null;
+  const digit = cleanupVariants[0].result.digit;
+  if (!cleanupVariants.every((variant) => variant.result.digit === digit)) return null;
+  return {
+    digit,
+    meanConfidence: cleanupVariants.reduce((sum, variant) => sum + (variant.result.confidence || 0), 0) / cleanupVariants.length,
+    meanGap: cleanupVariants.reduce((sum, variant) => sum + digitTopGap(variant.result), 0) / cleanupVariants.length,
+    maxConfidence: Math.max(...cleanupVariants.map((variant) => variant.result.confidence || 0))
+  };
+}
+
 function hasStrongAlternativeCleanupConsensus(variantResults, candidateDigit) {
   const alternatives = [
     { names: ['edge-clean', 'no-rule-cleanup'], minConfidence: 0.52, minGap: 0.22 },
@@ -928,6 +988,8 @@ function choosePreprocessConsensus(variantResults, options = {}) {
   const digitIndex = Number(options.digitIndex);
   const isLeftVirtualDigit = Number.isFinite(digitIndex) && digitIndex === 0;
   const isRightVirtualDigit = Number.isFinite(digitIndex) && digitIndex === 1;
+  const cleanupQuad = findCleanupQuad(variantResults);
+  const cleanupAgreement = cleanupQuadAgreesOnDigit(cleanupQuad);
 
   const strictNoComponentWide = findVariantAgreement(
     variantResults,
@@ -941,6 +1003,48 @@ function choosePreprocessConsensus(variantResults, options = {}) {
       ['strict', 'no-component-cleanup', 'wide-slot'],
       strictNoComponentWide.digit,
       'strict-no-component-wide-consensus',
+      true
+    );
+  }
+
+  const strongSlotMajority = findStrongSlotMajority(variantResults, {
+    minConfidence: 0.70,
+    minGap: 0.45,
+    minCount: 5
+  });
+  if (
+    strongSlotMajority &&
+    cleanupAgreement &&
+    cleanupAgreement.digit !== strongSlotMajority.digit &&
+    cleanupAgreement.meanConfidence < 0.90
+  ) {
+    return buildVariantConsensus(
+      variantResults,
+      strongSlotMajority.names,
+      strongSlotMajority.digit,
+      'strong-slot-majority-consensus',
+      true
+    );
+  }
+
+  const weakCleanupRightSlotMajority = isRightVirtualDigit
+    ? findStrongSlotMajority(variantResults, {
+      minConfidence: 0.86,
+      minGap: 0.70,
+      minCount: 4
+    })
+    : null;
+  if (
+    weakCleanupRightSlotMajority &&
+    cleanupAgreement &&
+    cleanupAgreement.digit !== weakCleanupRightSlotMajority.digit &&
+    cleanupAgreement.maxConfidence < 0.56
+  ) {
+    return buildVariantConsensus(
+      variantResults,
+      weakCleanupRightSlotMajority.names,
+      weakCleanupRightSlotMajority.digit,
+      'right-slot-weak-cleanup-slot-majority',
       true
     );
   }

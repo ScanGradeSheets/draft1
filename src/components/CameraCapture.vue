@@ -502,6 +502,13 @@ function highRiskRightSlotPreprocessReview(proc, result) {
   )
 }
 
+function structuralTwoDigitReview(proc, result, expectedDigit) {
+  if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 0 || !result) return false
+  const digit = Number(result.digit)
+  const expected = Number(expectedDigit)
+  return digit === 0 && Number.isFinite(expected) && expected !== 0
+}
+
 const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done'])
 
 const videoRef = ref(null)
@@ -3800,8 +3807,11 @@ const runRealOCR = async () => {
       const digit = digitResult[0].digit
       const topK = digitResult[0].topK || []
       const topGap = topK.length >= 2 ? (topK[0].confidence - topK[1].confidence) : 1
+      const expectedDigit = answerKey != null && proc.id < answerKey.length
+        ? answerKey[proc.id]
+        : null
       const correct = answerKey != null && proc.id < answerKey.length && answerKey[proc.id] != null
-        ? digit === answerKey[proc.id]
+        ? digit === expectedDigit
         : undefined
       const autoCheckAllowed =
         digitResult[0].confidence >= AUTO_CHECK_CONFIDENCE_THRESHOLD &&
@@ -3813,9 +3823,10 @@ const runRealOCR = async () => {
         digitResult[0].confidence < LOW_CONFIDENCE_THRESHOLD ||
         topGap < LOW_MARGIN_THRESHOLD
       const highRiskPreprocessReview = highRiskRightSlotPreprocessReview(proc, digitResult[0])
+      const structuralReview = structuralTwoDigitReview(proc, digitResult[0], expectedDigit)
       const reviewNeeded = correct === true
         ? !autoCheckAllowed
-        : highRiskPreprocessReview ? true
+        : highRiskPreprocessReview || structuralReview ? true
         : correct === false
           ? !autoXAllowed
           : lowSignal
@@ -3837,10 +3848,13 @@ const runRealOCR = async () => {
         baseConfidence: digitResult[0].baseConfidence ?? null,
         baseTopK: digitResult[0].baseTopK || null,
         preprocessDisagreement: digitResult[0].preprocessDisagreement === true,
-        preprocessReviewReason: reviewNeeded && highRiskPreprocessReview
+        preprocessReviewReason: reviewNeeded && structuralReview
+          ? 'two-digit-leading-zero-structural-review'
+          : reviewNeeded && highRiskPreprocessReview
           ? 'right-slot-preprocess-disagreement'
           : (digitResult[0].preprocessReviewReason || null),
         highRiskPreprocessReview,
+        structuralReview,
         preprocessVariants: digitResult[0].preprocessVariants || null,
         preprocessVoteSummary: digitResult[0].preprocessVoteSummary || null,
         ...(correct !== undefined && { correct })

@@ -83,8 +83,26 @@ Rollback point:
 Recommendation:
 ```
 
-If the failed scan remains `5/10`, reject the candidate.
+If a clean failed-scan OCR truth set remains at its original score, reject the
+candidate. Do not use answer-key score as OCR truth when the student may have
+written wrong answers.
 
 If the benchmark drops below `18/30`, reject the candidate.
 
 If wrong answers become more confident, reject or require explicit Tony review.
+
+## 2026-06-01 Late Update
+
+The May 30 repeatable two-digit benchmark has since moved from `19/30` to
+`22/30` with a scoped crop-voting/review-gating patch. The hard B72 classroom
+photo remains useful as a stability sample, but its `5/10` answer-key score is
+not a clean OCR accuracy score because the photographed student answers appear
+to include genuine wrong answers.
+
+For future OCR tuning, separate these two targets:
+
+- OCR handwriting truth: what the student actually wrote in the box.
+- Answer-key correctness: whether that written answer is mathematically correct.
+
+Do not optimize future OCR toward the answer key unless the actual handwritten
+truth for that sample is labeled.

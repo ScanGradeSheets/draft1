@@ -221,6 +221,23 @@ Safest next implementation action for the ScanGrade app:
 5. Accept no production OCR/crop/model patch unless it improves the failed scan above 5/10 and does not reduce the May 30 benchmark below 18/30.
 6. Do not start model training unless `docs/OCR_LABELED_HANDWRITING_DATASET_PLAN.md` conditions are met.
 
+2026-06-01 late OCR progress note:
+
+- Tony asked Codex to continue improving the observed OCR issues from the real two-digit classroom samples.
+- Verified production patch changes:
+  - Added a conservative strong slot-crop majority override before the printed-structure cleanup quad can dominate a two-digit slot.
+  - Added a narrow right-slot rescue when cleanup variants are weak but four strong slot variants agree.
+  - Added a structural review gate for impossible leading-zero answers on two-digit sheets, so confident `08`-style reads go to review instead of auto-grading as a clean wrong answer.
+- Verification:
+  - `npm run build` passed.
+  - Tony May 30 repeatable benchmark improved from `19/30` to `22/30`.
+  - Three newer B4230 classroom photos kept the same prediction strings after the patch: `17,16,13,12,13,13,12,12,16,12`; `15,15,17,13,19,11,12,17,13,19`; `37,29,33,28,44,24,37,38,41,15`.
+  - Hard B72 photo stayed stable at `5/10` against the answer key: `17,15,11,19,19,11,11,12,14,11`.
+- Important interpretation:
+  - B72 and some newer classroom photos include student answers that appear to differ from the answer key, so answer-key score is not always OCR handwriting accuracy.
+  - Future OCR benchmarking should label actual handwritten answers separately from answer-key correctness before tuning more aggressively.
+- One shadow-clean preprocess experiment was tried locally because raw crops for some `2`/`3` failures were visibly clearer than the model inputs, but it did not improve the measured benchmark and was reverted before commit.
+
 Safest next action for mission control:
 
 1. Inspect the May 27+ raw session files listed in `CODEX_RECOVERY_STATUS_KANBAN_PATHS.txt` using targeted searches only.
