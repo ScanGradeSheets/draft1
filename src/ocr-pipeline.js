@@ -53,11 +53,11 @@ let ensembleDigitSession = null;
 let rightSlotDigitSession = null;
 let rightSlotModelPathLoaded = null;
 const LEGACY_MNIST_MODEL_PATH = publicUrl('models/mnist-model.onnx');
-const DEFAULT_MODEL_PATH = publicUrl('models/worksheet-digit-tony-generalist-aug-strong-20260601.onnx');
-const DEFAULT_RIGHT_SLOT_MODEL_PATH = publicUrl('models/worksheet-digit-tony-generalist-noaug-20260601.onnx');
+const DEFAULT_MODEL_PATH = publicUrl('models/worksheet-digit-tony-generalist-extra-20260601.onnx');
+const DEFAULT_RIGHT_SLOT_MODEL_PATH = null;
 const DEFAULT_ENSEMBLE_MODEL_PATH = publicUrl('models/worksheet-digit-generalist.onnx');
-const MODEL_CACHE_BUSTER = 'worksheet-slot-models-20260601a';
-const KNOWN_WORKSHEET_SHA256 = 'ce6fd271418c8fcffaa4c7a85107f73a2ae739f7901ed95742dc398659dd535d';
+const MODEL_CACHE_BUSTER = 'worksheet-slot-models-20260602-extra-no-right';
+const KNOWN_WORKSHEET_SHA256 = '996a4912e6fe7ebc1d98356e13a08abc976ff6575770b6f32c5f13a519889811';
 const KNOWN_RIGHT_SLOT_SHA256 = 'e15751df23d9e88f4c103ff1c53f019a66a631dc4926d7091481ebdbacf518da';
 const KNOWN_ENSEMBLE_SHA256 = '50e82b5d5569198f326c4c4d127d668b1c4101e5e2aaacf71d07f85b4d193282';
 const PRIMARY_MODEL_WEIGHT = 0.75;
@@ -967,6 +967,29 @@ function hasStrongAlternativeCleanupConsensus(variantResults, candidateDigit) {
   });
 }
 
+function findTrustedCleanupMajorityAgainst(variantResults, candidateDigit) {
+  const cleanupMajorities = [
+    ['strict', 'no-rule-cleanup', 'no-component-cleanup'],
+    ['strict', 'edge-clean', 'no-component-cleanup'],
+    ['strict', 'edge-clean', 'no-rule-cleanup']
+  ];
+
+  for (const names of cleanupMajorities) {
+    const agreement = findVariantAgreement(variantResults, names, 0.72, 0.36);
+    if (!agreement) continue;
+    // A strong cleanup "1" can still be the printed guide/divider, so do not let
+    // that alone block wider slot evidence. Non-1 cleanup majorities are usually
+    // real handwriting shape that the wider crops can distort with box structure.
+    if (agreement.digit !== 1 && agreement.digit !== candidateDigit) return agreement;
+  }
+
+  return null;
+}
+
+function slotConsensusBlockedByCleanup(variantResults, candidateDigit) {
+  return Boolean(findTrustedCleanupMajorityAgainst(variantResults, candidateDigit));
+}
+
 function buildVariantConsensus(variantResults, names, digit, reason, alwaysReview = true) {
   const probs = averageVariantProbsWeighted(variantResults, names);
   if (!probs) return null;
@@ -1073,6 +1096,7 @@ function choosePreprocessConsensus(variantResults, options = {}) {
   );
   if (
     slotTriple &&
+    !slotConsensusBlockedByCleanup(variantResults, slotTriple.digit) &&
     variantMeets(findVariant(variantResults, 'wide-slot'), 0.82, 0.68) &&
     variantMeets(findVariant(variantResults, 'no-side-erase'), 0.82, 0.68)
   ) {
@@ -1141,7 +1165,7 @@ function choosePreprocessConsensus(variantResults, options = {}) {
     0.78,
     0.70
   );
-  if (gentleEdgeNoSide) {
+  if (gentleEdgeNoSide && !slotConsensusBlockedByCleanup(variantResults, gentleEdgeNoSide.digit)) {
     return buildVariantConsensus(
       variantResults,
       ['gentle', 'edge-band-slot', 'no-side-erase'],
@@ -1164,7 +1188,11 @@ function choosePreprocessConsensus(variantResults, options = {}) {
     edgeBandWideNoSide.result.digit === edgeBandWideStrong.digit &&
     (edgeBandWideNoSide.result.confidence || 0) >= 0.45 &&
     digitTopGap(edgeBandWideNoSide.result) >= 0.10;
-  if (edgeBandWideStrong && edgeBandWideHasNoSideSupport) {
+  if (
+    edgeBandWideStrong &&
+    edgeBandWideHasNoSideSupport &&
+    !slotConsensusBlockedByCleanup(variantResults, edgeBandWideStrong.digit)
+  ) {
     return buildVariantConsensus(
       variantResults,
       ['edge-band-slot', 'wide-slot'],
@@ -1180,7 +1208,7 @@ function choosePreprocessConsensus(variantResults, options = {}) {
     0.60,
     0.34
   );
-  if (edgeBandNoSidePair) {
+  if (edgeBandNoSidePair && !slotConsensusBlockedByCleanup(variantResults, edgeBandNoSidePair.digit)) {
     return buildVariantConsensus(
       variantResults,
       ['edge-band-slot', 'no-side-erase'],
@@ -1202,7 +1230,11 @@ function choosePreprocessConsensus(variantResults, options = {}) {
     strict.result.digit !== expectedNoSideLoose.digit &&
     (strict.result.confidence || 0) >= 0.70 &&
     digitTopGap(strict.result) >= 0.42;
-  if (expectedNoSideLoose && !strictBlocksExpectedNoSide) {
+  if (
+    expectedNoSideLoose &&
+    !strictBlocksExpectedNoSide &&
+    !slotConsensusBlockedByCleanup(variantResults, expectedNoSideLoose.digit)
+  ) {
     return buildVariantConsensus(
       variantResults,
       ['expected-slot', 'no-side-erase'],
@@ -1218,7 +1250,11 @@ function choosePreprocessConsensus(variantResults, options = {}) {
     0.44,
     0.08
   );
-  if (edgeBandSlotTriple && strictWeak) {
+  if (
+    edgeBandSlotTriple &&
+    strictWeak &&
+    !slotConsensusBlockedByCleanup(variantResults, edgeBandSlotTriple.digit)
+  ) {
     return buildVariantConsensus(
       variantResults,
       ['center-safe-slot', 'expected-slot', 'edge-band-slot'],
@@ -1234,7 +1270,10 @@ function choosePreprocessConsensus(variantResults, options = {}) {
     0.60,
     0.45
   );
-  if (strongCenterEdgeSlotPair) {
+  if (
+    strongCenterEdgeSlotPair &&
+    !slotConsensusBlockedByCleanup(variantResults, strongCenterEdgeSlotPair.digit)
+  ) {
     return buildVariantConsensus(
       variantResults,
       ['center-safe-slot', 'edge-band-slot'],
@@ -1366,6 +1405,13 @@ function choosePreprocessConsensus(variantResults, options = {}) {
     ));
     if (!allStrongEnough) continue;
     if (pair.respectCleanupAlternative && hasStrongAlternativeCleanupConsensus(variantResults, digits[0])) {
+      continue;
+    }
+    if (
+      pair.allowStrictOverride &&
+      pair.names.some((name) => ['center-safe-slot', 'expected-slot', 'edge-band-slot', 'wide-slot', 'no-side-erase'].includes(name)) &&
+      slotConsensusBlockedByCleanup(variantResults, digits[0])
+    ) {
       continue;
     }
     if (!strictWeak && strict.result.digit !== digits[0]) {
