@@ -532,10 +532,24 @@ const displayedResultImage = computed(() =>
 )
 
 const studentAnswerGroups = computed(() => {
-  const groups = ocrResult.value?.answerGroups
-  if (Array.isArray(groups) && groups.length > 0) return groups
+  const result = ocrResult.value
+  const layoutGroups = Array.isArray(result?.layoutSnapshot?.question_groups)
+    ? result.layoutSnapshot.question_groups
+    : []
+  const predictions = Array.isArray(result?.predictions) ? result.predictions : []
+  const groups = result?.answerGroups
+  if (layoutGroups.length > 0) {
+    const rebuiltGroups = predictions.length
+      ? buildAnswerGroups(layoutGroups, predictions, result?.questionCorrect)
+      : null
+    if (Array.isArray(rebuiltGroups) && rebuiltGroups.length > 0) return rebuiltGroups
+    const normalizedGroups = normalizeAnswerGroupsForDisplay(groups, layoutGroups)
+    if (normalizedGroups.length > 0) return normalizedGroups
+    return []
+  }
+  const normalizedGroups = normalizeAnswerGroupsForDisplay(groups)
+  if (normalizedGroups.length > 0) return normalizedGroups
   const digits = Array.isArray(ocrResult.value?.digits) ? ocrResult.value.digits : []
-  const predictions = Array.isArray(ocrResult.value?.predictions) ? ocrResult.value.predictions : []
   return digits.map((digit, index) => {
     const prediction = predictions[index]
     const correct = prediction?.correct
@@ -644,11 +658,16 @@ const activeCorrectionPlaceholder = computed(() =>
 
 const studentScoreText = computed(() => {
   if (ocrResult.value?.predictions?.some((p) => p.reviewNeeded)) return ''
+  if (Array.isArray(ocrResult.value?.questionReview) && ocrResult.value.questionReview.some(Boolean)) return ''
   const questionCorrect = ocrResult.value?.questionCorrect
   if (Array.isArray(questionCorrect) && questionCorrect.length > 0) {
     const score = questionCorrect.filter(Boolean).length
     return `Score: ${score}/${questionCorrect.length}`
   }
+  const layoutGroups = Array.isArray(ocrResult.value?.layoutSnapshot?.question_groups)
+    ? ocrResult.value.layoutSnapshot.question_groups
+    : []
+  if (layoutGroups.length > 0) return ''
   const correct = ocrResult.value?.correct
   if (!Array.isArray(correct) || correct.length === 0) return ''
   const score = correct.filter(Boolean).length
@@ -871,7 +890,12 @@ async function applyManualCorrectionCells(cells) {
     nextPredictions,
     questionCorrect
   )
-  const needsReview = !!result.baseNeedsReview || nextPredictions.some((prediction) => prediction.reviewNeeded)
+  const groupedStructureNeedsReview =
+    (questionGroups.length > 0 && !Array.isArray(questionCorrect)) ||
+    (Array.isArray(questionReview) && questionReview.some(Boolean))
+  const needsReview = !!result.baseNeedsReview ||
+    nextPredictions.some((prediction) => prediction.reviewNeeded) ||
+    groupedStructureNeedsReview
   const nextResult = {
     ...result,
     predictions: nextPredictions,
@@ -2064,7 +2088,9 @@ function composeStudentAnnotatedImage(
           if (!rect) return
           const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
           const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
-          const hasReview = groupPredictions.some((prediction) => prediction.reviewNeeded)
+          const hasReview =
+            groupPredictions.some((prediction) => prediction.reviewNeeded) ||
+            groupHasRequiredSlotReview(group, ids, predictionById)
           const seed = (index + 1) * 131
           const correction = manualCorrections[String(group?.question_num ?? index + 1)]
 
@@ -2301,6 +2327,77 @@ function normalizeGradingCells(cells) {
   return out
 }
 
+function answerDigitCount(answer) {
+  if (answer == null) return 0
+  const text = String(answer).trim()
+  return /^\d+$/.test(text) ? text.length : 0
+}
+
+function groupHasRequiredSlotReview(group, ids, predictionById) {
+  if (!Array.isArray(ids) || ids.length === 0) return true
+  const expectedDigitCount = answerDigitCount(group?.answer)
+  const hasMissingPrediction = ids.some((id) => !predictionById.get(id))
+  if (hasMissingPrediction) return true
+  if (expectedDigitCount < ids.length) return false
+  return ids.some((id) => {
+    const prediction = predictionById.get(id)
+    const normalized = normalizeGradingDigit(
+      prediction?.blank === true || prediction?.empty === true ? null : prediction?.digit
+    )
+    return normalized === null || normalized === undefined
+  })
+}
+
+function displaySlotCountForGroup(group, layoutGroup = null) {
+  const ids = Array.isArray(group?.digitBoxIds)
+    ? group.digitBoxIds
+    : Array.isArray(group?.digit_box_ids)
+      ? group.digit_box_ids
+      : Array.isArray(layoutGroup?.digit_box_ids)
+        ? layoutGroup.digit_box_ids
+        : []
+  const displayDigits = Array.isArray(group?.displayDigits) ? group.displayDigits : []
+  return Math.max(
+    ids.length,
+    answerDigitCount(group?.answer ?? layoutGroup?.answer),
+    displayDigits.length,
+    1
+  )
+}
+
+function normalizeDisplayDigits(cells, slotCount) {
+  const out = Array.isArray(cells) ? cells.slice(0, slotCount) : []
+  while (out.length < slotCount) out.push('')
+  return out
+}
+
+function normalizeAnswerGroupsForDisplay(answerGroups, questionGroups = []) {
+  if (!Array.isArray(answerGroups) || answerGroups.length === 0) return []
+  const layoutByQuestionNum = new Map(
+    (questionGroups || []).map((group, index) => [group?.question_num ?? index + 1, group])
+  )
+  return answerGroups.map((group, index) => {
+    const questionNum = group?.questionNum ?? group?.question_num ?? index + 1
+    const layoutGroup = layoutByQuestionNum.get(questionNum) || questionGroups[index] || null
+    const digitBoxIds = Array.isArray(group?.digitBoxIds)
+      ? group.digitBoxIds
+      : Array.isArray(group?.digit_box_ids)
+        ? group.digit_box_ids
+        : Array.isArray(layoutGroup?.digit_box_ids)
+          ? layoutGroup.digit_box_ids
+          : []
+    const slotCount = displaySlotCountForGroup({ ...group, digitBoxIds }, layoutGroup)
+    return {
+      ...group,
+      questionNum,
+      label: group?.label || `${questionLetter(index)})`,
+      digitBoxIds,
+      displayDigits: normalizeDisplayDigits(group?.displayDigits, slotCount),
+      status: group?.status || 'review'
+    }
+  })
+}
+
 function questionLetter(index) {
   if (!Number.isFinite(index) || index < 0) return '?'
   let n = Math.floor(index)
@@ -2394,7 +2491,11 @@ function buildQuestionReviewFlags(questionGroups, predictions) {
   const byId = new Map(predictions.map((prediction) => [prediction.id, prediction]))
   return questionGroups.map((group) => {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-    return ids.some((id) => byId.get(id)?.reviewNeeded)
+    const hasLowConfidence = ids.some((id) => {
+      const prediction = byId.get(id)
+      return prediction?.reviewNeeded
+    })
+    return hasLowConfidence || groupHasRequiredSlotReview(group, ids, byId)
   })
 }
 
@@ -2403,7 +2504,7 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) 
   const byId = new Map(predictions.map((prediction) => [prediction.id, prediction]))
   return questionGroups.map((group, index) => {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-    const groupPredictions = ids.map((id) => byId.get(id)).filter(Boolean)
+    const groupPredictions = ids.map((id) => byId.get(id))
     const predictionCells = ids.map((id) => {
       const prediction = byId.get(id)
       const normalized = normalizeGradingDigit(
@@ -2412,19 +2513,19 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) 
       return normalized === undefined ? '' : normalized
     })
     const answerText = group?.answer == null ? '' : String(group.answer).trim()
-    const expectedDigitCount = /^\d+$/.test(answerText) ? answerText.length : predictionCells.length
+    const expectedDigitCount = answerDigitCount(answerText) || predictionCells.length
+    const slotCount = Math.max(ids.length, expectedDigitCount, predictionCells.length, 1)
     const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
-    const hasReview = groupPredictions.some((prediction) => prediction.reviewNeeded)
-    const manualCorrected = groupPredictions.some((prediction) => prediction.manualCorrected)
+    const hasReview =
+      groupPredictions.some((prediction) => prediction?.reviewNeeded) ||
+      groupHasRequiredSlotReview(group, ids, byId)
+    const manualCorrected = groupPredictions.some((prediction) => prediction?.manualCorrected)
     const status =
       hasReview ? 'review' :
       correct === true ? 'correct' :
       correct === false ? 'incorrect' :
       'review'
-    const displayDigits =
-      ids.length === 2 && expectedDigitCount === 1 && correct === true
-        ? [Number(answerText)]
-        : predictionCells
+    const displayDigits = normalizeDisplayDigits(predictionCells, slotCount)
     const predictedAnswerText = cellsToAnswerText(predictionCells)
 
     return {
@@ -2661,7 +2762,9 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
     }))
     if (!rect) return null
     const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
-    const hasReview = groupPredictions.some((prediction) => prediction?.reviewNeeded)
+    const hasReview =
+      groupPredictions.some((prediction) => prediction?.reviewNeeded) ||
+      groupHasRequiredSlotReview(group, ids, predictionById)
     const manualCorrected = groupPredictions.some((prediction) => prediction?.manualCorrected)
     const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
     const padX = Math.max(rect.h * 0.42, rect.w * 0.14)
@@ -3760,12 +3863,15 @@ const runRealOCR = async () => {
     // Build result; include per-box correctness only when answer_key was present.
     // Low-confidence captures are still useful in a classroom: save them for teacher review
     // instead of forcing repeated retries on older iPad cameras.
+    const groupedStructureNeedsReview =
+      (Array.isArray(layout.question_groups) && layout.question_groups.length > 0 && !Array.isArray(questionCorrect)) ||
+      (Array.isArray(questionReview) && questionReview.some(Boolean))
     const payload = {
       digits: predictions.map(p => p.digit),
       confidences: predictions.map(p => p.confidence),
       predictions,
       totalTime,
-      needsReview: baseNeedsReview || predictions.some((p) => p.reviewNeeded),
+      needsReview: baseNeedsReview || predictions.some((p) => p.reviewNeeded) || groupedStructureNeedsReview,
       baseNeedsReview,
       annotationGeometry,
       annotationRegions,
