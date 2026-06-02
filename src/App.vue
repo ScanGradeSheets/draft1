@@ -106,23 +106,37 @@
         :class="{ 'camera-wrapper--student': isStudentMode }"
         ref="cameraWrapper"
       >
-        <div v-if="showStudentCaptureUi" class="student-scan-bar">
-          <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
-            Home
-          </button>
-          <button type="button" class="student-scan-identity" @click="beginStudentSignIn">
-            <strong>{{ activeStudentSession?.mode === 'named' ? activeStudentSession.studentName : 'Login' }}</strong>
-          </button>
-          <div class="student-scan-actions">
-            <button
-              v-if="ocrResult"
-              type="button"
-              class="student-scan-link student-scan-reset"
-              @click="resetStudentScan"
-            >
-              New Scan
-            </button>
+        <div
+          v-if="showStudentCaptureUi"
+          class="student-scan-bar"
+          :class="{ 'student-scan-bar--grading': studentCameraProcessing }"
+        >
+          <div v-if="studentCameraProcessing" class="student-scan-grading" aria-live="polite">
+            <div class="student-scan-grading-loader" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <strong>Grading</strong>
           </div>
+          <template v-else>
+            <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
+              Home
+            </button>
+            <button type="button" class="student-scan-identity" @click="beginStudentSignIn">
+              <strong>{{ activeStudentSession?.mode === 'named' ? activeStudentSession.studentName : 'Login' }}</strong>
+            </button>
+            <div class="student-scan-actions">
+              <button
+                v-if="ocrResult"
+                type="button"
+                class="student-scan-link student-scan-reset"
+                @click="resetStudentScan"
+              >
+                New Scan
+              </button>
+            </div>
+          </template>
         </div>
         <CameraCapture
           :key="cameraKey"
@@ -132,6 +146,7 @@
           :auto-start="isStudentMode && studentView === 'capture'"
           @image-captured="handleImageCaptured"
           @ocr-complete="handleOCRComplete"
+          @processing-change="handleCameraProcessingChange"
           @student-done="handleStudentDone"
           ref="cameraRef"
         />
@@ -330,7 +345,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.02-0820-EDT-marking-popover-polish'
+const APP_BUILD_LABEL = '2026.06.02-0834-EDT-grading-bar-highlighter'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -366,6 +381,7 @@ const showTeacherUi = ref(!isStudentMode.value)
 const studentView = ref(isStudentMode.value ? 'landing' : 'capture')
 const showStudentCaptureUi = computed(() => isStudentMode.value && studentView.value === 'capture')
 const ocrResult = ref(null)
+const studentCameraProcessing = ref(false)
 const studentScanKey = ref(0)
 const cameraKey = computed(() => isStudentMode.value ? `student-camera-${studentScanKey.value}` : 'teacher-camera')
 const classRoster = ref([])
@@ -474,6 +490,7 @@ const syncRosterDraft = () => {
 const clearActiveScanResult = () => {
   ocrResult.value = null
   showAnnotationLayer.value = false
+  studentCameraProcessing.value = false
 }
 
 const resetStudentScan = () => {
@@ -615,6 +632,7 @@ const submissionScoreText = (submission) => {
 
 const handleOCRComplete = async (res) => {
   console.log('OCR Results:', res)
+  studentCameraProcessing.value = false
   ocrResult.value = res
 
   if (isStudentMode.value) {
@@ -645,6 +663,10 @@ const handleOCRComplete = async (res) => {
       }, 100)
     }
   })
+}
+
+const handleCameraProcessingChange = (isProcessing) => {
+  studentCameraProcessing.value = !!isProcessing
 }
 
 // Runtime test status tracking
@@ -1047,6 +1069,7 @@ onMounted(() => {
 
 <style scoped>
 .scan-grade {
+  --teacher-highlighter-rgb: 255, 255, 0;
   max-width: 800px;
   margin: 0 auto;
   color: #202124;
@@ -1642,6 +1665,86 @@ onMounted(() => {
   border: 1px solid #d2d2d7;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
+}
+
+.student-scan-bar--grading {
+  grid-template-columns: 1fr;
+}
+
+.student-scan-grading {
+  grid-column: 1 / -1;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #202124;
+}
+
+.student-scan-grading strong {
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.student-scan-grading-loader {
+  position: relative;
+  width: 42px;
+  height: 20px;
+  transform: rotate(-4deg);
+}
+
+.student-scan-grading-loader::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 5px;
+  top: 10px;
+  height: 1.5px;
+  background: rgba(46, 51, 56, 0.24);
+  border-radius: 999px;
+}
+
+.student-scan-grading-loader span {
+  position: absolute;
+  left: 3px;
+  top: 4px;
+  width: 25px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(var(--teacher-highlighter-rgb), 0.8);
+  mix-blend-mode: multiply;
+  transform-origin: left center;
+  animation: scan-grading-swipe 1.12s ease-in-out infinite;
+}
+
+.student-scan-grading-loader span:nth-child(2) {
+  top: 8px;
+  width: 31px;
+  animation-delay: 0.11s;
+  opacity: 0.84;
+}
+
+.student-scan-grading-loader span:nth-child(3) {
+  top: 12px;
+  width: 20px;
+  animation-delay: 0.22s;
+  opacity: 0.64;
+}
+
+@keyframes scan-grading-swipe {
+  0% {
+    opacity: 0;
+    transform: translateX(-7px) scaleX(0.08) skewX(-12deg);
+  }
+  42% {
+    opacity: 0.9;
+    transform: translateX(7px) scaleX(1) skewX(-12deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(22px) scaleX(0.72) skewX(-12deg);
+  }
 }
 
 .student-scan-identity {

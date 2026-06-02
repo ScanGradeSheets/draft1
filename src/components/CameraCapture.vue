@@ -236,7 +236,7 @@
       </div>
     </section>
 
-    <div v-if="processing" class="processing">
+    <div v-if="processing && !studentMode" class="processing">
       <div class="marking-loader" aria-hidden="true">
         <span></span>
         <span></span>
@@ -550,7 +550,7 @@ function structuralTwoDigitReview(proc, result, expectedDigit) {
   return digit === 0 && Number.isFinite(expected) && expected !== 0
 }
 
-const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done'])
+const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done', 'processing-change'])
 
 const videoRef = ref(null)
 const stream = ref(null)
@@ -1746,6 +1746,14 @@ const capturePhoto = () => {
 }
 
 watch(
+  processing,
+  (isProcessing) => {
+    emit('processing-change', isProcessing)
+  },
+  { immediate: true }
+)
+
+watch(
   () => [props.autoStart, props.captureEnabled, streamActive.value, capturedImage.value, processing.value, ocrResult.value, isLoading.value, autoStartCameraBlocked.value],
   async ([autoStart, captureEnabled, isStreamActive, currentCapturedImage, isProcessing, currentOcrResult, loading, autoBlocked]) => {
     if (!autoStart || !captureEnabled) return
@@ -2057,10 +2065,10 @@ function composeStudentAnnotatedImage(
         const cx = rect.x + rect.w * (0.5 + jitter(seed + 205, 0.025))
         const cy = rect.y + rect.h * (0.52 + jitter(seed + 207, 0.035))
         const rx = Math.max(rect.w * (0.38 + seededUnit(seed + 211) * 0.075), rect.h * 0.36)
-        const ry = Math.max(rect.h * (0.78 + seededUnit(seed + 213) * 0.17), rect.w * 0.62)
+        const ry = Math.max(rect.h * (0.61 + seededUnit(seed + 213) * 0.13), rect.w * 0.48)
         const angle = jitter(seed + 193, 0.13)
         const pointsPerLoop = 34 + Math.floor(seededUnit(seed + 215) * 11)
-        const highlighter = 'rgb(252, 255, 0)'
+        const highlighter = 'rgb(255, 255, 0)'
 
         ctx.save()
         ctx.globalCompositeOperation = 'multiply'
@@ -2093,7 +2101,7 @@ function composeStudentAnnotatedImage(
             }
           }
           ctx.strokeStyle = highlighter
-          ctx.globalAlpha = pass === 0 ? 0.54 : pass === 1 ? 0.36 : 0.24
+          ctx.globalAlpha = pass === 0 ? 0.6 : pass === 1 ? 0.4 : 0.28
           ctx.lineWidth = Math.max(12, Math.min(21, rect.h * (0.18 + seededUnit(passSeed + 29) * 0.055)))
           ctx.stroke()
         }
@@ -4563,7 +4571,7 @@ onUnmounted(stopStream)
 
 <style scoped>
 .camera-capture {
-  --teacher-highlighter-rgb: 252, 255, 0;
+  --teacher-highlighter-rgb: 255, 255, 0;
   background: white;
   border-radius: 8px;
   padding: 20px;
