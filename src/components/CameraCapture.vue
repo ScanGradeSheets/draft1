@@ -522,7 +522,7 @@ const lowCount = computed(() =>
 )
 
 const showAnnotatedResultImage = computed(() =>
-  !props.studentMode || liveOcrDebugExportEnabled.value
+  !props.studentMode
 )
 
 const displayedResultImage = computed(() =>
@@ -4341,6 +4341,7 @@ onUnmounted(stopStream)
   display: inline-grid;
   grid-auto-flow: column;
   grid-auto-columns: 31px;
+  position: relative;
   align-items: center;
   justify-content: start;
   gap: 0;
@@ -4366,7 +4367,27 @@ onUnmounted(stopStream)
 }
 
 .student-answer-pill + .student-answer-pill {
-  border-left: 1.5px solid #6f747a;
+  border-left: 0;
+}
+
+.student-answer-pills--double::before,
+.student-answer-pills--double::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 1.5px;
+  height: 9px;
+  transform: translateX(-50%);
+  background: #6f747a;
+  pointer-events: none;
+}
+
+.student-answer-pills--double::before {
+  top: 0;
+}
+
+.student-answer-pills--double::after {
+  bottom: 0;
 }
 
 .student-answer-item--correct {
