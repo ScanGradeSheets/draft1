@@ -12,6 +12,9 @@
           <button type="button" class="btn btn-primary student-home-btn" @click="beginGuestScan">
             Start Scan
           </button>
+          <button type="button" class="btn btn-secondary student-home-btn student-home-debug-btn" @click="beginDebugGuestScan">
+            Debug Scan (exports)
+          </button>
           <button type="button" class="btn btn-secondary student-home-btn" @click="beginStudentSignIn">
             Sign In
           </button>
@@ -327,7 +330,8 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.01-2012-EDT-debug-user-view'
+const APP_BUILD_LABEL = '2026.06.01-2019-EDT-debug-home-link'
+const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -389,6 +393,18 @@ const setModeInUrl = (mode) => {
     url.searchParams.set('mode', 'teacher')
   } else {
     url.searchParams.delete('mode')
+  }
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+const setLiveDebugInUrl = (enabled) => {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  for (const flag of DEBUG_QUERY_FLAGS) {
+    url.searchParams.delete(flag)
+  }
+  if (enabled) {
+    url.searchParams.set('liveOcrDebug', '1')
   }
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
 }
@@ -467,6 +483,7 @@ const resetStudentScan = () => {
 }
 
 const beginStudentSignIn = () => {
+  setLiveDebugInUrl(false)
   clearActiveScanResult()
   selectedStudentName.value = ''
   activeStudentSession.value = null
@@ -474,6 +491,12 @@ const beginStudentSignIn = () => {
 }
 
 const beginGuestScan = () => {
+  setLiveDebugInUrl(false)
+  continueAsGuest()
+}
+
+const beginDebugGuestScan = () => {
+  setLiveDebugInUrl(true)
   continueAsGuest()
 }
 
@@ -492,6 +515,7 @@ const startNamedScan = () => {
 }
 
 const returnToLanding = () => {
+  setLiveDebugInUrl(false)
   clearActiveScanResult()
   selectedStudentName.value = ''
   activeStudentSession.value = null
