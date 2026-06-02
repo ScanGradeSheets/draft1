@@ -522,7 +522,7 @@ const lowCount = computed(() =>
 )
 
 const showAnnotatedResultImage = computed(() =>
-  !props.studentMode
+  !!ocrResult.value?.annotatedImageUrl
 )
 
 const displayedResultImage = computed(() =>
@@ -2459,6 +2459,120 @@ function cloneRect(rect) {
   }
 }
 
+function buildSourceAnnotationContext(rawCrops, sourceAnchors, layout, warpedW, warpedH, sourceW, sourceH) {
+  if (
+    !Array.isArray(rawCrops) ||
+    !Array.isArray(sourceAnchors) ||
+    !layout ||
+    !Number.isFinite(warpedW) ||
+    !Number.isFinite(warpedH) ||
+    !Number.isFinite(sourceW) ||
+    !Number.isFinite(sourceH)
+  ) return null
+
+  const ids = ['tl', 'tr', 'br', 'bl']
+  const sourceById = new Map(sourceAnchors.map((anchor) => [anchor.id, anchor]))
+  const layoutAnchors = Array.isArray(layout?.homography?.anchors) ? layout.homography.anchors : []
+  const layoutById = new Map(layoutAnchors.map((anchor) => [anchor.id, anchor]))
+  if (!ids.every((id) => sourceById.has(id) && layoutById.has(id))) return null
+
+  const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, ids.flatMap((id) => {
+    const anchor = layoutById.get(id)
+    return [anchor.x * warpedW, anchor.y * warpedH]
+  }))
+  const dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, ids.flatMap((id) => {
+    const anchor = sourceById.get(id)
+    return [anchor.x, anchor.y]
+  }))
+  const H = cv.getPerspectiveTransform(srcPoints, dstPoints)
+
+  try {
+    const transformPoints = (points) => {
+      const pointMat = cv.matFromArray(points.length, 1, cv.CV_32FC2, points.flatMap((point) => [point.x, point.y]))
+      const out = new cv.Mat()
+      try {
+        cv.perspectiveTransform(pointMat, out, H)
+        const coords = []
+        for (let i = 0; i < points.length; i++) {
+          coords.push({ x: out.data32F[i * 2], y: out.data32F[i * 2 + 1] })
+        }
+        return coords
+      } finally {
+        pointMat.delete()
+        out.delete()
+      }
+    }
+
+    const transformRect = (rect) => {
+      if (!rect || ![rect.x, rect.y, rect.w, rect.h].every(Number.isFinite) || rect.w <= 0 || rect.h <= 0) return null
+      const points = transformPoints([
+        { x: rect.x, y: rect.y },
+        { x: rect.x + rect.w, y: rect.y },
+        { x: rect.x + rect.w, y: rect.y + rect.h },
+        { x: rect.x, y: rect.y + rect.h }
+      ])
+      const x0 = Math.max(0, Math.min(sourceW, Math.min(...points.map((point) => point.x))))
+      const y0 = Math.max(0, Math.min(sourceH, Math.min(...points.map((point) => point.y))))
+      const x1 = Math.max(0, Math.min(sourceW, Math.max(...points.map((point) => point.x))))
+      const y1 = Math.max(0, Math.min(sourceH, Math.max(...points.map((point) => point.y))))
+      if (x1 <= x0 || y1 <= y0) return null
+      return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
+    }
+
+    const transformCrop = (crop) => ({
+      ...crop,
+      cropRect: transformRect(crop.cropRect) || cloneRect(crop.cropRect),
+      boxRect: transformRect(crop.boxRect) || cloneRect(crop.boxRect),
+      expectedRect: transformRect(crop.expectedRect) || cloneRect(crop.expectedRect),
+      refinedRect: transformRect(crop.refinedRect) || cloneRect(crop.refinedRect)
+    })
+
+    const sourceLayout = clonePlain(layout)
+    sourceLayout.homography = {
+      ...(sourceLayout.homography || {}),
+      anchors: ids.map((id) => {
+        const anchor = sourceById.get(id)
+        return { id, x: anchor.x / sourceW, y: anchor.y / sourceH }
+      })
+    }
+    const qr = layout?.metadata?.qr_position
+    if (
+      qr &&
+      [qr.x, qr.y, qr.width, qr.height].every(Number.isFinite)
+    ) {
+      const qrRect = {
+        x: qr.x * warpedW,
+        y: qr.y * warpedH,
+        w: qr.width * warpedW,
+        h: qr.height * warpedH
+      }
+      const sourceQrRect = transformRect(qrRect)
+      if (sourceQrRect) {
+        sourceLayout.metadata = {
+          ...(sourceLayout.metadata || {}),
+          qr_position: {
+            x: sourceQrRect.x / sourceW,
+            y: sourceQrRect.y / sourceH,
+            width: sourceQrRect.w / sourceW,
+            height: sourceQrRect.h / sourceH
+          }
+        }
+      }
+    }
+
+    return {
+      crops: rawCrops.map(transformCrop),
+      layout: sourceLayout,
+      width: sourceW,
+      height: sourceH
+    }
+  } finally {
+    srcPoints.delete()
+    dstPoints.delete()
+    H.delete()
+  }
+}
+
 function unionRects(rects) {
   const valid = (rects || []).filter(Boolean)
   if (!valid.length) return null
@@ -3431,8 +3545,22 @@ const runRealOCR = async () => {
     }
 
     const { warpedImage, rawCrops, processedTensors } = result
-    const annotationGeometry = buildAnnotationGeometry(rawCrops, warpedImage.cols, warpedImage.rows, layout)
-    const layoutSnapshot = buildLayoutSnapshot(layout)
+    const sourceAnnotationContext = buildSourceAnnotationContext(
+      rawCrops,
+      result.sourceAnchors,
+      layout,
+      warpedImage.cols,
+      warpedImage.rows,
+      canvas.width,
+      canvas.height
+    )
+    const annotationCrops = sourceAnnotationContext?.crops || rawCrops
+    const annotationLayout = sourceAnnotationContext?.layout || layout
+    const annotationWidth = sourceAnnotationContext?.width || warpedImage.cols
+    const annotationHeight = sourceAnnotationContext?.height || warpedImage.rows
+    const annotationBaseImageUrl = sourceAnnotationContext ? capturedImage.value : null
+    const annotationGeometry = buildAnnotationGeometry(annotationCrops, annotationWidth, annotationHeight, null)
+    const layoutSnapshot = buildLayoutSnapshot(annotationLayout)
     partialDebug.stage = 'preparing OCR crops'
     const cropQuality = processedTensors.map((proc) => bestTensorInkQuality(proc))
     partialDebug.cropQuality = cropQuality
@@ -3665,15 +3793,16 @@ const runRealOCR = async () => {
     }
     try {
       const warpedBaseUrl = matToDataURL(warpedImage)
-      if (warpedBaseUrl) {
-        payload.annotationBaseUrl = warpedBaseUrl
+      const displayBaseUrl = annotationBaseImageUrl || warpedBaseUrl
+      if (displayBaseUrl) {
+        payload.annotationBaseUrl = displayBaseUrl
         payload.annotatedImageUrl = await composeStudentAnnotatedImage(
-          warpedBaseUrl,
-          warpedImage.cols,
-          warpedImage.rows,
+          displayBaseUrl,
+          annotationWidth,
+          annotationHeight,
           predictions,
-          rawCrops,
-          layout,
+          annotationCrops,
+          annotationLayout,
           questionCorrect,
           payload.manualCorrections
         )

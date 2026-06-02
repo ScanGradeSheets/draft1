@@ -2375,7 +2375,12 @@ function scoreQrPlacementForAnchors(anchors, layout, qrLocation) {
 
 function warpToBestTemplateOrientation(src, anchors, layout, options = {}) {
   const candidates = rotatedAnchorCandidates(anchors);
-  if (candidates.length <= 1) return warpToTemplate(src, anchors, layout);
+  if (candidates.length <= 1) {
+    return {
+      warped: warpToTemplate(src, anchors, layout),
+      anchors
+    };
+  }
 
   let best = null;
   const debug = [];
@@ -2393,7 +2398,7 @@ function warpToBestTemplateOrientation(src, anchors, layout, options = {}) {
 
     if (!best || combined.score > best.combined.score) {
       if (best?.warped) best.warped.delete();
-      best = { warped, combined, shift: candidate.shift };
+      best = { warped, combined, shift: candidate.shift, anchors: candidate.anchors };
     } else {
       warped.delete();
     }
@@ -2407,7 +2412,9 @@ function warpToBestTemplateOrientation(src, anchors, layout, options = {}) {
     };
   }
 
-  return best?.warped || warpToTemplate(src, anchors, layout);
+  return best
+    ? { warped: best.warped, anchors: best.anchors }
+    : { warped: warpToTemplate(src, anchors, layout), anchors };
 }
 
 function eraseKnownVirtualDigitLines(crop, cropRect, digitRect, options = {}) {
@@ -3401,7 +3408,9 @@ export function processWorksheet(input, layout, options = {}) {
   // Step 2: Warp to template. Uploaded classroom photos may arrive rotated
   // sideways, so choose the marker-label orientation whose answer boxes line
   // up best with the template before cropping.
-  const warped = warpToBestTemplateOrientation(src, anchors, layout, options);
+  const warpResult = warpToBestTemplateOrientation(src, anchors, layout, options);
+  const warped = warpResult.warped;
+  const sourceAnchors = warpResult.anchors || anchors;
 
   // Step 3: Crop boxes
   const crops = cropBoxes(warped, layout);
@@ -3440,7 +3449,8 @@ export function processWorksheet(input, layout, options = {}) {
       refinedRect: c.refinedRect,
       isVirtualDigitBox: c.isVirtualDigitBox === true
     })),
-    processedTensors: processed
+    processedTensors: processed,
+    sourceAnchors
   };
 }
 
