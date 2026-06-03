@@ -46,6 +46,7 @@ export default defineConfig({
     exclude: ['onnxruntime-web']
   },
   build: {
+    target: ['es2018', 'safari12'],
     assetsInlineLimit: 0
   }
 })
