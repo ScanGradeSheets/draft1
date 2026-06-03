@@ -455,7 +455,7 @@ const SAD_THRESHOLD = 48 * 36 * 20
 // Pre-filter: reject obviously blank (variance alone not sufficient for page)
 const VARIANCE_PREFILTER_MIN = 50
 const VARIANCE_PREFILTER_MIN_PORTRAIT = 8
-const FOCUS_SCORE_MIN_PORTRAIT = 280
+const FOCUS_SCORE_MIN_PORTRAIT = 340
 // Contour gate: full-frame so sheet can be anywhere in viewfinder
 const CONTOUR_W = 160
 const CONTOUR_H = 120
@@ -564,6 +564,7 @@ const processing = ref(false)
 const ocrResult = ref(null)
 const lastProcessedTensors = ref(null)
 const lastLiveOcrDebug = ref(null)
+const lastCaptureQuality = ref(null)
 const autoStartCameraBlocked = ref(false)
 const ocrDebugEnabled = ref(hasDebugQueryFlag('ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug'))
 const liveOcrDebugExportEnabled = computed(() =>
@@ -1737,7 +1738,22 @@ async function doCapture({ source = 'manual' } = {}) {
       return
     }
     const focusScore = getCanvasFocusScore(canvas)
+    const captureQuality = {
+      cropW,
+      cropH,
+      cropX,
+      cropY,
+      vw,
+      vh,
+      lumaMean: stats.mean,
+      lumaVariance: stats.variance,
+      focusScore,
+      focusThreshold: FOCUS_SCORE_MIN_PORTRAIT,
+      source,
+      capturedAt: new Date().toISOString()
+    }
     if (focusScore < FOCUS_SCORE_MIN_PORTRAIT) {
+      lastCaptureQuality.value = captureQuality
       studentAutoStatus.value = 'Hold still while camera focuses'
       error.value = source === 'manual'
         ? 'Image is still blurry. Hold steady and try again.'
@@ -1745,10 +1761,11 @@ async function doCapture({ source = 'manual' } = {}) {
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
+    lastCaptureQuality.value = captureQuality
     capturedImage.value = canvas.toDataURL('image/png')
     if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_CAPTURE) {
       window.__SCANGRADE_DEBUG_CAPTURE_URL = capturedImage.value
-      window.__SCANGRADE_DEBUG_CAPTURE_DIMS = { cropW, cropH, cropX, cropY, vw, vh, lumaMean: stats.mean, lumaVariance: stats.variance, focusScore }
+      window.__SCANGRADE_DEBUG_CAPTURE_DIMS = captureQuality
       console.log('[ScanGrade] Student capture debug: dims', { cropW, cropH, cropX, cropY, vw, vh, stats, focusScore }, '- view image: window.__SCANGRADE_DEBUG_CAPTURE_URL')
     }
     streamActive.value = false
@@ -2169,7 +2186,7 @@ function composeStudentAnnotatedImage(
         const ry = Math.max(rect.h * (0.49 + seededUnit(seed + 213) * 0.085), rect.w * 0.39)
         const angle = jitter(seed + 193, 0.18)
         const pointsPerLoop = 34 + Math.floor(seededUnit(seed + 215) * 11)
-        const highlighter = 'rgb(226, 255, 0)'
+        const highlighter = 'rgb(251, 247, 25)'
 
         ctx.save()
         ctx.globalCompositeOperation = 'multiply'
@@ -3800,6 +3817,13 @@ function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, qu
     lowGapGroups >= Math.ceil(expectedTwoDigitGroups * 0.70) &&
     avgConfidence < 0.74 &&
     avgTopGap < 0.42
+  const highReviewMismatchCapture =
+    mostlyTwoDigitWorksheet &&
+    score <= Math.max(2, Math.floor(total * 0.25)) &&
+    reviewCount >= Math.ceil(total * 0.60) &&
+    reviewMismatchGroups >= Math.ceil(total * 0.55) &&
+    avgConfidence < 0.84 &&
+    avgTopGap < 0.75
   if (!(
     (catastrophicLowScore && mostlyReview && (repeatedSuspicious || repeatedOneOrBlank || repeatedArtifacts)) ||
     (veryLowScore && almostAllReview && lowSignalCapture && (repeatedSuspicious || repeatedArtifacts)) ||
@@ -3813,7 +3837,8 @@ function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, qu
     broadMismatchLowSignalCapture ||
     weakTwoDigitReviewPileup ||
     repeatedSlotCollapse ||
-    highReviewLowGapCapture
+    highReviewLowGapCapture ||
+    highReviewMismatchCapture
   )) return null
 
   return {
@@ -3842,7 +3867,8 @@ function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, qu
     broadMismatchLowSignalCapture,
     weakTwoDigitReviewPileup,
     repeatedSlotCollapse,
-    highReviewLowGapCapture
+    highReviewLowGapCapture,
+    highReviewMismatchCapture
   }
 }
 
@@ -3940,6 +3966,7 @@ function buildLiveOcrErrorDebugPackage(err, partialDebug) {
       : null,
     ignoreQrHomography: !!partialDebug?.ignoreQrHomography,
     imageSize: partialDebug?.imageSize || null,
+    captureQuality: partialDebug?.captureQuality || lastCaptureQuality.value || null,
     warpedDataUrl: partialDebug?.warpedDataUrl || null,
     rawCropDataUrls: partialDebug?.rawCropDataUrls || [],
     modelInputDataUrls: partialDebug?.modelInputDataUrls || [],
@@ -4073,7 +4100,8 @@ const runRealOCR = async () => {
     tensors: [],
     preprocessStats: [],
     predictions: [],
-    answerKey: null
+    answerKey: null,
+    captureQuality: lastCaptureQuality.value || null
   }
 
   try {
@@ -4457,6 +4485,7 @@ const runRealOCR = async () => {
         rawCropDataUrls: partialDebug.rawCropDataUrls,
         modelInputDataUrls: partialDebug.modelInputDataUrls,
         tensors: partialDebug.tensors,
+        captureQuality: partialDebug.captureQuality,
         preprocessStats: partialDebug.preprocessStats,
         cropQuality: partialDebug.cropQuality,
         twoDigitCropFailure: partialDebug.twoDigitCropFailure,
@@ -4682,7 +4711,7 @@ onUnmounted(stopStream)
 
 <style scoped>
 .camera-capture {
-  --teacher-highlighter-rgb: 226, 255, 0;
+  --teacher-highlighter-rgb: 251, 247, 25;
   background: white;
   border-radius: 8px;
   padding: 20px;

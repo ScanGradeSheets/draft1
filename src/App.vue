@@ -340,7 +340,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.02-2208-EDT-focus-correction'
+const APP_BUILD_LABEL = '2026.06.02-2241-EDT-focus-highlighter'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -1064,7 +1064,7 @@ onMounted(() => {
 
 <style scoped>
 .scan-grade {
-  --teacher-highlighter-rgb: 226, 255, 0;
+  --teacher-highlighter-rgb: 251, 247, 25;
   max-width: 800px;
   margin: 0 auto;
   color: #202124;
