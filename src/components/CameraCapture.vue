@@ -707,39 +707,56 @@ const correctionPanelPlacement = computed(() => {
   const focusBottom = focusTop + focusHeight
   const centerX = focusLeft + focusWidth / 2
   const centerY = focusTop + focusHeight / 2
+  const lowerRow = centerY > 61
+  const upperRow = centerY < 30
   const bounds = { left: 2, top: 4, right: 98, bottom: 96 }
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
-  const intersectionArea = (candidate) => {
-    const x0 = Math.max(candidate.left, focusLeft)
-    const y0 = Math.max(candidate.top, focusTop)
-    const x1 = Math.min(candidate.left + panelWidthPct, focusRight)
-    const y1 = Math.min(candidate.top + panelHeightPct, focusBottom)
+  const activeQuestionRects = allAnnotationRegions.value
+    .filter((item) => item.questionNum === region.questionNum)
+    .map((item) => ({
+      left: Number.isFinite(item.leftPct) ? item.leftPct : focusLeft,
+      top: Number.isFinite(item.topPct) ? item.topPct : focusTop,
+      right: Number.isFinite(item.leftPct) && Number.isFinite(item.widthPct)
+        ? item.leftPct + item.widthPct
+        : focusRight,
+      bottom: Number.isFinite(item.topPct) && Number.isFinite(item.heightPct)
+        ? item.topPct + item.heightPct
+        : focusBottom
+    }))
+  const intersectionArea = (candidate, rect = null) => {
+    const avoid = rect || { left: focusLeft, top: focusTop, right: focusRight, bottom: focusBottom }
+    const x0 = Math.max(candidate.left, avoid.left)
+    const y0 = Math.max(candidate.top, avoid.top)
+    const x1 = Math.min(candidate.left + panelWidthPct, avoid.right)
+    const y1 = Math.min(candidate.top + panelHeightPct, avoid.bottom)
     return Math.max(0, x1 - x0) * Math.max(0, y1 - y0)
   }
+  const questionOverlap = (candidate) => activeQuestionRects
+    .reduce((sum, rect) => sum + intersectionArea(candidate, rect), 0)
   const rawCandidates = [
     {
       placement: 'left',
       left: focusLeft - panelWidthPct - gapPct,
       top: centerY - panelHeightPct / 2,
-      preference: centerX > 54 ? 0 : 4
+      preference: centerX > 54 ? (lowerRow ? 7 : 1) : 5
     },
     {
       placement: 'right',
       left: focusRight + gapPct,
       top: centerY - panelHeightPct / 2,
-      preference: centerX < 46 ? 0 : 7
+      preference: centerX < 46 ? (lowerRow ? 7 : 1) : 8
     },
     {
       placement: 'above',
       left: centerX - panelWidthPct / 2,
       top: focusTop - panelHeightPct - gapPct,
-      preference: centerY > 34 ? 1 : 6
+      preference: lowerRow ? 0 : (centerY > 34 ? 2 : 7)
     },
     {
       placement: 'below',
       left: centerX - panelWidthPct / 2,
       top: focusBottom + gapPct,
-      preference: centerY < 66 ? 2 : 7
+      preference: upperRow ? 0 : (lowerRow ? 8 : 2)
     }
   ]
 
@@ -750,12 +767,16 @@ const correctionPanelPlacement = computed(() => {
       Math.abs(left - candidate.left) +
       Math.abs(top - candidate.top)
     const overlap = intersectionArea({ left, top })
+    const siblingOverlap = questionOverlap({ left, top })
     const score =
       candidate.preference +
       offscreen * 9 +
-      overlap * 18 +
+      overlap * 24 +
+      siblingOverlap * 9 +
       (candidate.placement === 'right' && centerX > 68 ? 18 : 0) +
-      (candidate.placement === 'below' && centerY > 70 ? 8 : 0)
+      (candidate.placement === 'below' && centerY > 70 ? 8 : 0) +
+      (candidate.placement === 'left' && lowerRow ? 7 : 0) +
+      (candidate.placement === 'right' && lowerRow ? 7 : 0)
     return { ...candidate, left, top, score }
   })
   const best = candidates.sort((a, b) => a.score - b.score)[0]
@@ -2186,7 +2207,7 @@ function composeStudentAnnotatedImage(
         const ry = Math.max(rect.h * (0.49 + seededUnit(seed + 213) * 0.085), rect.w * 0.39)
         const angle = jitter(seed + 193, 0.18)
         const pointsPerLoop = 34 + Math.floor(seededUnit(seed + 215) * 11)
-        const highlighter = 'rgb(251, 247, 25)'
+        const highlighter = 'rgb(255, 255, 0)'
 
         ctx.save()
         ctx.globalCompositeOperation = 'multiply'
@@ -2219,7 +2240,7 @@ function composeStudentAnnotatedImage(
             }
           }
           ctx.strokeStyle = highlighter
-          ctx.globalAlpha = pass === 0 ? 0.74 : pass === 1 ? 0.5 : 0.34
+          ctx.globalAlpha = pass === 0 ? 0.82 : pass === 1 ? 0.56 : 0.38
           ctx.lineWidth = Math.max(11, Math.min(20, rect.h * (0.18 + seededUnit(passSeed + 29) * 0.052)))
           ctx.stroke()
         }
@@ -4711,7 +4732,7 @@ onUnmounted(stopStream)
 
 <style scoped>
 .camera-capture {
-  --teacher-highlighter-rgb: 251, 247, 25;
+  --teacher-highlighter-rgb: 255, 255, 0;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -5443,9 +5464,13 @@ onUnmounted(stopStream)
 }
 
 .student-correction-panel--image .student-correction-manual input {
-  min-width: 0;
-  padding: 5px 7px;
-  font-size: 18px;
+  width: 38px;
+  min-width: 38px;
+  height: 40px;
+  padding: 0 5px 1px;
+  text-align: center;
+  font-size: 20px;
+  line-height: 39px;
 }
 
 .student-correction-title {
@@ -5528,7 +5553,7 @@ onUnmounted(stopStream)
 
 .student-correction-manual {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(42px, 1fr) auto;
   gap: 4px;
   margin: 0;
   color: #1d1d1f;
@@ -5538,12 +5563,15 @@ onUnmounted(stopStream)
 
 .student-correction-manual input {
   width: 100%;
+  height: 50px;
   box-sizing: border-box;
   border: 1px solid #d2d2d7;
   border-radius: 8px;
   padding: 12px 14px;
+  text-align: center;
   font-size: 22px;
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0;
 }
 

@@ -340,7 +340,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.02-2241-EDT-focus-highlighter'
+const APP_BUILD_LABEL = '2026.06.03-0003-EDT-ocr-touch-popover'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
