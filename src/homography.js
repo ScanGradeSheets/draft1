@@ -1899,12 +1899,14 @@ function cloneVirtualDigitCropVariant(warped, sourceRect, eraseDigitRect, digitI
   const cropRect = clampRectToMat(warped, sourceRect);
   if (!cropRect) return null;
   const image = warped.roi(new cv.Rect(cropRect.x, cropRect.y, cropRect.w, cropRect.h)).clone();
-  eraseKnownVirtualDigitLines(
-    image,
-    cropRect,
-    eraseDigitRect,
-    virtualDigitLineEraseOptions(digitIndex, options.eraseOptions || {})
-  );
+  if (options.skipKnownLineErase !== true) {
+    eraseKnownVirtualDigitLines(
+      image,
+      cropRect,
+      eraseDigitRect,
+      virtualDigitLineEraseOptions(digitIndex, options.eraseOptions || {})
+    );
+  }
   return {
     name,
     image,
@@ -2104,6 +2106,31 @@ export function cropBoxes(warped, layout) {
         ),
         cloneVirtualDigitCropVariant(
           warped,
+          virtualDigitInnerRect(variantBaseRect, digitIndex, {
+            outerInsetFrac: 0.050,
+            centerInsetFrac: 0.060,
+            topInsetFrac: 0.035,
+            bottomInsetFrac: 0.055
+          }),
+          variantBaseRect,
+          digitIndex,
+          'low-slot',
+          {
+            eraseOptions: {
+              edgeBandFrac: 0.042,
+              thicknessMultiplier: 0.95,
+              centerGuideThicknessMultiplier: 1.30,
+              horizontalThicknessMultiplier: 1.18
+            },
+            preprocessOptions: {
+              protectInteriorStrokes: true,
+              strictLineRemoval: false,
+              ruleArtifactEraseBelow: 1.12
+            }
+          }
+        ),
+        cloneVirtualDigitCropVariant(
+          warped,
           virtualDigitInnerRect(ocrRect, digitIndex, {
             outerInsetFrac: 0.035,
             centerInsetFrac: 0.055,
@@ -2145,6 +2172,27 @@ export function cropBoxes(warped, layout) {
               centerGuideThicknessMultiplier: 1.25,
               horizontalThicknessMultiplier: 1.15
             },
+            preprocessOptions: {
+              protectInteriorStrokes: true,
+              strictLineRemoval: false,
+              skipRuleArtifactCleanup: true,
+              skipPrintedLineCleanup: true
+            }
+          }
+        ),
+        cloneVirtualDigitCropVariant(
+          warped,
+          virtualDigitInnerRect(ocrRect, digitIndex, {
+            outerInsetFrac: 0.020,
+            centerInsetFrac: 0.045,
+            topInsetFrac: 0.035,
+            bottomInsetFrac: 0.040
+          }),
+          ocrRect,
+          digitIndex,
+          'raw-border-slot',
+          {
+            skipKnownLineErase: true,
             preprocessOptions: {
               protectInteriorStrokes: true,
               strictLineRemoval: false,
