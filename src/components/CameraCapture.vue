@@ -46,10 +46,6 @@
             <span class="scantron-letter-bubble student-correction-label" :aria-label="activeCorrectionQuestion.label">
               {{ scantronAnswerLabel(activeCorrectionQuestion.label) }}
             </span>
-            <span class="student-correction-heading">
-              <strong>Question {{ activeCorrectionQuestionLetter }}</strong>
-              <span>{{ activeCorrectionSlotLabel }}</span>
-            </span>
             <button
               type="button"
               class="student-correction-close"
@@ -73,6 +69,8 @@
               :maxlength="activeCorrectionMaxLength"
               :placeholder="activeCorrectionPlaceholder"
               @input="normalizeManualCorrectionInput"
+              @focus="clearManualCorrectionInput"
+              @click="clearManualCorrectionInput"
               @keydown.enter.prevent="applyManualCorrectionText"
             >
             <button type="button" class="btn btn-primary student-correction-save" @click="applyManualCorrectionText">
@@ -457,6 +455,7 @@ const SAD_THRESHOLD = 48 * 36 * 20
 // Pre-filter: reject obviously blank (variance alone not sufficient for page)
 const VARIANCE_PREFILTER_MIN = 50
 const VARIANCE_PREFILTER_MIN_PORTRAIT = 8
+const FOCUS_SCORE_MIN_PORTRAIT = 280
 // Contour gate: full-frame so sheet can be anywhere in viewfinder
 const CONTOUR_W = 160
 const CONTOUR_H = 120
@@ -578,6 +577,7 @@ const modelSanityResults = ref(null)
 const capturedImageWrapRef = ref(null)
 const activeCorrectionQuestion = ref(null)
 const manualCorrectionText = ref('')
+const manualCorrectionClearedForSession = ref(false)
 const correctionError = ref('')
 let autoCaptureIntervalId = null
 let stableSince = null
@@ -695,58 +695,87 @@ const correctionPanelPlacement = computed(() => {
   ) {
     return null
   }
-  const panelWidthPct = 23
-  const panelHeightEstimatePct = 20
-  const gapPct = 1.35
-  const centerX = region.leftPct + region.widthPct / 2
-  const centerY = region.topPct + region.heightPct / 2
-  const spaceRight = 100 - (region.leftPct + region.widthPct)
-  const spaceLeft = region.leftPct
-  const rawSlotIndex = activeCorrectionQuestion.value?.slotIndex
-  const slotIndex = Number.isInteger(rawSlotIndex) && rawSlotIndex >= 0 ? rawSlotIndex : null
-  const preferredSide = slotIndex == null
-    ? (centerX < 50 ? 'right' : 'left')
-    : (slotIndex > 0 ? 'right' : 'left')
-  const canPlacePreferredRight = preferredSide === 'right' && spaceRight >= panelWidthPct + gapPct
-  const canPlacePreferredLeft = preferredSide === 'left' && spaceLeft >= panelWidthPct + gapPct
-
-  if (canPlacePreferredRight) {
-    return {
-      placement: 'right',
-      left: Math.min(98 - panelWidthPct, region.leftPct + region.widthPct + gapPct),
-      top: Math.min(86, Math.max(14, centerY)),
-      width: panelWidthPct,
-      transform: 'translateY(-50%)',
-      arrowX: 0,
-      arrowY: 50
-    }
+  const panelWidthPct = 20.5
+  const panelHeightPct = 17.8
+  const gapPct = 1.45
+  const focusLeft = Number.isFinite(region.focusLeftPct) ? region.focusLeftPct : region.leftPct
+  const focusTop = Number.isFinite(region.focusTopPct) ? region.focusTopPct : region.topPct
+  const focusWidth = Number.isFinite(region.focusWidthPct) ? region.focusWidthPct : region.widthPct
+  const focusHeight = Number.isFinite(region.focusHeightPct) ? region.focusHeightPct : region.heightPct
+  const focusRight = focusLeft + focusWidth
+  const focusBottom = focusTop + focusHeight
+  const centerX = focusLeft + focusWidth / 2
+  const centerY = focusTop + focusHeight / 2
+  const bounds = { left: 2, top: 4, right: 98, bottom: 96 }
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+  const intersectionArea = (candidate) => {
+    const x0 = Math.max(candidate.left, focusLeft)
+    const y0 = Math.max(candidate.top, focusTop)
+    const x1 = Math.min(candidate.left + panelWidthPct, focusRight)
+    const y1 = Math.min(candidate.top + panelHeightPct, focusBottom)
+    return Math.max(0, x1 - x0) * Math.max(0, y1 - y0)
   }
-
-  if (canPlacePreferredLeft) {
-    return {
+  const rawCandidates = [
+    {
       placement: 'left',
-      left: Math.max(2, region.leftPct - panelWidthPct - gapPct),
-      top: Math.min(86, Math.max(14, centerY)),
-      width: panelWidthPct,
-      transform: 'translateY(-50%)',
-      arrowX: 100,
-      arrowY: 50
+      left: focusLeft - panelWidthPct - gapPct,
+      top: centerY - panelHeightPct / 2,
+      preference: centerX > 54 ? 0 : 4
+    },
+    {
+      placement: 'right',
+      left: focusRight + gapPct,
+      top: centerY - panelHeightPct / 2,
+      preference: centerX < 46 ? 0 : 7
+    },
+    {
+      placement: 'above',
+      left: centerX - panelWidthPct / 2,
+      top: focusTop - panelHeightPct - gapPct,
+      preference: centerY > 34 ? 1 : 6
+    },
+    {
+      placement: 'below',
+      left: centerX - panelWidthPct / 2,
+      top: focusBottom + gapPct,
+      preference: centerY < 66 ? 2 : 7
     }
-  }
+  ]
 
-  const placeAbove = region.topPct > panelHeightEstimatePct + 5
-  const left = Math.max(2, Math.min(98 - panelWidthPct, centerX - panelWidthPct / 2))
-  const top = placeAbove
-    ? Math.max(4, region.topPct - gapPct)
-    : Math.min(88, region.topPct + region.heightPct + gapPct)
+  const candidates = rawCandidates.map((candidate) => {
+    const left = clamp(candidate.left, bounds.left, bounds.right - panelWidthPct)
+    const top = clamp(candidate.top, bounds.top, bounds.bottom - panelHeightPct)
+    const offscreen =
+      Math.abs(left - candidate.left) +
+      Math.abs(top - candidate.top)
+    const overlap = intersectionArea({ left, top })
+    const score =
+      candidate.preference +
+      offscreen * 9 +
+      overlap * 18 +
+      (candidate.placement === 'right' && centerX > 68 ? 18 : 0) +
+      (candidate.placement === 'below' && centerY > 70 ? 8 : 0)
+    return { ...candidate, left, top, score }
+  })
+  const best = candidates.sort((a, b) => a.score - b.score)[0]
+  const arrowX = best.placement === 'left'
+    ? 100
+    : best.placement === 'right'
+      ? 0
+      : clamp(((centerX - best.left) / panelWidthPct) * 100, 12, 88)
+  const arrowY = best.placement === 'above'
+    ? 100
+    : best.placement === 'below'
+      ? 0
+      : clamp(((centerY - best.top) / panelHeightPct) * 100, 12, 88)
   return {
-    placement: placeAbove ? 'above' : 'below',
-    left,
-    top,
+    placement: best.placement,
+    left: best.left,
+    top: best.top,
     width: panelWidthPct,
-    transform: placeAbove ? 'translateY(-100%)' : 'none',
-    arrowX: Math.min(88, Math.max(12, ((centerX - left) / panelWidthPct) * 100)),
-    arrowY: placeAbove ? 100 : 0
+    transform: 'none',
+    arrowX,
+    arrowY
   }
 })
 
@@ -966,6 +995,7 @@ function openCorrection(region) {
   }
   const currentText = activeCorrectionCurrentText.value
   manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
+  manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
   correctionError.value = ''
 }
@@ -989,6 +1019,7 @@ function openCorrectionByGroupSlot(group, slotIndex = null) {
   activeCorrectionQuestion.value = { ...region, slotIndex: selectedSlotIndex }
   const currentText = activeCorrectionCurrentText.value
   manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
+  manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
   correctionError.value = ''
   nextTick(() => {
@@ -999,6 +1030,7 @@ function openCorrectionByGroupSlot(group, slotIndex = null) {
 function cancelCorrection() {
   activeCorrectionQuestion.value = null
   manualCorrectionText.value = ''
+  manualCorrectionClearedForSession.value = false
   correctionError.value = ''
 }
 
@@ -1030,6 +1062,14 @@ function normalizeManualCorrectionInput(event) {
     .slice(0, maxLength)
   if (event?.target && event.target.value !== normalized) event.target.value = normalized
   manualCorrectionText.value = normalized
+  if (correctionError.value) correctionError.value = ''
+}
+
+function clearManualCorrectionInput() {
+  if (manualCorrectionClearedForSession.value) return
+  manualCorrectionClearedForSession.value = true
+  if (!manualCorrectionText.value) return
+  manualCorrectionText.value = ''
   if (correctionError.value) correctionError.value = ''
 }
 
@@ -1497,6 +1537,34 @@ function getGrayAndSAD(ctx, width, height) {
   return { gray, sad }
 }
 
+function getGrayFocusScore(gray, width, height) {
+  if (!gray || width < 3 || height < 3) return 0
+  let sum = 0
+  let count = 0
+  for (let y = 1; y < height - 1; y++) {
+    const row = y * width
+    for (let x = 1; x < width - 1; x++) {
+      const i = row + x
+      const gx = gray[i + 1] - gray[i - 1]
+      const gy = gray[i + width] - gray[i - width]
+      sum += gx * gx + gy * gy
+      count += 1
+    }
+  }
+  return count ? sum / count : 0
+}
+
+function getCanvasFocusScore(canvas) {
+  if (!canvas || !canvas.width || !canvas.height) return 0
+  const sample = document.createElement('canvas')
+  sample.width = CONTOUR_P_W
+  sample.height = CONTOUR_P_H
+  const ctx = sample.getContext('2d')
+  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, sample.width, sample.height)
+  const gray = getGrayAndSAD(ctx, sample.width, sample.height).gray
+  return getGrayFocusScore(gray, sample.width, sample.height)
+}
+
 function nextDrawableFrame(video) {
   return new Promise((resolve) => {
     if (video && typeof video.requestVideoFrameCallback === 'function') {
@@ -1590,12 +1658,17 @@ function runAutoCaptureCheck() {
     ? !!studentSheet?.ok
     : variance >= varianceMin && isPagePresentContour(video)
   const { gray, sad } = getGrayAndSAD(ctx, sampleW, sampleH)
+  const focusScore = getGrayFocusScore(gray, sampleW, sampleH)
+  const focusReady = !isPortrait || focusScore >= FOCUS_SCORE_MIN_PORTRAIT
+  if (isPortrait && pagePresent && !focusReady) {
+    studentAutoStatus.value = 'Hold still while camera focuses'
+  }
   previousFrameGray = gray
   const sadThreshold = isPortrait ? SAD_THRESHOLD_PORTRAIT : SAD_THRESHOLD
-  const stable = pagePresent && variance >= varianceMin && sad < sadThreshold
+  const stable = pagePresent && variance >= varianceMin && sad < sadThreshold && focusReady
   const holdMs = isPortrait ? STABILITY_HOLD_MS_PORTRAIT : STABILITY_HOLD_MS
   if (isPortrait && typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_AUTO) {
-    console.log('AutoCapture (portrait)', { sheetConfirmed: pagePresent, sad, sadThreshold, stable })
+    console.log('AutoCapture (portrait)', { sheetConfirmed: pagePresent, sad, sadThreshold, focusScore, focusReady, stable })
   }
   if (stable) {
     consecutiveFailures = 0
@@ -1663,11 +1736,20 @@ async function doCapture({ source = 'manual' } = {}) {
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
+    const focusScore = getCanvasFocusScore(canvas)
+    if (focusScore < FOCUS_SCORE_MIN_PORTRAIT) {
+      studentAutoStatus.value = 'Hold still while camera focuses'
+      error.value = source === 'manual'
+        ? 'Image is still blurry. Hold steady and try again.'
+        : null
+      if (streamActive.value) startAutoCaptureLoop()
+      return
+    }
     capturedImage.value = canvas.toDataURL('image/png')
     if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_CAPTURE) {
       window.__SCANGRADE_DEBUG_CAPTURE_URL = capturedImage.value
-      window.__SCANGRADE_DEBUG_CAPTURE_DIMS = { cropW, cropH, cropX, cropY, vw, vh, lumaMean: stats.mean, lumaVariance: stats.variance }
-      console.log('[ScanGrade] Student capture debug: dims', { cropW, cropH, cropX, cropY, vw, vh, stats }, '- view image: window.__SCANGRADE_DEBUG_CAPTURE_URL')
+      window.__SCANGRADE_DEBUG_CAPTURE_DIMS = { cropW, cropH, cropX, cropY, vw, vh, lumaMean: stats.mean, lumaVariance: stats.variance, focusScore }
+      console.log('[ScanGrade] Student capture debug: dims', { cropW, cropH, cropX, cropY, vw, vh, stats, focusScore }, '- view image: window.__SCANGRADE_DEBUG_CAPTURE_URL')
     }
     streamActive.value = false
     stopStream()
@@ -2083,11 +2165,11 @@ function composeStudentAnnotatedImage(
       const drawReviewMark = (rect, seed) => {
         const cx = rect.x + rect.w * (0.5 + jitter(seed + 205, 0.025))
         const cy = rect.y + rect.h * (0.52 + jitter(seed + 207, 0.035))
-        const rx = Math.max(rect.w * (0.38 + seededUnit(seed + 211) * 0.075), rect.h * 0.36)
-        const ry = Math.max(rect.h * (0.61 + seededUnit(seed + 213) * 0.13), rect.w * 0.48)
-        const angle = jitter(seed + 193, 0.13)
+        const rx = Math.max(rect.w * (0.39 + seededUnit(seed + 211) * 0.07), rect.h * 0.34)
+        const ry = Math.max(rect.h * (0.49 + seededUnit(seed + 213) * 0.085), rect.w * 0.39)
+        const angle = jitter(seed + 193, 0.18)
         const pointsPerLoop = 34 + Math.floor(seededUnit(seed + 215) * 11)
-        const highlighter = 'rgb(255, 255, 0)'
+        const highlighter = 'rgb(226, 255, 0)'
 
         ctx.save()
         ctx.globalCompositeOperation = 'multiply'
@@ -2098,7 +2180,7 @@ function composeStudentAnnotatedImage(
           const passCx = cx + jitter(passSeed + 37, rect.w * 0.025)
           const passCy = cy + jitter(passSeed + 41, rect.h * 0.035)
           const passRx = rx * (0.96 + seededUnit(passSeed + 43) * 0.11)
-          const passRy = ry * (0.95 + seededUnit(passSeed + 47) * 0.12)
+          const passRy = ry * (0.93 + seededUnit(passSeed + 47) * 0.13)
           const passAngle = angle + jitter(passSeed + 53, 0.045)
           const start = -Math.PI * (0.1 + seededUnit(passSeed + 5) * 0.1)
           const end = Math.PI * (1.82 + seededUnit(passSeed + 7) * 0.2)
@@ -2120,8 +2202,8 @@ function composeStudentAnnotatedImage(
             }
           }
           ctx.strokeStyle = highlighter
-          ctx.globalAlpha = pass === 0 ? 0.6 : pass === 1 ? 0.4 : 0.28
-          ctx.lineWidth = Math.max(12, Math.min(21, rect.h * (0.18 + seededUnit(passSeed + 29) * 0.055)))
+          ctx.globalAlpha = pass === 0 ? 0.74 : pass === 1 ? 0.5 : 0.34
+          ctx.lineWidth = Math.max(11, Math.min(20, rect.h * (0.18 + seededUnit(passSeed + 29) * 0.052)))
           ctx.stroke()
         }
         ctx.restore()
@@ -2248,20 +2330,20 @@ function composeStudentAnnotatedImage(
         const markerCenterX = topRightAnchor ? topRightAnchor.x * warpedW : null
         const markerCenterY = topRightAnchor ? topRightAnchor.y * warpedH : null
         const markerLeft = topRightAnchor ? markerCenterX - markerSize * warpedW * 0.72 : null
-        const markerBottom = topRightAnchor ? markerCenterY + markerSize * warpedH * 0.72 : null
+        const markerBottom = topRightAnchor ? markerCenterY + markerSize * warpedH * 0.64 : null
         const safeRight = topRightAnchor
-          ? Math.min(markerLeft - warpedW * 0.03, warpedW - warpedW * 0.055)
+          ? Math.min(markerLeft - warpedW * 0.038, warpedW - warpedW * 0.06)
           : warpedW - warpedW * 0.055
-        const desiredX = topRightAnchor
-          ? safeRight - estimatedW - warpedW * (0.008 + seededUnit(stampSeed + 5) * 0.026)
-          : warpedW - estimatedW - warpedW * (0.06 + seededUnit(stampSeed + 7) * 0.08)
-        const x = Math.max(warpedW * 0.53, Math.min(desiredX, warpedW - estimatedW - warpedW * 0.05))
-        const minStampY = topRightAnchor ? markerBottom + fontSize * (2.38 + seededUnit(stampSeed + 11) * 0.18) : null
-        const targetStampY = topRightAnchor ? markerBottom + fontSize * (2.7 + seededUnit(stampSeed + 13) * 0.36) : null
-        const maxStampY = topRightAnchor ? Math.max(minStampY, topQuestionY - fontSize * 0.72) : null
-        const y = topRightAnchor
-          ? Math.min(maxStampY, Math.max(minStampY, targetStampY))
-          : Math.max(warpedH * 0.068, Math.min(warpedH * 0.145, topQuestionY - warpedH * 0.09))
+        const safeLeft = warpedW * 0.635
+        const desiredX = safeRight - estimatedW - warpedW * (0.012 + seededUnit(stampSeed + 5) * 0.028)
+        const xMax = Math.max(safeLeft, safeRight - estimatedW)
+        const x = Math.max(safeLeft, Math.min(desiredX, xMax))
+        const yMin = topRightAnchor
+          ? Math.max(markerBottom + fontSize * 0.8, warpedH * 0.18)
+          : warpedH * 0.18
+        const yMax = Math.max(yMin, Math.min(topQuestionY - fontSize * 1.45, warpedH * 0.242))
+        const targetStampY = yMin + (yMax - yMin) * (0.3 + seededUnit(stampSeed + 13) * 0.52)
+        const y = Math.min(yMax, Math.max(yMin, targetStampY))
         ctx.save()
         ctx.translate(x + jitter(stampSeed + 17, 2.8), y + jitter(stampSeed + 19, 2.1))
         ctx.rotate(-0.052 + jitter(stampSeed + 23, 0.024))
@@ -3207,10 +3289,18 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
         y: target.y,
         w: target.w,
         h: target.h,
+        focusX: slotRect.x,
+        focusY: slotRect.y,
+        focusW: slotRect.w,
+        focusH: slotRect.h,
         leftPct: (target.x / warpedW) * 100,
         topPct: (target.y / warpedH) * 100,
         widthPct: (target.w / warpedW) * 100,
         heightPct: (target.h / warpedH) * 100,
+        focusLeftPct: (slotRect.x / warpedW) * 100,
+        focusTopPct: (slotRect.y / warpedH) * 100,
+        focusWidthPct: (slotRect.w / warpedW) * 100,
+        focusHeightPct: (slotRect.h / warpedH) * 100,
         manualCorrected: slotManualCorrected
       }
     }).filter(Boolean)
@@ -3957,6 +4047,7 @@ const runRealOCR = async () => {
   ocrResult.value = null
   activeCorrectionQuestion.value = null
   manualCorrectionText.value = ''
+  manualCorrectionClearedForSession.value = false
   correctionError.value = ''
   markerDebugSnapshot.value = null
   modelInfoSnapshot.value = null
@@ -4566,6 +4657,7 @@ const retake = () => {
   ocrResult.value = null
   activeCorrectionQuestion.value = null
   manualCorrectionText.value = ''
+  manualCorrectionClearedForSession.value = false
   correctionError.value = ''
   lastProcessedTensors.value = null
   lastLiveOcrDebug.value = null
@@ -4590,7 +4682,7 @@ onUnmounted(stopStream)
 
 <style scoped>
 .camera-capture {
-  --teacher-highlighter-rgb: 255, 255, 0;
+  --teacher-highlighter-rgb: 226, 255, 0;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -5103,20 +5195,21 @@ onUnmounted(stopStream)
 }
 
 .scantron-letter-bubble {
-  width: 25.7px;
-  height: 20px;
+  width: 22px;
+  height: 17.1px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   border: 1px solid #c4c8ce;
-  border-radius: 999px;
+  border-radius: 50% / 50%;
   color: #626b74;
   background: transparent;
   box-shadow: none;
-  font-size: 12px;
+  font-size: 10.5px;
   line-height: 1;
   font-weight: 600;
+  letter-spacing: 0;
 }
 
 .student-answer-label {
@@ -5237,12 +5330,12 @@ onUnmounted(stopStream)
 .student-correction-panel--image {
   position: absolute;
   z-index: 4;
-  min-width: 112px;
+  min-width: 96px;
   max-width: calc(100% - 12px);
-  max-height: min(56%, 190px);
+  max-height: min(56%, 174px);
   overflow: visible;
   margin: 0;
-  padding: 7px;
+  padding: 6px;
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
 }
 
@@ -5296,32 +5389,34 @@ onUnmounted(stopStream)
 
 .student-correction-panel--image .student-correction-title {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   font-size: 12px;
 }
 
 .student-correction-panel--image .student-correction-close {
   margin-left: auto;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .student-correction-panel--image .student-correction-choices,
 .student-correction-panel--image .student-correction-actions {
-  gap: 5px;
+  gap: 4px;
 }
 
 .student-correction-panel--image .correction-choice-btn {
   flex: 1 1 calc(33.333% - 4px);
   min-width: 0;
-  padding: 6px 8px;
+  padding: 5px 7px;
 }
 
 .student-correction-panel--image .student-correction-manual input {
   min-width: 0;
-  padding: 6px 8px;
-  font-size: 19px;
+  padding: 5px 7px;
+  font-size: 18px;
 }
 
 .student-correction-title {
@@ -5405,7 +5500,7 @@ onUnmounted(stopStream)
 .student-correction-manual {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 5px;
+  gap: 4px;
   margin: 0;
   color: #1d1d1f;
   font-size: 14px;
@@ -5430,13 +5525,13 @@ onUnmounted(stopStream)
 
 .student-correction-panel--image .student-correction-save {
   flex: 0 0 auto;
-  min-width: 48px;
-  padding: 6px 9px;
+  min-width: 42px;
+  padding: 5px 8px;
 }
 
 @media (max-width: 430px) {
   .student-correction-panel--image {
-    min-width: 108px;
+    min-width: 96px;
   }
 }
 

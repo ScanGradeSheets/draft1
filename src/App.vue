@@ -112,12 +112,7 @@
           :class="{ 'student-scan-bar--grading': studentCameraProcessing }"
         >
           <div v-if="studentCameraProcessing" class="student-scan-grading" aria-live="polite">
-            <div class="student-scan-grading-loader" aria-hidden="true">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-            <strong>Grading</strong>
+            <span class="student-scan-grading-word">Grading</span>
           </div>
           <template v-else>
             <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
@@ -345,7 +340,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.02-0917-EDT-correction-popover'
+const APP_BUILD_LABEL = '2026.06.02-2208-EDT-focus-correction'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -1069,7 +1064,7 @@ onMounted(() => {
 
 <style scoped>
 .scan-grade {
-  --teacher-highlighter-rgb: 255, 255, 0;
+  --teacher-highlighter-rgb: 226, 255, 0;
   max-width: 800px;
   margin: 0 auto;
   color: #202124;
@@ -1681,69 +1676,44 @@ onMounted(() => {
   color: #202124;
 }
 
-.student-scan-grading strong {
+.student-scan-grading-word {
+  position: relative;
+  isolation: isolate;
+  padding: 4px 8px 5px;
+  color: #202124;
   font-size: 15px;
   line-height: 1;
-  font-weight: 800;
+  font-weight: 650;
 }
 
-.student-scan-grading-loader {
-  position: relative;
-  width: 42px;
-  height: 20px;
-  transform: rotate(-4deg);
-}
-
-.student-scan-grading-loader::before {
+.student-scan-grading-word::before {
   content: "";
   position: absolute;
-  left: 6px;
-  right: 5px;
-  top: 10px;
-  height: 1.5px;
-  background: rgba(46, 51, 56, 0.24);
-  border-radius: 999px;
-}
-
-.student-scan-grading-loader span {
-  position: absolute;
-  left: 3px;
-  top: 4px;
-  width: 25px;
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(var(--teacher-highlighter-rgb), 0.8);
+  z-index: -1;
+  left: 2px;
+  right: 2px;
+  top: 50%;
+  height: 0.86em;
+  border-radius: 999px 80% 999px 72%;
+  background: rgba(var(--teacher-highlighter-rgb), 0.84);
   mix-blend-mode: multiply;
+  transform: translateY(-46%) rotate(-2deg) scaleX(0.18);
   transform-origin: left center;
-  animation: scan-grading-swipe 1.12s ease-in-out infinite;
+  animation: scan-grading-word-highlight 1.16s ease-in-out infinite;
 }
 
-.student-scan-grading-loader span:nth-child(2) {
-  top: 8px;
-  width: 31px;
-  animation-delay: 0.11s;
-  opacity: 0.84;
-}
-
-.student-scan-grading-loader span:nth-child(3) {
-  top: 12px;
-  width: 20px;
-  animation-delay: 0.22s;
-  opacity: 0.64;
-}
-
-@keyframes scan-grading-swipe {
+@keyframes scan-grading-word-highlight {
   0% {
     opacity: 0;
-    transform: translateX(-7px) scaleX(0.08) skewX(-12deg);
+    transform: translate(-8px, -46%) rotate(-2deg) scaleX(0.08) skewX(-10deg);
   }
   42% {
-    opacity: 0.9;
-    transform: translateX(7px) scaleX(1) skewX(-12deg);
+    opacity: 0.96;
+    transform: translate(0, -46%) rotate(-2deg) scaleX(1) skewX(-10deg);
   }
   100% {
     opacity: 0;
-    transform: translateX(22px) scaleX(0.72) skewX(-12deg);
+    transform: translate(10px, -46%) rotate(-2deg) scaleX(0.86) skewX(-10deg);
   }
 }
 
