@@ -4568,6 +4568,22 @@ const runRealOCR = async () => {
         partialDebug.reviewOnlyFallback = true
       }
     }
+    const saveKnownFallbackAsReview = () => (
+      knownGrade2Fallback &&
+      (
+        partialDebug.printedTitleFallback?.accepted === true ||
+        partialDebug.reviewOnlyFallback === true
+      )
+    )
+    let forcedFallbackReviewReason = null
+    const forceKnownFallbackReview = (reason) => {
+      if (!saveKnownFallbackAsReview()) return false
+      forcedFallbackReviewReason = reason
+      partialDebug.forcedFallbackReviewReason = reason
+      partialDebug.reviewOnlyFallback = true
+      return true
+    }
+
     const sourceAnnotationContext = buildSourceAnnotationContext(
       rawCrops,
       result.sourceAnchors,
@@ -4590,10 +4606,12 @@ const runRealOCR = async () => {
     const twoDigitCropFailure = detectTwoDigitCropFailure(layout.question_groups, cropQuality)
     partialDebug.twoDigitCropFailure = twoDigitCropFailure
     if (twoDigitCropFailure) {
-      rawCrops.forEach((crop) => crop.image.delete())
-      warpedImage.delete()
-      src.delete()
-      throw new Error('Answer boxes were not captured clearly. Hold the sheet flatter and try again.')
+      if (!forceKnownFallbackReview('two-digit-crop-quality-fallback-review')) {
+        rawCrops.forEach((crop) => crop.image.delete())
+        warpedImage.delete()
+        src.delete()
+        throw new Error('Answer boxes were not captured clearly. Hold the sheet flatter and try again.')
+      }
     }
     if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_OCR_INPUTS) {
       try {
@@ -4743,6 +4761,13 @@ const runRealOCR = async () => {
         ...(correct !== undefined && { correct })
       })
     }
+    if (forcedFallbackReviewReason) {
+      for (const prediction of predictions) {
+        prediction.reviewNeeded = true
+        prediction.forcedReviewReason = forcedFallbackReviewReason
+        prediction.preprocessReviewReason = prediction.preprocessReviewReason || forcedFallbackReviewReason
+      }
+    }
     partialDebug.predictions = predictions
     const twoDigitRecognitionFailure = detectTwoDigitRecognitionFailure(
       layout.question_groups,
@@ -4752,10 +4777,18 @@ const runRealOCR = async () => {
     )
     partialDebug.twoDigitRecognitionFailure = twoDigitRecognitionFailure
     if (twoDigitRecognitionFailure) {
-      rawCrops.forEach((crop) => crop.image.delete())
-      warpedImage.delete()
-      src.delete()
-      throw new Error('Answer boxes were not captured clearly. Hold the sheet flatter and try again.')
+      if (forceKnownFallbackReview('two-digit-recognition-quality-fallback-review')) {
+        for (const prediction of predictions) {
+          prediction.reviewNeeded = true
+          prediction.forcedReviewReason = forcedFallbackReviewReason
+          prediction.preprocessReviewReason = prediction.preprocessReviewReason || forcedFallbackReviewReason
+        }
+      } else {
+        rawCrops.forEach((crop) => crop.image.delete())
+        warpedImage.delete()
+        src.delete()
+        throw new Error('Answer boxes were not captured clearly. Hold the sheet flatter and try again.')
+      }
     }
 
     const totalTime = (performance.now() - start).toFixed(2)
@@ -4783,10 +4816,21 @@ const runRealOCR = async () => {
     partialDebug.answerGroups = answerGroups
     partialDebug.unusableTwoDigitScan = unusableTwoDigitScan
     if (unusableTwoDigitScan) {
-      rawCrops.forEach((crop) => crop.image.delete())
-      warpedImage.delete()
-      src.delete()
-      throw new Error('Answer boxes were not captured clearly. Hold the sheet flatter and try again.')
+      if (forceKnownFallbackReview('two-digit-unusable-quality-fallback-review')) {
+        for (const prediction of predictions) {
+          prediction.reviewNeeded = true
+          prediction.forcedReviewReason = forcedFallbackReviewReason
+          prediction.preprocessReviewReason = prediction.preprocessReviewReason || forcedFallbackReviewReason
+        }
+        if (Array.isArray(questionReview)) {
+          questionReview.fill(true)
+        }
+      } else {
+        rawCrops.forEach((crop) => crop.image.delete())
+        warpedImage.delete()
+        src.delete()
+        throw new Error('Answer boxes were not captured clearly. Hold the sheet flatter and try again.')
+      }
     }
 
     // Build result; include per-box correctness only when answer_key was present.
@@ -4800,8 +4844,9 @@ const runRealOCR = async () => {
       confidences: predictions.map(p => p.confidence),
       predictions,
       totalTime,
-      needsReview: baseNeedsReview || predictions.some((p) => p.reviewNeeded) || groupedStructureNeedsReview,
+      needsReview: !!forcedFallbackReviewReason || baseNeedsReview || predictions.some((p) => p.reviewNeeded) || groupedStructureNeedsReview,
       baseNeedsReview,
+      forcedFallbackReviewReason,
       annotationGeometry,
       annotationRegions,
       layoutSnapshot,
