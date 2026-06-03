@@ -43,11 +43,13 @@
           @click.stop
         >
           <div class="student-correction-title">
-            <span class="student-correction-label" :aria-label="activeCorrectionQuestion.label">
+            <span class="scantron-letter-bubble student-correction-label" :aria-label="activeCorrectionQuestion.label">
               {{ scantronAnswerLabel(activeCorrectionQuestion.label) }}
             </span>
-            <strong>{{ activeCorrectionFixLabel }}</strong>
-            <span class="student-correction-current">{{ activeCorrectionCurrentText }}</span>
+            <span class="student-correction-heading">
+              <strong>Question {{ activeCorrectionQuestionLetter }}</strong>
+              <span>{{ activeCorrectionSlotLabel }}</span>
+            </span>
             <button
               type="button"
               class="student-correction-close"
@@ -61,7 +63,7 @@
             <input
               v-model="manualCorrectionText"
               type="text"
-              aria-label="Enter answer"
+              :aria-label="activeCorrectionInputLabel"
               autocomplete="off"
               autocorrect="off"
               autocapitalize="off"
@@ -265,7 +267,7 @@
             class="student-answer-item"
             :class="`student-answer-item--${group.status}`"
           >
-            <span class="student-answer-label" :aria-label="group.label">{{ scantronAnswerLabel(group.label) }}</span>
+            <span class="scantron-letter-bubble student-answer-label" :aria-label="group.label">{{ scantronAnswerLabel(group.label) }}</span>
             <span class="student-answer-pills" :class="{ 'student-answer-pills--double': group.displayDigits.length > 1 }">
               <button
                 v-for="(digit, digitIndex) in group.displayDigits"
@@ -685,9 +687,17 @@ const correctionPanelStyle = computed(() => {
 const correctionPanelPlacement = computed(() => {
   const region = activeCorrectionRegion.value
   if (!region) return null
-  const panelWidthPct = 28
-  const panelHeightEstimatePct = 27
-  const gapPct = 1.6
+  if (
+    !Number.isFinite(region.leftPct) ||
+    !Number.isFinite(region.topPct) ||
+    !Number.isFinite(region.widthPct) ||
+    !Number.isFinite(region.heightPct)
+  ) {
+    return null
+  }
+  const panelWidthPct = 23
+  const panelHeightEstimatePct = 20
+  const gapPct = 1.35
   const centerX = region.leftPct + region.widthPct / 2
   const centerY = region.topPct + region.heightPct / 2
   const spaceRight = 100 - (region.leftPct + region.widthPct)
@@ -821,13 +831,22 @@ const activeCorrectionPlaceholder = computed(() =>
   activeCorrectionMaxLength.value > 1 ? '37' : '8'
 )
 
-const activeCorrectionFixLabel = computed(() => {
+const activeCorrectionQuestionLetter = computed(() =>
+  scantronAnswerLabel(activeCorrectionQuestion.value?.label)
+)
+
+const activeCorrectionSlotLabel = computed(() => {
   const slotIndex = activeCorrectionSlotIndex.value
-  if (slotIndex == null) return 'Fix'
   const group = activeCorrectionGroup.value
   const total = Math.max(1, Array.isArray(group?.digit_box_ids) ? group.digit_box_ids.length : 1)
-  return total > 1 ? `Fix digit ${slotIndex + 1}` : 'Fix digit'
+  if (slotIndex == null || total <= 1) return 'answer digit'
+  if (total === 2) return slotIndex === 0 ? 'left digit' : 'right digit'
+  return `digit ${slotIndex + 1}`
 })
+
+const activeCorrectionInputLabel = computed(() =>
+  `Enter ${activeCorrectionSlotLabel.value} for question ${activeCorrectionQuestionLetter.value}`
+)
 
 const studentScoreText = computed(() => {
   if (ocrResult.value?.predictions?.some((p) => p.reviewNeeded)) return ''
@@ -5083,20 +5102,24 @@ onUnmounted(stopStream)
   outline-offset: 2px;
 }
 
-.student-answer-label {
+.scantron-letter-bubble {
   width: 25.7px;
   height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1.1px solid #c4c8ce;
+  box-sizing: border-box;
+  border: 1px solid #c4c8ce;
   border-radius: 999px;
   color: #626b74;
-  background: #ffffff;
+  background: transparent;
   box-shadow: none;
-  font-size: 12.1px;
+  font-size: 12px;
   line-height: 1;
-  font-weight: 650;
+  font-weight: 600;
+}
+
+.student-answer-label {
   justify-self: center;
 }
 
@@ -5214,12 +5237,12 @@ onUnmounted(stopStream)
 .student-correction-panel--image {
   position: absolute;
   z-index: 4;
-  min-width: 136px;
+  min-width: 112px;
   max-width: calc(100% - 12px);
-  max-height: min(62%, 232px);
+  max-height: min(56%, 190px);
   overflow: visible;
   margin: 0;
-  padding: 8px;
+  padding: 7px;
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
 }
 
@@ -5272,24 +5295,16 @@ onUnmounted(stopStream)
 }
 
 .student-correction-panel--image .student-correction-title {
-  gap: 5px;
-  margin-bottom: 7px;
-  font-size: 13px;
-}
-
-.student-correction-panel--image .student-correction-title strong {
-  line-height: 1.05;
-}
-
-.student-correction-panel--image .student-correction-current {
-  margin-left: 0;
-  padding: 2px 6px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  margin-bottom: 6px;
   font-size: 12px;
 }
 
 .student-correction-panel--image .student-correction-close {
   margin-left: auto;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .student-correction-panel--image .student-correction-choices,
@@ -5298,14 +5313,15 @@ onUnmounted(stopStream)
 }
 
 .student-correction-panel--image .correction-choice-btn {
-  flex: 1 1 calc(50% - 3px);
+  flex: 1 1 calc(33.333% - 4px);
   min-width: 0;
-  padding: 7px 9px;
+  padding: 6px 8px;
 }
 
 .student-correction-panel--image .student-correction-manual input {
-  padding: 7px 8px;
-  font-size: 18px;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 19px;
 }
 
 .student-correction-title {
@@ -5319,31 +5335,37 @@ onUnmounted(stopStream)
 }
 
 .student-correction-label {
-  width: 25.7px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex: 0 0 auto;
-  border: 1.1px solid #c4c8ce;
-  border-radius: 999px;
-  color: #626b74;
-  background: #fff;
-  box-shadow: none;
-  font-size: 12.1px;
-  line-height: 1;
-  font-weight: 650;
 }
 
-.student-correction-current {
-  margin-left: auto;
-  padding: 3px 7px;
-  border: 1px solid #e0d28b;
-  border-radius: 999px;
-  color: #4f565f;
-  background: #fffef8;
-  font-size: 13px;
-  font-weight: 750;
+.student-correction-heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.02;
+}
+
+.student-correction-heading strong,
+.student-correction-panel--image .student-correction-heading strong {
+  overflow: hidden;
+  color: #1d1d1f;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.02;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-correction-heading span {
+  overflow: hidden;
+  color: #5f6368;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .student-correction-close {
@@ -5383,7 +5405,7 @@ onUnmounted(stopStream)
 .student-correction-manual {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 7px;
+  gap: 5px;
   margin: 0;
   color: #1d1d1f;
   font-size: 14px;
@@ -5403,26 +5425,18 @@ onUnmounted(stopStream)
 
 .student-correction-save {
   min-width: 0;
-  padding: 8px 12px;
+  padding: 8px 10px;
 }
 
 .student-correction-panel--image .student-correction-save {
   flex: 0 0 auto;
-  min-width: 56px;
-  padding: 7px 10px;
+  min-width: 48px;
+  padding: 6px 9px;
 }
 
 @media (max-width: 430px) {
   .student-correction-panel--image {
-    min-width: 128px;
-  }
-
-  .student-correction-panel--image .student-correction-manual {
-    grid-template-columns: 1fr;
-  }
-
-  .student-correction-panel--image .student-correction-save {
-    width: 100%;
+    min-width: 108px;
   }
 }
 

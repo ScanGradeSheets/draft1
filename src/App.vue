@@ -345,7 +345,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.02-0834-EDT-grading-bar-highlighter'
+const APP_BUILD_LABEL = '2026.06.02-0917-EDT-correction-popover'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
