@@ -4312,6 +4312,17 @@ function buildLiveOcrErrorDebugPackage(err, partialDebug) {
     modelInputDataUrls: partialDebug?.modelInputDataUrls || [],
     tensors: partialDebug?.tensors || [],
     preprocessStats: partialDebug?.preprocessStats || [],
+    cropQuality: partialDebug?.cropQuality || [],
+    twoDigitCropFailure: partialDebug?.twoDigitCropFailure || null,
+    twoDigitRecognitionFailure: partialDebug?.twoDigitRecognitionFailure || null,
+    unusableTwoDigitScan: partialDebug?.unusableTwoDigitScan || null,
+    forcedFallbackReviewReason: partialDebug?.forcedFallbackReviewReason || null,
+    reviewOnlyFallback: partialDebug?.reviewOnlyFallback === true,
+    knownGrade2Fallback: partialDebug?.knownGrade2Fallback === true,
+    printedTitleFallback: partialDebug?.printedTitleFallback || null,
+    questionCorrect: partialDebug?.questionCorrect || null,
+    questionReview: partialDebug?.questionReview || null,
+    answerGroups: partialDebug?.answerGroups || null,
     predictions: partialDebug?.predictions || [],
     answerKey: partialDebug?.answerKey || null,
     markerDebugSnapshot: markerDebugSnapshot.value || null,
@@ -4444,6 +4455,7 @@ const runRealOCR = async () => {
     knownGrade2Fallback: null,
     printedTitleFallback: null,
     reviewOnlyFallback: false,
+    forcedFallbackReviewReason: null,
     captureQuality: lastCaptureQuality.value || null
   }
 
@@ -4568,16 +4580,21 @@ const runRealOCR = async () => {
         partialDebug.reviewOnlyFallback = true
       }
     }
-    const saveKnownFallbackAsReview = () => (
-      knownGrade2Fallback &&
-      (
-        partialDebug.printedTitleFallback?.accepted === true ||
-        partialDebug.reviewOnlyFallback === true
-      )
-    )
+    const saveRecognizedScanAsReview = () => {
+      const hasAnswerKey = Array.isArray(layout?.answer_key) || Array.isArray(qrPayload?.answer_key)
+      const hasQuestionGroups = Array.isArray(layout?.question_groups) && layout.question_groups.length > 0
+      const hasQrTemplate = !!(qrPayload?.template_id || qrPayload?.layout_id)
+      const hasKnownFallbackTemplate =
+        knownGrade2Fallback &&
+        (
+          partialDebug.printedTitleFallback?.accepted === true ||
+          partialDebug.reviewOnlyFallback === true
+        )
+      return hasAnswerKey && hasQuestionGroups && (hasQrTemplate || hasKnownFallbackTemplate)
+    }
     let forcedFallbackReviewReason = null
     const forceKnownFallbackReview = (reason) => {
-      if (!saveKnownFallbackAsReview()) return false
+      if (!saveRecognizedScanAsReview()) return false
       forcedFallbackReviewReason = reason
       partialDebug.forcedFallbackReviewReason = reason
       partialDebug.reviewOnlyFallback = true
@@ -4603,6 +4620,7 @@ const runRealOCR = async () => {
     partialDebug.stage = 'preparing OCR crops'
     const cropQuality = processedTensors.map((proc) => bestTensorInkQuality(proc))
     partialDebug.cropQuality = cropQuality
+    partialDebug.stage = 'checking OCR crop quality'
     const twoDigitCropFailure = detectTwoDigitCropFailure(layout.question_groups, cropQuality)
     partialDebug.twoDigitCropFailure = twoDigitCropFailure
     if (twoDigitCropFailure) {
@@ -4769,6 +4787,7 @@ const runRealOCR = async () => {
       }
     }
     partialDebug.predictions = predictions
+    partialDebug.stage = 'checking OCR recognition quality'
     const twoDigitRecognitionFailure = detectTwoDigitRecognitionFailure(
       layout.question_groups,
       cropQuality,
@@ -4792,6 +4811,7 @@ const runRealOCR = async () => {
     }
 
     const totalTime = (performance.now() - start).toFixed(2)
+    partialDebug.stage = 'checking OCR scan usability'
     const baseNeedsReview =
       typeof window !== 'undefined' &&
       !!window.__SCANGRADE_DEBUG_PAGE_RECT_ESTIMATE_USED
