@@ -248,6 +248,9 @@
     <!-- Student Mode: show grade outcome or teacher-review outcome, never a dead-end "all set" screen -->
     <div v-if="studentMode && ocrResult" class="student-result" :class="studentResultClass">
       <p v-if="ocrResult.error" class="student-result-message">Try again</p>
+      <p v-if="ocrResult.error && studentOcrResultErrorHint" class="student-result-subtext">
+        {{ studentOcrResultErrorHint }}
+      </p>
       <p
         v-if="ocrResult.error && liveOcrDebugExportEnabled"
         class="student-result-subtext student-result-debug-error"
@@ -429,6 +432,27 @@ const props = defineProps({
   autoStart: { type: Boolean, default: false }
 })
 const DEFAULT_LAYOUT_URL = publicUrl('layouts/sg-10-box-v1.json')
+const KNOWN_GRADE2_FALLBACK_LAYOUT_ID = 'g2-mixed-within-50-v1'
+const KNOWN_GRADE2_LAYOUTS = Object.freeze([
+  {
+    layoutId: 'g2-add-within-20-v1',
+    title: 'Addition Within 20',
+    humanCode: 'SG-G2-A-001',
+    checksum: 'f0ce9bfe8e6b'
+  },
+  {
+    layoutId: 'g2-sub-within-20-v1',
+    title: 'Subtraction Within 20',
+    humanCode: 'SG-G2-B-001',
+    checksum: '09042d877797'
+  },
+  {
+    layoutId: 'g2-mixed-within-50-v1',
+    title: 'Mixed Within 50',
+    humanCode: 'SG-G2-C-001',
+    checksum: 'f4ccdad5079b'
+  }
+])
 const ROBUST_RETRY_CONFIDENCE_THRESHOLD = 0.86
 const ROBUST_RETRY_MARGIN_THRESHOLD = 0.18
 const LOW_CONFIDENCE_THRESHOLD = 0.78
@@ -936,6 +960,27 @@ const studentResultSubtext = computed(() => {
       : 'Your work has been graded and saved.'
   }
   return 'Your work has been saved for teacher review.'
+})
+
+const studentOcrResultErrorHint = computed(() => {
+  if (!ocrResult.value?.error) return ''
+  const message = String(ocrResult.value.error)
+  if (message.includes('QR code was not read')) {
+    return 'Keep the QR code visible and scan again.'
+  }
+  if (message.includes('Corner marker')) {
+    return 'Keep all four black corner squares visible.'
+  }
+  if (message.includes('Answer boxes')) {
+    return 'Hold the sheet flatter and let the camera focus.'
+  }
+  if (message.includes('Layout not found')) {
+    return 'The worksheet template did not load.'
+  }
+  if (message.includes('model') || message.includes('OCR')) {
+    return 'The grading engine did not finish loading.'
+  }
+  return 'Try again with the whole worksheet in view.'
 })
 
 const studentCaptureStateClass = computed(() => {
@@ -3126,6 +3171,188 @@ function clonePlain(value) {
   return JSON.parse(JSON.stringify(value))
 }
 
+function layoutUrlForId(layoutId) {
+  return publicUrl(`layouts/${layoutId}.json`)
+}
+
+async function fetchLayoutJson(layoutUrl) {
+  const response = await fetch(layoutUrl)
+  if (!response.ok) return null
+  return response.json()
+}
+
+function createQrPayloadForKnownLayout(match) {
+  if (!match?.layoutId) return null
+  return {
+    schema_version: 1,
+    template_id: match.layoutId,
+    template_version: 1,
+    sheet_instance_id: `${match.layoutId}-known-title-fallback`,
+    layout_id: match.layoutId,
+    answer_key_checksum: match.checksum || undefined,
+    qr_decode_source: 'printed-title-fallback'
+  }
+}
+
+function makeReviewOnlyLayout(layout, reason = 'unknown-template-fallback') {
+  const copy = clonePlain(layout)
+  if (!copy || typeof copy !== 'object') return copy
+  delete copy.answer_key
+  copy.boxes = Array.isArray(copy.boxes)
+    ? copy.boxes.map((box) => {
+      const next = { ...box }
+      delete next.expected_digit
+      return next
+    })
+    : copy.boxes
+  copy.question_groups = Array.isArray(copy.question_groups)
+    ? copy.question_groups.map((group) => {
+      const next = { ...group }
+      delete next.answer
+      delete next.canonical_digits
+      delete next.accepted_digit_responses
+      delete next.accepted_responses
+      return next
+    })
+    : copy.question_groups
+  copy.metadata = {
+    ...(copy.metadata || {}),
+    review_only_fallback: true,
+    review_only_reason: reason
+  }
+  return copy
+}
+
+function matToCanvas(mat) {
+  if (!mat || mat.rows === 0 || mat.cols === 0) return null
+  const canvas = document.createElement('canvas')
+  canvas.width = mat.cols
+  canvas.height = mat.rows
+  try {
+    if (typeof cv !== 'undefined' && typeof cv.imshow === 'function') {
+      cv.imshow(canvas, mat)
+      return canvas
+    }
+  } catch (_) {
+    // Fallback below.
+  }
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  const id = ctx.createImageData(mat.cols, mat.rows)
+  const ch = mat.channels ? mat.channels() : 4
+  for (let i = 0; i < mat.cols * mat.rows; i++) {
+    const si = i * ch
+    const di = i * 4
+    if (ch === 4) {
+      id.data[di] = mat.data[si]
+      id.data[di + 1] = mat.data[si + 1]
+      id.data[di + 2] = mat.data[si + 2]
+      id.data[di + 3] = mat.data[si + 3]
+    } else {
+      id.data[di] = id.data[di + 1] = id.data[di + 2] = mat.data[si]
+      id.data[di + 3] = 255
+    }
+  }
+  ctx.putImageData(id, 0, 0)
+  return canvas
+}
+
+function imageDataToDarkFeature(imageData, cols = 72, rows = 18) {
+  if (!imageData?.data || !imageData.width || !imageData.height) return null
+  const { data, width, height } = imageData
+  const luminance = []
+  const stride = Math.max(1, Math.floor((width * height) / 6000))
+  for (let i = 0; i < width * height; i += stride) {
+    const di = i * 4
+    luminance.push(0.299 * data[di] + 0.587 * data[di + 1] + 0.114 * data[di + 2])
+  }
+  luminance.sort((a, b) => a - b)
+  const background = luminance[Math.max(0, Math.min(luminance.length - 1, Math.floor(luminance.length * 0.88)))] || 235
+  const features = new Array(cols * rows).fill(0)
+  for (let y = 0; y < height; y++) {
+    const fy = Math.max(0, Math.min(rows - 1, Math.floor((y / height) * rows)))
+    for (let x = 0; x < width; x++) {
+      const di = (y * width + x) * 4
+      const lum = 0.299 * data[di] + 0.587 * data[di + 1] + 0.114 * data[di + 2]
+      const ink = Math.max(0, Math.min(1, (background - lum - 10) / 90))
+      if (ink <= 0) continue
+      const fx = Math.max(0, Math.min(cols - 1, Math.floor((x / width) * cols)))
+      features[fy * cols + fx] += ink
+    }
+  }
+  const norm = Math.sqrt(features.reduce((sum, value) => sum + value * value, 0))
+  if (!Number.isFinite(norm) || norm <= 0.0001) return null
+  return features.map((value) => value / norm)
+}
+
+function cosineFeatureScore(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return 0
+  let score = 0
+  for (let i = 0; i < a.length; i++) score += a[i] * b[i]
+  return score
+}
+
+function renderedTitleFeature(title, cols = 72, rows = 18) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 720
+  canvas.height = 180
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.fillStyle = '#111'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = '700 50px Lexend, Arial, sans-serif'
+  ctx.fillText(title, canvas.width / 2, canvas.height * 0.54)
+  return imageDataToDarkFeature(ctx.getImageData(0, 0, canvas.width, canvas.height), cols, rows)
+}
+
+function classifyKnownGrade2LayoutFromWarped(warpedImage) {
+  const canvas = matToCanvas(warpedImage)
+  const ctx = canvas?.getContext('2d')
+  if (!ctx) return null
+  const cols = 72
+  const rows = 18
+  const expected = KNOWN_GRADE2_LAYOUTS
+    .map((layout) => ({ ...layout, feature: renderedTitleFeature(layout.title, cols, rows) }))
+    .filter((layout) => Array.isArray(layout.feature))
+  if (!expected.length) return null
+  const titleRects = [
+    { x: 0.22, y: 0.094, w: 0.56, h: 0.070 },
+    { x: 0.22, y: 0.104, w: 0.56, h: 0.070 },
+    { x: 0.22, y: 0.114, w: 0.56, h: 0.070 },
+    { x: 0.18, y: 0.098, w: 0.64, h: 0.078 }
+  ]
+  const scored = expected.map((layout) => ({ ...layout, score: 0 }))
+  for (const rect of titleRects) {
+    const x = Math.max(0, Math.round(rect.x * canvas.width))
+    const y = Math.max(0, Math.round(rect.y * canvas.height))
+    const w = Math.max(1, Math.min(canvas.width - x, Math.round(rect.w * canvas.width)))
+    const h = Math.max(1, Math.min(canvas.height - y, Math.round(rect.h * canvas.height)))
+    const observed = imageDataToDarkFeature(ctx.getImageData(x, y, w, h), cols, rows)
+    if (!observed) continue
+    scored.forEach((layout) => {
+      layout.score = Math.max(layout.score, cosineFeatureScore(observed, layout.feature))
+    })
+  }
+  scored.sort((a, b) => b.score - a.score)
+  const best = scored[0]
+  const second = scored[1]
+  if (!best) return null
+  const gap = second ? best.score - second.score : best.score
+  return {
+    layoutId: best.layoutId,
+    title: best.title,
+    humanCode: best.humanCode,
+    checksum: best.checksum,
+    score: best.score,
+    gap,
+    accepted: best.score >= 0.28 && gap >= 0.018,
+    scores: scored.map(({ layoutId, title, score }) => ({ layoutId, title, score: Number(score.toFixed(4)) }))
+  }
+}
+
 function cloneRect(rect) {
   if (!rect) return null
   return {
@@ -4214,6 +4441,9 @@ const runRealOCR = async () => {
     preprocessStats: [],
     predictions: [],
     answerKey: null,
+    knownGrade2Fallback: null,
+    printedTitleFallback: null,
+    reviewOnlyFallback: false,
     captureQuality: lastCaptureQuality.value || null
   }
 
@@ -4248,24 +4478,24 @@ const runRealOCR = async () => {
       typeof window !== 'undefined' &&
       new URLSearchParams(window.location.search).get('allowDefaultLayout') === '1'
     partialDebug.allowDefaultLayout = allowDefaultLayout
-    if (!qrPayload && !allowDefaultLayout) {
-      throw new Error('QR code was not read. Keep the QR code visible and scan again.')
-    }
+    const knownGrade2Fallback = !qrPayload && !allowDefaultLayout
+    partialDebug.knownGrade2Fallback = knownGrade2Fallback
     let layoutUrl = qrPayload?.layout_id
-      ? publicUrl(`layouts/${qrPayload.layout_id}.json`)
-      : DEFAULT_LAYOUT_URL
+      ? layoutUrlForId(qrPayload.layout_id)
+      : knownGrade2Fallback
+        ? layoutUrlForId(KNOWN_GRADE2_FALLBACK_LAYOUT_ID)
+        : DEFAULT_LAYOUT_URL
     partialDebug.layoutUrl = layoutUrl
     partialDebug.stage = 'loading layout'
-    let layoutRes = await fetch(layoutUrl)
-    if (!layoutRes.ok) {
+    let layout = await fetchLayoutJson(layoutUrl)
+    if (!layout && !knownGrade2Fallback) {
       layoutUrl = DEFAULT_LAYOUT_URL
       partialDebug.layoutUrl = layoutUrl
-      layoutRes = await fetch(layoutUrl)
+      layout = await fetchLayoutJson(layoutUrl)
     }
-    if (!layoutRes.ok) {
+    if (!layout) {
       throw new Error('Layout not found. Ensure ' + DEFAULT_LAYOUT_URL + ' is available.')
     }
-    const layout = await layoutRes.json()
     partialDebug.layoutId = layout.layout_id || null
     // TEMPORARY (retest): ?ignoreQrHomography=1 keeps fetched layout anchors only; QR answer_key + other homography (e.g. marker_size) still merge.
     const ignoreQrHomography =
@@ -4313,6 +4543,31 @@ const runRealOCR = async () => {
     }
 
     const { warpedImage, rawCrops, processedTensors } = result
+    if (knownGrade2Fallback) {
+      partialDebug.stage = 'identifying known worksheet title'
+      const titleMatch = classifyKnownGrade2LayoutFromWarped(warpedImage)
+      partialDebug.printedTitleFallback = titleMatch
+      if (titleMatch?.accepted) {
+        const matchedLayoutUrl = layoutUrlForId(titleMatch.layoutId)
+        const matchedLayout = titleMatch.layoutId === layout.layout_id
+          ? layout
+          : await fetchLayoutJson(matchedLayoutUrl)
+        if (matchedLayout) {
+          layout = matchedLayout
+          layoutUrl = matchedLayoutUrl
+          qrPayload = createQrPayloadForKnownLayout(titleMatch)
+          partialDebug.layoutUrl = layoutUrl
+          partialDebug.layoutId = layout.layout_id || null
+          partialDebug.qrPayload = qrPayload
+        } else {
+          layout = makeReviewOnlyLayout(layout, 'known-title-layout-fetch-failed')
+          partialDebug.reviewOnlyFallback = true
+        }
+      } else {
+        layout = makeReviewOnlyLayout(layout, 'known-title-not-confident')
+        partialDebug.reviewOnlyFallback = true
+      }
+    }
     const sourceAnnotationContext = buildSourceAnnotationContext(
       rawCrops,
       result.sourceAnchors,
@@ -4423,8 +4678,7 @@ const runRealOCR = async () => {
         proc.tensorVariants.length > 1
       if (hasPreprocessVariants) {
         digitResult = await recognizeDigitsWithPreprocessVariants(proc.tensorVariants, null, {
-          digitIndex: proc.digitIndex,
-          forceReviewOnDisagreement: false
+          digitIndex: proc.digitIndex
         })
       } else {
         digitResult = await recognizeDigits(data)
@@ -4618,6 +4872,9 @@ const runRealOCR = async () => {
         layoutUrl: partialDebug.layoutUrl,
         layoutId: layout.layout_id || null,
         qrPayload: partialDebug.qrPayload,
+        knownGrade2Fallback: partialDebug.knownGrade2Fallback,
+        printedTitleFallback: partialDebug.printedTitleFallback,
+        reviewOnlyFallback: partialDebug.reviewOnlyFallback,
         activeHomography: partialDebug.activeHomography,
         warpOrientation: window.__SCANGRADE_DEBUG_WARP_ORIENTATION || null,
         imageSize: partialDebug.imageSize,
