@@ -419,7 +419,7 @@ import {
   recognizeDigitsWithPreprocessVariants,
   getDigitModelInfo
 } from '../ocr-pipeline.js'
-import { decodeQrFromCanvas } from '../qr-decode.js'
+import { decodeQrFromCanvas, decodeQrFromPageUrl } from '../qr-decode.js'
 import { publicUrl } from '../public-paths.js'
 
 const props = defineProps({
@@ -4239,7 +4239,10 @@ const runRealOCR = async () => {
 
     // Try to decode QR from image (payload-only); fallback to default layout when no QR
     partialDebug.stage = 'decoding QR'
-    const qrPayload = decodeQrFromCanvas(canvas)
+    let qrPayload = decodeQrFromCanvas(canvas)
+    if (!qrPayload && typeof window !== 'undefined') {
+      qrPayload = decodeQrFromPageUrl(window.location.href)
+    }
     partialDebug.qrPayload = qrPayload || null
     const allowDefaultLayout =
       typeof window !== 'undefined' &&
