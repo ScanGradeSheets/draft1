@@ -340,7 +340,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.03-0003-EDT-ocr-touch-popover'
+const APP_BUILD_LABEL = '2026.06.03-0716-EDT-popover-anchor'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -1064,7 +1064,7 @@ onMounted(() => {
 
 <style scoped>
 .scan-grade {
-  --teacher-highlighter-rgb: 251, 247, 25;
+  --teacher-highlighter-rgb: 253, 255, 50;
   max-width: 800px;
   margin: 0 auto;
   color: #202124;
@@ -1668,7 +1668,7 @@ onMounted(() => {
 
 .student-scan-grading {
   grid-column: 1 / -1;
-  min-height: 36px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1679,23 +1679,23 @@ onMounted(() => {
 .student-scan-grading-word {
   position: relative;
   isolation: isolate;
-  padding: 4px 8px 5px;
+  padding: 6px 13px 7px;
   color: #202124;
-  font-size: 15px;
+  font-size: 18px;
   line-height: 1;
-  font-weight: 650;
+  font-weight: 560;
 }
 
 .student-scan-grading-word::before {
   content: "";
   position: absolute;
   z-index: -1;
-  left: 2px;
-  right: 2px;
+  left: -7px;
+  right: -7px;
   top: 50%;
-  height: 0.86em;
+  height: 1.18em;
   border-radius: 999px 80% 999px 72%;
-  background: rgba(var(--teacher-highlighter-rgb), 0.84);
+  background: rgba(var(--teacher-highlighter-rgb), 0.9);
   mix-blend-mode: multiply;
   transform: translateY(-46%) rotate(-2deg) scaleX(0.18);
   transform-origin: left center;

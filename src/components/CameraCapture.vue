@@ -279,7 +279,7 @@
                 ]"
                 :disabled="!isAnswerGroupEditable(group)"
                 :aria-label="`Fix ${group.label} digit ${digitIndex + 1}`"
-                @click.stop="openCorrectionByGroupSlot(group, digitIndex)"
+                @click.stop="openCorrectionByGroupSlot(group, shouldUseWholeAnswerCorrection(group) ? null : digitIndex)"
               >
                 {{ digit === null || digit === undefined || digit === '' ? '' : digit }}
               </button>
@@ -662,13 +662,15 @@ const correctionRegions = computed(() => {
 const activeCorrectionRegion = computed(() => {
   const question = activeCorrectionQuestion.value
   if (!question) return null
+  if (question.slotIndex == null) {
+    return allAnnotationRegions.value.find((region) =>
+      region.questionNum === question.questionNum &&
+      region.slotIndex == null
+    ) || question
+  }
   return allAnnotationRegions.value.find((region) =>
     region.questionNum === question.questionNum &&
-    (
-      question.slotIndex == null ||
-      region.slotIndex == null ||
-      region.slotIndex === question.slotIndex
-    )
+    region.slotIndex === question.slotIndex
   ) || question
 })
 
@@ -696,9 +698,10 @@ const correctionPanelPlacement = computed(() => {
   ) {
     return null
   }
-  const panelWidthPct = 20.5
-  const panelHeightPct = 17.8
-  const gapPct = 1.45
+  const wholeAnswer = activeCorrectionSlotIndex.value == null && activeCorrectionMaxLength.value > 1
+  const panelWidthPct = wholeAnswer ? 43 : 40
+  const panelHeightPct = wholeAnswer ? 27 : 25
+  const gapPct = 1.65
   const focusLeft = Number.isFinite(region.focusLeftPct) ? region.focusLeftPct : region.leftPct
   const focusTop = Number.isFinite(region.focusTopPct) ? region.focusTopPct : region.topPct
   const focusWidth = Number.isFinite(region.focusWidthPct) ? region.focusWidthPct : region.widthPct
@@ -707,8 +710,11 @@ const correctionPanelPlacement = computed(() => {
   const focusBottom = focusTop + focusHeight
   const centerX = focusLeft + focusWidth / 2
   const centerY = focusTop + focusHeight / 2
-  const lowerRow = centerY > 61
+  const lowerRow = centerY > 60
   const upperRow = centerY < 30
+  const rightEdgeRisk = focusRight > 74 || centerX > 67
+  const leftEdgeRisk = focusLeft < 17 || centerX < 20
+  const preferVertical = lowerRow || rightEdgeRisk
   const bounds = { left: 2, top: 4, right: 98, bottom: 96 }
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
   const activeQuestionRects = allAnnotationRegions.value
@@ -738,25 +744,25 @@ const correctionPanelPlacement = computed(() => {
       placement: 'left',
       left: focusLeft - panelWidthPct - gapPct,
       top: centerY - panelHeightPct / 2,
-      preference: centerX > 54 ? (lowerRow ? 7 : 1) : 5
+      preference: centerX > 54 ? 2 : 7
     },
     {
       placement: 'right',
       left: focusRight + gapPct,
       top: centerY - panelHeightPct / 2,
-      preference: centerX < 46 ? (lowerRow ? 7 : 1) : 8
+      preference: centerX < 46 ? 2 : 9
     },
     {
       placement: 'above',
       left: centerX - panelWidthPct / 2,
       top: focusTop - panelHeightPct - gapPct,
-      preference: lowerRow ? 0 : (centerY > 34 ? 2 : 7)
+      preference: lowerRow ? 0 : (centerY > 33 ? 1 : 8)
     },
     {
       placement: 'below',
       left: centerX - panelWidthPct / 2,
       top: focusBottom + gapPct,
-      preference: upperRow ? 0 : (lowerRow ? 8 : 2)
+      preference: upperRow ? 0 : (lowerRow ? 11 : 2)
     }
   ]
 
@@ -773,10 +779,10 @@ const correctionPanelPlacement = computed(() => {
       offscreen * 9 +
       overlap * 24 +
       siblingOverlap * 9 +
-      (candidate.placement === 'right' && centerX > 68 ? 18 : 0) +
-      (candidate.placement === 'below' && centerY > 70 ? 8 : 0) +
-      (candidate.placement === 'left' && lowerRow ? 7 : 0) +
-      (candidate.placement === 'right' && lowerRow ? 7 : 0)
+      (candidate.placement === 'right' && rightEdgeRisk ? 90 : 0) +
+      (candidate.placement === 'left' && leftEdgeRisk ? 40 : 0) +
+      (candidate.placement === 'below' && centerY > 67 ? 30 : 0) +
+      ((candidate.placement === 'left' || candidate.placement === 'right') && preferVertical ? 58 : 0)
     return { ...candidate, left, top, score }
   })
   const best = candidates.sort((a, b) => a.score - b.score)[0]
@@ -803,7 +809,12 @@ const correctionPanelPlacement = computed(() => {
 
 const correctionPanelClass = computed(() => {
   const placement = correctionPanelPlacement.value?.placement
-  return placement ? `student-correction-panel--${placement}` : ''
+  const classes = []
+  if (placement) classes.push(`student-correction-panel--${placement}`)
+  if (activeCorrectionSlotIndex.value == null && activeCorrectionMaxLength.value > 1) {
+    classes.push('student-correction-panel--double')
+  }
+  return classes.join(' ')
 })
 
 const activeCorrectionGroup = computed(() => {
@@ -984,6 +995,24 @@ function isAnswerGroupEditable(group) {
   return !!(group && !ocrResult.value?.error && Array.isArray(group.digitBoxIds) && group.digitBoxIds.length)
 }
 
+function reviewSlotIndexesForGroup(group) {
+  if (!isAnswerGroupEditable(group)) return []
+  const ids = Array.isArray(group?.digitBoxIds) ? group.digitBoxIds : []
+  const byId = new Map((ocrResult.value?.predictions || []).map((prediction) => [prediction.id, prediction]))
+  return ids
+    .map((id, slotIndex) => ({ id, slotIndex }))
+    .filter(({ slotIndex }) => slotNeedsReview(group, ids, slotIndex, byId))
+    .map(({ slotIndex }) => slotIndex)
+}
+
+function shouldUseWholeAnswerCorrection(group) {
+  if (!isAnswerGroupEditable(group)) return false
+  const ids = Array.isArray(group?.digitBoxIds) ? group.digitBoxIds : []
+  if (ids.length <= 1) return false
+  const reviewSlots = reviewSlotIndexesForGroup(group)
+  return reviewSlots.length === ids.length
+}
+
 function groupForQuestionNum(questionNum) {
   const groups = Array.isArray(ocrResult.value?.layoutSnapshot?.question_groups)
     ? ocrResult.value.layoutSnapshot.question_groups
@@ -1009,11 +1038,18 @@ function preferredCorrectionSlotIndex(group, region = null) {
 function openCorrection(region) {
   if (!isCorrectionRegionEditable(region)) return
   const group = groupForQuestionNum(region.questionNum)
+  const useWholeAnswer = region.slotIndex == null && (region.wholeAnswer || shouldUseWholeAnswerCorrection({
+    ...group,
+    digitBoxIds: Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : region.digitBoxIds,
+    questionNum: region.questionNum
+  }))
   activeCorrectionQuestion.value = {
     ...region,
-    slotIndex: Number.isInteger(region.slotIndex)
-      ? region.slotIndex
-      : preferredCorrectionSlotIndex(group, region)
+    slotIndex: useWholeAnswer
+      ? null
+      : Number.isInteger(region.slotIndex)
+        ? region.slotIndex
+        : preferredCorrectionSlotIndex(group, region)
   }
   const currentText = activeCorrectionCurrentText.value
   manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
@@ -1024,12 +1060,15 @@ function openCorrection(region) {
 
 function openCorrectionByGroupSlot(group, slotIndex = null) {
   if (!isAnswerGroupEditable(group)) return
-  const selectedSlotIndex = Number.isInteger(slotIndex)
+  const useWholeAnswer = slotIndex == null || shouldUseWholeAnswerCorrection(group)
+  const selectedSlotIndex = useWholeAnswer
+    ? null
+    : Number.isInteger(slotIndex)
     ? slotIndex
     : preferredCorrectionSlotIndex(group)
   const region = allAnnotationRegions.value.find((item) =>
     item.questionNum === group.questionNum &&
-    item.slotIndex === selectedSlotIndex
+    (selectedSlotIndex == null ? item.slotIndex == null : item.slotIndex === selectedSlotIndex)
   ) || allAnnotationRegions.value.find((item) => item.questionNum === group.questionNum) || {
     key: `question-region-${group.questionNum}`,
     label: group.label,
@@ -2207,7 +2246,7 @@ function composeStudentAnnotatedImage(
         const ry = Math.max(rect.h * (0.49 + seededUnit(seed + 213) * 0.085), rect.w * 0.39)
         const angle = jitter(seed + 193, 0.18)
         const pointsPerLoop = 34 + Math.floor(seededUnit(seed + 215) * 11)
-        const highlighter = 'rgb(255, 255, 0)'
+        const highlighter = 'rgb(253, 255, 50)'
 
         ctx.save()
         ctx.globalCompositeOperation = 'multiply'
@@ -2609,9 +2648,15 @@ function composeStudentAnnotatedImage(
             )
           }
           if (hasReview) {
-            reviewSlotRects.forEach(({ slotRect, slotIndex }) => {
-              drawReviewMark(slotRect, seed + slotIndex * 19)
-            })
+            const validSlotRects = slotRects.filter(Boolean)
+            if (validSlotRects.length > 1 && reviewSlotRects.length === validSlotRects.length) {
+              const reviewRect = unionRects(validSlotRects)
+              if (reviewRect) drawReviewMark(reviewRect, seed + 211)
+            } else {
+              reviewSlotRects.forEach(({ slotRect, slotIndex }) => {
+                drawReviewMark(slotRect, seed + slotIndex * 19)
+              })
+            }
           } else if (correct === true) {
             drawCheck(rect, seed)
           } else if (correct === false) {
@@ -3298,7 +3343,7 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
       groupHasRequiredSlotReview(group, ids, predictionById)
     const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
     const questionNum = group?.question_num ?? index + 1
-    return ids.map((id, slotIndex) => {
+    const slotRegions = ids.map((id, slotIndex) => {
       const crop = cropById.get(id)
       const slotRect = annotationRectForCrop(crop)
       const prediction = predictionById.get(id)
@@ -3342,6 +3387,53 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
         manualCorrected: slotManualCorrected
       }
     }).filter(Boolean)
+    if (slotRegions.length > 1 && slotRegions.every((region) => region.reviewNeeded)) {
+      const focusRect = unionRects(slotRegions.map((region) => ({
+        x: region.focusX,
+        y: region.focusY,
+        w: region.focusW,
+        h: region.focusH
+      })))
+      if (focusRect) {
+        const padX = Math.max(focusRect.h * 0.55, focusRect.w * 0.12)
+        const padY = Math.max(focusRect.h * 0.42, focusRect.w * 0.045)
+        const target = {
+          x: Math.max(0, focusRect.x - padX),
+          y: Math.max(0, focusRect.y - padY),
+          w: Math.min(warpedW, focusRect.x + focusRect.w + padX) - Math.max(0, focusRect.x - padX),
+          h: Math.min(warpedH, focusRect.y + focusRect.h + padY) - Math.max(0, focusRect.y - padY)
+        }
+        return [{
+          key: `question-region-${questionNum}-answer`,
+          label: `${questionLetter(index)})`,
+          questionNum,
+          slotIndex: null,
+          wholeAnswer: true,
+          digitBoxIds: ids,
+          reviewNeeded: true,
+          questionReviewNeeded: hasReview,
+          correct,
+          x: target.x,
+          y: target.y,
+          w: target.w,
+          h: target.h,
+          focusX: focusRect.x,
+          focusY: focusRect.y,
+          focusW: focusRect.w,
+          focusH: focusRect.h,
+          leftPct: (target.x / warpedW) * 100,
+          topPct: (target.y / warpedH) * 100,
+          widthPct: (target.w / warpedW) * 100,
+          heightPct: (target.h / warpedH) * 100,
+          focusLeftPct: (focusRect.x / warpedW) * 100,
+          focusTopPct: (focusRect.y / warpedH) * 100,
+          focusWidthPct: (focusRect.w / warpedW) * 100,
+          focusHeightPct: (focusRect.h / warpedH) * 100,
+          manualCorrected: slotRegions.some((region) => region.manualCorrected)
+        }]
+      }
+    }
+    return slotRegions
   }).filter(Boolean)
 }
 
@@ -4732,7 +4824,7 @@ onUnmounted(stopStream)
 
 <style scoped>
 .camera-capture {
-  --teacher-highlighter-rgb: 255, 255, 0;
+  --teacher-highlighter-rgb: 253, 255, 50;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -5380,13 +5472,18 @@ onUnmounted(stopStream)
 .student-correction-panel--image {
   position: absolute;
   z-index: 4;
-  min-width: 96px;
+  box-sizing: border-box;
+  min-width: 128px;
   max-width: calc(100% - 12px);
   max-height: min(56%, 174px);
   overflow: visible;
   margin: 0;
-  padding: 6px;
+  padding: 7px;
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
+}
+
+.student-correction-panel--image.student-correction-panel--double {
+  min-width: 150px;
 }
 
 .student-correction-panel--image::after {
@@ -5398,42 +5495,42 @@ onUnmounted(stopStream)
 }
 
 .student-correction-panel--right::after {
-  left: -8px;
+  left: -10px;
   top: var(--correction-arrow-y, 50%);
   transform: translateY(-50%);
-  border-top: 8px solid transparent;
-  border-bottom: 8px solid transparent;
-  border-right: 8px solid rgba(255, 253, 244, 0.96);
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 10px solid rgba(255, 253, 244, 0.96);
   filter: drop-shadow(-1px 1px 0 rgba(240, 199, 68, 0.72));
 }
 
 .student-correction-panel--left::after {
-  right: -8px;
+  right: -10px;
   top: var(--correction-arrow-y, 50%);
   transform: translateY(-50%);
-  border-top: 8px solid transparent;
-  border-bottom: 8px solid transparent;
-  border-left: 8px solid rgba(255, 253, 244, 0.96);
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid rgba(255, 253, 244, 0.96);
   filter: drop-shadow(1px 1px 0 rgba(240, 199, 68, 0.72));
 }
 
 .student-correction-panel--above::after {
   left: var(--correction-arrow-x, 50%);
-  bottom: -8px;
+  bottom: -10px;
   transform: translateX(-50%);
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid rgba(255, 253, 244, 0.96);
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid rgba(255, 253, 244, 0.96);
   filter: drop-shadow(1px 1px 0 rgba(240, 199, 68, 0.72));
 }
 
 .student-correction-panel--below::after {
   left: var(--correction-arrow-x, 50%);
-  top: -8px;
+  top: -10px;
   transform: translateX(-50%);
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-bottom: 8px solid rgba(255, 253, 244, 0.96);
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid rgba(255, 253, 244, 0.96);
   filter: drop-shadow(1px -1px 0 rgba(240, 199, 68, 0.72));
 }
 
@@ -5457,20 +5554,31 @@ onUnmounted(stopStream)
   gap: 4px;
 }
 
+.student-correction-panel--image .student-correction-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .student-correction-panel--image .correction-choice-btn {
-  flex: 1 1 calc(33.333% - 4px);
+  flex: 0 0 auto;
   min-width: 0;
-  padding: 5px 7px;
+  height: 36px;
+  padding: 0 4px;
 }
 
 .student-correction-panel--image .student-correction-manual input {
-  width: 38px;
-  min-width: 38px;
-  height: 40px;
-  padding: 0 5px 1px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 2px;
   text-align: center;
-  font-size: 20px;
-  line-height: 39px;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.student-correction-panel--image.student-correction-panel--double .student-correction-manual input {
+  width: 58px;
+  min-width: 58px;
 }
 
 .student-correction-title {
@@ -5553,12 +5661,16 @@ onUnmounted(stopStream)
 
 .student-correction-manual {
   display: grid;
-  grid-template-columns: minmax(42px, 1fr) auto;
+  grid-template-columns: 44px 64px;
   gap: 4px;
   margin: 0;
   color: #1d1d1f;
   font-size: 14px;
   font-weight: 700;
+}
+
+.student-correction-panel--image.student-correction-panel--double .student-correction-manual {
+  grid-template-columns: 58px 64px;
 }
 
 .student-correction-manual input {
@@ -5582,13 +5694,17 @@ onUnmounted(stopStream)
 
 .student-correction-panel--image .student-correction-save {
   flex: 0 0 auto;
-  min-width: 42px;
-  padding: 5px 8px;
+  width: 64px;
+  min-width: 64px;
+  height: 44px;
+  padding: 0 7px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 @media (max-width: 430px) {
   .student-correction-panel--image {
-    min-width: 96px;
+    min-width: 128px;
   }
 }
 
