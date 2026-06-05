@@ -4111,6 +4111,11 @@ function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, qu
     reviewCount >= Math.ceil(total * 0.70) &&
     avgConfidence < 0.70 &&
     (repeatedSuspicious || repeatedArtifacts)
+  const structuralLowSignalPileup =
+    repeatedSuspicious ||
+    repeatedArtifacts ||
+    lowInkGroups >= Math.ceil(expectedTwoDigitGroups * 0.60) ||
+    oneOrBlankDominatedGroups >= Math.ceil(expectedTwoDigitGroups * 0.75)
   const mismatchReviewPileup =
     mostlyTwoDigitWorksheet &&
     mismatchGroups >= Math.ceil(total * 0.45) &&
@@ -4156,7 +4161,8 @@ function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, qu
     reviewCount >= Math.ceil(total * 0.70) &&
     lowGapGroups >= Math.ceil(expectedTwoDigitGroups * 0.70) &&
     avgConfidence < 0.74 &&
-    avgTopGap < 0.42
+    avgTopGap < 0.42 &&
+    structuralLowSignalPileup
   const highReviewMismatchCapture =
     mostlyTwoDigitWorksheet &&
     score <= Math.max(2, Math.floor(total * 0.25)) &&
@@ -4173,12 +4179,9 @@ function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, qu
     allReviewUnstableTwoDigitCapture ||
     severeLowSignalTwoDigitCapture ||
     lowConfidenceReviewPileup ||
-    mismatchReviewPileup ||
-    broadMismatchLowSignalCapture ||
     weakTwoDigitReviewPileup ||
     repeatedSlotCollapse ||
-    highReviewLowGapCapture ||
-    highReviewMismatchCapture
+    highReviewLowGapCapture
   )) return null
 
   return {
@@ -4203,6 +4206,7 @@ function detectUnusableTwoDigitScan(questionGroups, cropQuality, predictions, qu
     allReviewUnstableTwoDigitCapture,
     severeLowSignalTwoDigitCapture,
     lowConfidenceReviewPileup,
+    structuralLowSignalPileup,
     mismatchReviewPileup,
     broadMismatchLowSignalCapture,
     weakTwoDigitReviewPileup,

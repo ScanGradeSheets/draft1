@@ -1723,17 +1723,66 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
   );
   const strictDisagrees = strict && strict.result.digit !== result.digit;
   const resultGap = digitTopGap(result);
+  const voteShare = votes.top?.share || 0;
+  const voteMargin = votes.margin || 0;
+  const voteSupportsResult = votes.top?.digit === result.digit;
+  const variantsSupportingResult = variantResults
+    .filter((variant) => variant.result.digit === result.digit)
+    .length;
+  const strongProbability = result.confidence >= 0.72 && resultGap >= 0.35;
+  const decisiveProbability = result.confidence >= 0.88 && resultGap >= 0.60;
+  const strongVoteWinner =
+    voteSupportsResult &&
+    voteShare >= 0.64 &&
+    voteMargin >= 0.24 &&
+    strongProbability;
+  const decisiveVoteWinner =
+    voteSupportsResult &&
+    voteShare >= 0.70 &&
+    voteMargin >= 0.38 &&
+    (decisiveProbability || variantsSupportingResult >= 5);
+  const strongSelectedResult =
+    decisiveVoteWinner ||
+    strongVoteWinner ||
+    (decisiveProbability && voteSupportsResult && voteMargin >= 0.28);
+  const fragmentedVariants =
+    !strongSelectedResult &&
+    uniqueStrongDigits.size >= 4 &&
+    voteMargin < 0.34;
+  const weakVote =
+    !strongSelectedResult &&
+    voteShare < 0.54 &&
+    voteMargin < 0.16;
+  const weakResult =
+    !strongSelectedResult &&
+    (
+      (resultGap < 0.07 && voteMargin < 0.45) ||
+      result.confidence < 0.58
+    );
+  const strictStrongDisagrees =
+    strictDisagrees &&
+    digitTopGap(strict.result) >= 0.28 &&
+    !strongSelectedResult &&
+    !(strongProbability && voteMargin >= 0.55);
+  const consensusStillUncertain =
+    (consensus?.alwaysReview === true || dominant?.alwaysReview === true) &&
+    !strongSelectedResult &&
+    (
+      fragmentedVariants ||
+      weakVote ||
+      weakResult ||
+      uniqueStrongDigits.size >= 3 ||
+      voteMargin < 0.30
+    );
   const shouldForceReview =
     options.forceReviewOnDisagreement !== false &&
     (
-      postSelectionRescue ||
-      consensus?.alwaysReview === true ||
-      dominant?.alwaysReview === true ||
-      uniqueStrongDigits.size >= 3 ||
-      (votes.top?.share || 0) < 0.62 ||
-      resultGap < 0.12 ||
-      result.confidence < 0.78 ||
-      (strictDisagrees && digitTopGap(strict.result) >= 0.06)
+      (postSelectionRescue && !strongSelectedResult) ||
+      consensusStillUncertain ||
+      fragmentedVariants ||
+      weakVote ||
+      weakResult ||
+      strictStrongDisagrees
     );
 
   const withDetails = {
