@@ -147,6 +147,13 @@ Build label: 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback
 Change: Student Mode warms the digit model when the scan view opens, shares one in-flight ONNX model initialization promise, and treats auxiliary right-slot model load/run failure as a fallback-to-primary condition instead of failing the whole scan.
 ```
 
+Current old-iPad review-save candidate for this pass:
+
+```text
+Build label: 2026.06.07-1841-EDT-sg3-old-ipad-review-save
+Change: If the primary digit engine cannot initialize or run after a good capture, the app now keeps the scan, marks every answer slot for teacher review, suppresses any fake score, and saves the result instead of showing the fatal "grading engine did not finish loading" retry state.
+```
+
 ## Current Repo Notes
 
 The worktree is expected to be dirty. Known dirty areas at SG 3 startup included:
@@ -209,7 +216,7 @@ This is still an improvement over the old exported live-build behavior, which sc
 
 Next useful work:
 
-1. Test build `2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback` on the old iPad using the QR workflow and confirm whether the same worksheet now grades instead of showing "The grading engine did not finish loading."
+1. Test build `2026.06.07-1841-EDT-sg3-old-ipad-review-save` on the old iPad using the QR workflow and confirm whether the same worksheet now saves as teacher review instead of showing "Try again."
 2. If live scans still over-review after sharp auto-capture, improve preprocessing/model signal using the replay artifacts before relaxing confidence again.
 3. Keep scoring OCR against handwritten truth, not answer-key correctness.
 4. Treat the clean 9-photo target as achieved, but do not claim classroom-trustworthy generalization from only nine sheets or one rough iPhone batch.
@@ -744,3 +751,35 @@ Verification results:
 - Older live iPhone still replay stayed safe: `72/90` answer OCR truth, `53/90` confident, `53/53` confident accuracy, `0` confident wrong, `159/180` digit OCR truth.
 - The live replay command exited nonzero because two old still captures were intentionally guarded as unusable/all-review; the truth scorer confirms no confident-wrong regression.
 - Next proof must be a live old-iPad retest on `2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback`.
+
+2026-06-07 / SG 3:
+Tony retested build `2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback` on the old iPad and saw the same "Try again / The grading engine did not finish loading" message. The screenshot showed the new build label and a clean full-page worksheet capture, proving that deployment, QR routing, capture, and homography were not the cause. The auxiliary right-slot fallback was insufficient; the old iPad is likely failing the primary ONNX/WASM digit engine itself.
+
+Production changes for build `2026.06.07-1841-EDT-sg3-old-ipad-review-save`:
+
+- `CameraCapture.runRealOCR()` no longer initializes the digit engine before homography/crop processing. It preserves the captured worksheet and OCR crop context first.
+- If primary digit model initialization or inference fails after a recognized worksheet capture, the app now builds review-only predictions with `digit: null`, `confidence: 0`, `reviewNeeded: true`, and `forcedReviewReason = "digit-engine-unavailable-review"` or `"digit-engine-inference-failed-review"`.
+- Review-only engine fallback suppresses `questionCorrect` and `questionScore`, so the teacher queue does not show a fake `0/10` grade.
+- The result payload records `digitEngineFallback`, `digitEngineError`, `reviewOnlyFallback`, and `forcedFallbackReviewReason` for future debugging.
+- Normal OCR confidence, capture thresholds, homography, and model behavior were not loosened.
+
+Reproducible old-iPad stand-in:
+
+```text
+node scripts/eval_uploaded_worksheets.mjs --url https://127.0.0.1:5174 --model /models/missing-primary-old-ipad-test.onnx --out private-evidence/sg3-old-ipad-primary-failure-20260607/before private-evidence/sg3-9-photo-confidence-20260606/1-Photo-1.jpg
+node scripts/eval_uploaded_worksheets.mjs --url https://127.0.0.1:5174 --model /models/missing-primary-old-ipad-test.onnx --out private-evidence/sg3-old-ipad-primary-failure-20260607/after private-evidence/sg3-9-photo-confidence-20260606/1-Photo-1.jpg
+node scripts/eval_uploaded_worksheets.mjs --url https://127.0.0.1:5174 --out private-evidence/sg3-old-ipad-primary-failure-20260607/normal-9 private-evidence/sg3-9-photo-confidence-20260606/1-Photo-1.jpg private-evidence/sg3-9-photo-confidence-20260606/2-Photo-2.jpg private-evidence/sg3-9-photo-confidence-20260606/3-Photo-3.jpg private-evidence/sg3-9-photo-confidence-20260606/4-Photo-4.jpg private-evidence/sg3-9-photo-confidence-20260606/5-Photo-5.jpg private-evidence/sg3-9-photo-confidence-20260606/6-Photo-6.jpg private-evidence/sg3-9-photo-confidence-20260606/7-Photo-7.jpg private-evidence/sg3-9-photo-confidence-20260606/8-Photo-8.jpg private-evidence/sg3-9-photo-confidence-20260606/9-Photo-9.jpg
+node scripts/score_sg3_9_photo_ocr.mjs --run private-evidence/sg3-old-ipad-primary-failure-20260607/normal-9 --out private-evidence/sg3-old-ipad-primary-failure-20260607/normal-9-score
+npm run build
+npx playwright test test-app.spec.js test-ocr.spec.js test-upload-real.spec.js --config=playwright.config.js
+```
+
+Verification results:
+
+- Before patch, forced missing primary model failed the sheet with `ONNX model not found at /models/missing-primary-old-ipad-test.onnx`.
+- After patch, the same forced missing primary model produced no fatal OCR error, `questionCorrect = null`, `questionReviewCount = 10`, `20/20` review-needed predictions, `digitEngineFallback = true`, and `forcedFallbackReviewReason = "digit-engine-unavailable-review"`.
+- Student Mode forced-primary failure saved a local teacher-review record with `status = "review"`, `needsReview = true`, twenty `null` digit slots, `questionCorrect = null`, and `questionScore = null`.
+- Clean 9-photo truth score stayed at `89/90` confident, `89/89` confident accuracy, `0` confident wrong, `90/90` all-answer OCR truth.
+- `npm run build` passed.
+- Focused Playwright suite passed: `5 passed`.
+- Next proof must be a live old-iPad retest on `2026.06.07-1841-EDT-sg3-old-ipad-review-save`. Expected old-iPad behavior if ONNX still cannot run: no score, no green/red grading, but a real saved scan with yellow teacher-review regions instead of "Try again."

@@ -1,10 +1,10 @@
 {
   "current_mission": "Use Tony's latest real worksheet photos to improve confident two-digit OCR reads without allowing confident wrong reads.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
-  "next_best_move": "Tony: test build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback on the old iPad and one phone. The old iPad screenshot showed capture working but the grading engine failing after the worksheet was saved for review; this build warms the digit model earlier and falls back to the primary model if the auxiliary right-slot model fails.",
-  "plain_english_status": "The clean 9-photo benchmark is solved for this evidence set: the current policy reads all 90 handwritten answers correctly and auto-clears 89/90 answers with 89/89 confident accuracy and 0 confident wrong reads. Tony's 2026-06-07 live iPhone batches exposed a harder classroom problem: rough live captures are safe but still too review-heavy. The sharp-auto build should prevent the app from submitting half-focused scans. Tony's old iPad screenshot then exposed a separate reliability issue: the scan image looked good, but the digit grading engine did not finish loading. Build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback keeps the OCR/capture policy intact, warms the model at Student Mode startup, shares in-flight model loading, and prevents an auxiliary right-slot model failure from killing the whole scan.",
+  "next_best_move": "Tony: test build 2026.06.07-1841-EDT-sg3-old-ipad-review-save on the old iPad. The 1745 build still hit the grading-engine load message, proving the problem is likely the primary ONNX/WASM engine on old Safari rather than capture or the auxiliary right-slot model.",
+  "plain_english_status": "The clean 9-photo benchmark is solved for this evidence set: the current policy reads all 90 handwritten answers correctly and auto-clears 89/90 answers with 89/89 confident accuracy and 0 confident wrong reads. Tony's 2026-06-07 live iPhone batches exposed a harder classroom problem: rough live captures are safe but still too review-heavy. The sharp-auto build should prevent the app from submitting half-focused scans. Tony's old iPad then exposed a separate reliability issue: the scan image and QR flow look good, but the primary digit grading engine can fail to finish loading on old Safari. Build 2026.06.07-1841-EDT-sg3-old-ipad-review-save keeps the OCR/capture policy intact and, if the primary digit engine cannot initialize or run after a recognized capture, saves a scoreless teacher-review scan with all slots marked yellow instead of showing Try again.",
   "needs_tony": [
-    "Test build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback on the old iPad; confirm whether the same worksheet now grades instead of showing the grading-engine load message.",
+    "Test build 2026.06.07-1841-EDT-sg3-old-ipad-review-save on the old iPad; expected fallback if the digit engine still cannot run is a saved teacher-review scan with no score, not Try again.",
     "For any sheet that fails in the live app, also send one normal camera photo of the same physical page if convenient.",
     "Keep using normal student pencil/spacing; imperfect handwriting is the useful test.",
     "If possible, note whether a scan was from the live app, a phone photo, or an iPad photo."
@@ -22,11 +22,11 @@
       "column": "Now",
       "cards": [
         {
-          "title": "Verify old iPad engine fallback",
+          "title": "Verify old iPad review-save fallback",
           "type": "validation",
           "owner": "Codex",
-          "summary": "Current candidate is build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback, which warms the OCR engine earlier and falls back if the optional right-slot model fails.",
-          "detail": "The clean 9-photo target is still met at 89/90 confident with 0 confident wrong reads. The latest live still replay remains safe at 53/90 confident, 53/53 confident accuracy, and 0 confident wrong. Tony's old iPad screenshot showed a good scan image followed by the grading-engine load error, so the next proof is a live old-iPad retest."
+          "summary": "Current candidate is build 2026.06.07-1841-EDT-sg3-old-ipad-review-save, which saves a scoreless teacher-review scan if the primary digit engine fails on old Safari.",
+          "detail": "The clean 9-photo target is still met at 89/90 confident with 0 confident wrong reads. Tony's old iPad retest of the 1745 build still showed a good scan image followed by the grading-engine load error, so this patch handles primary engine failure after capture by preserving the scan and marking every answer for teacher review."
         }
       ]
     },
@@ -87,6 +87,13 @@
           "owner": "Codex",
           "summary": "Build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback protects good old-iPad captures from failing only because the auxiliary digit engine path did not load.",
           "detail": "Production changes: Student Mode warms the digit model when capture starts, model initialization shares one in-flight promise, and right-slot model load/run failure falls back to the primary digit model instead of producing a whole-scan error. Verification: forced missing right-slot model replay produced 20 predictions and debug fallback metadata with no OCR error; npm run build passed; Playwright smoke/upload suite passed 5/5; clean 9-photo truth score stayed 89/90 confident, 89/89 confident accuracy, 0 confident wrong, and 90/90 all-answer OCR truth; older live iPhone replay stayed safe at 53/90 confident, 53/53 confident accuracy, and 0 confident wrong."
+        },
+        {
+          "title": "Old iPad primary-engine fallback candidate verified",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "Build 2026.06.07-1841-EDT-sg3-old-ipad-review-save turns primary digit-engine failure into a real saved teacher-review scan.",
+          "detail": "Forced missing primary model replay failed before the patch and produced no fatal OCR error after the patch: questionCorrect null, questionReviewCount 10, 20/20 review-needed predictions, digitEngineFallback true, and forcedFallbackReviewReason digit-engine-unavailable-review. Student Mode forced-primary failure saved a review queue record with status review, needsReview true, twenty null digit slots, and no question score. Clean 9-photo truth score stayed 89/90 confident, 89/89 confident accuracy, 0 confident wrong, and 90/90 all-answer OCR truth. npm run build and the focused Playwright suite passed."
         },
         {
           "title": "SG3 sharp auto-capture candidate verified",

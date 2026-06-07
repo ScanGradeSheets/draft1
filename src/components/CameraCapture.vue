@@ -4828,11 +4828,6 @@ const runRealOCR = async () => {
     }
     partialDebug.activeHomography = activeHomography
 
-    // Initialize model
-    partialDebug.stage = 'initializing digit model'
-    await initDigitModel()
-    modelInfoSnapshot.value = getDigitModelInfo()
-
     if ((ocrDebugEnabled.value || liveOcrDebugExportEnabled.value) && typeof window !== 'undefined') {
       window.__SCANGRADE_DEBUG_MARKERS = true
       window.__SCANGRADE_DEBUG_PREPROCESS_STATS = []
@@ -4994,106 +4989,161 @@ const runRealOCR = async () => {
     if (typeof window !== 'undefined' && Array.isArray(window.__SCANGRADE_DEBUG_PREPROCESS_STATS)) {
       partialDebug.preprocessStats = window.__SCANGRADE_DEBUG_PREPROCESS_STATS
     }
-    const predictions = []
+    let predictions = []
     const MNIST_LEN = 28 * 28
-    partialDebug.stage = 'running digit model'
-    for (const proc of processedTensors) {
-      const src = proc.tensor
-      const data = new Float32Array(MNIST_LEN)
-      if (src && src.length >= MNIST_LEN) {
-        data.set(typeof src.subarray === 'function' ? src.subarray(0, MNIST_LEN) : src.slice(0, MNIST_LEN))
+    let digitEngineFallbackReview = false
+    const buildDigitEngineFallbackPredictions = (reason, err) => {
+      const message = String(err?.message || err || reason)
+      forcedFallbackReviewReason = forcedFallbackReviewReason || reason
+      partialDebug.forcedFallbackReviewReason = forcedFallbackReviewReason
+      partialDebug.reviewOnlyFallback = true
+      partialDebug.digitEngineFallback = true
+      partialDebug.digitEngineError = {
+        reason,
+        message,
+        stage: partialDebug.stage
       }
-      // Pass Float32Arrays so inference copies the data; passing ort.Tensor can expose neutered .data in onnxruntime-web.
-      let digitResult
-      const hasPreprocessVariants =
-        proc.isVirtualDigitBox === true &&
-        Array.isArray(proc.tensorVariants) &&
-        proc.tensorVariants.length > 1
-      if (hasPreprocessVariants) {
-        digitResult = await recognizeDigitsWithPreprocessVariants(proc.tensorVariants, null, {
-          digitIndex: proc.digitIndex
-        })
-      } else {
-        digitResult = await recognizeDigits(data)
-        const baseTopK = digitResult[0].topK || []
-        const baseTopGap = baseTopK.length >= 2 ? (baseTopK[0].confidence - baseTopK[1].confidence) : 1
-        const forceRobust = proc.isVirtualDigitBox === true
-        if (forceRobust || digitResult[0].confidence < ROBUST_RETRY_CONFIDENCE_THRESHOLD || baseTopGap < ROBUST_RETRY_MARGIN_THRESHOLD) {
-          digitResult = await recognizeDigitsRobust(data, digitResult[0], { force: forceRobust })
-        }
-      }
-      const digit = digitResult[0].digit
-      const topK = digitResult[0].topK || []
-      const topGap = topK.length >= 2 ? (topK[0].confidence - topK[1].confidence) : 1
-      const expectedDigit = answerKey != null && proc.id < answerKey.length
-        ? answerKey[proc.id]
-        : null
-      const correct = answerKey != null && proc.id < answerKey.length && answerKey[proc.id] != null
-        ? digit === expectedDigit
-        : undefined
-      const autoCheckAllowed =
-        digitResult[0].confidence >= AUTO_CHECK_CONFIDENCE_THRESHOLD &&
-        topGap >= AUTO_CHECK_MARGIN_THRESHOLD
-      const autoXAllowed = autoXAllowedForDigit(proc, digitResult[0], topGap)
-      const lowSignal =
-        digitResult[0].confidence < LOW_CONFIDENCE_THRESHOLD ||
-        topGap < LOW_MARGIN_THRESHOLD
-      const highRiskPreprocessReview = highRiskRightSlotPreprocessReview(proc, digitResult[0])
-      const structuralReview = structuralTwoDigitReview(proc, digitResult[0], expectedDigit)
-      const highRiskMismatchReview = highRiskTwoDigitMismatchReview(proc, digitResult[0], expectedDigit)
-      const confidencePolicyClearance = confidencePolicyClearanceForDigit(
-        proc,
-        digitResult[0],
-        topGap,
-        correct,
-        {
-          highRiskPreprocessReview,
-          structuralReview,
-          highRiskMismatchReview,
-          cameraCapture: !!partialDebug.captureQuality
-        }
-      )
-      const reviewNeeded = confidencePolicyClearance.allowed ? false
-        : correct === true
-          ? !autoCheckAllowed
-          : highRiskPreprocessReview || structuralReview || highRiskMismatchReview ? true
-          : correct === false
-            ? !autoXAllowed
-            : lowSignal
-      predictions.push({
+      return processedTensors.map((proc) => ({
         id: proc.id,
         questionNum: proc.questionNum,
         digitIndex: proc.digitIndex,
-        digit,
-        confidence: digitResult[0].confidence,
-        topK,
-        topGap,
-        reviewNeeded,
-        probs: digitResult[0].probs || [],
-        entropyNorm: digitResult[0].entropyNorm ?? null,
-        robust: digitResult[0].robust === true,
-        robustOverride: digitResult[0].robustOverride || null,
-        variantCount: digitResult[0].variantCount || 1,
-        baseDigit: digitResult[0].baseDigit ?? null,
-        baseConfidence: digitResult[0].baseConfidence ?? null,
-        baseTopK: digitResult[0].baseTopK || null,
-        preprocessDisagreement: digitResult[0].preprocessDisagreement === true,
-        preprocessReviewReason: reviewNeeded && structuralReview
-          ? 'two-digit-leading-zero-structural-review'
-          : reviewNeeded && highRiskMismatchReview
-          ? 'two-digit-mismatch-low-trust-review'
-          : reviewNeeded && highRiskPreprocessReview
-          ? 'right-slot-preprocess-disagreement'
-          : (digitResult[0].preprocessReviewReason || null),
-        confidencePolicyCleared: confidencePolicyClearance.allowed === true,
-        confidencePolicyClearanceReason: confidencePolicyClearance.reason,
-        originalChosenDigitConfidence: chosenDigitProbability(digitResult[0]),
-        highRiskPreprocessReview,
-        structuralReview,
-        preprocessVariants: digitResult[0].preprocessVariants || null,
-        preprocessVoteSummary: digitResult[0].preprocessVoteSummary || null,
-        ...(correct !== undefined && { correct })
-      })
+        digit: null,
+        confidence: 0,
+        topK: [],
+        topGap: 0,
+        reviewNeeded: true,
+        probs: [],
+        entropyNorm: null,
+        robust: false,
+        robustOverride: null,
+        variantCount: Array.isArray(proc.tensorVariants) ? Math.max(1, proc.tensorVariants.length) : 1,
+        baseDigit: null,
+        baseConfidence: null,
+        baseTopK: null,
+        preprocessDisagreement: false,
+        preprocessReviewReason: reason,
+        confidencePolicyCleared: false,
+        confidencePolicyClearanceReason: reason,
+        originalChosenDigitConfidence: 0,
+        highRiskPreprocessReview: false,
+        structuralReview: false,
+        forcedReviewReason: reason,
+        digitEngineFallback: true
+      }))
+    }
+
+    try {
+      partialDebug.stage = 'initializing digit model'
+      await initDigitModel()
+      modelInfoSnapshot.value = getDigitModelInfo()
+
+      partialDebug.stage = 'running digit model'
+      for (const proc of processedTensors) {
+        const src = proc.tensor
+        const data = new Float32Array(MNIST_LEN)
+        if (src && src.length >= MNIST_LEN) {
+          data.set(typeof src.subarray === 'function' ? src.subarray(0, MNIST_LEN) : src.slice(0, MNIST_LEN))
+        }
+        // Pass Float32Arrays so inference copies the data; passing ort.Tensor can expose neutered .data in onnxruntime-web.
+        let digitResult
+        const hasPreprocessVariants =
+          proc.isVirtualDigitBox === true &&
+          Array.isArray(proc.tensorVariants) &&
+          proc.tensorVariants.length > 1
+        if (hasPreprocessVariants) {
+          digitResult = await recognizeDigitsWithPreprocessVariants(proc.tensorVariants, null, {
+            digitIndex: proc.digitIndex
+          })
+        } else {
+          digitResult = await recognizeDigits(data)
+          const baseTopK = digitResult[0].topK || []
+          const baseTopGap = baseTopK.length >= 2 ? (baseTopK[0].confidence - baseTopK[1].confidence) : 1
+          const forceRobust = proc.isVirtualDigitBox === true
+          if (forceRobust || digitResult[0].confidence < ROBUST_RETRY_CONFIDENCE_THRESHOLD || baseTopGap < ROBUST_RETRY_MARGIN_THRESHOLD) {
+            digitResult = await recognizeDigitsRobust(data, digitResult[0], { force: forceRobust })
+          }
+        }
+        const digit = digitResult[0].digit
+        const topK = digitResult[0].topK || []
+        const topGap = topK.length >= 2 ? (topK[0].confidence - topK[1].confidence) : 1
+        const expectedDigit = answerKey != null && proc.id < answerKey.length
+          ? answerKey[proc.id]
+          : null
+        const correct = answerKey != null && proc.id < answerKey.length && answerKey[proc.id] != null
+          ? digit === expectedDigit
+          : undefined
+        const autoCheckAllowed =
+          digitResult[0].confidence >= AUTO_CHECK_CONFIDENCE_THRESHOLD &&
+          topGap >= AUTO_CHECK_MARGIN_THRESHOLD
+        const autoXAllowed = autoXAllowedForDigit(proc, digitResult[0], topGap)
+        const lowSignal =
+          digitResult[0].confidence < LOW_CONFIDENCE_THRESHOLD ||
+          topGap < LOW_MARGIN_THRESHOLD
+        const highRiskPreprocessReview = highRiskRightSlotPreprocessReview(proc, digitResult[0])
+        const structuralReview = structuralTwoDigitReview(proc, digitResult[0], expectedDigit)
+        const highRiskMismatchReview = highRiskTwoDigitMismatchReview(proc, digitResult[0], expectedDigit)
+        const confidencePolicyClearance = confidencePolicyClearanceForDigit(
+          proc,
+          digitResult[0],
+          topGap,
+          correct,
+          {
+            highRiskPreprocessReview,
+            structuralReview,
+            highRiskMismatchReview,
+            cameraCapture: !!partialDebug.captureQuality
+          }
+        )
+        const reviewNeeded = confidencePolicyClearance.allowed ? false
+          : correct === true
+            ? !autoCheckAllowed
+            : highRiskPreprocessReview || structuralReview || highRiskMismatchReview ? true
+            : correct === false
+              ? !autoXAllowed
+              : lowSignal
+        predictions.push({
+          id: proc.id,
+          questionNum: proc.questionNum,
+          digitIndex: proc.digitIndex,
+          digit,
+          confidence: digitResult[0].confidence,
+          topK,
+          topGap,
+          reviewNeeded,
+          probs: digitResult[0].probs || [],
+          entropyNorm: digitResult[0].entropyNorm ?? null,
+          robust: digitResult[0].robust === true,
+          robustOverride: digitResult[0].robustOverride || null,
+          variantCount: digitResult[0].variantCount || 1,
+          baseDigit: digitResult[0].baseDigit ?? null,
+          baseConfidence: digitResult[0].baseConfidence ?? null,
+          baseTopK: digitResult[0].baseTopK || null,
+          preprocessDisagreement: digitResult[0].preprocessDisagreement === true,
+          preprocessReviewReason: reviewNeeded && structuralReview
+            ? 'two-digit-leading-zero-structural-review'
+            : reviewNeeded && highRiskMismatchReview
+            ? 'two-digit-mismatch-low-trust-review'
+            : reviewNeeded && highRiskPreprocessReview
+            ? 'right-slot-preprocess-disagreement'
+            : (digitResult[0].preprocessReviewReason || null),
+          confidencePolicyCleared: confidencePolicyClearance.allowed === true,
+          confidencePolicyClearanceReason: confidencePolicyClearance.reason,
+          originalChosenDigitConfidence: chosenDigitProbability(digitResult[0]),
+          highRiskPreprocessReview,
+          structuralReview,
+          preprocessVariants: digitResult[0].preprocessVariants || null,
+          preprocessVoteSummary: digitResult[0].preprocessVoteSummary || null,
+          ...(correct !== undefined && { correct })
+        })
+      }
+    } catch (err) {
+      if (!saveRecognizedScanAsReview()) throw err
+      digitEngineFallbackReview = true
+      const reason = partialDebug.stage === 'running digit model'
+        ? 'digit-engine-inference-failed-review'
+        : 'digit-engine-unavailable-review'
+      console.warn('[ScanGrade] Digit engine unavailable; saving scan for teacher review:', err)
+      predictions = buildDigitEngineFallbackPredictions(reason, err)
     }
     if (forcedFallbackReviewReason) {
       for (const prediction of predictions) {
@@ -5131,7 +5181,9 @@ const runRealOCR = async () => {
     const baseNeedsReview =
       typeof window !== 'undefined' &&
       !!window.__SCANGRADE_DEBUG_PAGE_RECT_ESTIMATE_USED
-    const questionCorrect = buildQuestionCorrect(layout.question_groups, predictions)
+    const questionCorrect = digitEngineFallbackReview
+      ? null
+      : buildQuestionCorrect(layout.question_groups, predictions)
     const questionReview = buildQuestionReviewFlags(layout.question_groups, predictions)
     const answerGroups = buildAnswerGroups(layout.question_groups, predictions, questionCorrect)
     const annotationRegions = buildAnnotationRegions(
@@ -5183,6 +5235,9 @@ const runRealOCR = async () => {
       needsReview: !!forcedFallbackReviewReason || baseNeedsReview || predictions.some((p) => p.reviewNeeded) || groupedStructureNeedsReview,
       baseNeedsReview,
       forcedFallbackReviewReason,
+      digitEngineFallback: digitEngineFallbackReview || partialDebug.digitEngineFallback === true,
+      digitEngineError: partialDebug.digitEngineError || null,
+      reviewOnlyFallback: partialDebug.reviewOnlyFallback === true,
       annotationGeometry,
       annotationRegions,
       layoutSnapshot,
@@ -5256,6 +5311,9 @@ const runRealOCR = async () => {
         knownGrade2Fallback: partialDebug.knownGrade2Fallback,
         printedTitleFallback: partialDebug.printedTitleFallback,
         reviewOnlyFallback: partialDebug.reviewOnlyFallback,
+        forcedFallbackReviewReason,
+        digitEngineFallback: partialDebug.digitEngineFallback === true,
+        digitEngineError: partialDebug.digitEngineError || null,
         activeHomography: partialDebug.activeHomography,
         warpOrientation: window.__SCANGRADE_DEBUG_WARP_ORIENTATION || null,
         imageSize: partialDebug.imageSize,
