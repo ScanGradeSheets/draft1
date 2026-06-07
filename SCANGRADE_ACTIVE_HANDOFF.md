@@ -18,12 +18,13 @@ This is the first file to read when Codex loses chat history, a Codex update hid
 
 ## Current Mission
 
-Use Tony's latest completed worksheet photos to improve ScanGrade's confident-read rate while keeping high-confidence reads trustworthy.
+Use Tony's latest completed worksheet photos and live iPhone scan exports to improve ScanGrade's confident-read rate while keeping high-confidence reads trustworthy.
 
 Current target:
 
-- At least 95% confident reads on the active 9 raw worksheet photos.
-- 100% accuracy on those high-confidence reads.
+- Preserve at least 95% confident reads on the active 9 raw worksheet photos.
+- Preserve 100% accuracy on those high-confidence reads.
+- On rough live camera captures, prefer yellow teacher review over any confident wrong read.
 - Review flags are acceptable for genuinely ambiguous handwriting; confident wrong reads are not acceptable.
 
 Important interpretation:
@@ -79,6 +80,24 @@ scangrade-crops-1780662387762.png
 scangrade-crops-1780662409459.png
 scangrade-crops-1780662449022.png
 scangrade-crops-1780662469187.png
+```
+
+Latest iPhone live debug evidence from Tony's 2026-06-07 iPhone tests lives at:
+
+```text
+/Users/openclaw/Desktop/4/
+```
+
+Tracked handwritten-truth labels for that batch:
+
+```text
+docs/SG3_IPHONE_LIVE_OCR_SCORECARD.json
+```
+
+Private replay artifacts:
+
+```text
+private-evidence/sg3-iphone-live-20260607/
 ```
 
 ## Latest Known Code State
@@ -144,31 +163,39 @@ Mission Control is useful project memory, but its state file was stale after SG 
 
 ## Next Action
 
-The active 9-photo SG3 confidence target is met by the tightened production confidence policy:
+The active 9-photo SG3 confidence target is met by the current source-aware confidence policy:
 
-- Current best replay: `private-evidence/sg3-9-photo-confidence-20260606/candidate-confidence-policy-tight-final-9/`
-- Confident answer coverage: `88/90` (`97.8%`).
-- Confident answer accuracy vs handwriting: `88/88` (`100.0%`).
+- Current best replay: `private-evidence/sg3-9-photo-confidence-20260606/candidate-source-aware-confidence-2-20260607/`
+- Confident answer coverage: `89/90` (`98.9%`).
+- Confident answer accuracy vs handwriting: `89/89` (`100.0%`).
 - Confident wrong answers: `0`.
 - All-answer OCR accuracy vs handwriting: `90/90` (`100.0%`).
-- Digit OCR accuracy vs handwriting: `180/180` (`100.0%`).
+- Target result: pass.
 
-Continue from here by gathering or replaying more real completed worksheets before broadening the confidence policy further. The two remaining yellow-review cases are both OCR-correct but low-signal/no-reason cases:
+The 2026-06-07 live iPhone batch is safer but still conservative:
 
 ```text
-9-Photo-9.jpg Q2 truth=29 predicted=29 key=29 minConf=40.3% minGap=10.6%
-9-Photo-9.jpg Q6 truth=24 predicted=24 key=25 minConf=39.0% minGap=4.9%
+Replay: private-evidence/sg3-iphone-live-20260607/current-build-0959/
+Truth labels: docs/SG3_IPHONE_LIVE_OCR_SCORECARD.json
+Answer OCR truth: 72/90
+Confident answers: 53/90
+Confident answer accuracy: 53/53
+Confident wrong answers: 0
+Review answers: 37
+Digit OCR truth: 159/180
+Confident digit wrong: 0
 ```
 
-Do not re-add `robustOverride` as a confidence-clearance reason. That over-broad candidate reached `90/90` confident answers on this batch, but it trusted fragile low-probability rescue paths and was rejected.
+This is an improvement over the old exported live-build behavior, which scored `68/90` answer OCR truth and made `18` confident wrong answer calls on this same iPhone batch. Do not solve the remaining live-camera under-confidence by broadly loosening confidence gates. The remaining problem is degraded capture/OCR signal quality, not just display policy.
 
 Next useful work:
 
-1. Push/record the confidence-policy commit as the rollback point.
-2. Test the pushed build with any new real worksheet photos Tony provides.
-3. Keep scoring OCR against handwritten truth, not answer-key correctness.
-4. Treat the active 9-photo target as achieved, but do not claim classroom-trustworthy generalization from only nine sheets.
-5. Update this file after every meaningful benchmark, patch, commit, push, or blocker.
+1. Push/record the current source-aware confidence and live OCR safety commit as the rollback point.
+2. Test the pushed build on Tony's phone using build label `2026.06.07-0959-EDT-sg3-live-ocr-safety`.
+3. If live scans still over-review, improve crop quality, preprocessing, or model signal using the replay artifacts before relaxing confidence again.
+4. Keep scoring OCR against handwritten truth, not answer-key correctness.
+5. Treat the clean 9-photo target as achieved, but do not claim classroom-trustworthy generalization from only nine sheets or one rough iPhone batch.
+6. Update this file after every meaningful benchmark, patch, commit, push, or blocker.
 
 ## Running Log
 
@@ -510,3 +537,83 @@ docs/SG_THREAD_HANDOFF_PROTOCOL.md
 SCANGRADE_ACTIVE_HANDOFF.md
 mission-control/state/mission-state.json
 ```
+
+2026-06-07 / SG 3:
+Analyzed Tony's `/Users/openclaw/Desktop/4` live iPhone test batch and added a tracked handwritten-truth scorecard for it. The old exported public build was far too trusting on these rough captures:
+
+- Answer OCR truth: `68/90`.
+- Confident answers: `84/90`.
+- Confident answer accuracy: `66/84`.
+- Confident wrong answers: `18`.
+- Review answers: `6`.
+- Digit OCR truth: `155/180`.
+- Confident digit wrong: `21`.
+
+Added:
+
+```text
+docs/SG3_IPHONE_LIVE_OCR_SCORECARD.json
+scripts/score_live_ocr_debug_truth.mjs
+npm run score:live-ocr-truth
+```
+
+Important interpretation: these live truth labels score what the student wrote, not whether the student answer was mathematically correct.
+
+2026-06-07 / SG 3:
+Patched the app for live-camera safety and a slightly easier capture gate.
+
+Production changes:
+
+- Confidence policy is now source-aware: clean/non-camera upload evidence can clear validated review reasons, while camera captures stay stricter.
+- Tightened two-digit auto-X calibration to `confidence >= 0.92` and `margin >= 0.50`.
+- Review-bound OCR rescues and right-slot expected-edge conflicts cannot become automatic confident Xs.
+- Added narrow right-slot `7` rescue paths and tightened two older left-slot rescue shapes.
+- Eased auto-capture slightly for wrinkled live sheets: portrait hold `450ms -> 375ms`, centered tolerance `0.28 -> 0.30`, span threshold `0.34/0.42 -> 0.32/0.40`, soft perspective width/height `0.66/0.70 -> 0.63/0.67`, and tilt/lean `0.195 -> 0.22`. Focus/marker/page appearance gates were not loosened.
+- Updated visible build label to `2026.06.07-0959-EDT-sg3-live-ocr-safety`.
+
+Current clean 9-photo replay:
+
+```text
+private-evidence/sg3-9-photo-confidence-20260606/candidate-source-aware-confidence-2-20260607/
+```
+
+Score:
+
+- Confident answer coverage: `89/90` (`98.9%`).
+- Confident answer accuracy vs handwriting: `89/89` (`100.0%`).
+- Confident wrong answers: `0`.
+- All-answer OCR accuracy vs handwriting: `90/90` (`100.0%`).
+- Target result: pass.
+
+Current live iPhone replay:
+
+```text
+private-evidence/sg3-iphone-live-20260607/current-build-0959/
+```
+
+Score:
+
+- Answer OCR truth: `72/90`.
+- Confident answers: `53/90`.
+- Confident answer accuracy: `53/53`.
+- Confident wrong answers: `0`.
+- Review answers: `37`.
+- Digit OCR truth: `159/180`.
+- Confident digit wrong: `0`.
+- Guard rejected two unusable captures into all-review rather than trusting them: `1780835794316` and `1780836093776`.
+
+Verification commands run:
+
+```text
+npm run score:sg3-ocr -- --run private-evidence/sg3-9-photo-confidence-20260606/candidate-source-aware-confidence-2-20260607
+SG_REPLAY_URL=https://127.0.0.1:5174 npm run eval:live-ocr-captured -- --out-dir private-evidence/sg3-iphone-live-20260607/current-build-0959 /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-*.json
+npm run score:live-ocr-truth -- private-evidence/sg3-iphone-live-20260607/current-build-0959/*-replay-result.json
+npm run build
+npx playwright test test-app.spec.js test-upload.spec.js test-ocr.spec.js verify-single-pipeline.spec.js test-upload-real.spec.js export-crops-debug.spec.js --config=playwright.config.js
+```
+
+Verification results:
+
+- `npm run build` passed with only the existing chunk-size warning.
+- Focused Playwright suite passed: `11 passed`.
+- Live replay still reports only `72/90` OCR truth, so future live work should focus on crop quality, preprocessing, and model signal before any broader confidence promotion.

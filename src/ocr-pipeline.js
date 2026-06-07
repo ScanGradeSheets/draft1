@@ -1712,7 +1712,9 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
       digitIndex === 0 &&
       result.digit === 2 &&
       strictShape.leftLongest >= 15 &&
-      strictShape.centerX >= 13.1
+      strictShape.centerX >= 13.1 &&
+      strictShape.total <= 80 &&
+      strictShape.bottom <= 28
     ) {
       return { digit: 3, reason: 'left-slot-open-three-shape-rescue' };
     }
@@ -1748,6 +1750,8 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
       strictShape.centerX >= 13.5 &&
       strictShape.rightLongest >= 12 &&
       strictShape.leftLongest <= 6 &&
+      strictShape.topLongest <= 4 &&
+      strictShape.topRight >= 14 &&
       strictShape.total <= 45 &&
       strictShape.bottom <= 8
     ) {
@@ -1813,6 +1817,44 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
     const centerSafeSlot = findVariant(variantResults, 'center-safe-slot');
     const lowSlot = findVariant(variantResults, 'low-slot');
     const rawBorderSlot = findVariant(variantResults, 'raw-border-slot');
+    const wideSlot = findVariant(variantResults, 'wide-slot');
+    const noSideErase = findVariant(variantResults, 'no-side-erase');
+    const cleanupSeven = findVariantAgreement(
+      variantResults,
+      ['strict', 'edge-clean', 'no-rule-cleanup', 'no-component-cleanup'],
+      0.80,
+      0.70
+    );
+    const expectedSlot = findVariant(variantResults, 'expected-slot');
+    if (
+      !postSelectionRescue &&
+      result.digit === 1 &&
+      cleanupSeven?.digit === 7 &&
+      expectedSlot?.result?.digit === 1 &&
+      (expectedSlot.result.confidence || 0) <= 0.60
+    ) {
+      const rescueProbs = averageVariantProbsWeighted(
+        variantResults,
+        ['strict', 'edge-clean', 'no-rule-cleanup', 'no-component-cleanup']
+      ) || cleanupSeven.probs;
+      applyRescue(rescueProbs, 7, 'right-slot-cleanup-seven-rescue');
+    }
+    if (
+      !postSelectionRescue &&
+      result.digit === 1 &&
+      lowSlot?.result?.digit === 7 &&
+      wideSlot?.result?.digit === 7 &&
+      noSideErase?.result?.digit === 7 &&
+      (lowSlot.result.confidence || 0) >= 0.90 &&
+      digitTopGap(lowSlot.result) >= 0.80 &&
+      (wideSlot.result.confidence || 0) >= 0.65 &&
+      digitTopGap(wideSlot.result) >= 0.50 &&
+      (noSideErase.result.confidence || 0) >= 0.90 &&
+      digitTopGap(noSideErase.result) >= 0.80
+    ) {
+      const rescueProbs = averageVariantProbsWeighted(variantResults, ['low-slot', 'wide-slot', 'no-side-erase']) || lowSlot.result.probs;
+      applyRescue(rescueProbs, 7, 'right-slot-low-wide-seven-rescue');
+    }
     if (
       !postSelectionRescue &&
       centerSafeSlot &&
@@ -1847,7 +1889,6 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
     ) {
       applyRescue(rawBorderSlot.result.probs, rawBorderSlot.result.digit, 'right-slot-raw-border-high-rescue');
     }
-    const wideSlot = findVariant(variantResults, 'wide-slot');
     if (
       !postSelectionRescue &&
       wideSlot &&

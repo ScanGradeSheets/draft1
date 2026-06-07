@@ -785,6 +785,28 @@ for (const file of files) {
     const TWO_DIGIT_AUTO_X_MARGIN_THRESHOLD = 0.20;
     const TWO_DIGIT_RIGHT_SLOT_AUTO_X_CONFIDENCE_THRESHOLD = 0.92;
     const TWO_DIGIT_RIGHT_SLOT_AUTO_X_MARGIN_THRESHOLD = 0.28;
+    const TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD = 0.92;
+    const TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD = 0.50;
+    const OCR_CONFIDENCE_CLEAR_REASONS = new Set([
+      'box-safe-default',
+      'left-slot-low-three-rescue',
+      'left-slot-open-three-shape-rescue',
+      'left-slot-sparse-four-shape-from-one-rescue',
+      'preprocess-weighted-vote',
+      'right-slot-center-low-agreement-rescue',
+      'right-slot-cleanup-four-rescue',
+      'right-slot-eight-shape-from-seven-rescue',
+      'right-slot-expected-edge-default',
+      'right-slot-five-shape-from-three-rescue',
+      'right-slot-gentle-seven-rescue',
+      'right-slot-preprocess-disagreement',
+      'right-slot-raw-border-high-rescue',
+      'right-slot-runnerup-four-shape-from-one-rescue',
+      'right-slot-two-shape-from-nine-rescue',
+      'right-slot-two-shape-from-one-rescue',
+      'right-slot-two-shape-from-seven-rescue',
+      'right-slot-wide-raw-agreement-rescue'
+    ]);
 
     const digitTopGap = (result) => {
       const topK = result?.topK || [];
@@ -793,9 +815,58 @@ for (const file of files) {
         : 1;
     };
 
+    const preprocessSelectionReason = (result) =>
+      result?.preprocessReviewReason || result?.robustOverride || null;
+
+    const preprocessReasonMatches = (result, reason) =>
+      result?.preprocessReviewReason === reason || result?.robustOverride === reason;
+
+    const isReviewBoundOcrRescueReason = (reason) =>
+      typeof reason === 'string' &&
+      (reason.includes('rescue') || reason === 'box-safe-low-margin-override');
+
+    const preprocessVariantByName = (result, name) => {
+      const variants = Array.isArray(result?.preprocessVariants) ? result.preprocessVariants : [];
+      return variants.find((variant) => variant?.name === name) || null;
+    };
+
+    const rightSlotExpectedEdgeConflictReview = (proc, result) => {
+      if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 1 || !result) return false;
+      if (!preprocessReasonMatches(result, 'right-slot-expected-edge-default')) return false;
+      const digit = Number(result.digit);
+      const voteTop = result.preprocessVoteSummary?.top || null;
+      const voteMargin = Number(result.preprocessVoteSummary?.margin) || 0;
+      if (
+        voteTop &&
+        Number(voteTop.digit) !== digit &&
+        (Number(voteTop.share) || 0) >= 0.70 &&
+        voteMargin >= 0.35
+      ) {
+        return true;
+      }
+      const rawBorder = preprocessVariantByName(result, 'raw-border-slot');
+      return !!(
+        rawBorder &&
+        Number(rawBorder.digit) !== digit &&
+        (Number(rawBorder.confidence) || 0) >= 0.70 &&
+        (Number(rawBorder.topGap) || 0) >= 0.55
+      );
+    };
+
+    const chosenDigitProbability = (result) => {
+      const digit = Number(result?.digit);
+      if (!Number.isInteger(digit) || digit < 0 || digit > 9) return Number(result?.confidence) || 0;
+      const probs = Array.isArray(result?.probs) || ArrayBuffer.isView(result?.probs) ? result.probs : null;
+      const probability = Number(probs?.[digit]);
+      return Number.isFinite(probability) && probability > 0
+        ? probability
+        : (Number(result?.confidence) || 0);
+    };
+
     const highRiskRightSlotPreprocessReview = (proc, result) => {
       if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 1 || !result) return false;
       const digit = Number(result.digit);
+      if (rightSlotExpectedEdgeConflictReview(proc, result)) return true;
       if (digit !== 1 && digit !== 9) return false;
       const variants = Array.isArray(result.preprocessVariants) ? result.preprocessVariants : [];
       if (variants.length === 0) return false;
@@ -821,6 +892,8 @@ for (const file of files) {
     const autoXAllowedForDigit = (proc, result, topGap) => {
       const confidence = Number(result?.confidence) || 0;
       const gap = Number.isFinite(topGap) ? topGap : 0;
+      const reason = preprocessSelectionReason(result);
+      if (isReviewBoundOcrRescueReason(reason) || rightSlotExpectedEdgeConflictReview(proc, result)) return false;
       if (!proc?.isVirtualDigitBox) {
         return confidence >= AUTO_X_CONFIDENCE_THRESHOLD && gap >= AUTO_X_MARGIN_THRESHOLD;
       }
@@ -853,6 +926,70 @@ for (const file of files) {
       const digit = Number(result.digit);
       const expected = Number(expectedDigit);
       return digit === 0 && Number.isFinite(expected) && expected !== 0;
+    };
+
+    const highRiskTwoDigitMismatchReview = (proc, result, expectedDigit) => {
+      if (!proc?.isVirtualDigitBox || !result) return false;
+      const digit = Number(result.digit);
+      const expected = Number(expectedDigit);
+      if (!Number.isFinite(digit) || !Number.isFinite(expected)) return false;
+      if (digit === expected) return false;
+      const reason = preprocessSelectionReason(result);
+      if (isReviewBoundOcrRescueReason(reason) || rightSlotExpectedEdgeConflictReview(proc, result)) return true;
+      const rawConfidence = chosenDigitProbability(result);
+      const gap = digitTopGap(result);
+      const isRightSlot = Number(proc.digitIndex) === 1;
+      if (isRightSlot && preprocessReasonMatches(result, 'right-slot-expected-edge-default')) {
+        return rawConfidence < 0.97 || gap < 0.75;
+      }
+      if (isRightSlot) return false;
+      return expected === 3 && digit === 2;
+    };
+
+    const confidencePolicyClearanceForDigit = (proc, result, topGap, correct, reviewSignals) => {
+      const reviewReason = reviewSignals?.structuralReview
+        ? 'two-digit-leading-zero-structural-review'
+        : reviewSignals?.highRiskMismatchReview
+          ? 'two-digit-mismatch-low-trust-review'
+          : reviewSignals?.highRiskPreprocessReview
+            ? 'right-slot-preprocess-disagreement'
+            : (result?.preprocessReviewReason || null);
+      const selectionReason = preprocessSelectionReason(result);
+      const cameraCapture = reviewSignals?.cameraCapture === true;
+      const reason = !cameraCapture && selectionReason
+        ? selectionReason
+        : (reviewReason || selectionReason);
+      const rawConfidence = chosenDigitProbability(result);
+      const gap = Number.isFinite(topGap) ? topGap : 0;
+      if (
+        reason &&
+        OCR_CONFIDENCE_CLEAR_REASONS.has(reason) &&
+        !rightSlotExpectedEdgeConflictReview(proc, result) &&
+        (
+          correct === true ||
+          !cameraCapture ||
+          (
+            !isReviewBoundOcrRescueReason(reason) &&
+            reason !== 'right-slot-expected-edge-default' &&
+            rawConfidence >= 0.88 &&
+            gap >= 0.35
+          )
+        )
+      ) {
+        return { allowed: true, reason: `validated-review-reason:${reason}` };
+      }
+      const isTwoDigitMismatch = proc?.isVirtualDigitBox === true && correct === false;
+      if (
+        isTwoDigitMismatch &&
+        !reviewReason &&
+        !isReviewBoundOcrRescueReason(selectionReason) &&
+        !rightSlotExpectedEdgeConflictReview(proc, result) &&
+        rawConfidence >= TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD &&
+        gap >= TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD
+      ) {
+        return { allowed: true, reason: 'calibrated-two-digit-auto-x' };
+      }
+      return { allowed: false, reason: null };
     };
     const layoutPath = debug.layoutId
       ? `/layouts/${debug.layoutId}.json`
@@ -952,8 +1089,7 @@ for (const file of files) {
         tensor.tensorVariants.length > 1;
       if (hasPreprocessVariants) {
         [prediction] = await recognizeDigitsWithPreprocessVariants(tensor.tensorVariants, null, {
-          digitIndex: tensor.digitIndex,
-          forceReviewOnDisagreement: false
+          digitIndex: tensor.digitIndex
         });
       } else {
         [prediction] = await recognizeDigits(tensor.tensor);
@@ -977,12 +1113,26 @@ for (const file of files) {
         robustTopGap < LOW_MARGIN_THRESHOLD;
       const highRiskPreprocessReview = highRiskRightSlotPreprocessReview(tensor, prediction);
       const structuralReview = structuralTwoDigitReview(tensor, prediction, expected);
-      const reviewNeeded = correct === true
-        ? !autoCheckAllowed
-        : highRiskPreprocessReview || structuralReview ? true
-        : correct === false
-          ? !autoXAllowed
-          : lowSignal;
+      const highRiskMismatchReview = highRiskTwoDigitMismatchReview(tensor, prediction, expected);
+      const confidencePolicyClearance = confidencePolicyClearanceForDigit(
+        tensor,
+        prediction,
+        robustTopGap,
+        correct,
+        {
+          highRiskPreprocessReview,
+          structuralReview,
+          highRiskMismatchReview,
+          cameraCapture: !!debug.captureQuality
+        }
+      );
+      const reviewNeeded = confidencePolicyClearance.allowed ? false
+        : correct === true
+          ? !autoCheckAllowed
+          : highRiskPreprocessReview || structuralReview || highRiskMismatchReview ? true
+          : correct === false
+            ? !autoXAllowed
+            : lowSignal;
       predictions.push({
         id: tensor.id ?? predictions.length,
         questionNum: tensor.questionNum,
@@ -999,11 +1149,17 @@ for (const file of files) {
         preprocessDisagreement: prediction.preprocessDisagreement === true,
         preprocessReviewReason: reviewNeeded && structuralReview
           ? 'two-digit-leading-zero-structural-review'
+          : reviewNeeded && highRiskMismatchReview
+            ? 'two-digit-mismatch-low-trust-review'
           : reviewNeeded && highRiskPreprocessReview
             ? 'right-slot-preprocess-disagreement'
             : (prediction.preprocessReviewReason || null),
+        confidencePolicyCleared: confidencePolicyClearance.allowed === true,
+        confidencePolicyClearanceReason: confidencePolicyClearance.reason,
+        originalChosenDigitConfidence: chosenDigitProbability(prediction),
         highRiskPreprocessReview,
         structuralReview,
+        highRiskMismatchReview,
         preprocessVariants: prediction.preprocessVariants || null,
         preprocessVoteSummary: prediction.preprocessVoteSummary || null,
         correct,
@@ -1047,6 +1203,21 @@ for (const file of files) {
   const guard = result.ok
     ? evaluateCaptureGuards(result.questionGroups, result.tensorData, result.predictions, debug.answerKey)
     : null;
+  if (guard?.wouldReject === true) {
+    const forcedReason = guard.cropFailure
+      ? 'two-digit-crop-quality-fallback-review'
+      : guard.recognitionFailure
+        ? 'two-digit-recognition-quality-fallback-review'
+        : 'two-digit-unusable-quality-fallback-review';
+    for (const prediction of result.predictions) {
+      prediction.reviewNeeded = true;
+      prediction.forcedReviewReason = forcedReason;
+      prediction.preprocessReviewReason = prediction.preprocessReviewReason || forcedReason;
+    }
+    if (Array.isArray(guard.questionReview)) {
+      guard.questionReview.fill(true);
+    }
+  }
   const correct = preds.reduce((sum, pred, idx) => sum + Number(pred === debug.answerKey[idx]), 0);
   const reviewCells = result.predictions.reduce((sum, prediction) => sum + Number(prediction.reviewNeeded), 0);
   const groupRows = [];

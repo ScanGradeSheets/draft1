@@ -1,0 +1,21 @@
+{
+  "batch": "sg3-iphone-live-20260607",
+  "source_dir": "/Users/openclaw/Desktop/4",
+  "scoring_rule": "Score OCR against the answer visibly written by the student, not against the worksheet answer key.",
+  "notes": [
+    "These are the nine live iPhone scans Tony supplied after the SG3 confidence-policy build.",
+    "The screenshots show real app output; several mathematically wrong student answers are intentionally treated as OCR-correct when the app reads what was written.",
+    "The 1780835922655 question 6 truth is inferred from the visible popup and crop as 10."
+  ],
+  "truth_by_debug_id": {
+    "1780835744659": [37, 29, 33, 28, 44, 24, 37, 38, 41, 15],
+    "1780835794316": [37, 29, 33, 38, 44, 24, 37, 38, 41, 15],
+    "1780835835982": [17, 16, 13, 12, 13, 13, 12, 12, 16, 12],
+    "1780835883256": [15, 15, 17, 13, 19, 11, 12, 17, 13, 19],
+    "1780835922655": [17, 15, 11, 12, 12, 10, 12, 12, 16, 11],
+    "1780835950761": [17, 15, 12, 12, 12, 12, 12, 12, 14, 11],
+    "1780836030293": [15, 15, 17, 13, 19, 11, 12, 17, 13, 19],
+    "1780836093776": [37, 29, 29, 28, 44, 24, 37, 38, 41, 15],
+    "1780836133924": [15, 15, 17, 13, 19, 11, 12, 17, 13, 19]
+  }
+}

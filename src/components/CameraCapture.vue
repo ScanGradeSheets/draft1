@@ -465,13 +465,14 @@ const TWO_DIGIT_AUTO_X_CONFIDENCE_THRESHOLD = 0.88
 const TWO_DIGIT_AUTO_X_MARGIN_THRESHOLD = 0.20
 const TWO_DIGIT_RIGHT_SLOT_AUTO_X_CONFIDENCE_THRESHOLD = 0.92
 const TWO_DIGIT_RIGHT_SLOT_AUTO_X_MARGIN_THRESHOLD = 0.28
-const TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD = 0.74
-const TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD = 0.28
+const TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD = 0.92
+const TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD = 0.50
 const OCR_CONFIDENCE_CLEAR_REASONS = Object.freeze(new Set([
   'box-safe-default',
   'left-slot-low-three-rescue',
   'left-slot-open-three-shape-rescue',
   'left-slot-sparse-four-shape-from-one-rescue',
+  'preprocess-weighted-vote',
   'right-slot-center-low-agreement-rescue',
   'right-slot-cleanup-four-rescue',
   'right-slot-eight-shape-from-seven-rescue',
@@ -492,7 +493,7 @@ const DEBUG_REAL_WORKSHEET_EXPECTED = Object.freeze([8, 4, 1, 9, 2, 7, 0, 5, 3, 
 
 // Auto-capture: layered page-present gate (variance pre-filter + contour) + stability hold
 const STABILITY_HOLD_MS = 1500
-const STABILITY_HOLD_MS_PORTRAIT = 450
+const STABILITY_HOLD_MS_PORTRAIT = 375
 const CHECK_INTERVAL_MS = 300
 const SAMPLE_W = 48
 const SAMPLE_H = 36
@@ -530,9 +531,64 @@ function hasDebugQueryFlag(...names) {
   })
 }
 
+function preprocessSelectionReason(result) {
+  return result?.preprocessReviewReason || result?.robustOverride || null
+}
+
+function preprocessReasonMatches(result, reason) {
+  return result?.preprocessReviewReason === reason || result?.robustOverride === reason
+}
+
+function isReviewBoundOcrRescueReason(reason) {
+  if (typeof reason !== 'string' || !reason) return false
+  return reason.includes('rescue') || reason === 'box-safe-low-margin-override'
+}
+
+function preprocessVariantByName(result, name) {
+  const variants = Array.isArray(result?.preprocessVariants) ? result.preprocessVariants : []
+  return variants.find((variant) => variant?.name === name) || null
+}
+
+function preprocessTopGap(result) {
+  const topK = Array.isArray(result?.topK) ? result.topK : []
+  return topK.length >= 2
+    ? (Number(topK[0]?.confidence) || 0) - (Number(topK[1]?.confidence) || 0)
+    : 1
+}
+
+function rightSlotExpectedEdgeConflictReview(proc, result) {
+  if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 1 || !result) return false
+  if (!preprocessReasonMatches(result, 'right-slot-expected-edge-default')) return false
+
+  const digit = Number(result.digit)
+  const voteTop = result.preprocessVoteSummary?.top || null
+  const voteMargin = Number(result.preprocessVoteSummary?.margin) || 0
+  if (
+    voteTop &&
+    Number(voteTop.digit) !== digit &&
+    (Number(voteTop.share) || 0) >= 0.70 &&
+    voteMargin >= 0.35
+  ) {
+    return true
+  }
+
+  const rawBorder = preprocessVariantByName(result, 'raw-border-slot')
+  if (
+    rawBorder &&
+    Number(rawBorder.digit) !== digit &&
+    (Number(rawBorder.confidence) || 0) >= 0.70 &&
+    (Number(rawBorder.topGap) || 0) >= 0.55
+  ) {
+    return true
+  }
+
+  return false
+}
+
 function highRiskRightSlotPreprocessReview(proc, result) {
   if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 1 || !result) return false
   const digit = Number(result.digit)
+  if (rightSlotExpectedEdgeConflictReview(proc, result)) return true
   if (digit !== 1 && digit !== 9) return false
   const variants = Array.isArray(result.preprocessVariants) ? result.preprocessVariants : []
   if (variants.length === 0) return false
@@ -560,6 +616,8 @@ function highRiskRightSlotPreprocessReview(proc, result) {
 function autoXAllowedForDigit(proc, result, topGap) {
   const confidence = Number(result?.confidence) || 0
   const gap = Number.isFinite(topGap) ? topGap : 0
+  const reason = preprocessSelectionReason(result)
+  if (isReviewBoundOcrRescueReason(reason) || rightSlotExpectedEdgeConflictReview(proc, result)) return false
   if (!proc?.isVirtualDigitBox) {
     return confidence >= AUTO_X_CONFIDENCE_THRESHOLD && gap >= AUTO_X_MARGIN_THRESHOLD
   }
@@ -600,26 +658,47 @@ function chosenDigitProbability(result) {
 }
 
 function confidencePolicyClearanceForDigit(proc, result, topGap, correct, reviewSignals) {
-  const reason = reviewSignals?.structuralReview
+  const reviewReason = reviewSignals?.structuralReview
     ? 'two-digit-leading-zero-structural-review'
     : reviewSignals?.highRiskMismatchReview
-    ? 'left-slot-2-vs-3-mismatch-review'
-    : reviewSignals?.highRiskPreprocessReview
-    ? 'right-slot-preprocess-disagreement'
-    : (result?.preprocessReviewReason || null)
+      ? 'two-digit-mismatch-low-trust-review'
+      : reviewSignals?.highRiskPreprocessReview
+        ? 'right-slot-preprocess-disagreement'
+        : (result?.preprocessReviewReason || null)
+  const selectionReason = preprocessSelectionReason(result)
+  const cameraCapture = reviewSignals?.cameraCapture === true
+  const reason = !cameraCapture && selectionReason
+    ? selectionReason
+    : (reviewReason || selectionReason)
+  const rawConfidence = chosenDigitProbability(result)
+  const gap = Number.isFinite(topGap) ? topGap : 0
 
-  if (reason && OCR_CONFIDENCE_CLEAR_REASONS.has(reason)) {
+  if (
+    reason &&
+    OCR_CONFIDENCE_CLEAR_REASONS.has(reason) &&
+    !rightSlotExpectedEdgeConflictReview(proc, result) &&
+    (
+      correct === true ||
+      !cameraCapture ||
+      (
+        !isReviewBoundOcrRescueReason(reason) &&
+        reason !== 'right-slot-expected-edge-default' &&
+        rawConfidence >= 0.88 &&
+        gap >= 0.35
+      )
+    )
+  ) {
     return { allowed: true, reason: `validated-review-reason:${reason}` }
   }
 
   const isTwoDigitMismatch =
     proc?.isVirtualDigitBox === true &&
     correct === false
-  const rawConfidence = chosenDigitProbability(result)
-  const gap = Number.isFinite(topGap) ? topGap : 0
   if (
     isTwoDigitMismatch &&
-    !reason &&
+    !reviewReason &&
+    !isReviewBoundOcrRescueReason(selectionReason) &&
+    !rightSlotExpectedEdgeConflictReview(proc, result) &&
     rawConfidence >= TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD &&
     gap >= TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD
   ) {
@@ -637,10 +716,22 @@ function structuralTwoDigitReview(proc, result, expectedDigit) {
 }
 
 function highRiskTwoDigitMismatchReview(proc, result, expectedDigit) {
-  if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 0 || !result) return false
+  if (!proc?.isVirtualDigitBox || !result) return false
   const digit = Number(result.digit)
   const expected = Number(expectedDigit)
   if (!Number.isFinite(digit) || !Number.isFinite(expected)) return false
+  if (digit === expected) return false
+
+  const reason = preprocessSelectionReason(result)
+  if (isReviewBoundOcrRescueReason(reason) || rightSlotExpectedEdgeConflictReview(proc, result)) return true
+
+  const rawConfidence = chosenDigitProbability(result)
+  const gap = preprocessTopGap(result)
+  const isRightSlot = Number(proc.digitIndex) === 1
+  if (isRightSlot && preprocessReasonMatches(result, 'right-slot-expected-edge-default')) {
+    return rawConfidence < 0.97 || gap < 0.75
+  }
+  if (isRightSlot) return false
   return expected === 3 && digit === 2
 }
 
@@ -1562,9 +1653,9 @@ function analyzeStudentSheetInPortraitCrop(canvas) {
     const centerX = markers.reduce((sum, marker) => sum + marker.x, 0) / markers.length
     const centerY = markers.reduce((sum, marker) => sum + marker.y, 0) / markers.length
     const centered =
-      Math.abs(centerX - w / 2) <= w * 0.28 &&
-      Math.abs(centerY - h / 2) <= h * 0.28
-    const spansEnough = spanX >= w * 0.34 && spanY >= h * 0.42
+      Math.abs(centerX - w / 2) <= w * 0.30 &&
+      Math.abs(centerY - h / 2) <= h * 0.30
+    const spansEnough = spanX >= w * 0.32 && spanY >= h * 0.40
     const cornersLookPlaced =
       byId.tl.x < w * 0.43 && byId.tl.y < h * 0.35 &&
       byId.tr.x > w * 0.57 && byId.tr.y < h * 0.35 &&
@@ -1584,12 +1675,12 @@ function analyzeStudentSheetInPortraitCrop(canvas) {
       leftLean <= 0.16 &&
       rightLean <= 0.16
     const softPerspectiveOkay =
-      widthBalance >= 0.66 &&
-      heightBalance >= 0.70 &&
-      topTilt <= 0.195 &&
-      bottomTilt <= 0.195 &&
-      leftLean <= 0.195 &&
-      rightLean <= 0.195
+      widthBalance >= 0.63 &&
+      heightBalance >= 0.67 &&
+      topTilt <= 0.22 &&
+      bottomTilt <= 0.22 &&
+      leftLean <= 0.22 &&
+      rightLean <= 0.22
     const appearance = validateStudentSheetAppearance(canvas, markers)
     const ok = centered && spansEnough && cornersLookPlaced && (perspectiveOkay || softPerspectiveOkay) && appearance.ok
     let status = 'Hold steady'
@@ -4822,7 +4913,12 @@ const runRealOCR = async () => {
         digitResult[0],
         topGap,
         correct,
-        { highRiskPreprocessReview, structuralReview, highRiskMismatchReview }
+        {
+          highRiskPreprocessReview,
+          structuralReview,
+          highRiskMismatchReview,
+          cameraCapture: !!partialDebug.captureQuality
+        }
       )
       const reviewNeeded = confidencePolicyClearance.allowed ? false
         : correct === true
@@ -4852,7 +4948,7 @@ const runRealOCR = async () => {
         preprocessReviewReason: reviewNeeded && structuralReview
           ? 'two-digit-leading-zero-structural-review'
           : reviewNeeded && highRiskMismatchReview
-          ? 'left-slot-2-vs-3-mismatch-review'
+          ? 'two-digit-mismatch-low-trust-review'
           : reviewNeeded && highRiskPreprocessReview
           ? 'right-slot-preprocess-disagreement'
           : (digitResult[0].preprocessReviewReason || null),

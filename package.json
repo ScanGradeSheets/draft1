@@ -28,6 +28,7 @@
     "inspect:uploaded-worksheet": "node scripts/inspect_uploaded_worksheet.mjs",
     "eval:live-ocr-debug": ".venv/bin/python3.13 scripts/replay_live_ocr_debug.py",
     "eval:live-ocr-captured": "node scripts/replay_live_ocr_captured.mjs",
+    "score:live-ocr-truth": "node scripts/score_live_ocr_debug_truth.mjs",
     "import:live-ocr-tensors": "node scripts/import_live_ocr_tensors.mjs",
     "dataset:student-samples": "node scripts/build_student_sample_dataset.mjs",
     "export:labeled-crops": "node scripts/export_labeled_crops.mjs",
