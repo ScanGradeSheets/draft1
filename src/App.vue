@@ -340,7 +340,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.07-1354-EDT-sg3-burst-capture'
+const APP_BUILD_LABEL = '2026.06.07-1525-EDT-sg3-sharp-auto-capture'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices

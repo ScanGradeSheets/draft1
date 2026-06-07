@@ -1,10 +1,10 @@
 {
   "current_mission": "Use Tony's latest real worksheet photos to improve confident two-digit OCR reads without allowing confident wrong reads.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
-  "next_best_move": "Codex/Tony: push and test build 2026.06.07-1354-EDT-sg3-burst-capture on live phone scans. The clean 9-photo target is still met, and the current live replay remains safe with 0 confident wrong reads; this build tries to improve live scan quality by choosing the clearest frame from a 5-frame auto-capture burst before OCR.",
-  "plain_english_status": "The clean 9-photo benchmark is solved for this evidence set: the current policy reads all 90 handwritten answers correctly and auto-clears 89/90 answers with 89/89 confident accuracy and 0 confident wrong reads. Tony's 2026-06-07 live iPhone batch exposed a harder problem: the old public build was overconfident, with 18 confident wrong answers. The pushed live-safety build improved OCR truth to 72/90 and kept confident reads at 53/53 with 0 confident wrong answers, but rough live captures are still too conservative at 53/90 confident. The current local candidate, build 2026.06.07-1354-EDT-sg3-burst-capture, does not loosen confidence. It improves the capture step by picking the best of 5 auto-capture frames, while preserving the existing final focus threshold and sheet checks. Still-image replay cannot prove the burst benefit, so the next proof has to be a real phone scan.",
+  "next_best_move": "Codex/Tony: push and test build 2026.06.07-1525-EDT-sg3-sharp-auto-capture on live phone scans. The newest burst-build phone batch showed that soft auto-captured frames were still getting submitted; this build keeps the easy pre-capture gate but waits for a sharper selected frame before OCR.",
+  "plain_english_status": "The clean 9-photo benchmark is solved for this evidence set: the current policy reads all 90 handwritten answers correctly and auto-clears 89/90 answers with 89/89 confident accuracy and 0 confident wrong reads. Tony's 2026-06-07 live iPhone batches exposed a harder classroom problem: rough live captures are safe but still too review-heavy. The first burst build worked mechanically, but the newest live batch showed the bad scans clustered around selected-frame focus scores of 420-510. Build 2026.06.07-1525-EDT-sg3-sharp-auto-capture keeps the eased pre-capture gate, extends the burst window, and requires an auto-selected frame to be sharper before grading. This should prevent the app from submitting half-focused scans; remaining misses on sharp scans are still an OCR/model-preprocessing problem.",
   "needs_tony": [
-    "Test build 2026.06.07-1354-EDT-sg3-burst-capture after it is pushed, and send any new debug JSON/crop export with the build label if live scans still over-review.",
+    "Test build 2026.06.07-1525-EDT-sg3-sharp-auto-capture after it is pushed, and send any new debug JSON/crop export before making manual corrections if live scans still over-review.",
     "For any sheet that fails in the live app, also send one normal camera photo of the same physical page if convenient.",
     "Keep using normal student pencil/spacing; imperfect handwriting is the useful test.",
     "If possible, note whether a scan was from the live app, a phone photo, or an iPad photo."
@@ -12,7 +12,7 @@
   "blocked_or_risky": [
     "The active 9-photo target is met, but nine photos is still too narrow to claim classroom-trustworthy generalization.",
     "The latest rough live iPhone still replay is safe but conservative: 53/90 confident answers, 53/53 confident accuracy, and 0 confident wrong reads.",
-    "The burst-capture candidate is verified against still replays for no regression, but its benefit can only be proven with new live camera scans.",
+    "The sharp-auto-capture candidate is verified against still replays for no OCR regression, but its benefit can only be proven with new live camera scans.",
     "OCR/capture/homography files contain large tracked modifications and should not be changed or pushed casually.",
     "Debug crop export specs create local artifacts when run, so only run them intentionally.",
     "Codex thread history has disappeared after updates more than once, so current work must be recorded in SCANGRADE_ACTIVE_HANDOFF.md."
@@ -25,8 +25,8 @@
           "title": "Harden live iPhone OCR",
           "type": "validation",
           "owner": "Codex",
-          "summary": "Current local candidate is build 2026.06.07-1354-EDT-sg3-burst-capture with a 5-frame auto-capture selector.",
-          "detail": "The clean 9-photo target is still met at 89/90 confident with 0 confident wrong reads. The latest live still replay remains 53/90 confident, 53/53 confident accuracy, and 72/90 OCR-correct answers because replay starts after capture. Test the burst build live before changing confidence gates again."
+          "summary": "Current local candidate is build 2026.06.07-1525-EDT-sg3-sharp-auto-capture with a longer burst and stricter final auto sharpness gate.",
+          "detail": "The clean 9-photo target is still met at 89/90 confident with 0 confident wrong reads. The latest live still replay remains 53/90 confident, 53/53 confident accuracy, and 72/90 OCR-correct answers because replay starts after capture. Tony's newest live burst batch showed that half-focused auto frames were still being accepted, so test the sharp-auto build live before changing confidence gates again."
         }
       ]
     },
@@ -50,7 +50,7 @@
           "type": "app",
           "owner": "Codex",
           "summary": "Use npm run score:sg3-ocr and npm run score:live-ocr-truth after every OCR/review change.",
-          "detail": "The clean benchmark is private-evidence/sg3-9-photo-confidence-20260606/burst-capture-1354. The live still benchmark is private-evidence/sg3-iphone-live-20260607/burst-capture-1354. A patch only counts as progress if confident wrong answers stay at 0 and handwritten-truth accuracy or safe confident coverage improves on new evidence."
+          "detail": "The clean benchmark is private-evidence/sg3-9-photo-confidence-20260606/sharp-auto-capture-1525. The live still benchmark is private-evidence/sg3-iphone-live-20260607/sharp-auto-capture-1525. A patch only counts as progress if confident wrong answers stay at 0 and handwritten-truth accuracy or safe confident coverage improves on new evidence."
         }
       ]
     },
@@ -81,6 +81,13 @@
     {
       "column": "Done",
       "cards": [
+        {
+          "title": "SG3 sharp auto-capture candidate verified",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "Build 2026.06.07-1525-EDT-sg3-sharp-auto-capture keeps the easy sheet-finding gate but waits for a sharper auto-selected frame before OCR.",
+          "detail": "Tony's newest burst-build live batch showed low-focus captures averaging far fewer confident reads. This candidate extends auto burst capture to 8 frames, adds an auto-only final focus threshold of 650, keeps manual capture at 340, and preserves OCR safety. Verification: npm run build passed; focused Playwright suite passed 5/5; clean 9-photo truth score stayed 89/90 confident, 89/89 confident accuracy, 0 confident wrong, and 90/90 all-answer OCR truth; older live iPhone replay stayed safe at 53/90 confident, 53/53 confident accuracy, and 0 confident wrong."
+        },
         {
           "title": "SG3 burst capture candidate verified",
           "type": "validation",

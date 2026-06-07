@@ -503,8 +503,9 @@ const VARIANCE_PREFILTER_MIN = 50
 const VARIANCE_PREFILTER_MIN_PORTRAIT = 8
 const FOCUS_SCORE_MIN_PORTRAIT = 340
 const AUTO_GATE_FOCUS_SCORE_MIN_PORTRAIT = 300
-const AUTO_CAPTURE_BURST_FRAMES = 5
-const AUTO_CAPTURE_BURST_DELAY_MS = 85
+const AUTO_CAPTURE_FINAL_FOCUS_SCORE_MIN_PORTRAIT = 650
+const AUTO_CAPTURE_BURST_FRAMES = 8
+const AUTO_CAPTURE_BURST_DELAY_MS = 110
 // Contour gate: full-frame so sheet can be anywhere in viewfinder
 const CONTOUR_W = 160
 const CONTOUR_H = 120
@@ -2095,6 +2096,9 @@ async function doCapture({ source = 'manual' } = {}) {
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
+    const focusThreshold = source === 'auto'
+      ? AUTO_CAPTURE_FINAL_FOCUS_SCORE_MIN_PORTRAIT
+      : FOCUS_SCORE_MIN_PORTRAIT
     const captureQuality = {
       cropW,
       cropH,
@@ -2105,8 +2109,10 @@ async function doCapture({ source = 'manual' } = {}) {
       lumaMean: stats.mean,
       lumaVariance: stats.variance,
       focusScore,
-      focusThreshold: FOCUS_SCORE_MIN_PORTRAIT,
+      focusThreshold,
+      manualFocusThreshold: FOCUS_SCORE_MIN_PORTRAIT,
       autoFocusThreshold: AUTO_GATE_FOCUS_SCORE_MIN_PORTRAIT,
+      autoFinalFocusThreshold: AUTO_CAPTURE_FINAL_FOCUS_SCORE_MIN_PORTRAIT,
       sheetOk: sheetCheck.ok === true,
       sheetStatus: sheetCheck.status || null,
       burstFrameCount,
@@ -2116,7 +2122,7 @@ async function doCapture({ source = 'manual' } = {}) {
       source,
       capturedAt: new Date().toISOString()
     }
-    if (focusScore < FOCUS_SCORE_MIN_PORTRAIT) {
+    if (focusScore < focusThreshold) {
       lastCaptureQuality.value = captureQuality
       studentAutoStatus.value = 'Hold still while camera focuses'
       error.value = source === 'manual'

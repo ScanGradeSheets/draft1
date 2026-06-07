@@ -100,6 +100,14 @@ Private replay artifacts:
 private-evidence/sg3-iphone-live-20260607/
 ```
 
+Newest live iPhone burst-capture evidence from Tony's 2026-06-07 tests lives at:
+
+```text
+/Users/openclaw/Desktop/5/
+```
+
+This batch was captured on public build `2026.06.07-1354-EDT-sg3-burst-capture`. It contains 10 debug JSONs, 10 crop previews, and 11 screenshots. One screenshot (`IMG_8803.PNG`, 3:11 PM) appears to have no matching debug JSON. Tony manually corrected some cells in one debug file; those predictions preserved `originalDigit`, so the batch is still useful for capture-quality analysis.
+
 ## Latest Known Code State
 
 Current branch: `autobuild/safe-20260223`
@@ -123,6 +131,13 @@ Current burst-capture candidate for this pass:
 ```text
 Build label: 2026.06.07-1354-EDT-sg3-burst-capture
 Change: Student Mode auto-capture now samples a 5-frame burst after the gate fires, scores frame focus/contrast/marker sanity, and sends the best frame to OCR. The pre-capture focus gate was eased from 340 to 300, but the final chosen frame still has to pass the existing 340 focus threshold.
+```
+
+Current sharp auto-capture candidate for this pass:
+
+```text
+Build label: 2026.06.07-1525-EDT-sg3-sharp-auto-capture
+Change: Student Mode auto-capture still uses the eased pre-capture focus gate of 300, but now samples an 8-frame burst over a longer autofocus window and requires the selected auto frame to reach a final focus score of 650 before OCR. Manual capture keeps the older 340 final focus threshold.
 ```
 
 ## Current Repo Notes
@@ -187,8 +202,8 @@ This is still an improvement over the old exported live-build behavior, which sc
 
 Next useful work:
 
-1. Test build `2026.06.07-1354-EDT-sg3-burst-capture` on Tony's phone using the QR workflow and compare auto-capture ease plus confident/read accuracy.
-2. If live scans still over-review after burst capture, improve preprocessing/model signal using the replay artifacts before relaxing confidence again.
+1. Test build `2026.06.07-1525-EDT-sg3-sharp-auto-capture` on Tony's phone using the QR workflow and compare auto-capture ease plus confident/read accuracy.
+2. If live scans still over-review after sharp auto-capture, improve preprocessing/model signal using the replay artifacts before relaxing confidence again.
 3. Keep scoring OCR against handwritten truth, not answer-key correctness.
 4. Treat the clean 9-photo target as achieved, but do not claim classroom-trustworthy generalization from only nine sheets or one rough iPhone batch.
 5. Update this file after every meaningful benchmark, patch, commit, push, or blocker.
@@ -644,3 +659,48 @@ Verification results:
 - Live iPhone still replay remained unchanged as expected: `72/90` answer OCR truth, `53/90` confident, `53/53` confident accuracy, `0` confident wrong.
 - Playwright smoke/upload suite passed: `5 passed`.
 - Important limitation: still replay cannot prove burst-capture improvement because burst selection happens before the still image exists. The next proof is live testing on Tony's phone.
+
+2026-06-07 / SG 3:
+Analyzed Tony's newest live iPhone test batch from `/Users/openclaw/Desktop/5/` against build `2026.06.07-1354-EDT-sg3-burst-capture`.
+
+Evidence:
+
+- 10 debug JSONs, 10 crop previews, and 11 screenshots.
+- All debug JSONs confirmed `captureQuality.source = auto`, `burstFrameCount = 5`, and the burst build path.
+- One debug JSON (`1780859247795`) was manually corrected after scanning; the touched predictions preserved `originalDigit`, so do not treat its post-correction answer groups as a clean raw-confidence score.
+
+Finding:
+
+- The burst mechanism works, but the app was still accepting selected frames that were too soft for reliable classroom OCR.
+- In `/Users/openclaw/Desktop/5`, captures with selected-frame focus below `650` averaged `4.6/10` confident answers and high review counts.
+- Captures with selected-frame focus at or above `650` averaged `7.6/10` confident answers.
+- Still-visible OCR/model misses remain on sharper scans, especially around thin/right-slot `9`, `2`, and some ambiguous second digits, so this capture patch is not the full 95% confidence solution.
+
+Production changes:
+
+- Added build label `2026.06.07-1525-EDT-sg3-sharp-auto-capture`.
+- Kept the eased auto pre-capture focus gate at `300`.
+- Added an auto-only final focus threshold of `650` before OCR.
+- Extended auto burst capture from `5` frames at `85ms` spacing to `8` frames at `110ms` spacing so phone autofocus has longer to settle.
+- Manual Student Mode capture still uses the older final focus threshold of `340`.
+- `captureQuality` now records `manualFocusThreshold` and `autoFinalFocusThreshold`.
+
+Verification commands run:
+
+```text
+npm run build
+npx playwright test test-app.spec.js test-ocr.spec.js test-upload-real.spec.js --config=playwright.config.js
+node scripts/eval_uploaded_worksheets.mjs --url https://127.0.0.1:5174 --out private-evidence/sg3-9-photo-confidence-20260606/sharp-auto-capture-1525 private-evidence/sg3-9-photo-confidence-20260606/1-Photo-1.jpg private-evidence/sg3-9-photo-confidence-20260606/2-Photo-2.jpg private-evidence/sg3-9-photo-confidence-20260606/3-Photo-3.jpg private-evidence/sg3-9-photo-confidence-20260606/4-Photo-4.jpg private-evidence/sg3-9-photo-confidence-20260606/5-Photo-5.jpg private-evidence/sg3-9-photo-confidence-20260606/6-Photo-6.jpg private-evidence/sg3-9-photo-confidence-20260606/7-Photo-7.jpg private-evidence/sg3-9-photo-confidence-20260606/8-Photo-8.jpg private-evidence/sg3-9-photo-confidence-20260606/9-Photo-9.jpg
+npm run score:sg3-ocr -- --run private-evidence/sg3-9-photo-confidence-20260606/sharp-auto-capture-1525
+node scripts/replay_live_ocr_captured.mjs --url https://127.0.0.1:5174 --out-dir private-evidence/sg3-iphone-live-20260607/sharp-auto-capture-1525 /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835744659.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835794316.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835835982.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835883256.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835922655.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835950761.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780836030293.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780836093776.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780836133924.json
+npm run score:live-ocr-truth -- private-evidence/sg3-iphone-live-20260607/sharp-auto-capture-1525/*-replay-result.json
+```
+
+Verification results:
+
+- `npm run build` passed.
+- Focused Playwright suite passed: `5 passed`.
+- Clean 9-photo truth score still passed: `89/90` confident, `89/89` confident accuracy, `0` confident wrong, `90/90` all-answer OCR truth.
+- Older live iPhone still replay stayed safe: `72/90` answer OCR truth, `53/90` confident, `53/53` confident accuracy, `0` confident wrong, `159/180` digit OCR truth.
+- The live replay command exited nonzero because two old still captures were intentionally guarded as unusable/all-review; the truth scorer confirms no confident-wrong regression.
+- Next proof must be a new live phone scan on `2026.06.07-1525-EDT-sg3-sharp-auto-capture`.
