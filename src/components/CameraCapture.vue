@@ -502,6 +502,9 @@ const SAD_THRESHOLD = 48 * 36 * 20
 const VARIANCE_PREFILTER_MIN = 50
 const VARIANCE_PREFILTER_MIN_PORTRAIT = 8
 const FOCUS_SCORE_MIN_PORTRAIT = 340
+const AUTO_GATE_FOCUS_SCORE_MIN_PORTRAIT = 300
+const AUTO_CAPTURE_BURST_FRAMES = 5
+const AUTO_CAPTURE_BURST_DELAY_MS = 85
 // Contour gate: full-frame so sheet can be anywhere in viewfinder
 const CONTOUR_W = 160
 const CONTOUR_H = 120
@@ -1841,6 +1844,10 @@ function nextDrawableFrame(video) {
   })
 }
 
+function waitMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 function getCanvasLumaStats(canvas) {
   const ctx = canvas.getContext('2d')
   const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
@@ -1870,6 +1877,102 @@ function frameLooksDrawable(video) {
   } catch (_) {
     return false
   }
+}
+
+function makeStudentCaptureCanvas(video) {
+  const vw = video.videoWidth
+  const vh = video.videoHeight
+  const { cropW, cropH, cropX, cropY } = getPortraitCropRect(vw, vh)
+  if (vw === 0 || vh === 0 || cropW < 1 || cropH < 1) {
+    return null
+  }
+  const canvas = document.createElement('canvas')
+  canvas.width = cropW
+  canvas.height = cropH
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH)
+  return { canvas, cropW, cropH, cropX, cropY, vw, vh }
+}
+
+function makeStudentCaptureSample(canvas) {
+  const sample = document.createElement('canvas')
+  sample.width = CONTOUR_P_W
+  sample.height = CONTOUR_P_H
+  const ctx = sample.getContext('2d')
+  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, sample.width, sample.height)
+  return sample
+}
+
+function scoreStudentCaptureCandidate(frame, index) {
+  const stats = getCanvasLumaStats(frame.canvas)
+  const focusScore = getCanvasFocusScore(frame.canvas)
+  const sheetCheck = analyzeStudentSheetInPortraitCrop(makeStudentCaptureSample(frame.canvas))
+  const blank = stats.mean < 4 && stats.variance < 6
+  const markerCount = Array.isArray(sheetCheck?.markers) ? sheetCheck.markers.length : 0
+  let score = blank ? -100000 : 0
+  if (sheetCheck?.ok) score += 5000
+  else if (markerCount === 4) score += 1200
+  else score -= 2000
+  score += Math.min(focusScore, 1800) * 1.3
+  score += Math.min(stats.variance, 1200) * 0.35
+  score -= Math.abs((stats.mean || 0) - 155) * 1.5
+  const appearance = sheetCheck?.appearance
+  const paper = appearance?.paperStats
+  const markerStats = appearance?.markerStats
+  if (paper) {
+    score += Math.min(Math.max((paper.brightFraction || 0) - 0.45, 0), 0.4) * 500
+    score -= Math.max((paper.darkFraction || 0) - 0.18, 0) * 800
+  }
+  if (Array.isArray(markerStats)) {
+    const darkMarkerCount = markerStats.filter((marker) =>
+      (marker?.darkFraction || 0) >= 0.12 && (marker?.mean || 255) <= 190
+    ).length
+    score += darkMarkerCount * 80
+  }
+  return {
+    ...frame,
+    index,
+    stats,
+    focusScore,
+    sampleSheetCheck: sheetCheck,
+    blank,
+    score
+  }
+}
+
+async function captureStudentFrameCandidate(video, index) {
+  await nextDrawableFrame(video)
+  const frame = makeStudentCaptureCanvas(video)
+  return frame ? scoreStudentCaptureCandidate(frame, index) : null
+}
+
+async function captureBestStudentFrame(video, source) {
+  const frameCount = source === 'auto' ? AUTO_CAPTURE_BURST_FRAMES : 1
+  let best = null
+  const burstScores = []
+  for (let index = 0; index < frameCount; index += 1) {
+    if (index > 0) await waitMs(AUTO_CAPTURE_BURST_DELAY_MS)
+    const candidate = await captureStudentFrameCandidate(video, index)
+    if (!candidate) continue
+    burstScores.push({
+      index,
+      score: Math.round(candidate.score),
+      focusScore: Math.round(candidate.focusScore),
+      lumaMean: Number(candidate.stats.mean.toFixed(1)),
+      lumaVariance: Number(candidate.stats.variance.toFixed(1)),
+      sheetOk: candidate.sampleSheetCheck?.ok === true,
+      sheetStatus: candidate.sampleSheetCheck?.status || null,
+      blank: candidate.blank
+    })
+    if (!best || candidate.score > best.score) {
+      best = candidate
+    }
+  }
+  if (best) {
+    best.burstScores = burstScores
+    best.burstFrameCount = frameCount
+  }
+  return best
 }
 
 async function waitForDrawableVideoFrame(video, timeoutMs = 5000) {
@@ -1925,7 +2028,7 @@ function runAutoCaptureCheck() {
     : variance >= varianceMin && isPagePresentContour(video)
   const { gray, sad } = getGrayAndSAD(ctx, sampleW, sampleH)
   const focusScore = getGrayFocusScore(gray, sampleW, sampleH)
-  const focusReady = !isPortrait || focusScore >= FOCUS_SCORE_MIN_PORTRAIT
+  const focusReady = !isPortrait || focusScore >= AUTO_GATE_FOCUS_SCORE_MIN_PORTRAIT
   if (isPortrait && pagePresent && !focusReady) {
     studentAutoStatus.value = 'Hold still while camera focuses'
   }
@@ -1934,7 +2037,7 @@ function runAutoCaptureCheck() {
   const stable = pagePresent && variance >= varianceMin && sad < sadThreshold && focusReady
   const holdMs = isPortrait ? STABILITY_HOLD_MS_PORTRAIT : STABILITY_HOLD_MS
   if (isPortrait && typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_AUTO) {
-    console.log('AutoCapture (portrait)', { sheetConfirmed: pagePresent, sad, sadThreshold, focusScore, focusReady, stable })
+    console.log('AutoCapture (portrait)', { sheetConfirmed: pagePresent, sad, sadThreshold, focusScore, focusThreshold: AUTO_GATE_FOCUS_SCORE_MIN_PORTRAIT, focusReady, stable })
   }
   if (stable) {
     consecutiveFailures = 0
@@ -1967,26 +2070,16 @@ async function doCapture({ source = 'manual' } = {}) {
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
-    const vw = video.videoWidth
-    const vh = video.videoHeight
-    if (vw === 0 || vh === 0) {
+    if (source === 'auto') {
+      studentAutoStatus.value = 'Choosing clearest frame'
+    }
+    const capture = await captureBestStudentFrame(video, source)
+    if (!capture) {
       error.value = 'Camera not ready. Try again.'
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
-    const { cropW, cropH, cropX, cropY } = getPortraitCropRect(vw, vh)
-    if (cropW < 1 || cropH < 1) {
-      error.value = 'Camera not ready. Try again.'
-      if (streamActive.value) startAutoCaptureLoop()
-      return
-    }
-    const canvas = document.createElement('canvas')
-    canvas.width = cropW
-    canvas.height = cropH
-    const ctx = canvas.getContext('2d')
-    await nextDrawableFrame(video)
-    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH)
-    const stats = getCanvasLumaStats(canvas)
+    const { canvas, cropW, cropH, cropX, cropY, vw, vh, stats, focusScore, burstScores, burstFrameCount } = capture
     if (stats.mean < 4 && stats.variance < 6) {
       studentAutoStatus.value = 'Camera warming up'
       error.value = 'Camera captured a blank frame. Try again.'
@@ -2002,7 +2095,6 @@ async function doCapture({ source = 'manual' } = {}) {
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
-    const focusScore = getCanvasFocusScore(canvas)
     const captureQuality = {
       cropW,
       cropH,
@@ -2014,6 +2106,13 @@ async function doCapture({ source = 'manual' } = {}) {
       lumaVariance: stats.variance,
       focusScore,
       focusThreshold: FOCUS_SCORE_MIN_PORTRAIT,
+      autoFocusThreshold: AUTO_GATE_FOCUS_SCORE_MIN_PORTRAIT,
+      sheetOk: sheetCheck.ok === true,
+      sheetStatus: sheetCheck.status || null,
+      burstFrameCount,
+      burstSelectedIndex: capture.index,
+      burstBestScore: Math.round(capture.score),
+      burstScores,
       source,
       capturedAt: new Date().toISOString()
     }

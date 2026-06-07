@@ -104,31 +104,26 @@ private-evidence/sg3-iphone-live-20260607/
 
 Current branch: `autobuild/safe-20260223`
 
-Latest pushed rollback point:
+Latest pushed rollback point before the burst-capture pass:
 
 ```text
-588425b Tune OCR review gates for iPhone scans
+7fe8a46 Improve SG3 live OCR confidence safety
 ```
 
-That commit changed only:
+That commit established the current safety baseline:
 
 ```text
-src/ocr-pipeline.js
-src/components/CameraCapture.vue
+Build label: 2026.06.07-0959-EDT-sg3-live-ocr-safety
+Clean 9-photo replay: 89/90 confident, 89/89 confident accuracy, 0 confident wrong, 90/90 OCR truth.
+Live iPhone still replay: 72/90 OCR truth, 53/90 confident, 53/53 confident accuracy, 0 confident wrong.
 ```
 
-SG 2 verification for `588425b`:
+Current burst-capture candidate for this pass:
 
-- Latest 4 iPhone debug JSONs: review flags dropped to `13/80` digit reads.
-- Broader replay across prior debug batches: `86/450` review-flagged digits.
-- `npm run build` passed.
-- This fixed a blanket-review regression; it did not yet finish the 9-photo confidence/accuracy goal.
-
-SG 2 died after starting the new 9-photo pass. Its pause summary said:
-
-- No code changes had been made in the new 9-photo pass.
-- No new benchmark had been run for the 9-photo pass.
-- The next planned work was to visually map ground truth, create a hard scorecard, locate current OCR/review gates, tune, and verify.
+```text
+Build label: 2026.06.07-1354-EDT-sg3-burst-capture
+Change: Student Mode auto-capture now samples a 5-frame burst after the gate fires, scores frame focus/contrast/marker sanity, and sends the best frame to OCR. The pre-capture focus gate was eased from 340 to 300, but the final chosen frame still has to pass the existing 340 focus threshold.
+```
 
 ## Current Repo Notes
 
@@ -163,9 +158,9 @@ Mission Control is useful project memory, but its state file was stale after SG 
 
 ## Next Action
 
-The active 9-photo SG3 confidence target is met by the current source-aware confidence policy:
+The active 9-photo SG3 confidence target remains met by the current source-aware confidence policy and the new local burst-capture candidate:
 
-- Current best replay: `private-evidence/sg3-9-photo-confidence-20260606/candidate-source-aware-confidence-2-20260607/`
+- Current best replay: `private-evidence/sg3-9-photo-confidence-20260606/burst-capture-1354/`
 - Confident answer coverage: `89/90` (`98.9%`).
 - Confident answer accuracy vs handwriting: `89/89` (`100.0%`).
 - Confident wrong answers: `0`.
@@ -175,7 +170,7 @@ The active 9-photo SG3 confidence target is met by the current source-aware conf
 The 2026-06-07 live iPhone batch is safer but still conservative:
 
 ```text
-Replay: private-evidence/sg3-iphone-live-20260607/current-build-0959/
+Replay: private-evidence/sg3-iphone-live-20260607/burst-capture-1354/
 Truth labels: docs/SG3_IPHONE_LIVE_OCR_SCORECARD.json
 Answer OCR truth: 72/90
 Confident answers: 53/90
@@ -186,16 +181,17 @@ Digit OCR truth: 159/180
 Confident digit wrong: 0
 ```
 
-This is an improvement over the old exported live-build behavior, which scored `68/90` answer OCR truth and made `18` confident wrong answer calls on this same iPhone batch. Do not solve the remaining live-camera under-confidence by broadly loosening confidence gates. The remaining problem is degraded capture/OCR signal quality, not just display policy.
+This replay is unchanged because the replay starts from already-captured still images; it cannot simulate the new live-camera burst choosing a better frame before OCR. The useful verification fact is no OCR confidence regression on the old stills. The next proof has to come from a live phone scan on build `2026.06.07-1354-EDT-sg3-burst-capture`.
+
+This is still an improvement over the old exported live-build behavior, which scored `68/90` answer OCR truth and made `18` confident wrong answer calls on this same iPhone batch. Do not solve the remaining live-camera under-confidence by broadly loosening confidence gates. The remaining problem is degraded capture/OCR signal quality, not just display policy.
 
 Next useful work:
 
-1. Push/record the current source-aware confidence and live OCR safety commit as the rollback point.
-2. Test the pushed build on Tony's phone using build label `2026.06.07-0959-EDT-sg3-live-ocr-safety`.
-3. If live scans still over-review, improve crop quality, preprocessing, or model signal using the replay artifacts before relaxing confidence again.
-4. Keep scoring OCR against handwritten truth, not answer-key correctness.
-5. Treat the clean 9-photo target as achieved, but do not claim classroom-trustworthy generalization from only nine sheets or one rough iPhone batch.
-6. Update this file after every meaningful benchmark, patch, commit, push, or blocker.
+1. Test build `2026.06.07-1354-EDT-sg3-burst-capture` on Tony's phone using the QR workflow and compare auto-capture ease plus confident/read accuracy.
+2. If live scans still over-review after burst capture, improve preprocessing/model signal using the replay artifacts before relaxing confidence again.
+3. Keep scoring OCR against handwritten truth, not answer-key correctness.
+4. Treat the clean 9-photo target as achieved, but do not claim classroom-trustworthy generalization from only nine sheets or one rough iPhone batch.
+5. Update this file after every meaningful benchmark, patch, commit, push, or blocker.
 
 ## Running Log
 
@@ -617,3 +613,34 @@ Verification results:
 - `npm run build` passed with only the existing chunk-size warning.
 - Focused Playwright suite passed: `11 passed`.
 - Live replay still reports only `72/90` OCR truth, so future live work should focus on crop quality, preprocessing, and model signal before any broader confidence promotion.
+
+2026-06-07 / SG 3:
+Added Student Mode auto-capture burst selection for local candidate build `2026.06.07-1354-EDT-sg3-burst-capture`.
+
+Production changes:
+
+- Auto-capture now samples `5` frames after the stability gate fires, scores focus/contrast/marker sanity, and sends the best frame to OCR.
+- The pre-capture focus gate was eased from `340` to `300` so a wrinkled but usable sheet can trigger the burst sooner.
+- The final selected frame still has to pass the existing `340` focus threshold plus full sheet marker/page checks.
+- Live debug `captureQuality` now records burst frame scores, selected index, best score, sheet status, and both focus thresholds.
+- Manual Student Mode capture still captures a single frame.
+- Updated visible build label to `2026.06.07-1354-EDT-sg3-burst-capture`.
+
+Verification commands run:
+
+```text
+npm run build
+node scripts/replay_live_ocr_captured.mjs --url https://127.0.0.1:5174 --out-dir private-evidence/sg3-iphone-live-20260607/burst-capture-1354 /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835744659.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835794316.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835835982.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835883256.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835922655.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780835950761.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780836030293.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780836093776.json /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-1780836133924.json
+node scripts/score_live_ocr_debug_truth.mjs private-evidence/sg3-iphone-live-20260607/burst-capture-1354/*-replay-result.json
+node scripts/eval_uploaded_worksheets.mjs --url https://127.0.0.1:5174 --out private-evidence/sg3-9-photo-confidence-20260606/burst-capture-1354 private-evidence/sg3-9-photo-confidence-20260606/1-Photo-1.jpg private-evidence/sg3-9-photo-confidence-20260606/2-Photo-2.jpg private-evidence/sg3-9-photo-confidence-20260606/3-Photo-3.jpg private-evidence/sg3-9-photo-confidence-20260606/4-Photo-4.jpg private-evidence/sg3-9-photo-confidence-20260606/5-Photo-5.jpg private-evidence/sg3-9-photo-confidence-20260606/6-Photo-6.jpg private-evidence/sg3-9-photo-confidence-20260606/7-Photo-7.jpg private-evidence/sg3-9-photo-confidence-20260606/8-Photo-8.jpg private-evidence/sg3-9-photo-confidence-20260606/9-Photo-9.jpg
+npm run score:sg3-ocr -- --run private-evidence/sg3-9-photo-confidence-20260606/burst-capture-1354
+npx playwright test test-app.spec.js test-ocr.spec.js test-upload-real.spec.js
+```
+
+Verification results:
+
+- `npm run build` passed.
+- Clean 9-photo truth score passed: `89/90` confident, `89/89` confident accuracy, `0` confident wrong, `90/90` all-answer OCR truth.
+- Live iPhone still replay remained unchanged as expected: `72/90` answer OCR truth, `53/90` confident, `53/53` confident accuracy, `0` confident wrong.
+- Playwright smoke/upload suite passed: `5 passed`.
+- Important limitation: still replay cannot prove burst-capture improvement because burst selection happens before the still image exists. The next proof is live testing on Tony's phone.
