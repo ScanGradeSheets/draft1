@@ -8,6 +8,15 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const base = process.env.SG_BASE || '/'
 
+function lastCliValue(flag) {
+  const index = process.argv.lastIndexOf(flag)
+  return index >= 0 ? process.argv[index + 1] : null
+}
+
+const cliHost = lastCliValue('--host')
+const hmrHost = process.env.SG_HMR_HOST ||
+  (cliHost === '127.0.0.1' || cliHost === 'localhost' ? cliHost : '100.90.211.12')
+
 export default defineConfig({
   base,
   plugins: [
@@ -37,7 +46,7 @@ export default defineConfig({
     strictPort: true,
     https: true,
     hmr: {
-      host: '100.90.211.12',
+      host: hmrHost,
       overlay: false,
       protocol: 'wss'
     }

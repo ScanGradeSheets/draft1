@@ -465,6 +465,27 @@ const TWO_DIGIT_AUTO_X_CONFIDENCE_THRESHOLD = 0.88
 const TWO_DIGIT_AUTO_X_MARGIN_THRESHOLD = 0.20
 const TWO_DIGIT_RIGHT_SLOT_AUTO_X_CONFIDENCE_THRESHOLD = 0.92
 const TWO_DIGIT_RIGHT_SLOT_AUTO_X_MARGIN_THRESHOLD = 0.28
+const TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD = 0.74
+const TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD = 0.28
+const OCR_CONFIDENCE_CLEAR_REASONS = Object.freeze(new Set([
+  'box-safe-default',
+  'left-slot-low-three-rescue',
+  'left-slot-open-three-shape-rescue',
+  'left-slot-sparse-four-shape-from-one-rescue',
+  'right-slot-center-low-agreement-rescue',
+  'right-slot-cleanup-four-rescue',
+  'right-slot-eight-shape-from-seven-rescue',
+  'right-slot-expected-edge-default',
+  'right-slot-five-shape-from-three-rescue',
+  'right-slot-gentle-seven-rescue',
+  'right-slot-preprocess-disagreement',
+  'right-slot-raw-border-high-rescue',
+  'right-slot-runnerup-four-shape-from-one-rescue',
+  'right-slot-two-shape-from-nine-rescue',
+  'right-slot-two-shape-from-one-rescue',
+  'right-slot-two-shape-from-seven-rescue',
+  'right-slot-wide-raw-agreement-rescue'
+]))
 
 /** Golden digits for the primary printed test worksheet (index = box id 0–9 = questions 1–10). */
 const DEBUG_REAL_WORKSHEET_EXPECTED = Object.freeze([8, 4, 1, 9, 2, 7, 0, 5, 3, 6])
@@ -568,11 +589,59 @@ function autoXAllowedForDigit(proc, result, topGap) {
   return confidence >= minConfidence && gap >= minGap
 }
 
+function chosenDigitProbability(result) {
+  const digit = Number(result?.digit)
+  if (!Number.isInteger(digit) || digit < 0 || digit > 9) return Number(result?.confidence) || 0
+  const probs = Array.isArray(result?.probs) || ArrayBuffer.isView(result?.probs) ? result.probs : null
+  const probability = Number(probs?.[digit])
+  return Number.isFinite(probability) && probability > 0
+    ? probability
+    : (Number(result?.confidence) || 0)
+}
+
+function confidencePolicyClearanceForDigit(proc, result, topGap, correct, reviewSignals) {
+  const reason = reviewSignals?.structuralReview
+    ? 'two-digit-leading-zero-structural-review'
+    : reviewSignals?.highRiskMismatchReview
+    ? 'left-slot-2-vs-3-mismatch-review'
+    : reviewSignals?.highRiskPreprocessReview
+    ? 'right-slot-preprocess-disagreement'
+    : (result?.preprocessReviewReason || null)
+
+  if (reason && OCR_CONFIDENCE_CLEAR_REASONS.has(reason)) {
+    return { allowed: true, reason: `validated-review-reason:${reason}` }
+  }
+
+  const isTwoDigitMismatch =
+    proc?.isVirtualDigitBox === true &&
+    correct === false
+  const rawConfidence = chosenDigitProbability(result)
+  const gap = Number.isFinite(topGap) ? topGap : 0
+  if (
+    isTwoDigitMismatch &&
+    !reason &&
+    rawConfidence >= TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD &&
+    gap >= TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD
+  ) {
+    return { allowed: true, reason: 'calibrated-two-digit-auto-x' }
+  }
+
+  return { allowed: false, reason: null }
+}
+
 function structuralTwoDigitReview(proc, result, expectedDigit) {
   if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 0 || !result) return false
   const digit = Number(result.digit)
   const expected = Number(expectedDigit)
   return digit === 0 && Number.isFinite(expected) && expected !== 0
+}
+
+function highRiskTwoDigitMismatchReview(proc, result, expectedDigit) {
+  if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 0 || !result) return false
+  const digit = Number(result.digit)
+  const expected = Number(expectedDigit)
+  if (!Number.isFinite(digit) || !Number.isFinite(expected)) return false
+  return expected === 3 && digit === 2
 }
 
 const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done', 'processing-change'])
@@ -4747,12 +4816,21 @@ const runRealOCR = async () => {
         topGap < LOW_MARGIN_THRESHOLD
       const highRiskPreprocessReview = highRiskRightSlotPreprocessReview(proc, digitResult[0])
       const structuralReview = structuralTwoDigitReview(proc, digitResult[0], expectedDigit)
-      const reviewNeeded = correct === true
-        ? !autoCheckAllowed
-        : highRiskPreprocessReview || structuralReview ? true
-        : correct === false
-          ? !autoXAllowed
-          : lowSignal
+      const highRiskMismatchReview = highRiskTwoDigitMismatchReview(proc, digitResult[0], expectedDigit)
+      const confidencePolicyClearance = confidencePolicyClearanceForDigit(
+        proc,
+        digitResult[0],
+        topGap,
+        correct,
+        { highRiskPreprocessReview, structuralReview, highRiskMismatchReview }
+      )
+      const reviewNeeded = confidencePolicyClearance.allowed ? false
+        : correct === true
+          ? !autoCheckAllowed
+          : highRiskPreprocessReview || structuralReview || highRiskMismatchReview ? true
+          : correct === false
+            ? !autoXAllowed
+            : lowSignal
       predictions.push({
         id: proc.id,
         questionNum: proc.questionNum,
@@ -4773,9 +4851,14 @@ const runRealOCR = async () => {
         preprocessDisagreement: digitResult[0].preprocessDisagreement === true,
         preprocessReviewReason: reviewNeeded && structuralReview
           ? 'two-digit-leading-zero-structural-review'
+          : reviewNeeded && highRiskMismatchReview
+          ? 'left-slot-2-vs-3-mismatch-review'
           : reviewNeeded && highRiskPreprocessReview
           ? 'right-slot-preprocess-disagreement'
           : (digitResult[0].preprocessReviewReason || null),
+        confidencePolicyCleared: confidencePolicyClearance.allowed === true,
+        confidencePolicyClearanceReason: confidencePolicyClearance.reason,
+        originalChosenDigitConfidence: chosenDigitProbability(digitResult[0]),
         highRiskPreprocessReview,
         structuralReview,
         preprocessVariants: digitResult[0].preprocessVariants || null,

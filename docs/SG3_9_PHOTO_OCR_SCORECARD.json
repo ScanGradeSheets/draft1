@@ -1,0 +1,79 @@
+{
+  "created_at": "2026-06-06",
+  "purpose": "Active handwritten-truth scorecard for SG3 OCR confidence tuning. Private images are not committed.",
+  "private_image_dir": "private-evidence/sg3-9-photo-confidence-20260606",
+  "target": {
+    "confident_read_coverage_min": 0.95,
+    "confident_wrong_max": 0
+  },
+  "templates": {
+    "SG-G2-A-001": {
+      "title": "Addition Within 20",
+      "answer_key": ["15", "15", "17", "13", "19", "11", "12", "17", "13", "19"]
+    },
+    "SG-G2-B-001": {
+      "title": "Subtraction Within 20",
+      "answer_key": ["17", "15", "12", "12", "12", "12", "12", "12", "14", "11"]
+    },
+    "SG-G2-C-001": {
+      "title": "Mixed Within 50",
+      "answer_key": ["37", "29", "43", "28", "42", "25", "37", "38", "41", "15"]
+    }
+  },
+  "photos": [
+    {
+      "file": "1-Photo-1.jpg",
+      "template_id": "SG-G2-A-001",
+      "handwritten_truth": ["15", "15", "17", "13", "19", "11", "12", "17", "13", "19"],
+      "notes": "Clean addition sample."
+    },
+    {
+      "file": "2-Photo-2.jpg",
+      "template_id": "SG-G2-C-001",
+      "handwritten_truth": ["37", "29", "33", "28", "44", "24", "37", "38", "41", "15"],
+      "notes": "Several math-wrong handwritten answers; score OCR against handwriting first."
+    },
+    {
+      "file": "3-Photo-3.jpg",
+      "template_id": "SG-G2-B-001",
+      "handwritten_truth": ["17", "15", "11", "12", "12", "12", "12", "12", "14", "11"],
+      "notes": "Q3 appears handwritten as 11, not answer-key 12."
+    },
+    {
+      "file": "4-Photo-4.jpg",
+      "template_id": "SG-G2-A-001",
+      "handwritten_truth": ["15", "15", "17", "13", "19", "11", "12", "17", "12", "19"],
+      "notes": "Q9 visually reads as 12; verify with crop if this becomes decisive."
+    },
+    {
+      "file": "5-Photo-5.jpg",
+      "template_id": "SG-G2-B-001",
+      "handwritten_truth": ["17", "16", "13", "12", "13", "13", "12", "12", "16", "12"],
+      "notes": "Many math-wrong handwritten answers."
+    },
+    {
+      "file": "6-Photo-6.jpg",
+      "template_id": "SG-G2-B-001",
+      "handwritten_truth": ["17", "15", "12", "12", "12", "12", "12", "12", "14", "11"],
+      "notes": "Q9 is overwritten/scribbled and may legitimately need review if uncertain."
+    },
+    {
+      "file": "7-Photo-7.jpg",
+      "template_id": "SG-G2-A-001",
+      "handwritten_truth": ["15", "15", "17", "13", "19", "11", "12", "17", "13", "19"],
+      "notes": "Several digits touch dividers or box borders."
+    },
+    {
+      "file": "8-Photo-8.jpg",
+      "template_id": "SG-G2-C-001",
+      "handwritten_truth": ["37", "29", "33", "38", "44", "24", "37", "38", "41", "15"],
+      "notes": "Q4 tens digit visually reads closer to 3 than 2; verify with crop if decisive."
+    },
+    {
+      "file": "9-Photo-9.jpg",
+      "template_id": "SG-G2-C-001",
+      "handwritten_truth": ["37", "29", "33", "38", "44", "24", "37", "38", "41", "15"],
+      "notes": "Similar mixed sample; Q4 appears to be 38."
+    }
+  ]
+}

@@ -1,29 +1,30 @@
 {
-  "current_mission": "Use Tony's real student worksheet scans to make two-digit OCR trustworthy before expanding ScanGrade.",
+  "current_mission": "Use Tony's latest real worksheet photos to improve confident two-digit OCR reads without allowing confident wrong reads.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
-  "next_best_move": "Codex: start with docs/OCR_RELIABILITY_OPERATING_MAP.md, then use the reproduced 5/10 subtraction scan plus the May 30 three-sheet benchmark as the gate for any narrow OCR/crop-preprocessing fix.",
-  "plain_english_status": "We have the current Grade 2 worksheet packet published, the app/test path working, and real student handwriting evidence. Tony's newest subtraction scan reproduced a real OCR failure: the sheet and boxes are found, but thin pencil 2s and 7s are often read as 1 or 9, yielding 5/10 on that sheet. The May 30 benchmark remains 18/30 across three sheets. The next work should be evidence-based OCR diagnosis and narrow fixes only; Tony has locked the current app UI for now, so autonomous work should not make further app UI/style/layout changes unless he asks.",
+  "next_best_move": "Codex/Tony: validate the pushed SG3 confidence policy on more real completed worksheets. The active 9-photo target is met, so do not broaden the policy again unless new evidence proves the two remaining yellow cases are safe to promote.",
+  "plain_english_status": "The current app has a pushed review-gate fix at commit 588425b that stopped a recent iPhone batch from blanket-marking almost every answer as low confidence. Tony then supplied a newer 9-photo worksheet batch and set the next target: at least 95% confident reads with 100% accuracy on those confident reads. SG 3 created a durable active handoff and benchmarked against handwritten truth, not answer-key correctness. Baseline was 49/90 confident answers, 48/49 correct confident answers, 1 confident wrong answer, and 71/90 total OCR-correct answers. The new tightened confidence policy reads all 90 handwritten answers correctly on the active 9-photo replay and auto-clears 88/90 answers with 88/88 confident accuracy and 0 confident wrong reads. The two remaining yellow-review answers are OCR-correct but low-signal/no-reason cases, so they should stay yellow until broader evidence or stronger features justify promoting them.",
   "needs_tony": [
-    "Send any additional completed Addition, Subtraction, or Mixed sheets as clear full-page photos when available.",
+    "If a live scan still over-reviews after the next patch, send the new debug JSON/crop export with the build label.",
     "For any sheet that fails in the live app, also send one normal camera photo of the same physical page if convenient.",
     "Keep using normal student pencil/spacing; imperfect handwriting is the useful test.",
     "If possible, note whether a scan was from the live app, a phone photo, or an iPad photo."
   ],
   "blocked_or_risky": [
-    "Two-digit OCR is not yet classroom-trustworthy: newest subtraction sample scores 5/10 despite correct sheet detection.",
+    "The active 9-photo target is met, but nine photos is still too narrow to claim classroom-trustworthy generalization.",
     "OCR/capture/homography files contain large tracked modifications and should not be changed or pushed casually.",
-    "Debug crop export specs create local artifacts when run, so only run them intentionally."
+    "Debug crop export specs create local artifacts when run, so only run them intentionally.",
+    "Codex thread history has disappeared after updates more than once, so current work must be recorded in SCANGRADE_ACTIVE_HANDOFF.md."
   ],
   "focus_board": [
     {
       "column": "Now",
       "cards": [
         {
-          "title": "Diagnose failed subtraction scan",
+          "title": "Improve 9-photo OCR confidence",
           "type": "validation",
           "owner": "Codex",
-          "summary": "Tony's newest student scan is a reproducible two-digit OCR failure: 5/10 on Subtraction Within 20.",
-          "detail": "The app finds the sheet and answer boxes, but thin pencil 2s and 7s are degraded in the 28x28 model inputs and misread as 1 or 9. Use this sample with the May 30 benchmark before accepting any OCR change."
+          "summary": "Current best is 88/90 confident reads with 0 confident wrong reads and 90/90 OCR-correct answers on Tony's latest 9 completed worksheet photos.",
+          "detail": "The active 9-photo target is met: 97.8% confident coverage and 100% accuracy on confident reads. Score against handwritten truth, not the answer key. The two remaining review cases are OCR-correct but low-signal/no-reason, so the next move is broader validation on more real worksheets rather than loosening the policy again."
         }
       ]
     },
@@ -43,11 +44,11 @@
       "column": "Codex Next",
       "cards": [
         {
-          "title": "Gate any OCR fix against real samples",
+          "title": "Patch only with truth-score replay",
           "type": "app",
           "owner": "Codex",
-          "summary": "Any crop-preprocessing or candidate-selection fix must improve Tony's failed subtraction scan without reducing the May 30 benchmark.",
-          "detail": "Start with docs/OCR_RELIABILITY_OPERATING_MAP.md. Current baseline: newest subtraction sample 5/10; May 30 benchmark 18/30. Do not push OCR changes as improvements until they clear this gate."
+          "summary": "Use npm run score:sg3-ocr after every OCR/review change and compare against the best report in private-evidence.",
+          "detail": "The current best reports are private-evidence/sg3-9-photo-confidence-20260606/candidate-confidence-policy-tight-final-9/truth-score.md and confidence-calibration.md. A patch only counts as progress if confident wrong answers stay at 0 and handwritten-truth accuracy or safe confident coverage improves on new evidence."
         }
       ]
     },
@@ -78,6 +79,48 @@
     {
       "column": "Done",
       "cards": [
+        {
+          "title": "SG3 confidence policy target met",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "The tightened production confidence policy reaches 88/90 confident reads with 0 confident wrong reads on the active 9-photo benchmark.",
+          "detail": "Latest best run: private-evidence/sg3-9-photo-confidence-20260606/candidate-confidence-policy-tight-final-9. Result: 90/90 answer OCR accuracy, 180/180 digit OCR accuracy, 88/90 confident answers, 88/88 confident accuracy, and 0 confident wrong answers. Full Playwright suite passed 11/11 and npm run build passed. The two remaining yellow cases should stay review-bound until broader evidence supports promotion."
+        },
+        {
+          "title": "9-photo truth baseline recorded",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "The SG3 worksheet batch now has a handwritten-truth scorecard and reusable scoring script.",
+          "detail": "Baseline 588425b result: 49/90 confident answers, 48/49 correct confident answers, 1 confident wrong answer, 71/90 total OCR-correct answers. Reports are local/private; command is npm run score:sg3-ocr."
+        },
+        {
+          "title": "Shape-rescue OCR candidate verified",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "The current SG3 OCR candidate has zero confident wrong reads and 90/90 OCR-correct answers on the 9-photo handwritten-truth benchmark.",
+          "detail": "Shape rescues improved recognition from 79/90 to 90/90 while keeping rescued uncertain digits under review. Current best result: 49/90 confident answers, 49/49 correct confident answers, 0 confident wrong answers, 90/90 total OCR-correct answers. Recognition is now clean on this batch, but confidence coverage does not yet meet the 95% target."
+        },
+        {
+          "title": "Confidence calibration report added",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "SG3 now has a repeatable report showing why the app is under-confident and why broad threshold loosening is not enough.",
+          "detail": "Report: private-evidence/sg3-9-photo-confidence-20260606/candidate-four-from-one-rescues/confidence-calibration.md. It shows 41 reviewed answers, all 41 reviewed answers OCR-correct, and a target requirement of 86/90 confident reads. Moderate confidence-only promotion reaches 54/90; evidence-only reason promotion plus moderate no-reason mismatch reaches 88/90 but is not yet a safe production policy because it would trust fragile low-probability rescues."
+        },
+        {
+          "title": "9-photo OCR recognition cleaned up",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "The active 9-photo replay now reads every handwritten answer correctly while preserving zero confident wrong reads.",
+          "detail": "Latest best run: private-evidence/sg3-9-photo-confidence-20260606/candidate-four-from-one-rescues. Result: 90/90 answer OCR accuracy, 180/180 digit OCR accuracy, 49/90 confident answers, 49/49 confident accuracy, and 0 confident wrong answers. The next challenge is confidence policy, not the two former 4-to-1 recognition misses."
+        },
+        {
+          "title": "SG active handoff created",
+          "type": "mission-control",
+          "owner": "Codex",
+          "summary": "SCANGRADE_ACTIVE_HANDOFF.md and docs/SG_THREAD_HANDOFF_PROTOCOL.md now capture the live recovery path when Codex updates hide a thread.",
+          "detail": "Future SG threads should read the active handoff before older recovery files, inspect git state, and continue from the recorded next action instead of relying on hidden chat history."
+        },
         {
           "title": "Private Mission Control v1",
           "type": "mission-control",

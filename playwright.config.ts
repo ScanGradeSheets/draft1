@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './',
   timeout: 60000,
   use: {
-    baseURL: 'https://localhost:5174',
+    baseURL: 'https://127.0.0.1:5174',
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
   },

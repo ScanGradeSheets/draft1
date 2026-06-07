@@ -869,6 +869,86 @@ function findVariant(variantResults, name) {
   return variantResults.find((variant) => variant.name === name) || null;
 }
 
+function digitTensorShapeFeatures(src, threshold = 0.22) {
+  if (!src || src.length < MNIST_DIGIT_LEN) return null;
+
+  let total = 0;
+  let weightedX = 0;
+  let weightedY = 0;
+  const sumRegion = (x0, x1, y0, y1) => {
+    let sum = 0;
+    for (let y = y0; y < y1; y++) {
+      const row = y * MNIST_DIGIT_SIZE;
+      for (let x = x0; x < x1; x++) {
+        const value = src[row + x] || 0;
+        if (value > threshold) sum += value;
+      }
+    }
+    return sum;
+  };
+  const longestRowRun = (y) => {
+    let best = 0;
+    let current = 0;
+    const row = y * MNIST_DIGIT_SIZE;
+    for (let x = 0; x < MNIST_DIGIT_SIZE; x++) {
+      if ((src[row + x] || 0) > threshold) {
+        current += 1;
+        best = Math.max(best, current);
+      } else {
+        current = 0;
+      }
+    }
+    return best;
+  };
+  const longestColRun = (x) => {
+    let best = 0;
+    let current = 0;
+    for (let y = 0; y < MNIST_DIGIT_SIZE; y++) {
+      if ((src[y * MNIST_DIGIT_SIZE + x] || 0) > threshold) {
+        current += 1;
+        best = Math.max(best, current);
+      } else {
+        current = 0;
+      }
+    }
+    return best;
+  };
+
+  for (let y = 0; y < MNIST_DIGIT_SIZE; y++) {
+    const row = y * MNIST_DIGIT_SIZE;
+    for (let x = 0; x < MNIST_DIGIT_SIZE; x++) {
+      const value = src[row + x] || 0;
+      if (value <= threshold) continue;
+      total += value;
+      weightedX += x * value;
+      weightedY += y * value;
+    }
+  }
+
+  let topLongest = 0;
+  let bottomLongest = 0;
+  let leftLongest = 0;
+  let rightLongest = 0;
+  for (let y = 4; y < 12; y++) topLongest = Math.max(topLongest, longestRowRun(y));
+  for (let y = 17; y < 24; y++) bottomLongest = Math.max(bottomLongest, longestRowRun(y));
+  for (let x = 2; x < 12; x++) leftLongest = Math.max(leftLongest, longestColRun(x));
+  for (let x = 16; x < 26; x++) rightLongest = Math.max(rightLongest, longestColRun(x));
+
+  return {
+    centerX: total ? weightedX / total : 0,
+    centerY: total ? weightedY / total : 0,
+    top: sumRegion(0, MNIST_DIGIT_SIZE, 0, 9),
+    middle: sumRegion(0, MNIST_DIGIT_SIZE, 9, 19),
+    bottom: sumRegion(0, MNIST_DIGIT_SIZE, 19, MNIST_DIGIT_SIZE),
+    topRight: sumRegion(14, MNIST_DIGIT_SIZE, 0, 14),
+    topLongest,
+    bottomLongest,
+    leftLongest,
+    rightLongest,
+    total
+  };
+}
+
 function variantTopKConfidenceForDigit(variant, digit) {
   const topK = variant?.result?.topK || [];
   const match = topK.find((item) => item.digit === digit);
@@ -1540,6 +1620,7 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
     const probs = await runDigitDataAsProbs(data, options);
     variantResults.push({
       name,
+      data,
       result: digitResultFromProbs(probs, { preprocessVariantName: name })
     });
   }
@@ -1624,6 +1705,90 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
     postSelectionRescue = true;
   };
 
+  const strictShape = digitTensorShapeFeatures(strict?.data);
+  const shapeRescue = (() => {
+    if (!strictShape) return null;
+    if (
+      digitIndex === 0 &&
+      result.digit === 2 &&
+      strictShape.leftLongest >= 15 &&
+      strictShape.centerX >= 13.1
+    ) {
+      return { digit: 3, reason: 'left-slot-open-three-shape-rescue' };
+    }
+    if (
+      digitIndex === 1 &&
+      result.digit === 9 &&
+      strictShape.centerY <= 12.7 &&
+      strictShape.middle >= 24.8
+    ) {
+      return { digit: 2, reason: 'right-slot-two-shape-from-nine-rescue' };
+    }
+    if (
+      digitIndex === 1 &&
+      result.digit === 7 &&
+      strictShape.topRight <= 1.0
+    ) {
+      return { digit: 2, reason: 'right-slot-two-shape-from-seven-rescue' };
+    }
+    if (
+      digitIndex === 1 &&
+      result.digit === 1 &&
+      variantTopKConfidenceForDigit({ result }, 4) >= 0.18 &&
+      strictShape.total >= 85 &&
+      strictShape.bottom >= 20 &&
+      strictShape.leftLongest >= 8 &&
+      strictShape.rightLongest >= 12
+    ) {
+      return { digit: 4, reason: 'right-slot-runnerup-four-shape-from-one-rescue' };
+    }
+    if (
+      digitIndex === 0 &&
+      result.digit === 1 &&
+      strictShape.centerX >= 13.5 &&
+      strictShape.rightLongest >= 12 &&
+      strictShape.leftLongest <= 6 &&
+      strictShape.total <= 45 &&
+      strictShape.bottom <= 8
+    ) {
+      return { digit: 4, reason: 'left-slot-sparse-four-shape-from-one-rescue' };
+    }
+    if (
+      digitIndex === 1 &&
+      result.digit === 1 &&
+      strictShape.rightLongest <= 3
+    ) {
+      return { digit: 2, reason: 'right-slot-two-shape-from-one-rescue' };
+    }
+    if (
+      digitIndex === 1 &&
+      result.digit === 4 &&
+      strictShape.top >= 18.7 &&
+      strictShape.bottom <= 4.0
+    ) {
+      return { digit: 9, reason: 'right-slot-nine-shape-from-four-rescue' };
+    }
+    if (
+      digitIndex === 1 &&
+      result.digit === 3 &&
+      strictShape.total <= 30.5 &&
+      strictShape.centerX <= 12.2
+    ) {
+      return { digit: 5, reason: 'right-slot-five-shape-from-three-rescue' };
+    }
+    if (
+      digitIndex === 1 &&
+      result.digit === 7 &&
+      strictShape.centerX <= 11.65
+    ) {
+      return { digit: 8, reason: 'right-slot-eight-shape-from-seven-rescue' };
+    }
+    return null;
+  })();
+  if (shapeRescue) {
+    applyRescue(result.probs, shapeRescue.digit, shapeRescue.reason);
+  }
+
   if (digitIndex === 0 && (result.digit === 5 || result.digit === 7)) {
     const noComponent = findVariant(variantResults, 'no-component-cleanup');
     if (variantTopKConfidenceForDigit(noComponent, 3) >= 0.25) {
@@ -1641,6 +1806,77 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
     ) {
       const cleanupProbs = averageVariantProbsWeighted(variantResults, ['strict', 'edge-clean']) || strictVariant.result.probs;
       applyRescue(cleanupProbs, 4, 'right-slot-cleanup-four-rescue');
+    }
+  }
+
+  if (digitIndex === 1) {
+    const centerSafeSlot = findVariant(variantResults, 'center-safe-slot');
+    const lowSlot = findVariant(variantResults, 'low-slot');
+    const rawBorderSlot = findVariant(variantResults, 'raw-border-slot');
+    if (
+      !postSelectionRescue &&
+      centerSafeSlot &&
+      lowSlot &&
+      centerSafeSlot.result.digit !== 1 &&
+      centerSafeSlot.result.digit !== result.digit &&
+      centerSafeSlot.result.digit === lowSlot.result.digit &&
+      (centerSafeSlot.result.confidence || 0) >= 0.45 &&
+      (lowSlot.result.confidence || 0) >= 0.45 &&
+      digitTopGap(centerSafeSlot.result) >= 0.10 &&
+      digitTopGap(lowSlot.result) >= 0.10
+    ) {
+      const rescueProbs = averageVariantProbsWeighted(variantResults, ['center-safe-slot', 'low-slot']) || centerSafeSlot.result.probs;
+      applyRescue(rescueProbs, centerSafeSlot.result.digit, 'right-slot-center-low-agreement-rescue');
+    }
+    if (
+      !postSelectionRescue &&
+      result.digit === 9 &&
+      centerSafeSlot?.result?.digit === 8 &&
+      (centerSafeSlot.result.confidence || 0) >= 0.80 &&
+      digitTopGap(centerSafeSlot.result) >= 0.70
+    ) {
+      applyRescue(centerSafeSlot.result.probs, 8, 'right-slot-center-eight-rescue');
+    }
+    if (
+      !postSelectionRescue &&
+      (result.digit === 4 || result.digit === 9) &&
+      rawBorderSlot &&
+      rawBorderSlot.result.digit !== result.digit &&
+      (rawBorderSlot.result.confidence || 0) >= 0.85 &&
+      digitTopGap(rawBorderSlot.result) >= 0.80
+    ) {
+      applyRescue(rawBorderSlot.result.probs, rawBorderSlot.result.digit, 'right-slot-raw-border-high-rescue');
+    }
+    const wideSlot = findVariant(variantResults, 'wide-slot');
+    if (
+      !postSelectionRescue &&
+      wideSlot &&
+      rawBorderSlot &&
+      wideSlot.result.digit !== 1 &&
+      wideSlot.result.digit !== result.digit &&
+      wideSlot.result.digit === rawBorderSlot.result.digit &&
+      (wideSlot.result.confidence || 0) >= 0.45 &&
+      (rawBorderSlot.result.confidence || 0) >= 0.45 &&
+      digitTopGap(wideSlot.result) >= 0.18 &&
+      digitTopGap(rawBorderSlot.result) >= 0.18
+    ) {
+      const rescueProbs = averageVariantProbsWeighted(variantResults, ['wide-slot', 'raw-border-slot']) || rawBorderSlot.result.probs;
+      applyRescue(rescueProbs, wideSlot.result.digit, 'right-slot-wide-raw-agreement-rescue');
+    }
+    const noRuleCleanup = findVariant(variantResults, 'no-rule-cleanup');
+    const gentleSlot = findVariant(variantResults, 'gentle');
+    if (
+      !postSelectionRescue &&
+      result.digit === 1 &&
+      noRuleCleanup?.result?.digit === 7 &&
+      gentleSlot?.result?.digit === 7 &&
+      (noRuleCleanup.result.confidence || 0) >= 0.25 &&
+      (gentleSlot.result.confidence || 0) >= 0.70 &&
+      digitTopGap(noRuleCleanup.result) >= 0.05 &&
+      digitTopGap(gentleSlot.result) >= 0.50
+    ) {
+      const rescueProbs = averageVariantProbsWeighted(variantResults, ['no-rule-cleanup', 'gentle']) || gentleSlot.result.probs;
+      applyRescue(rescueProbs, 7, 'right-slot-gentle-seven-rescue');
     }
   }
 
@@ -1698,6 +1934,17 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
         const rescueProbs = averageVariantProbsWeighted(variantResults, ['edge-band-slot', 'no-side-erase', 'raw-border-slot']) || rawBorderSlot.result.probs;
         applyRescue(rescueProbs, 3, 'left-slot-edge-raw-three-rescue');
       }
+    }
+  }
+
+  if (!postSelectionRescue && digitIndex === 0 && result.digit === 6) {
+    const lowSlot = findVariant(variantResults, 'low-slot');
+    if (
+      lowSlot?.result?.digit === 3 &&
+      (lowSlot.result.confidence || 0) >= 0.85 &&
+      digitTopGap(lowSlot.result) >= 0.75
+    ) {
+      applyRescue(lowSlot.result.probs, 3, 'left-slot-low-three-rescue');
     }
   }
 
