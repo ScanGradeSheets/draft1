@@ -340,7 +340,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.03-1648-EDT-qr-review-gates'
+const APP_BUILD_LABEL = '2026.06.07-0728-EDT-sg3-confidence-policy'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
