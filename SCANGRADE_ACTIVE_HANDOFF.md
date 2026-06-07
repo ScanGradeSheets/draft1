@@ -140,6 +140,13 @@ Build label: 2026.06.07-1525-EDT-sg3-sharp-auto-capture
 Change: Student Mode auto-capture still uses the eased pre-capture focus gate of 300, but now samples an 8-frame burst over a longer autofocus window and requires the selected auto frame to reach a final focus score of 650 before OCR. Manual capture keeps the older 340 final focus threshold.
 ```
 
+Current old-iPad engine fallback candidate for this pass:
+
+```text
+Build label: 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback
+Change: Student Mode warms the digit model when the scan view opens, shares one in-flight ONNX model initialization promise, and treats auxiliary right-slot model load/run failure as a fallback-to-primary condition instead of failing the whole scan.
+```
+
 ## Current Repo Notes
 
 The worktree is expected to be dirty. Known dirty areas at SG 3 startup included:
@@ -202,7 +209,7 @@ This is still an improvement over the old exported live-build behavior, which sc
 
 Next useful work:
 
-1. Test build `2026.06.07-1525-EDT-sg3-sharp-auto-capture` on Tony's phone using the QR workflow and compare auto-capture ease plus confident/read accuracy.
+1. Test build `2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback` on the old iPad using the QR workflow and confirm whether the same worksheet now grades instead of showing "The grading engine did not finish loading."
 2. If live scans still over-review after sharp auto-capture, improve preprocessing/model signal using the replay artifacts before relaxing confidence again.
 3. Keep scoring OCR against handwritten truth, not answer-key correctness.
 4. Treat the clean 9-photo target as achieved, but do not claim classroom-trustworthy generalization from only nine sheets or one rough iPhone batch.
@@ -704,3 +711,36 @@ Verification results:
 - Older live iPhone still replay stayed safe: `72/90` answer OCR truth, `53/90` confident, `53/53` confident accuracy, `0` confident wrong, `159/180` digit OCR truth.
 - The live replay command exited nonzero because two old still captures were intentionally guarded as unusable/all-review; the truth scorer confirms no confident-wrong regression.
 - Next proof must be a new live phone scan on `2026.06.07-1525-EDT-sg3-sharp-auto-capture`.
+
+2026-06-07 / SG 3:
+Tony tested on an old iPad and reported that capture looked much better, but the result panel showed: "Try again. The grading engine did not finish loading. Scan saved for teacher review." The screenshot showed a clean, full-page worksheet image, so this was not primarily a capture/homography failure. It indicated old-iPad OCR runtime/model initialization fragility after successful capture.
+
+Production changes for build `2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback`:
+
+- Student Mode now starts warming `initDigitModel()` as soon as the scan view opens, giving older Safari/iPad hardware a head start before OCR begins.
+- `initDigitModel()` now shares one in-flight model initialization promise, avoiding duplicate ONNX/WASM/model loads when warmup and grading overlap.
+- Auxiliary right-slot model load/run failure now disables that optional model for the current path and falls back to the primary digit model rather than failing the entire scan.
+- Debug model info records `rightSlot.unavailable`, `rightSlot.unavailableReason`, and `rightSlot.fallback = "primary digit model"` when that fallback is used.
+- No capture thresholds, homography behavior, or confidence policy gates were loosened.
+
+Verification commands run:
+
+```text
+node scripts/eval_uploaded_worksheets.mjs --url https://127.0.0.1:5174 --model /models/worksheet-digit-tony-generalist-noaug-20260601.onnx --right-slot-model /models/missing-right-slot-old-ipad-test.onnx --out private-evidence/sg3-old-ipad-engine-fallback-20260607/missing-right-slot /tmp/codex-remote-attachments/019e9a57-ed9d-78a0-b620-e58b9ee66c3c/8F0CA1D8-C947-46A6-AAD9-CA51F5F84A9C/1-Photo-1.jpg
+node scripts/eval_uploaded_worksheets.mjs --url https://127.0.0.1:5174 --out private-evidence/sg3-9-photo-confidence-20260606/old-ipad-engine-fallback-1745 private-evidence/sg3-9-photo-confidence-20260606/1-Photo-1.jpg private-evidence/sg3-9-photo-confidence-20260606/2-Photo-2.jpg private-evidence/sg3-9-photo-confidence-20260606/3-Photo-3.jpg private-evidence/sg3-9-photo-confidence-20260606/4-Photo-4.jpg private-evidence/sg3-9-photo-confidence-20260606/5-Photo-5.jpg private-evidence/sg3-9-photo-confidence-20260606/6-Photo-6.jpg private-evidence/sg3-9-photo-confidence-20260606/7-Photo-7.jpg private-evidence/sg3-9-photo-confidence-20260606/8-Photo-8.jpg private-evidence/sg3-9-photo-confidence-20260606/9-Photo-9.jpg
+npm run score:sg3-ocr -- --run private-evidence/sg3-9-photo-confidence-20260606/old-ipad-engine-fallback-1745
+npm run build
+npx playwright test test-app.spec.js test-ocr.spec.js test-upload-real.spec.js --config=playwright.config.js
+node scripts/replay_live_ocr_captured.mjs --url https://127.0.0.1:5174 --out-dir private-evidence/sg3-iphone-live-20260607/old-ipad-engine-fallback-1745 /Users/openclaw/Desktop/4/scangrade-live-ocr-debug-*.json
+npm run score:live-ocr-truth -- private-evidence/sg3-iphone-live-20260607/old-ipad-engine-fallback-1745/*-replay-result.json
+```
+
+Verification results:
+
+- Forced missing right-slot model replay produced `20` predictions with no OCR error and debug fallback metadata: `rightSlot.loaded = false`, `rightSlot.unavailable = true`, `rightSlot.fallback = "primary digit model"`.
+- `npm run build` passed.
+- Focused Playwright suite passed: `5 passed`.
+- Clean 9-photo truth score stayed at `89/90` confident, `89/89` confident accuracy, `0` confident wrong, `90/90` all-answer OCR truth.
+- Older live iPhone still replay stayed safe: `72/90` answer OCR truth, `53/90` confident, `53/53` confident accuracy, `0` confident wrong, `159/180` digit OCR truth.
+- The live replay command exited nonzero because two old still captures were intentionally guarded as unusable/all-review; the truth scorer confirms no confident-wrong regression.
+- Next proof must be a live old-iPad retest on `2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback`.

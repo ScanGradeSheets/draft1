@@ -413,7 +413,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { processWorksheet, detectCornerMarkers } from '../homography.js'
 import {
   initDigitModel,
@@ -768,6 +768,7 @@ const activeCorrectionQuestion = ref(null)
 const manualCorrectionText = ref('')
 const manualCorrectionClearedForSession = ref(false)
 const correctionError = ref('')
+let digitModelWarmupStarted = false
 let autoCaptureIntervalId = null
 let stableSince = null
 let previousFrameGray = null
@@ -2232,6 +2233,20 @@ const capturePhoto = () => {
   if (!props.captureEnabled) return
   doCapture({ source: 'manual' })
 }
+
+onMounted(() => {
+  if (props.studentMode) {
+    window.setTimeout(warmStudentDigitModel, 0)
+  }
+})
+
+watch(
+  () => [props.studentMode, props.captureEnabled],
+  ([studentMode, captureEnabled]) => {
+    if (studentMode && captureEnabled) warmStudentDigitModel()
+  },
+  { immediate: true }
+)
 
 watch(
   processing,
@@ -4687,6 +4702,19 @@ async function runModelSanityTest() {
   } finally {
     modelSanityRunning.value = false
   }
+}
+
+function warmStudentDigitModel() {
+  if (!props.studentMode || digitModelWarmupStarted) return
+  digitModelWarmupStarted = true
+  initDigitModel()
+    .then(() => {
+      modelInfoSnapshot.value = getDigitModelInfo()
+    })
+    .catch((err) => {
+      digitModelWarmupStarted = false
+      console.warn('[ScanGrade] Student digit model warmup did not finish:', err)
+    })
 }
 
 const runRealOCR = async () => {

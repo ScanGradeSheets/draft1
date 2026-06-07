@@ -1,10 +1,10 @@
 {
   "current_mission": "Use Tony's latest real worksheet photos to improve confident two-digit OCR reads without allowing confident wrong reads.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
-  "next_best_move": "Codex/Tony: push and test build 2026.06.07-1525-EDT-sg3-sharp-auto-capture on live phone scans. The newest burst-build phone batch showed that soft auto-captured frames were still getting submitted; this build keeps the easy pre-capture gate but waits for a sharper selected frame before OCR.",
-  "plain_english_status": "The clean 9-photo benchmark is solved for this evidence set: the current policy reads all 90 handwritten answers correctly and auto-clears 89/90 answers with 89/89 confident accuracy and 0 confident wrong reads. Tony's 2026-06-07 live iPhone batches exposed a harder classroom problem: rough live captures are safe but still too review-heavy. The first burst build worked mechanically, but the newest live batch showed the bad scans clustered around selected-frame focus scores of 420-510. Build 2026.06.07-1525-EDT-sg3-sharp-auto-capture keeps the eased pre-capture gate, extends the burst window, and requires an auto-selected frame to be sharper before grading. This should prevent the app from submitting half-focused scans; remaining misses on sharp scans are still an OCR/model-preprocessing problem.",
+  "next_best_move": "Tony: test build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback on the old iPad and one phone. The old iPad screenshot showed capture working but the grading engine failing after the worksheet was saved for review; this build warms the digit model earlier and falls back to the primary model if the auxiliary right-slot model fails.",
+  "plain_english_status": "The clean 9-photo benchmark is solved for this evidence set: the current policy reads all 90 handwritten answers correctly and auto-clears 89/90 answers with 89/89 confident accuracy and 0 confident wrong reads. Tony's 2026-06-07 live iPhone batches exposed a harder classroom problem: rough live captures are safe but still too review-heavy. The sharp-auto build should prevent the app from submitting half-focused scans. Tony's old iPad screenshot then exposed a separate reliability issue: the scan image looked good, but the digit grading engine did not finish loading. Build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback keeps the OCR/capture policy intact, warms the model at Student Mode startup, shares in-flight model loading, and prevents an auxiliary right-slot model failure from killing the whole scan.",
   "needs_tony": [
-    "Test build 2026.06.07-1525-EDT-sg3-sharp-auto-capture after it is pushed, and send any new debug JSON/crop export before making manual corrections if live scans still over-review.",
+    "Test build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback on the old iPad; confirm whether the same worksheet now grades instead of showing the grading-engine load message.",
     "For any sheet that fails in the live app, also send one normal camera photo of the same physical page if convenient.",
     "Keep using normal student pencil/spacing; imperfect handwriting is the useful test.",
     "If possible, note whether a scan was from the live app, a phone photo, or an iPad photo."
@@ -22,11 +22,11 @@
       "column": "Now",
       "cards": [
         {
-          "title": "Harden live iPhone OCR",
+          "title": "Verify old iPad engine fallback",
           "type": "validation",
           "owner": "Codex",
-          "summary": "Current local candidate is build 2026.06.07-1525-EDT-sg3-sharp-auto-capture with a longer burst and stricter final auto sharpness gate.",
-          "detail": "The clean 9-photo target is still met at 89/90 confident with 0 confident wrong reads. The latest live still replay remains 53/90 confident, 53/53 confident accuracy, and 72/90 OCR-correct answers because replay starts after capture. Tony's newest live burst batch showed that half-focused auto frames were still being accepted, so test the sharp-auto build live before changing confidence gates again."
+          "summary": "Current candidate is build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback, which warms the OCR engine earlier and falls back if the optional right-slot model fails.",
+          "detail": "The clean 9-photo target is still met at 89/90 confident with 0 confident wrong reads. The latest live still replay remains safe at 53/90 confident, 53/53 confident accuracy, and 0 confident wrong. Tony's old iPad screenshot showed a good scan image followed by the grading-engine load error, so the next proof is a live old-iPad retest."
         }
       ]
     },
@@ -50,7 +50,7 @@
           "type": "app",
           "owner": "Codex",
           "summary": "Use npm run score:sg3-ocr and npm run score:live-ocr-truth after every OCR/review change.",
-          "detail": "The clean benchmark is private-evidence/sg3-9-photo-confidence-20260606/sharp-auto-capture-1525. The live still benchmark is private-evidence/sg3-iphone-live-20260607/sharp-auto-capture-1525. A patch only counts as progress if confident wrong answers stay at 0 and handwritten-truth accuracy or safe confident coverage improves on new evidence."
+          "detail": "The clean benchmark is private-evidence/sg3-9-photo-confidence-20260606/old-ipad-engine-fallback-1745. The live still benchmark is private-evidence/sg3-iphone-live-20260607/old-ipad-engine-fallback-1745. A patch only counts as progress if confident wrong answers stay at 0 and handwritten-truth accuracy or safe confident coverage improves on new evidence."
         }
       ]
     },
@@ -81,6 +81,13 @@
     {
       "column": "Done",
       "cards": [
+        {
+          "title": "Old iPad engine fallback candidate verified",
+          "type": "validation",
+          "owner": "Codex",
+          "summary": "Build 2026.06.07-1745-EDT-sg3-old-ipad-engine-fallback protects good old-iPad captures from failing only because the auxiliary digit engine path did not load.",
+          "detail": "Production changes: Student Mode warms the digit model when capture starts, model initialization shares one in-flight promise, and right-slot model load/run failure falls back to the primary digit model instead of producing a whole-scan error. Verification: forced missing right-slot model replay produced 20 predictions and debug fallback metadata with no OCR error; npm run build passed; Playwright smoke/upload suite passed 5/5; clean 9-photo truth score stayed 89/90 confident, 89/89 confident accuracy, 0 confident wrong, and 90/90 all-answer OCR truth; older live iPhone replay stayed safe at 53/90 confident, 53/53 confident accuracy, and 0 confident wrong."
+        },
         {
           "title": "SG3 sharp auto-capture candidate verified",
           "type": "validation",

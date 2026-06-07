@@ -49,9 +49,12 @@ function getOrtRuntimeConfig() {
  * ONNX Runtime session (singleton)
  */
 let digitSession = null;
+let digitModelInitPromise = null;
 let ensembleDigitSession = null;
 let rightSlotDigitSession = null;
 let rightSlotModelPathLoaded = null;
+let rightSlotModelUnavailablePath = null;
+let rightSlotModelUnavailableReason = null;
 const LEGACY_MNIST_MODEL_PATH = publicUrl('models/mnist-model.onnx');
 const DEFAULT_MODEL_PATH = publicUrl('models/worksheet-digit-tony-generalist-noaug-20260601.onnx');
 const DEFAULT_RIGHT_SLOT_MODEL_PATH = publicUrl('models/worksheet-digit-live-trusted-temp.onnx');
@@ -507,8 +510,9 @@ function makeRobustDigitVariants(src) {
  */
 export async function initDigitModel() {
   if (digitSession) return digitSession;
+  if (digitModelInitPromise) return digitModelInitPromise;
 
-  try {
+  digitModelInitPromise = (async () => {
     const modelPath = getModelPathFromUrl();
     const primary = await loadDigitSession(modelPath);
     digitSession = primary.session;
@@ -611,29 +615,62 @@ export async function initDigitModel() {
     }
     console.log('✅ ONNX digit model loaded:', digitSession.inputNames, '→', digitSession.outputNames);
     return digitSession;
+  })();
+
+  try {
+    return await digitModelInitPromise;
   } catch (err) {
+    digitModelInitPromise = null;
     console.error('❌ Failed to load ONNX model:', err);
     throw new Error('ONNX model not found at ' + getModelPathFromUrl() + ': ' + (err?.message || String(err)));
   }
 }
 
+function disableRightSlotModel(modelPath, err) {
+  rightSlotDigitSession = null;
+  rightSlotModelPathLoaded = null;
+  rightSlotModelUnavailablePath = modelPath || null;
+  rightSlotModelUnavailableReason = err?.message || String(err || 'unknown right-slot model failure');
+  if (modelRuntimeInfo) {
+    modelRuntimeInfo.rightSlot = {
+      ...(modelRuntimeInfo.rightSlot || {}),
+      enabled: !!modelPath,
+      modelPath,
+      loaded: false,
+      unavailable: true,
+      unavailableReason: rightSlotModelUnavailableReason,
+      fallback: 'primary digit model'
+    };
+  }
+  console.warn('[ScanGrade] Right-slot OCR model unavailable; falling back to primary model:', rightSlotModelUnavailableReason);
+}
+
 async function getRightSlotDigitSession() {
   const modelPath = getRightSlotModelPathFromUrl();
   if (!modelPath) return null;
+  if (rightSlotModelUnavailablePath === modelPath) return null;
   if (rightSlotDigitSession && rightSlotModelPathLoaded === modelPath) return rightSlotDigitSession;
 
-  const loaded = await loadDigitSession(modelPath);
+  let loaded;
+  try {
+    loaded = await loadDigitSession(modelPath);
+  } catch (err) {
+    disableRightSlotModel(modelPath, err);
+    return null;
+  }
   if (modelPath === DEFAULT_RIGHT_SLOT_MODEL_PATH && loaded.sha256 && loaded.sha256 !== KNOWN_RIGHT_SLOT_SHA256) {
-    rightSlotDigitSession = null;
-    rightSlotModelPathLoaded = null;
-    throw new Error(
+    disableRightSlotModel(
+      modelPath,
       `Loaded OCR right-slot model SHA ${loaded.sha256.slice(0, 12)} does not match the expected model ` +
       `${KNOWN_RIGHT_SLOT_SHA256.slice(0, 12)}. Reload the page to clear the stale model cache.`
     );
+    return null;
   }
 
   rightSlotDigitSession = loaded.session;
   rightSlotModelPathLoaded = modelPath;
+  rightSlotModelUnavailablePath = null;
+  rightSlotModelUnavailableReason = null;
   if (modelRuntimeInfo) {
     modelRuntimeInfo.rightSlot = {
       enabled: true,
@@ -2163,12 +2200,22 @@ function maybeApplyLowConfidenceSixVoteOverride(averagedProbs, variantProbs) {
 async function runDigitDataAsProbs(data, options = {}) {
   // Copy to a new Float32Array so buffer is not neutered by WASM transfer. Prefer array over ort.Tensor
   // because onnxruntime-web can detach/replace Tensor.data, yielding zeros when read.
-  const tensor = new ort.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
   const digitIndex = Number(options.digitIndex);
   const rightSlotSession = digitIndex === 1 ? await getRightSlotDigitSession() : null;
-  const activeSession = rightSlotSession || digitSession;
-  const probs = await runDigitSessionAsProbs(activeSession, tensor);
-  if (!rightSlotSession && ensembleDigitSession) {
+  let usedRightSlotSession = false;
+  if (rightSlotSession) {
+    try {
+      const rightSlotTensor = new ort.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
+      usedRightSlotSession = true;
+      return await runDigitSessionAsProbs(rightSlotSession, rightSlotTensor);
+    } catch (err) {
+      usedRightSlotSession = false;
+      disableRightSlotModel(getRightSlotModelPathFromUrl(), err);
+    }
+  }
+  const tensor = new ort.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
+  const probs = await runDigitSessionAsProbs(digitSession, tensor);
+  if (!usedRightSlotSession && ensembleDigitSession) {
     const ensembleTensor = new ort.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
     const auxProbs = await runDigitSessionAsProbs(ensembleDigitSession, ensembleTensor);
     for (let i = 0; i < probs.length; i++) {
