@@ -1,0 +1,565 @@
+{
+  "layout_id": "sg-g1-lw-10-place-value-50",
+  "version": 1,
+  "answer_key": [
+    3,
+    4,
+    4,
+    0,
+    4,
+    9,
+    3,
+    2,
+    3,
+    0,
+    4,
+    7
+  ],
+  "page": {
+    "aspect_ratio": 0.7727,
+    "units": "normalized"
+  },
+  "boxes": [
+    {
+      "id": 0,
+      "question_num": 1,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3909,
+      "y": 0.4184,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 3
+    },
+    {
+      "id": 1,
+      "question_num": 1,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4576,
+      "y": 0.4184,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 4
+    },
+    {
+      "id": 2,
+      "question_num": 2,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3909,
+      "y": 0.6296,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 4
+    },
+    {
+      "id": 3,
+      "question_num": 2,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4576,
+      "y": 0.6296,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 0
+    },
+    {
+      "id": 4,
+      "question_num": 3,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3909,
+      "y": 0.8407,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 4
+    },
+    {
+      "id": 5,
+      "question_num": 3,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4576,
+      "y": 0.8407,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 9
+    },
+    {
+      "id": 6,
+      "question_num": 4,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8055,
+      "y": 0.4184,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 3
+    },
+    {
+      "id": 7,
+      "question_num": 4,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8722,
+      "y": 0.4184,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 2
+    },
+    {
+      "id": 8,
+      "question_num": 5,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8055,
+      "y": 0.6296,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 3
+    },
+    {
+      "id": 9,
+      "question_num": 5,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8722,
+      "y": 0.6296,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 0
+    },
+    {
+      "id": 10,
+      "question_num": 6,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8055,
+      "y": 0.8407,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 4
+    },
+    {
+      "id": 11,
+      "question_num": 6,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8722,
+      "y": 0.8407,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 7
+    }
+  ],
+  "question_groups": [
+    {
+      "question_num": 1,
+      "problem": "3 tens + 4 ones",
+      "answer": 34,
+      "digit_box_ids": [
+        0,
+        1
+      ],
+      "canonical_digits": [
+        3,
+        4
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3932
+        ],
+        "y1": 0.3592,
+        "y2": 0.4184
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "34",
+          "digits": [
+            3,
+            4
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 2,
+      "problem": "after 39",
+      "answer": 40,
+      "digit_box_ids": [
+        2,
+        3
+      ],
+      "canonical_digits": [
+        4,
+        0
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3932
+        ],
+        "y1": 0.5703,
+        "y2": 0.6296
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "40",
+          "digits": [
+            4,
+            0
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 3,
+      "problem": "before 50",
+      "answer": 49,
+      "digit_box_ids": [
+        4,
+        5
+      ],
+      "canonical_digits": [
+        4,
+        9
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3932
+        ],
+        "y1": 0.7815,
+        "y2": 0.8407
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "49",
+          "digits": [
+            4,
+            9
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 4,
+      "problem": "larger: 27 or 32",
+      "answer": 32,
+      "digit_box_ids": [
+        6,
+        7
+      ],
+      "canonical_digits": [
+        3,
+        2
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.8078
+        ],
+        "y1": 0.3592,
+        "y2": 0.4184
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "32",
+          "digits": [
+            3,
+            2
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 5,
+      "problem": "10 + 10 + 10",
+      "answer": 30,
+      "digit_box_ids": [
+        8,
+        9
+      ],
+      "canonical_digits": [
+        3,
+        0
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.8078
+        ],
+        "y1": 0.5703,
+        "y2": 0.6296
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "30",
+          "digits": [
+            3,
+            0
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 6,
+      "problem": "40 + 7",
+      "answer": 47,
+      "digit_box_ids": [
+        10,
+        11
+      ],
+      "canonical_digits": [
+        4,
+        7
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.8078
+        ],
+        "y1": 0.7815,
+        "y2": 0.8407
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "47",
+          "digits": [
+            4,
+            7
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    }
+  ],
+  "question_regions": [
+    {
+      "question_num": 1,
+      "layout_family": "work_cards",
+      "x": 0.1,
+      "y": 0.2319,
+      "width": 0.3854,
+      "height": 0.1969,
+      "letter_bubble": {
+        "x": 0.1223,
+        "y": 0.3304
+      }
+    },
+    {
+      "question_num": 2,
+      "layout_family": "work_cards",
+      "x": 0.1,
+      "y": 0.4431,
+      "width": 0.3854,
+      "height": 0.1969,
+      "letter_bubble": {
+        "x": 0.1223,
+        "y": 0.5415
+      }
+    },
+    {
+      "question_num": 3,
+      "layout_family": "work_cards",
+      "x": 0.1,
+      "y": 0.6543,
+      "width": 0.3854,
+      "height": 0.1969,
+      "letter_bubble": {
+        "x": 0.1223,
+        "y": 0.7527
+      }
+    },
+    {
+      "question_num": 4,
+      "layout_family": "work_cards",
+      "x": 0.5146,
+      "y": 0.2319,
+      "width": 0.3854,
+      "height": 0.1969,
+      "letter_bubble": {
+        "x": 0.5368,
+        "y": 0.3304
+      }
+    },
+    {
+      "question_num": 5,
+      "layout_family": "work_cards",
+      "x": 0.5146,
+      "y": 0.4431,
+      "width": 0.3854,
+      "height": 0.1969,
+      "letter_bubble": {
+        "x": 0.5368,
+        "y": 0.5415
+      }
+    },
+    {
+      "question_num": 6,
+      "layout_family": "work_cards",
+      "x": 0.5146,
+      "y": 0.6543,
+      "width": 0.3854,
+      "height": 0.1969,
+      "letter_bubble": {
+        "x": 0.5368,
+        "y": 0.7527
+      }
+    }
+  ],
+  "work_regions": [
+    {
+      "question_num": 1,
+      "x": 0.1658,
+      "y": 0.2928,
+      "width": 0.2927,
+      "height": 0.0578,
+      "graded": false
+    },
+    {
+      "question_num": 2,
+      "x": 0.1658,
+      "y": 0.5039,
+      "width": 0.2927,
+      "height": 0.0578,
+      "graded": false
+    },
+    {
+      "question_num": 3,
+      "x": 0.1658,
+      "y": 0.7151,
+      "width": 0.2927,
+      "height": 0.0578,
+      "graded": false
+    },
+    {
+      "question_num": 4,
+      "x": 0.5804,
+      "y": 0.2928,
+      "width": 0.2927,
+      "height": 0.0578,
+      "graded": false
+    },
+    {
+      "question_num": 5,
+      "x": 0.5804,
+      "y": 0.5039,
+      "width": 0.2927,
+      "height": 0.0578,
+      "graded": false
+    },
+    {
+      "question_num": 6,
+      "x": 0.5804,
+      "y": 0.7151,
+      "width": 0.2927,
+      "height": 0.0578,
+      "graded": false
+    }
+  ],
+  "homography": {
+    "anchors": [
+      {
+        "id": "tl",
+        "x": 0.0829,
+        "y": 0.0641
+      },
+      {
+        "id": "tr",
+        "x": 0.9171,
+        "y": 0.0641
+      },
+      {
+        "id": "br",
+        "x": 0.9171,
+        "y": 0.9359
+      },
+      {
+        "id": "bl",
+        "x": 0.0829,
+        "y": 0.9359
+      }
+    ],
+    "marker_size": 0.0528
+  },
+  "metadata": {
+    "title": "Place Value and Number Sense",
+    "human_code": "SG-G1-LW-10",
+    "grade_level": 1,
+    "layout_family": "work_cards",
+    "total_questions": 6,
+    "answer_box_count": 12,
+    "printed_text_font_family": "Lexend",
+    "required_font_files": [
+      "public/fonts/Lexend-wght.ttf"
+    ],
+    "digit_box_width_mm": 13.4,
+    "digit_box_height_mm": 16.55,
+    "answer_slots_per_question": 2,
+    "answer_slot_counts": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "marker_size_mm": 11.4,
+    "classroom_test_packet": true,
+    "classroom_test_packet_date": "2026-06-17",
+    "grading_policy": {
+      "answer_slots_per_question": 2,
+      "answer_slot_counts": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "graded_region": "final_numeric_answer_boxes_only",
+      "work_space_graded": false,
+      "printed_digit_split_guide": "one-slot boxes have no divider; two-slot boxes use open center divider notches",
+      "blank_digit_value": null,
+      "shorter_answers_accept_left_or_right_placement": true
+    },
+    "qr_position": {
+      "x": 0.4403,
+      "y": 0.8715,
+      "width": 0.1195,
+      "height": 0.0923
+    }
+  }
+}
