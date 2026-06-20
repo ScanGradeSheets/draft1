@@ -44,9 +44,10 @@ Implementation:
 - Each debug scan posts the full live OCR debug bundle to Mission Control.
 - Mission Control now exposes token-protected `POST /api/debug-scans` and stores the evidence under `private-evidence/debug-scans/YYYY-MM-DD/<scan-id>/`.
 - Saved files include `debug.json`, `summary.json`, `captured.png`, `warped.png`, `raw-crops/*.png`, and `model-inputs/*.png` when available.
+- 2026-06-19 follow-up: debug uploads now also include `marked-sheet.jpg` and `overlay-debug.json` when the browser successfully renders the marked result. Use these to diagnose yellow review circles, checks, or X marks that appear in the wrong place.
 - `private-evidence/` is ignored by git; do not commit this student evidence.
 - Manual corrections are not auto-uploaded over the raw scan result. The auto-saved bundle is intended to represent what the app saw at scan time.
-- Public debug build label for this change: `2026.06.19-2000-EDT-debug-auto-upload`.
+- Current public debug build label after the marked-sheet follow-up: `2026.06.19-2105-EDT-debug-marked-sheet`.
 
 Runbook:
 

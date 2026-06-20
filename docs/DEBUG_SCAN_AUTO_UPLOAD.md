@@ -17,6 +17,8 @@ Each saved scan includes:
 - `debug.json`: full OCR debug bundle from the browser.
 - `summary.json`: small index file with layout, score/review counts, runtime, and quality metadata.
 - `captured.png`: original captured camera image when available.
+- `marked-sheet.jpg`: the user-facing marked sheet image when available.
+- `overlay-debug.json`: compact overlay geometry and mark-placement metadata when available.
 - `warped.png`: homography-warped worksheet when available.
 - `raw-crops/*.png`: raw answer-box crops.
 - `model-inputs/*.png`: 28x28 model input images.
@@ -75,3 +77,5 @@ private-evidence/debug-scans/
 ```
 
 Use `summary.json` files to triage a large batch before opening the full `debug.json` files. The saved debug data reflects the raw OCR result at scan time; later on-screen manual corrections are not auto-uploaded over the original evidence.
+
+For misplaced yellow circles, checks, or X marks, compare `marked-sheet.jpg` with `overlay-debug.json`. The marked-sheet image is the same rendered result the student saw; the overlay JSON records the answer-box rectangles, mark type, review slots, and whether the marks were drawn on the source camera capture or the warped worksheet.

@@ -255,6 +255,8 @@ function summarizeDebugScan(debug, body, req, receivedAt) {
     runtime: debug.runtime || null,
     assets: {
       hasCapturedImage: typeof debug.capturedImageDataUrl === 'string',
+      hasMarkedSheet: typeof debug.markedSheetDataUrl === 'string',
+      hasOverlayDebug: debug.overlayDebug && typeof debug.overlayDebug === 'object' && !Array.isArray(debug.overlayDebug),
       hasWarpedImage: typeof debug.warpedDataUrl === 'string',
       rawCropCount: Array.isArray(debug.rawCropDataUrls) ? debug.rawCropDataUrls.length : 0,
       modelInputCount: Array.isArray(debug.modelInputDataUrls) ? debug.modelInputDataUrls.length : 0,
@@ -296,6 +298,16 @@ async function saveDebugScanUpload(body, req) {
   const assetFiles = [];
   const capturedPath = await writeDataUrl(resolve(dir, 'captured.png'), debug.capturedImageDataUrl);
   if (capturedPath) assetFiles.push('captured.png');
+  const markedSheetPath = await writeDataUrl(resolve(dir, 'marked-sheet.jpg'), debug.markedSheetDataUrl);
+  if (markedSheetPath) assetFiles.push('marked-sheet.jpg');
+  if (debug.overlayDebug && typeof debug.overlayDebug === 'object' && !Array.isArray(debug.overlayDebug)) {
+    await writePlainJson(resolve(dir, 'overlay-debug.json'), {
+      receivedAt,
+      debugScanId: id,
+      ...debug.overlayDebug,
+    });
+    assetFiles.push('overlay-debug.json');
+  }
   const warpedPath = await writeDataUrl(resolve(dir, 'warped.png'), debug.warpedDataUrl);
   if (warpedPath) assetFiles.push('warped.png');
 

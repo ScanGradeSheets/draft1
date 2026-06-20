@@ -1540,6 +1540,18 @@ async function applyManualCorrectionCells(cells, { slotIndex = null } = {}) {
     nextPredictions,
     questionCorrect
   )
+  const overlayDebug = buildOverlayDebugSnapshot({
+    questionGroups,
+    layoutId: layoutSnapshot?.layout_id || result.template_id || null,
+    annotationGeometry,
+    annotationRegions,
+    predictions: nextPredictions,
+    questionCorrect,
+    questionReview,
+    annotationBaseMode: result.annotationBaseMode || 'unknown',
+    annotationSeed: result.annotationSeed,
+    markedSheetAvailable: !!annotatedImageUrl
+  })
   const groupedStructureNeedsReview =
     (questionGroups.length > 0 && !Array.isArray(questionCorrect)) ||
     (Array.isArray(questionReview) && questionReview.some(Boolean))
@@ -1575,6 +1587,8 @@ async function applyManualCorrectionCells(cells, { slotIndex = null } = {}) {
       questionReview,
       annotationGeometry,
       annotationRegions,
+      markedSheetDataUrl: annotatedImageUrl || null,
+      overlayDebug,
       manualCorrections,
       correctedAt: new Date().toISOString()
     }
@@ -4022,6 +4036,96 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
   }).filter(Boolean)
 }
 
+function buildOverlayDebugSnapshot({
+  questionGroups,
+  layoutId = null,
+  annotationGeometry,
+  annotationRegions,
+  predictions,
+  questionCorrect = null,
+  questionReview = null,
+  annotationBaseMode = 'unknown',
+  annotationSeed = null,
+  markedSheetAvailable = false
+} = {}) {
+  const groups = Array.isArray(questionGroups) ? questionGroups : []
+  const crops = Array.isArray(annotationGeometry?.crops) ? annotationGeometry.crops : []
+  const warpedW = annotationGeometry?.warpedW || 1
+  const warpedH = annotationGeometry?.warpedH || 1
+  const cropById = new Map(crops.map((crop, index) => [crop.id ?? index, crop]))
+  const predictionById = new Map((predictions || []).map((prediction, index) => [prediction.id ?? index, prediction]))
+
+  const questionMarks = groups.map((group, index) => {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    const slotRects = ids.map((id) => {
+      const crop = cropById.get(id)
+      const rect = annotationRectForCrop(crop)
+      return rect ? { digitBoxId: id, ...cloneRect(rect) } : null
+    }).filter(Boolean)
+    const answerRect = unionRects(slotRects)
+    const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
+    const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
+    const reviewNeeded =
+      Array.isArray(questionReview) && typeof questionReview[index] === 'boolean'
+        ? questionReview[index]
+        : groupPredictions.some((prediction) => prediction?.reviewNeeded) ||
+          groupHasRequiredSlotReview(group, ids, predictionById)
+    const reviewSlots = ids
+      .map((id, slotIndex) => ({ id, slotIndex }))
+      .filter(({ slotIndex }) => slotNeedsReview(group, ids, slotIndex, predictionById))
+      .map(({ slotIndex }) => slotIndex)
+    const markKind = reviewNeeded
+      ? 'review'
+      : correct === true
+        ? 'check'
+        : correct === false
+          ? 'x'
+          : 'none'
+    const markRects = markKind === 'review'
+      ? (
+          slotRects.length > 1 && reviewSlots.length === slotRects.length && answerRect
+            ? [{ kind: 'whole-answer-review', ...cloneRect(answerRect) }]
+            : reviewSlots
+              .map((slotIndex) => {
+                const slotRect = slotRects.find((rect) => rect.digitBoxId === ids[slotIndex])
+                return slotRect ? { kind: 'slot-review', slotIndex, ...cloneRect(slotRect) } : null
+              })
+              .filter(Boolean)
+        )
+      : answerRect
+        ? [{ kind: markKind, ...cloneRect(answerRect) }]
+        : []
+
+    return {
+      questionNum: group?.question_num ?? index + 1,
+      label: `${questionLetter(index)})`,
+      digitBoxIds: ids,
+      expectedAnswer: group?.answer ?? null,
+      markKind,
+      correct: typeof correct === 'boolean' ? correct : null,
+      reviewNeeded,
+      reviewSlots,
+      answerRect: cloneRect(answerRect),
+      slotRects,
+      markRects
+    }
+  })
+
+  return {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    purpose: 'debug rendered result overlay placement',
+    layoutId,
+    annotationBaseMode,
+    annotationSeed,
+    markedSheetAvailable,
+    dimensions: { width: warpedW, height: warpedH },
+    annotationGeometry: clonePlain(annotationGeometry || null),
+    annotationRegions: clonePlain(annotationRegions || []),
+    questionMarks
+  }
+}
+
 function tensorInkQuality(tensor, id = null) {
   const values = tensor && typeof tensor.length === 'number' ? tensor : []
   let inkPixels = 0
@@ -4985,6 +5089,7 @@ const runRealOCR = async () => {
     const annotationWidth = sourceAnnotationContext?.width || warpedImage.cols
     const annotationHeight = sourceAnnotationContext?.height || warpedImage.rows
     const annotationBaseImageUrl = sourceAnnotationContext ? capturedImage.value : null
+    const annotationBaseMode = sourceAnnotationContext ? 'source-capture' : 'warped-sheet'
     const annotationGeometry = buildAnnotationGeometry(annotationCrops, annotationWidth, annotationHeight, null)
     const layoutSnapshot = buildLayoutSnapshot(annotationLayout)
     partialDebug.stage = 'preparing OCR crops'
@@ -5319,6 +5424,7 @@ const runRealOCR = async () => {
       annotationGeometry,
       annotationRegions,
       layoutSnapshot,
+      annotationBaseMode,
       annotationSeed: Date.now() % 1000000,
       manualCorrections: {}
     }
@@ -5361,10 +5467,24 @@ const runRealOCR = async () => {
     } catch (e) {
       console.warn('[ScanGrade] student annotation render failed:', e)
     }
+    const overlayDebug = buildOverlayDebugSnapshot({
+      questionGroups: annotationLayout?.question_groups,
+      layoutId: annotationLayout?.layout_id || layout?.layout_id || null,
+      annotationGeometry,
+      annotationRegions,
+      predictions,
+      questionCorrect,
+      questionReview,
+      annotationBaseMode,
+      annotationSeed: payload.annotationSeed,
+      markedSheetAvailable: !!payload.annotatedImageUrl
+    })
 
     if (liveOcrDebugExportEnabled.value) {
       lastLiveOcrDebug.value = {
         capturedImageDataUrl: capturedImage.value,
+        markedSheetDataUrl: payload.annotatedImageUrl || null,
+        overlayDebug,
         warpedDataUrl: partialDebug.warpedDataUrl,
         rawCropDataUrls: partialDebug.rawCropDataUrls,
         modelInputDataUrls: partialDebug.modelInputDataUrls,
