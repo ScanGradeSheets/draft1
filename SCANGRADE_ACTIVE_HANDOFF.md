@@ -128,6 +128,14 @@ Current judgement:
 
 Unrelated dirty worktree files existed before this handoff and should not be reverted without Tony's approval.
 
+2026-06-20 17:34 EDT update:
+
+- Tony scanned another packet, but no new worksheet debug folders arrived in `private-evidence/debug-scans/2026-06-20/`.
+- The latest real packet evidence visible at that moment was still the earlier run ending at `2026-06-20T01:28:14Z`; later entries were smoke/receiver checks only.
+- Local Mission Control was not running and the tailnet URL returned `502`, so the just-scanned packet should be treated as not received.
+- Mission Control was restarted and the tailnet route returned `200`; a tailnet receiver-check upload saved successfully.
+- Next action remains: open a prepared debug URL whose token matches the running receiver, re-scan a 3-page sanity set, confirm folders arrive, then scan the full packet set.
+
 ## Grade 1 Last-Week Classroom Test Packet
 
 On 2026-06-17, SG 3 generated a new 10-page Grade 1 packet for Tony's final classroom testing window before summer break.
