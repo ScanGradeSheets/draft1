@@ -224,11 +224,47 @@ async function writeDataUrl(path, dataUrl) {
   return path;
 }
 
+function debugKeys(key) {
+  return Array.isArray(key) ? key : [key];
+}
+
+function firstDebugString(debug, body, key) {
+  for (const source of [debug, body, body?.debug]) {
+    for (const candidate of debugKeys(key)) {
+      if (typeof source?.[candidate] === 'string') return source[candidate];
+    }
+  }
+  return null;
+}
+
+function firstDebugObject(debug, body, key) {
+  for (const source of [debug, body, body?.debug]) {
+    for (const candidate of debugKeys(key)) {
+      if (source?.[candidate] && typeof source[candidate] === 'object' && !Array.isArray(source[candidate])) return source[candidate];
+    }
+  }
+  return null;
+}
+
+function firstDebugArray(debug, body, key) {
+  for (const source of [debug, body, body?.debug]) {
+    for (const candidate of debugKeys(key)) {
+      if (Array.isArray(source?.[candidate])) return source[candidate];
+    }
+  }
+  return [];
+}
+
+const CAPTURED_IMAGE_KEYS = ['capturedImageDataUrl', 'capturedImage', 'captureDataUrl'];
+const MARKED_SHEET_KEYS = ['markedSheetDataUrl', 'markedSheetImage', 'annotatedImageUrl'];
+const CROPS_IMAGE_KEYS = ['cropsImageDataUrl', 'cropContactSheetDataUrl', 'cropsDataUrl', 'cropsImage'];
+
 function summarizeDebugScan(debug, body, req, receivedAt) {
   const predictions = Array.isArray(debug.predictions) ? debug.predictions : [];
   const answerGroups = Array.isArray(debug.answerGroups) ? debug.answerGroups : [];
   const questionCorrect = Array.isArray(debug.questionCorrect) ? debug.questionCorrect : null;
   const questionReview = Array.isArray(debug.questionReview) ? debug.questionReview : null;
+  const overlayDebug = firstDebugObject(debug, body, 'overlayDebug');
   return {
     receivedAt,
     source: body.source || 'scangrade-browser-debug',
@@ -254,13 +290,14 @@ function summarizeDebugScan(debug, body, req, receivedAt) {
     modelInfo: debug.modelInfo || null,
     runtime: debug.runtime || null,
     assets: {
-      hasCapturedImage: typeof debug.capturedImageDataUrl === 'string',
-      hasMarkedSheet: typeof debug.markedSheetDataUrl === 'string',
-      hasOverlayDebug: debug.overlayDebug && typeof debug.overlayDebug === 'object' && !Array.isArray(debug.overlayDebug),
-      hasWarpedImage: typeof debug.warpedDataUrl === 'string',
-      rawCropCount: Array.isArray(debug.rawCropDataUrls) ? debug.rawCropDataUrls.length : 0,
-      modelInputCount: Array.isArray(debug.modelInputDataUrls) ? debug.modelInputDataUrls.length : 0,
-      tensorCount: Array.isArray(debug.tensors) ? debug.tensors.length : 0,
+      hasCapturedImage: !!firstDebugString(debug, body, CAPTURED_IMAGE_KEYS),
+      hasMarkedSheet: !!firstDebugString(debug, body, MARKED_SHEET_KEYS),
+      hasOverlayDebug: !!overlayDebug,
+      hasWarpedImage: !!firstDebugString(debug, body, 'warpedDataUrl'),
+      hasCropsImage: !!firstDebugString(debug, body, CROPS_IMAGE_KEYS),
+      rawCropCount: firstDebugArray(debug, body, 'rawCropDataUrls').length,
+      modelInputCount: firstDebugArray(debug, body, 'modelInputDataUrls').length,
+      tensorCount: firstDebugArray(debug, body, 'tensors').length,
     },
   };
 }
@@ -296,29 +333,32 @@ async function saveDebugScanUpload(body, req) {
   });
 
   const assetFiles = [];
-  const capturedPath = await writeDataUrl(resolve(dir, 'captured.png'), debug.capturedImageDataUrl);
+  const capturedPath = await writeDataUrl(resolve(dir, 'captured.png'), firstDebugString(debug, body, CAPTURED_IMAGE_KEYS));
   if (capturedPath) assetFiles.push('captured.png');
-  const markedSheetPath = await writeDataUrl(resolve(dir, 'marked-sheet.jpg'), debug.markedSheetDataUrl);
+  const markedSheetPath = await writeDataUrl(resolve(dir, 'marked-sheet.jpg'), firstDebugString(debug, body, MARKED_SHEET_KEYS));
   if (markedSheetPath) assetFiles.push('marked-sheet.jpg');
-  if (debug.overlayDebug && typeof debug.overlayDebug === 'object' && !Array.isArray(debug.overlayDebug)) {
+  const overlayDebug = firstDebugObject(debug, body, 'overlayDebug');
+  if (overlayDebug) {
     await writePlainJson(resolve(dir, 'overlay-debug.json'), {
       receivedAt,
       debugScanId: id,
-      ...debug.overlayDebug,
+      ...overlayDebug,
     });
     assetFiles.push('overlay-debug.json');
   }
-  const warpedPath = await writeDataUrl(resolve(dir, 'warped.png'), debug.warpedDataUrl);
+  const warpedPath = await writeDataUrl(resolve(dir, 'warped.png'), firstDebugString(debug, body, 'warpedDataUrl'));
   if (warpedPath) assetFiles.push('warped.png');
+  const cropsPath = await writeDataUrl(resolve(dir, 'crops.png'), firstDebugString(debug, body, CROPS_IMAGE_KEYS));
+  if (cropsPath) assetFiles.push('crops.png');
 
-  const rawCropUrls = Array.isArray(debug.rawCropDataUrls) ? debug.rawCropDataUrls : [];
+  const rawCropUrls = firstDebugArray(debug, body, 'rawCropDataUrls');
   for (let i = 0; i < rawCropUrls.length; i += 1) {
     const filename = `raw-crops/raw-${String(i + 1).padStart(2, '0')}.png`;
     const written = await writeDataUrl(resolve(dir, filename), rawCropUrls[i]);
     if (written) assetFiles.push(filename);
   }
 
-  const modelInputUrls = Array.isArray(debug.modelInputDataUrls) ? debug.modelInputDataUrls : [];
+  const modelInputUrls = firstDebugArray(debug, body, 'modelInputDataUrls');
   for (let i = 0; i < modelInputUrls.length; i += 1) {
     const filename = `model-inputs/model-${String(i + 1).padStart(2, '0')}.png`;
     const written = await writeDataUrl(resolve(dir, filename), modelInputUrls[i]);

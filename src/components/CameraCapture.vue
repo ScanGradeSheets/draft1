@@ -3450,6 +3450,142 @@ function gradingCellsMatch(a, b) {
   return a.every((value, index) => value === b[index])
 }
 
+function numberOrZero(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+function optionalSingleDigitForGroup(group, ids) {
+  if (!Array.isArray(ids) || ids.length !== 2) return null
+  const answer = group?.answer == null ? '' : String(group.answer).trim()
+  if (!/^\d$/.test(answer)) return null
+  const digit = Number(answer)
+  const acceptedResponses = acceptedResponsesForGroup(group, ids.length)
+  const hasFlexibleBlank = acceptedResponses.some((response) => (
+    Array.isArray(response) &&
+    response.length === ids.length &&
+    response.includes(digit) &&
+    response.includes(null)
+  ))
+  return hasFlexibleBlank ? digit : null
+}
+
+function matchingOptionalDigitLooksUsable(prediction, quality) {
+  if (!prediction) return false
+  const confidence = numberOrZero(prediction.confidence)
+  const topGap = numberOrZero(prediction.topGap)
+  if (confidence >= 0.70 && topGap >= 0.40) return true
+  const inkPixels = numberOrZero(quality?.inkPixels)
+  const maxRowCount = numberOrZero(quality?.maxRowCount)
+  const weakRatio = numberOrZero(quality?.weakVariantRatio)
+  const artifactRatio = numberOrZero(quality?.artifactVariantRatio)
+  return (
+    confidence >= 0.58 &&
+    topGap >= 0.26 &&
+    inkPixels >= 28 &&
+    maxRowCount >= 4 &&
+    weakRatio < 0.45 &&
+    artifactRatio < 0.35
+  )
+}
+
+function optionalBlankSlotLooksLikeArtifact(prediction, quality) {
+  if (!prediction) return false
+  const confidence = numberOrZero(prediction.confidence)
+  const topGap = numberOrZero(prediction.topGap)
+  const reason = String(prediction.preprocessReviewReason || '')
+  const reviewSignal =
+    prediction.reviewNeeded === true ||
+    prediction.highRiskPreprocessReview === true ||
+    prediction.structuralReview === true ||
+    prediction.preprocessDisagreement === true ||
+    reason.length > 0
+  const weakModel = confidence < 0.72 || topGap < 0.35
+  const weakInk =
+    !quality?.ok ||
+    quality?.allVariantsWeak === true ||
+    numberOrZero(quality?.weakVariantRatio) >= 0.35 ||
+    numberOrZero(quality?.artifactVariantRatio) >= 0.15 ||
+    numberOrZero(quality?.inkPixels) <= 38 ||
+    numberOrZero(quality?.maxRowCount) <= 4 ||
+    numberOrZero(quality?.inkW) <= 8
+  const guideLineOne =
+    prediction.digit === 1 &&
+    reviewSignal &&
+    (
+      prediction.highRiskPreprocessReview === true ||
+      reason.includes('mismatch') ||
+      reason.includes('guide') ||
+      reason.includes('two-digit')
+    )
+  const strongExtraDigit =
+    confidence >= 0.93 &&
+    topGap >= 0.82 &&
+    prediction.reviewNeeded !== true &&
+    !weakInk
+  return !strongExtraDigit && (guideLineOne || (reviewSignal && (weakModel || weakInk)))
+}
+
+function applyOptionalSingleDigitBlankOverrides(questionGroups, predictions, cropQuality) {
+  if (!Array.isArray(questionGroups) || !Array.isArray(predictions)) return []
+  const predictionById = new Map(predictions.map((prediction) => [prediction.id, prediction]))
+  const qualityById = new Map((cropQuality || []).map((quality) => [quality.id, quality]))
+  const overrides = []
+
+  for (const group of questionGroups) {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    const expectedDigit = optionalSingleDigitForGroup(group, ids)
+    if (expectedDigit === null) continue
+
+    const slots = ids.map((id, slotIndex) => ({
+      id,
+      slotIndex,
+      prediction: predictionById.get(id),
+      quality: qualityById.get(id)
+    }))
+    if (slots.some((slot) => !slot.prediction)) continue
+
+    const matchingSlots = slots.filter((slot) => (
+      slot.prediction.digit === expectedDigit &&
+      matchingOptionalDigitLooksUsable(slot.prediction, slot.quality)
+    ))
+    if (matchingSlots.length !== 1) continue
+
+    const blankSlot = slots.find((slot) => slot.slotIndex !== matchingSlots[0].slotIndex)
+    if (!blankSlot || blankSlot.prediction.digit === expectedDigit) continue
+    if (!optionalBlankSlotLooksLikeArtifact(blankSlot.prediction, blankSlot.quality)) continue
+
+    const matchedPrediction = matchingSlots[0].prediction
+    const blankPrediction = blankSlot.prediction
+    if (matchedPrediction.reviewNeeded === true) {
+      matchedPrediction.reviewNeeded = false
+      matchedPrediction.preprocessReviewReason = matchedPrediction.preprocessReviewReason || 'flexible-one-digit-answer'
+      matchedPrediction.confidencePolicyCleared = true
+      matchedPrediction.confidencePolicyClearanceReason = 'flexible-one-digit-answer'
+    }
+    blankPrediction.originalDigitBeforeBlankOverride = blankPrediction.digit
+    blankPrediction.originalConfidenceBeforeBlankOverride = blankPrediction.confidence
+    blankPrediction.digit = null
+    blankPrediction.blank = true
+    blankPrediction.empty = true
+    blankPrediction.reviewNeeded = false
+    blankPrediction.preprocessReviewReason = 'flexible-one-digit-optional-blank'
+    blankPrediction.confidencePolicyCleared = true
+    blankPrediction.confidencePolicyClearanceReason = 'flexible-one-digit-optional-blank'
+    overrides.push({
+      questionNum: group?.question_num ?? null,
+      expectedDigit,
+      matchedSlotIndex: matchingSlots[0].slotIndex,
+      blankSlotIndex: blankSlot.slotIndex,
+      blankDigitBoxId: blankSlot.id,
+      originalDigit: blankPrediction.originalDigitBeforeBlankOverride,
+      reason: blankPrediction.preprocessReviewReason
+    })
+  }
+
+  return overrides
+}
+
 function buildQuestionCorrect(questionGroups, predictions) {
   if (!Array.isArray(questionGroups) || questionGroups.length === 0) return null
   const byId = new Map(predictions.map((prediction) => [prediction.id, prediction]))
@@ -3894,7 +4030,7 @@ function layoutBoxRectMap(layout, warpedW, warpedH) {
 }
 
 function annotationRectForCrop(crop) {
-  return crop?.layoutBoxRect || crop?.boxRect || crop?.cropRect || null
+  return crop?.layoutBoxRect || crop?.expectedRect || crop?.boxRect || crop?.refinedRect || crop?.cropRect || null
 }
 
 function buildLayoutSnapshot(layout) {
@@ -3916,6 +4052,8 @@ function buildAnnotationGeometry(rawCrops, warpedW, warpedH, layout = null) {
       questionNum: crop.questionNum ?? index + 1,
       cropRect: cloneRect(crop.cropRect),
       boxRect: cloneRect(crop.boxRect),
+      expectedRect: cloneRect(crop.expectedRect),
+      refinedRect: cloneRect(crop.refinedRect),
       layoutBoxRect: cloneRect(expectedById.get(crop.id ?? index))
     }))
   }
@@ -5335,6 +5473,10 @@ const runRealOCR = async () => {
         prediction.preprocessReviewReason = prediction.preprocessReviewReason || forcedFallbackReviewReason
       }
     }
+    const optionalSingleDigitBlankOverrides = forcedFallbackReviewReason
+      ? []
+      : applyOptionalSingleDigitBlankOverrides(layout.question_groups, predictions, cropQuality)
+    partialDebug.optionalSingleDigitBlankOverrides = optionalSingleDigitBlankOverrides
     partialDebug.predictions = predictions
     partialDebug.stage = 'checking OCR recognition quality'
     const twoDigitRecognitionFailure = detectTwoDigitRecognitionFailure(
@@ -5492,6 +5634,7 @@ const runRealOCR = async () => {
         captureQuality: partialDebug.captureQuality,
         preprocessStats: partialDebug.preprocessStats,
         cropQuality: partialDebug.cropQuality,
+        optionalSingleDigitBlankOverrides: partialDebug.optionalSingleDigitBlankOverrides,
         twoDigitCropFailure: partialDebug.twoDigitCropFailure,
         twoDigitRecognitionFailure: partialDebug.twoDigitRecognitionFailure,
         unusableTwoDigitScan: partialDebug.unusableTwoDigitScan,

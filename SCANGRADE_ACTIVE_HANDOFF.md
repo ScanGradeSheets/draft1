@@ -1,6 +1,6 @@
 # ScanGrade Active Handoff
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 Current thread: SG 3
 Previous thread: SG 2 (`019e760b-4e8f-7751-be8b-40baddcb8e58`)
 
@@ -45,9 +45,10 @@ Implementation:
 - Mission Control now exposes token-protected `POST /api/debug-scans` and stores the evidence under `private-evidence/debug-scans/YYYY-MM-DD/<scan-id>/`.
 - Saved files include `debug.json`, `summary.json`, `captured.png`, `warped.png`, `raw-crops/*.png`, and `model-inputs/*.png` when available.
 - 2026-06-19 follow-up: debug uploads now also include `marked-sheet.jpg` and `overlay-debug.json` when the browser successfully renders the marked result. Use these to diagnose yellow review circles, checks, or X marks that appear in the wrong place.
+- 2026-06-20 follow-up: Mission Control debug uploads now accept current browser field names plus fallback aliases for captured/marked/crops images. When present, the receiver saves `captured.png`, `marked-sheet.jpg`, `overlay-debug.json`, `warped.png`, `crops.png`, `raw-crops/*.png`, and `model-inputs/*.png`.
 - `private-evidence/` is ignored by git; do not commit this student evidence.
 - Manual corrections are not auto-uploaded over the raw scan result. The auto-saved bundle is intended to represent what the app saw at scan time.
-- Current public debug build label after the marked-sheet follow-up: `2026.06.19-2105-EDT-debug-marked-sheet`.
+- Current public debug build label after the classroom-debug follow-up: `2026.06.20-0820-EDT-sg3-classroom-debug-fix`.
 
 Runbook:
 
@@ -68,6 +69,32 @@ https://scangradesheets.github.io/draft1/?liveOcrDebug=1&debugAutoUpload=1&debug
 ```
 
 The scan device needs an HTTPS route to the receiver. The tailnet Mission Control route is the intended route. If it shows `502`, first confirm the local Mission Control server is running on the Mac.
+
+## 2026-06-20 Classroom Debug Fix
+
+Tony uploaded classroom scans from the Grade 1 last-week packet and reported that results were still disappointing. Analysis found two separate failure families:
+
+- Safe policy failure: one-digit handwritten answers in two-slot boxes were sometimes read as fake two-digit answers because the optional blank slot picked up a weak guide-line/artifact digit, for example `5 -> 51`, `8 -> 84`, or `7 -> 71`.
+- Real recognition/crop failure: some visual formats and two-digit layouts still produce low-quality crops or weak recognition. These should stay yellow review until the layout/capture/OCR path is improved.
+
+Changes made:
+
+- Added a conservative optional one-digit blank override in `src/components/CameraCapture.vue`. It only applies to two-slot answer groups whose worksheet answer is one digit, where one slot confidently matches the expected digit and the other slot has weak/review/artifact evidence. The artifact slot is treated as blank instead of creating a false companion digit.
+- Marked-sheet annotation geometry now prefers the expected printed answer slot (`layoutBoxRect` / `expectedRect`) before crop/refined rectangles. This should keep yellow review circles closer to the answer boxes instead of drifting with crop geometry.
+- Mission Control debug scan saving now preserves marked-sheet screenshots and image assets more robustly, including fallback key names.
+
+Local replay on the saved 2026-06-20 classroom debug uploads showed this patch rescued 3 optional-blank cases in the 70-question packet sample and reduced review groups from 38 to 35 in that replay. This is not enough to call the new packet formats reliable; it is a safe incremental fix plus better evidence capture. The remaining next work is layout/crop robustness on ten frames, dot collections, number bonds, number patterns, place value, and the two-digit fact rows.
+
+Verification completed:
+
+```text
+node --check mission-control/server.mjs
+local authorized POST /api/debug-scans smoke test saved captured.png, marked-sheet.jpg, overlay-debug.json, warped.png, crops.png, raw-crops/raw-01.png, and model-inputs/model-01.png
+saved classroom debug replay: optional blank override +3, review groups 38 -> 35
+npm run build
+npm run build:github
+compiled dist sanity check: /draft1/ base OK, build label OK, optional policy present, marked-sheet upload present
+```
 
 ## Grade 1 Last-Week Classroom Test Packet
 
