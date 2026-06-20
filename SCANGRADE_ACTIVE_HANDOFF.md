@@ -96,6 +96,38 @@ npm run build:github
 compiled dist sanity check: /draft1/ base OK, build label OK, optional policy present, marked-sheet upload present
 ```
 
+## 2026-06-20 Pre-Codex-Update Handoff
+
+Tony is about to update Codex. If this thread disappears, continue from these anchors:
+
+```text
+Source branch: autobuild/safe-20260223
+Latest source commit: 5e0d9db Fix classroom debug optional blanks
+Latest public deploy commit on gh-pages: 99d9c65 Deploy classroom debug fix build
+Public test URL: https://scangradesheets.github.io/draft1/
+Expected visible build label: 2026.06.20-0820-EDT-sg3-classroom-debug-fix
+```
+
+The immediate next move is evidence collection, not another blind app tweak. Use the current build to gather more classroom scans because the debug receiver now preserves enough evidence to diagnose the real failures.
+
+Recommended scan protocol:
+
+1. Before scanning a full stack, open the public test URL and confirm the build label is `2026.06.20-0820-EDT-sg3-classroom-debug-fix`.
+2. Confirm Mission Control debug intake is running and reachable from the scan device. Expected receiver command is still `SG_DEBUG_UPLOAD_TOKEN=<short-secret> node mission-control/server.mjs`.
+3. Scan a tiny sanity set first: one simple fact-row page, one two-digit fact-row page, and one visual-format page such as ten frames/dot collections/number bonds.
+4. Confirm Mission Control receives new `private-evidence/debug-scans/YYYY-MM-DD/<scan-id>/` folders with `debug.json`, `summary.json`, `captured.png`, `marked-sheet.jpg`, `overlay-debug.json`, and crop/model assets when available.
+5. If those uploads land, scan the full classroom packet set raw. Do not manually correct the result before the auto-upload has saved the original scan evidence.
+6. Prefer the iPhone/current device for the evidence batch. Test the old iPad separately as a compatibility track, because its engine/loading behavior is a different failure mode.
+7. After the batch, analyze by worksheet type and failure mode before changing OCR/capture again. Separate optional-blank policy issues from true crop/recognition/layout failures.
+
+Current judgement:
+
+- Scan more now, after a 3-page upload sanity check.
+- Do not spend more time tuning in the abstract before the batch unless debug auto-upload is broken.
+- Expect the app to still show many yellow review cases on the varied Grade 1 packet. That evidence is useful; the goal is to learn which worksheet formats are viable and which need layout/crop redesign.
+
+Unrelated dirty worktree files existed before this handoff and should not be reverted without Tony's approval.
+
 ## Grade 1 Last-Week Classroom Test Packet
 
 On 2026-06-17, SG 3 generated a new 10-page Grade 1 packet for Tony's final classroom testing window before summer break.
