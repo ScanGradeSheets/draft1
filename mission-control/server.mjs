@@ -5,6 +5,7 @@ import { extname, normalize, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
 
 const execFileAsync = promisify(execFile);
 
@@ -12,16 +13,19 @@ const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MC_ROOT = resolve(ROOT, 'mission-control');
 const PUBLIC_ROOT = resolve(MC_ROOT, 'public');
 const STATE_ROOT = resolve(MC_ROOT, 'state');
+const DEBUG_SCAN_ROOT = resolve(ROOT, 'private-evidence', 'debug-scans');
 const PORT = Number(process.env.SG_MISSION_CONTROL_PORT || 8787);
 const HOST = process.env.SG_MISSION_CONTROL_HOST || '127.0.0.1';
 const ROUTE_PREFIX = '/mission-control';
+const MAX_DEFAULT_BODY_BYTES = 2 * 1024 * 1024;
+const MAX_DEBUG_SCAN_BYTES = Number(process.env.SG_DEBUG_UPLOAD_MAX_BYTES || 80 * 1024 * 1024);
 
 const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
   'Cache-Control': 'no-store',
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-ScanGrade-Debug-Token',
 };
 
 const mimeTypes = {
@@ -53,6 +57,11 @@ async function writeJson(path, data) {
   };
   await writeFile(path, `${JSON.stringify(out, null, 2)}\n`, 'utf8');
   return out;
+}
+
+async function writePlainJson(path, data) {
+  await mkdir(resolve(path, '..'), { recursive: true });
+  await writeFile(path, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
 async function exists(path) {
@@ -163,11 +172,155 @@ async function statusPayload() {
   };
 }
 
-async function collectBody(req) {
+async function collectBody(req, maxBytes = MAX_DEFAULT_BODY_BYTES) {
   const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+  let totalBytes = 0;
+  for await (const chunk of req) {
+    totalBytes += chunk.length;
+    if (totalBytes > maxBytes) {
+      const error = new Error(`Request body too large. Limit is ${Math.round(maxBytes / 1024 / 1024)} MB.`);
+      error.statusCode = 413;
+      throw error;
+    }
+    chunks.push(chunk);
+  }
   const text = Buffer.concat(chunks).toString('utf8');
   return text ? JSON.parse(text) : {};
+}
+
+function safeSlug(value, fallback = 'scan') {
+  const slug = String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return slug || fallback;
+}
+
+function assertInside(root, target) {
+  const normalizedRoot = root.endsWith('/') ? root : `${root}/`;
+  if (target !== root && !target.startsWith(normalizedRoot)) {
+    const error = new Error('Resolved path escaped debug scan root.');
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+function dataUrlToBuffer(dataUrl) {
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return null;
+  const commaIndex = dataUrl.indexOf(',');
+  if (commaIndex === -1) return null;
+  const meta = dataUrl.slice(0, commaIndex);
+  const payload = dataUrl.slice(commaIndex + 1);
+  if (meta.includes(';base64')) return Buffer.from(payload, 'base64');
+  return Buffer.from(decodeURIComponent(payload), 'utf8');
+}
+
+async function writeDataUrl(path, dataUrl) {
+  const buffer = dataUrlToBuffer(dataUrl);
+  if (!buffer) return null;
+  await mkdir(resolve(path, '..'), { recursive: true });
+  await writeFile(path, buffer);
+  return path;
+}
+
+function summarizeDebugScan(debug, body, req, receivedAt) {
+  const predictions = Array.isArray(debug.predictions) ? debug.predictions : [];
+  const answerGroups = Array.isArray(debug.answerGroups) ? debug.answerGroups : [];
+  const questionCorrect = Array.isArray(debug.questionCorrect) ? debug.questionCorrect : null;
+  const questionReview = Array.isArray(debug.questionReview) ? debug.questionReview : null;
+  return {
+    receivedAt,
+    source: body.source || 'scangrade-browser-debug',
+    uploadReason: body.uploadReason || null,
+    pageUrl: body.pageUrl || null,
+    userAgent: body.userAgent || req.headers['user-agent'] || null,
+    origin: req.headers.origin || null,
+    generatedAt: debug.generatedAt || null,
+    layoutId: debug.layoutId || debug.layout_id || debug.qrPayload?.template_id || null,
+    sheetInstanceId: debug.qrPayload?.sheet_instance_id || null,
+    qrPayload: debug.qrPayload || null,
+    predictionCount: predictions.length,
+    answerGroupCount: answerGroups.length,
+    questionCount: questionCorrect?.length || answerGroups.length || null,
+    questionScore: questionCorrect ? questionCorrect.filter(Boolean).length : null,
+    questionReviewCount: questionReview ? questionReview.filter(Boolean).length : (debug.questionReviewCount ?? null),
+    needsReviewCount: predictions.filter((prediction) => prediction?.reviewNeeded).length,
+    digitEngineFallback: debug.digitEngineFallback === true,
+    digitEngineError: debug.digitEngineError || null,
+    forcedFallbackReviewReason: debug.forcedFallbackReviewReason || null,
+    captureQuality: debug.captureQuality || null,
+    cropQualityCount: Array.isArray(debug.cropQuality) ? debug.cropQuality.length : null,
+    modelInfo: debug.modelInfo || null,
+    runtime: debug.runtime || null,
+    assets: {
+      hasCapturedImage: typeof debug.capturedImageDataUrl === 'string',
+      hasWarpedImage: typeof debug.warpedDataUrl === 'string',
+      rawCropCount: Array.isArray(debug.rawCropDataUrls) ? debug.rawCropDataUrls.length : 0,
+      modelInputCount: Array.isArray(debug.modelInputDataUrls) ? debug.modelInputDataUrls.length : 0,
+      tensorCount: Array.isArray(debug.tensors) ? debug.tensors.length : 0,
+    },
+  };
+}
+
+async function saveDebugScanUpload(body, req) {
+  const debug = body?.debug && typeof body.debug === 'object' ? body.debug : body;
+  if (!debug || typeof debug !== 'object' || Array.isArray(debug)) {
+    const error = new Error('Expected a debug scan JSON object.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const receivedAt = new Date().toISOString();
+  const dateSlug = receivedAt.slice(0, 10);
+  const layoutSlug = safeSlug(debug.layoutId || debug.layout_id || debug.qrPayload?.template_id, 'unknown-layout');
+  const id = `${receivedAt.replace(/[:.]/g, '-').replace('T', '_').replace('Z', '')}-${layoutSlug}-${randomUUID().slice(0, 8)}`;
+  const dir = normalize(resolve(DEBUG_SCAN_ROOT, dateSlug, id));
+  assertInside(DEBUG_SCAN_ROOT, dir);
+  await mkdir(dir, { recursive: true });
+
+  const summary = summarizeDebugScan(debug, body, req, receivedAt);
+  await writePlainJson(resolve(dir, 'summary.json'), summary);
+  await writePlainJson(resolve(dir, 'debug.json'), {
+    receivedAt,
+    upload: {
+      source: body.source || 'scangrade-browser-debug',
+      uploadReason: body.uploadReason || null,
+      pageUrl: body.pageUrl || null,
+      userAgent: body.userAgent || req.headers['user-agent'] || null,
+      origin: req.headers.origin || null,
+    },
+    debug,
+  });
+
+  const assetFiles = [];
+  const capturedPath = await writeDataUrl(resolve(dir, 'captured.png'), debug.capturedImageDataUrl);
+  if (capturedPath) assetFiles.push('captured.png');
+  const warpedPath = await writeDataUrl(resolve(dir, 'warped.png'), debug.warpedDataUrl);
+  if (warpedPath) assetFiles.push('warped.png');
+
+  const rawCropUrls = Array.isArray(debug.rawCropDataUrls) ? debug.rawCropDataUrls : [];
+  for (let i = 0; i < rawCropUrls.length; i += 1) {
+    const filename = `raw-crops/raw-${String(i + 1).padStart(2, '0')}.png`;
+    const written = await writeDataUrl(resolve(dir, filename), rawCropUrls[i]);
+    if (written) assetFiles.push(filename);
+  }
+
+  const modelInputUrls = Array.isArray(debug.modelInputDataUrls) ? debug.modelInputDataUrls : [];
+  for (let i = 0; i < modelInputUrls.length; i += 1) {
+    const filename = `model-inputs/model-${String(i + 1).padStart(2, '0')}.png`;
+    const written = await writeDataUrl(resolve(dir, filename), modelInputUrls[i]);
+    if (written) assetFiles.push(filename);
+  }
+
+  return {
+    ok: true,
+    id,
+    path: dir,
+    summaryPath: resolve(dir, 'summary.json'),
+    debugPath: resolve(dir, 'debug.json'),
+    assetFiles,
+  };
 }
 
 function sendJson(res, code, payload) {
@@ -243,6 +396,19 @@ const server = createServer(async (req, res) => {
       return sendJson(res, 200, await statusPayload());
     }
 
+    if (req.method === 'POST' && pathname === '/api/debug-scans') {
+      const expectedToken = process.env.SG_DEBUG_UPLOAD_TOKEN || '';
+      const suppliedToken = req.headers['x-scangrade-debug-token'] || '';
+      if (!expectedToken) {
+        return sendJson(res, 503, { error: 'Debug uploads require SG_DEBUG_UPLOAD_TOKEN on the Mission Control server.' });
+      }
+      if (expectedToken && suppliedToken !== expectedToken) {
+        return sendJson(res, 401, { error: 'Invalid debug upload token.' });
+      }
+      const body = await collectBody(req, MAX_DEBUG_SCAN_BYTES);
+      return sendJson(res, 201, await saveDebugScanUpload(body, req));
+    }
+
     if (req.method === 'POST' && pathname === '/api/mission') {
       const body = await collectBody(req);
       const current = await readJson(resolve(STATE_ROOT, 'mission-state.json'), {});
@@ -263,7 +429,7 @@ const server = createServer(async (req, res) => {
 
     return serveStatic(req, res);
   } catch (error) {
-    return sendJson(res, 500, { error: String(error.stack || error.message || error) });
+    return sendJson(res, error.statusCode || 500, { error: String(error.stack || error.message || error) });
   }
 });
 

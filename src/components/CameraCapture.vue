@@ -316,6 +316,13 @@
           Done
         </button>
       </div>
+      <p
+        v-if="liveOcrDebugExportEnabled && debugUploadConfig.autoUpload"
+        class="student-result-subtext debug-auto-upload-status"
+        :class="`debug-auto-upload-status--${debugAutoUploadState}`"
+      >
+        {{ debugAutoUploadStatus }}
+      </p>
     </div>
 
     <!-- Teacher / Review Mode: full OCR result -->
@@ -533,6 +540,70 @@ function hasDebugQueryFlag(...names) {
     const value = params.get(name)
     return value === '1' || value === 'true' || value === 'yes'
   })
+}
+
+const DEBUG_UPLOAD_URL_KEY = 'scangrade.debugUploadUrl.v1'
+const DEBUG_UPLOAD_TOKEN_KEY = 'scangrade.debugUploadToken.v1'
+const DEBUG_AUTO_UPLOAD_KEY = 'scangrade.debugAutoUpload.v1'
+
+function parseDebugBoolean(value) {
+  if (value == null) return null
+  const normalized = String(value).trim().toLowerCase()
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
+  return null
+}
+
+function getDebugQueryParam(params, ...names) {
+  for (const name of names) {
+    if (params.has(name)) return params.get(name)
+  }
+  return null
+}
+
+function safeStorageGet(key) {
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    if (value == null || value === '') {
+      window.localStorage.removeItem(key)
+    } else {
+      window.localStorage.setItem(key, value)
+    }
+  } catch {
+    // Debug upload is a convenience path; blocked storage should not affect scanning.
+  }
+}
+
+function initDebugUploadConfig() {
+  const empty = { url: '', token: '', autoUpload: false }
+  if (typeof window === 'undefined') return empty
+
+  const params = new URLSearchParams(window.location.search)
+  const hasUrlParam = params.has('debugUploadUrl') || params.has('debugUploadEndpoint')
+  const hasTokenParam = params.has('debugUploadToken') || params.has('debugToken')
+  const hasAutoParam = params.has('debugAutoUpload') || params.has('debugUpload')
+  const queryUrl = getDebugQueryParam(params, 'debugUploadUrl', 'debugUploadEndpoint')
+  const queryToken = getDebugQueryParam(params, 'debugUploadToken', 'debugToken')
+  const queryAuto = parseDebugBoolean(getDebugQueryParam(params, 'debugAutoUpload', 'debugUpload'))
+
+  if (hasUrlParam) safeStorageSet(DEBUG_UPLOAD_URL_KEY, queryUrl || '')
+  if (hasTokenParam) safeStorageSet(DEBUG_UPLOAD_TOKEN_KEY, queryToken || '')
+  if (hasAutoParam) safeStorageSet(DEBUG_AUTO_UPLOAD_KEY, queryAuto === true ? '1' : '0')
+  if (hasUrlParam && !hasAutoParam && queryUrl) safeStorageSet(DEBUG_AUTO_UPLOAD_KEY, '1')
+
+  const storedAuto = parseDebugBoolean(safeStorageGet(DEBUG_AUTO_UPLOAD_KEY))
+  return {
+    url: (hasUrlParam ? queryUrl : safeStorageGet(DEBUG_UPLOAD_URL_KEY)) || '',
+    token: (hasTokenParam ? queryToken : safeStorageGet(DEBUG_UPLOAD_TOKEN_KEY)) || '',
+    autoUpload: queryAuto ?? storedAuto ?? (hasUrlParam && !!queryUrl)
+  }
 }
 
 function preprocessSelectionReason(result) {
@@ -753,6 +824,13 @@ const ocrResult = ref(null)
 const lastProcessedTensors = ref(null)
 const lastLiveOcrDebug = ref(null)
 const lastCaptureQuality = ref(null)
+const debugUploadConfig = initDebugUploadConfig()
+const debugAutoUploadState = ref(debugUploadConfig.autoUpload && debugUploadConfig.url ? 'ready' : 'idle')
+const debugAutoUploadStatus = ref(
+  debugUploadConfig.autoUpload && debugUploadConfig.url
+    ? 'Debug auto-save ready'
+    : 'Debug auto-save needs an upload URL'
+)
 const autoStartCameraBlocked = ref(false)
 const ocrDebugEnabled = ref(hasDebugQueryFlag('ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug'))
 const liveOcrDebugExportEnabled = computed(() =>
@@ -5325,6 +5403,7 @@ const runRealOCR = async () => {
       if (typeof window !== 'undefined') {
         window.__SCANGRADE_LIVE_OCR_DEBUG = lastLiveOcrDebug.value
       }
+      await uploadLiveOcrDebug(lastLiveOcrDebug.value, 'ocr-complete')
     } else {
       lastLiveOcrDebug.value = null
     }
@@ -5413,6 +5492,7 @@ const runRealOCR = async () => {
     }
     if (liveOcrDebugExportEnabled.value) {
       lastLiveOcrDebug.value = buildLiveOcrErrorDebugPackage(err, partialDebug)
+      await uploadLiveOcrDebug(lastLiveOcrDebug.value, 'ocr-error')
     } else {
       lastLiveOcrDebug.value = null
     }
@@ -5479,6 +5559,56 @@ function exportTensorsJson() {
   link.download = `scangrade-tensors-${Date.now()}.json`
   link.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(data))
   link.click()
+}
+
+function currentDebugPageUrl() {
+  if (typeof window === 'undefined') return ''
+  try {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('debugUploadToken')
+    url.searchParams.delete('debugToken')
+    return url.toString()
+  } catch {
+    return ''
+  }
+}
+
+async function uploadLiveOcrDebug(data, uploadReason = 'ocr-complete') {
+  if (!liveOcrDebugExportEnabled.value || !debugUploadConfig.autoUpload || !data) return
+  if (!debugUploadConfig.url) {
+    debugAutoUploadState.value = 'failed'
+    debugAutoUploadStatus.value = 'Debug auto-save needs an upload URL'
+    return
+  }
+
+  debugAutoUploadState.value = 'uploading'
+  debugAutoUploadStatus.value = 'Saving debug bundle...'
+
+  try {
+    const headers = { 'Content-Type': 'application/json' }
+    if (debugUploadConfig.token) headers['X-ScanGrade-Debug-Token'] = debugUploadConfig.token
+    const response = await fetch(debugUploadConfig.url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        source: 'scangrade-browser-debug',
+        uploadReason,
+        pageUrl: currentDebugPageUrl(),
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        debug: data
+      })
+    })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error || `Upload failed (${response.status})`)
+    }
+    debugAutoUploadState.value = 'saved'
+    debugAutoUploadStatus.value = payload?.id ? `Debug saved: ${payload.id}` : 'Debug saved'
+  } catch (err) {
+    debugAutoUploadState.value = 'failed'
+    debugAutoUploadStatus.value = `Debug auto-save failed: ${err?.message || err}`
+    console.warn('[ScanGrade] live OCR debug upload failed:', err)
+  }
 }
 
 function exportLiveOcrDebugJson() {
@@ -5997,6 +6127,23 @@ onUnmounted(stopStream)
   line-height: 1.35;
   text-align: left;
   overflow-wrap: anywhere;
+}
+
+.debug-auto-upload-status {
+  width: 100%;
+  margin: 12px 0 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.debug-auto-upload-status--saved {
+  color: #126c39;
+  font-weight: 700;
+}
+
+.debug-auto-upload-status--failed {
+  color: #b42318;
+  font-weight: 700;
 }
 
 .student-answer-grid {

@@ -1,6 +1,6 @@
 # ScanGrade Active Handoff
 
-Last updated: 2026-06-07
+Last updated: 2026-06-19
 Current thread: SG 3
 Previous thread: SG 2 (`019e760b-4e8f-7751-be8b-40baddcb8e58`)
 
@@ -18,19 +18,218 @@ This is the first file to read when Codex loses chat history, a Codex update hid
 
 ## Current Mission
 
-Use Tony's latest completed worksheet photos and live iPhone scan exports to improve ScanGrade's confident-read rate while keeping high-confidence reads trustworthy.
+Collect Tony's final Grade 1 classroom evidence before summer break, keep the public app and private Mission Control reachable, and convert the results into a narrow September Teachers Pay Teachers launch path.
 
-Current target:
+Current targets:
 
-- Preserve at least 95% confident reads on the active 9 raw worksheet photos.
-- Preserve 100% accuracy on those high-confidence reads.
+- Use the Grade 1 last-week packet to collect varied real classroom scans before school ends.
+- Score app detection against what the student wrote, not only against the correct math answer.
 - On rough live camera captures, prefer yellow teacher review over any confident wrong read.
+- Preserve the solved 9-photo confidence benchmark as a regression gate when OCR/capture changes resume.
 - Review flags are acceptable for genuinely ambiguous handwriting; confident wrong reads are not acceptable.
 
 Important interpretation:
 Score OCR against the handwritten answer visible in the box, not only against the worksheet answer key. Some student answers are mathematically wrong, and those should become confident red Xs only when the OCR read itself is trustworthy.
 
 Tony reaffirmed this on 2026-06-06: math-wrong student answers are good evidence because they simulate actual app performance. Optimize detection relative to what the student wrote, not relative to the correct math answer.
+
+## Debug Scan Auto Upload
+
+On 2026-06-19, SG 3 added an auto-upload path for large classroom debug-scan collection. This was requested because Tony has roughly 160 Grade 1 packet pages to scan and manual downloads of every JSON/crop preview are too slow.
+
+Implementation:
+
+- Browser debug mode accepts `debugUploadUrl`, `debugUploadToken`, and `debugAutoUpload=1` query params.
+- The settings persist in browser storage, so Tony only needs to open the prepared URL once per scan device.
+- Each debug scan posts the full live OCR debug bundle to Mission Control.
+- Mission Control now exposes token-protected `POST /api/debug-scans` and stores the evidence under `private-evidence/debug-scans/YYYY-MM-DD/<scan-id>/`.
+- Saved files include `debug.json`, `summary.json`, `captured.png`, `warped.png`, `raw-crops/*.png`, and `model-inputs/*.png` when available.
+- `private-evidence/` is ignored by git; do not commit this student evidence.
+- Manual corrections are not auto-uploaded over the raw scan result. The auto-saved bundle is intended to represent what the app saw at scan time.
+- Public debug build label for this change: `2026.06.19-2000-EDT-debug-auto-upload`.
+
+Runbook:
+
+```text
+docs/DEBUG_SCAN_AUTO_UPLOAD.md
+```
+
+Expected local receiver command:
+
+```text
+SG_DEBUG_UPLOAD_TOKEN=<short-secret> node mission-control/server.mjs
+```
+
+Prepared public scan URL pattern:
+
+```text
+https://scangradesheets.github.io/draft1/?liveOcrDebug=1&debugAutoUpload=1&debugUploadUrl=https%3A%2F%2Fhobbes-mac-mini.tail9a3379.ts.net%2Fmission-control%2Fapi%2Fdebug-scans&debugUploadToken=<short-secret>
+```
+
+The scan device needs an HTTPS route to the receiver. The tailnet Mission Control route is the intended route. If it shows `502`, first confirm the local Mission Control server is running on the Mac.
+
+## Grade 1 Last-Week Classroom Test Packet
+
+On 2026-06-17, SG 3 generated a new 10-page Grade 1 packet for Tony's final classroom testing window before summer break.
+
+Generator:
+
+```text
+scripts/generate_grade1_last_week_test_packet.mjs
+```
+
+Printable files:
+
+```text
+public/worksheets/grade1-last-week-test-20260617/printables/ScanGrade-Grade1-Last-Week-Test-Packet.pdf
+public/worksheets/grade1-last-week-test-20260617/printables/ScanGrade-Grade1-Last-Week-Test-Answer-Key.pdf
+```
+
+Index and manifest:
+
+```text
+public/worksheets/grade1-last-week-test-20260617/index.html
+public/worksheets/grade1-last-week-test-20260617/manifest.json
+```
+
+Layouts were written to both:
+
+```text
+public/layouts/sg-g1-lw-*.json
+layouts/sg-g1-lw-*.json
+```
+
+Packet composition:
+
+- Addition single-digit answers, one answer slot.
+- Addition two-digit answers, two answer slots.
+- Subtraction single-digit answers, one answer slot.
+- Subtraction two-digit answers, two answer slots.
+- Mixed addition/subtraction within 20, mixed one-slot and two-slot answers.
+- Ten frames to 20, mixed one-slot and two-slot answers.
+- Dot collections to 20, mixed one-slot and two-slot answers.
+- Number bonds to 20, mixed one-slot and two-slot answers.
+- Number patterns, mixed one-slot and two-slot answers.
+- Place value and number sense to 50, two answer slots.
+
+Verification completed:
+
+```text
+node --check scripts/generate_grade1_last_week_test_packet.mjs
+node scripts/generate_grade1_last_week_test_packet.mjs
+custom manifest/layout structure check: 10 templates, 114 answer boxes
+Playwright screenshots reviewed for lw01, lw02, lw05, lw06, lw08, lw09, lw10
+npm run build
+```
+
+2026-06-18 formatting revision:
+
+- Sheets 1-5 and 9 now use the older centered fact-row / sequence formatting with larger printed numerals and no grey practice lines.
+- Sheet 5 now uses two-slot boxes for every question so answer length is not given away.
+- Sheet 6 now stacks two ten frames vertically with a two-slot answer box to the right, centered with the letter bubble.
+- Sheet 7 now uses two-slot boxes and keeps dot collections narrower while allowing them to extend vertically.
+- Sheet 8 number-bond connector lines now meet the center of the whole answer box instead of visually pointing at individual digit cells.
+- Sheet 9 now uses larger number-pattern text, no grey line, and two-slot boxes throughout.
+- Sheet 10 no longer uses dotted work boxes; prompts and answer boxes are aligned on the letter-bubble centerline.
+- All subtitles are now one short instruction sentence rather than "Grade 1 Math".
+- Regenerated PDFs/SVGs/layout JSON and verified `grade1 last-week structure ok: 10 templates 120 boxes`; `npm run build` passed.
+
+2026-06-18 follow-up template tightening:
+
+- Fact-row and pattern letter bubbles now sit closer to their questions using a text-start spacing rule based on the longest prompt in the column, instead of a far-left fixed rail.
+- Ten-frame, dot-collection, work-card, and number-bond letter bubbles were nudged closer while preserving clear separation from diagrams/prompts.
+- Sheet 8 number-bond circles now have white fill and top-circle connector starts lower, so lines do not visually run through the top value circle.
+- Sheet 10 question D changed from unclear `27 or 32?` to a clearer two-line greater-number prompt: `greater:` / `27 or 32`.
+- Regenerated all worksheet SVGs, QR images, PDFs, manifest, and layout JSON for the Grade 1 last-week packet.
+- Rendered the packet to `tmp/pdfs/grade1-last-week-preview/page-*.png` and refreshed `tmp/pdfs/grade1-last-week-preview/contact-sheet.png`.
+- Visual QA checked sheets 1, 5, 6, 7, 8, 9, and 10 after regeneration.
+- Verification passed: `node --check scripts/generate_grade1_last_week_test_packet.mjs`, `grade1 last-week structure ok: 10 templates 120 boxes`, `pdfinfo` confirmed 10 Letter pages, and `npm run build` passed.
+
+2026-06-18 final sheet 4 revision:
+
+- Sheet 4 subtraction prompts now keep all printed numbers at 20 or below while preserving two-digit answers: `20 - 8`, `19 - 4`, `18 - 1`, `20 - 6`, `17 - 2`, `19 - 2`, `18 - 2`, `20 - 2`.
+- Regenerated the Grade 1 last-week packet PDFs, SVGs, manifest, QR images, and layout JSON.
+- Rendered sheet 4 for visual QA at `tmp/pdfs/grade1-last-week-preview/page-final-04.png`, then refreshed the full page PNG set and contact sheet.
+- Verification passed: `node --check scripts/generate_grade1_last_week_test_packet.mjs`, custom prompt guard confirmed all sheet 4 prompt numbers are <= 20, `grade1 last-week structure ok: 10 templates 120 boxes`, `pdfinfo` confirmed 10 Letter pages, and `npm run build` passed.
+
+2026-06-18 final fact-row bubble spacing revision:
+
+- Sheets 1-5 letter bubbles were moved slightly left by increasing the fact-row bubble gap rule from about 7.4 mm to 10.2 mm from the estimated text start.
+- This keeps bubbles visually attached to their question rows while avoiding the crowded look where labels nearly touched the first digit.
+- Regenerated the Grade 1 last-week packet PDFs, SVGs, manifest, QR images, and layout JSON.
+- Rendered pages 1-5 for visual QA, then refreshed the full page PNG set and contact sheet.
+- Verification passed: `node --check scripts/generate_grade1_last_week_test_packet.mjs`, `grade1 last-week structure ok: 10 templates 120 boxes`, `pdfinfo` confirmed 10 Letter pages, and `npm run build` passed.
+
+No OCR, capture, homography, iPad, model, or grading-policy app logic was changed for this packet.
+
+## Public URL and Mission Control Status
+
+On 2026-06-18, SG 3 fixed the public GitHub Pages deployment for:
+
+```text
+https://scangradesheets.github.io/draft1/
+```
+
+Root cause:
+
+```text
+The live GitHub Pages HTML had root-relative asset paths such as /assets and /opencv.js. Under the /draft1/ project path those resolved to the wrong location on phones.
+```
+
+Fix:
+
+```text
+npm run build:github
+git push gh-pages commit 788154e Fix GitHub Pages draft1 asset paths
+```
+
+Verification:
+
+```text
+curl -sI https://scangradesheets.github.io/draft1/ -> 200
+curl -sI https://scangradesheets.github.io/draft1/assets/index-coeKVQVg.js -> 200
+curl -sI https://scangradesheets.github.io/draft1/opencv.js -> 200
+curl -sI https://scangradesheets.github.io/draft1/layouts/sg-g1-lw-01-add-1digit.json -> 200
+curl -sI https://scangradesheets.github.io/draft1/worksheets/grade1-last-week-test-20260617/printables/ScanGrade-Grade1-Last-Week-Test-Packet.pdf -> 200
+```
+
+Also on 2026-06-18, Mission Control gained a Calendar / To Do section. It reads from:
+
+```text
+mission-control/state/mission-state.json -> launch_plan
+```
+
+The tailnet Mission Control URL:
+
+```text
+https://hobbes-mac-mini.tail9a3379.ts.net/mission-control/
+```
+
+was returning:
+
+```text
+HTTP/2 502
+```
+
+Local check showed:
+
+```text
+curl -sI http://127.0.0.1:8787/mission-control/ -> connection failed
+```
+
+Meaning:
+
+```text
+Tailscale is reachable, but the local Mission Control Node server is down.
+```
+
+The next operational step is to start the local server on the Mac:
+
+```text
+node mission-control/server.mjs
+```
+
+Codex attempted to start it, but outside-sandbox approval was blocked by the current Codex usage/approval limit. Do not spend time debugging Tailscale before first confirming the local server responds on `127.0.0.1:8787`.
 
 ## Active Evidence Set
 
@@ -783,3 +982,165 @@ Verification results:
 - `npm run build` passed.
 - Focused Playwright suite passed: `5 passed`.
 - Next proof must be a live old-iPad retest on `2026.06.07-1841-EDT-sg3-old-ipad-review-save`. Expected old-iPad behavior if ONNX still cannot run: no score, no green/red grading, but a real saved scan with yellow teacher-review regions instead of "Try again."
+
+2026-06-10 / SG 3:
+Tony asked whether the current worksheet format is versatile enough for hundreds of Grade 1-3 classroom worksheet variations before locking in worksheet design. Codex researched the Ontario Grade 1-3 math curriculum and common printable worksheet categories, then created a controlled 10-sheet Grade 1-3 curriculum probe packet.
+
+What changed:
+
+- Added `docs/CURRICULUM_PROBE_G1_G3_MATRIX.md`.
+- Added `scripts/generate_curriculum_probe_worksheets.mjs`.
+- Generated a separate probe packet under `public/worksheets/curriculum-probe-g1-g3/`.
+- Generated scan-loadable layouts under both `public/layouts/sg-probe-*.json` and `layouts/sg-probe-*.json`.
+- Generated packet files:
+  - `public/worksheets/curriculum-probe-g1-g3/index.html`
+  - `public/worksheets/curriculum-probe-g1-g3/manifest.json`
+  - `public/worksheets/curriculum-probe-g1-g3/teacher-answer-key.html`
+  - `public/worksheets/curriculum-probe-g1-g3/printables/ScanGrade-Grade1-3-Curriculum-Probe-Packet.pdf`
+  - `public/worksheets/curriculum-probe-g1-g3/printables/ScanGrade-Grade1-3-Curriculum-Probe-Answer-Key.pdf`
+
+Probe contents:
+
+- CP01 Grade 1 Addition and Subtraction Within 20, two slots, supported.
+- CP02 Grade 1 Numbers and Place Value to 50, two slots, supported.
+- CP03 Grade 1 Patterns and Missing Numbers, two slots, supported.
+- CP04 Grade 2 Addition and Subtraction Within 100, two slots, supported.
+- CP05 Grade 2 Place Value to 200, three slots, stress.
+- CP06 Grade 2 Equal Groups and Sharing, two slots, supported.
+- CP07 Grade 2 Money in Cents, three slots, stress.
+- CP08 Grade 3 Addition and Subtraction to 1000, three slots, stress.
+- CP09 Grade 3 Multiplication and Division Facts, three slots, stress.
+- CP10 Grade 3 Measurement, Data, and Time Numbers, three slots, future/stress.
+
+Important product interpretation:
+
+- Grade 1-3 Ontario whole-number expectations top out at 50, 200, and 1000 respectively.
+- Four- and five-digit whole-number answers are Grade 4-5 surfaces, not part of the Grade 1-3 readiness claim.
+- This packet intentionally keeps answers numeric-only. Fractions, inequality symbols, dollar decimals, time notation, units in answer boxes, student-drawn graphs/shapes/clocks, and process grading remain separate future parser/review surfaces.
+
+Commands run:
+
+```text
+node scripts/generate_curriculum_probe_worksheets.mjs
+qlmanage -t -s 1600 -o /tmp/sg-probe-ql2 public/worksheets/curriculum-probe-g1-g3/cp05-grade2-place-value-to-200.svg
+qlmanage -t -s 1600 -o /tmp/sg-probe-ql4 public/worksheets/curriculum-probe-g1-g3/cp08-grade3-add-sub-to-1000.svg
+qlmanage -t -s 1600 -o /tmp/sg-probe-ql4 public/worksheets/curriculum-probe-g1-g3/cp10-grade3-measurement-data-time.svg
+node -e "const fs=require('fs'); const manifest=JSON.parse(fs.readFileSync('public/worksheets/curriculum-probe-g1-g3/manifest.json','utf8')); for (const t of manifest.templates){ const layout=JSON.parse(fs.readFileSync('public/layouts/'+t.layout_id+'.json','utf8')); if(layout.question_groups.length!==10) throw new Error(t.layout_id+' groups'); if(layout.boxes.length!==t.answer_box_count) throw new Error(t.layout_id+' boxes'); if(layout.boxes.length!==10*t.answer_slots_per_question) throw new Error(t.layout_id+' slot count'); if(!t.qr_payload_url.includes('SG1%3A'+t.layout_id+'%3A')) throw new Error(t.layout_id+' qr'); } console.log('curriculum probe manifest/layout structure ok:', manifest.templates.length, 'templates')"
+npm run build
+```
+
+Verification results:
+
+- Generator completed and produced 10 SVG worksheets, QR images, layout JSON files, HTML index, answer key, and two PDFs.
+- Visual QA caught and fixed three-slot prompt/bubble overlap on CP05/CP08/CP10.
+- Final visual QA on CP05, CP08, and CP10 showed clean prompt/bubble separation and usable three-slot answer boxes.
+- Structural check passed: `curriculum probe manifest/layout structure ok: 10 templates`.
+- `npm run build` passed.
+- No OCR, capture, homography, iPad, confidence policy, app UI, or model code was changed for this packet.
+
+Rollback point:
+
+- No commit was created in this turn.
+- Remove the new `docs/CURRICULUM_PROBE_G1_G3_MATRIX.md`, `scripts/generate_curriculum_probe_worksheets.mjs`, `public/worksheets/curriculum-probe-g1-g3/`, and `sg-probe-*` layout JSON files to remove the probe packet.
+
+Next action:
+
+- Print or open `public/worksheets/curriculum-probe-g1-g3/printables/ScanGrade-Grade1-3-Curriculum-Probe-Packet.pdf`.
+- Classroom-test a small subset first: CP01, CP04, CP05, CP08, and CP10 are the highest-information first pass.
+- Score results by handwritten truth, not just answer key, and separate scan success, QR/layout success, OCR truth, confident-read coverage, confident-wrong count, review count, and student-writing behavior.
+
+2026-06-10 / SG 3 worksheet layout correction:
+Tony reviewed the generated Grade 1-3 curriculum probe packet and caught several printed-layout problems before classroom use:
+
+- Some word-heavy two-slot sheets had letter bubbles overlapping prompt text.
+- CP07-CP10 three-slot right-column bubbles sat too far into the center gutter, visually closer to left-column questions than to their own prompts.
+- CP09 was the clearest example of the center-gutter attachment problem.
+
+What changed:
+
+- Updated `scripts/generate_curriculum_probe_worksheets.mjs` only.
+- Regenerated all probe SVG, PDF, QR, manifest, answer-key, and layout outputs.
+- Three-slot right-column bubbles now sit closer to their own right-column prompts.
+- Two-slot right-column labels now leave enough clearance for prompts such as `100 - 47`.
+- Compact/blank/sequence prompts now use a wider label lane.
+- Existing-equals prompts no longer get an extra trailing equals sign in the rendered SVG.
+- Shortened several probe prompts that were too long for the current two-column printed format:
+  - CP02 uses shorter place-value prompts such as `30 + 5`, `36 + 3`, and `5,10,15,__`.
+  - CP03 uses tighter missing-number notation.
+  - CP06 abbreviates group prompts as `grps`.
+  - CP10 shortens measurement/data wording such as `perim`, `mode 18,18`, and `half turn deg`.
+
+Verification:
+
+- Visual QA via Quick Look thumbnails checked CP01, CP02, CP03, CP04, CP05, CP06, CP07, CP09, and CP10 after regeneration.
+- CP02, CP03, and CP06 no longer have letter bubbles overlapping prompt text.
+- CP07, CP09, and CP10 right-column bubbles now read as attached to their own questions instead of the opposite column.
+- Structural check passed: `curriculum probe manifest/layout structure ok: 10 templates`.
+- `npm run build` passed.
+- No OCR, capture, homography, iPad, confidence policy, app UI, or model code changed.
+
+2026-06-12 / SG 3 Grade 1-2 curriculum probe V2:
+Tony narrowed the next classroom-test packet to Grade 1 and Grade 2 only, with more realistic student work space and more varied worksheet layouts. The key design decision is that ScanGrade grades only final numeric answer boxes; diagrams and work areas are printed for student thinking and teacher review, not OCR scoring.
+
+New planning doc:
+
+```text
+docs/CURRICULUM_PROBE_G1_G2_V2_PLAN.md
+```
+
+New generator:
+
+```text
+scripts/generate_curriculum_probe_g1_g2_v2_worksheets.mjs
+```
+
+Generated packet:
+
+```text
+public/worksheets/curriculum-probe-g1-g2-v2/index.html
+public/worksheets/curriculum-probe-g1-g2-v2/manifest.json
+public/worksheets/curriculum-probe-g1-g2-v2/teacher-answer-key.html
+public/worksheets/curriculum-probe-g1-g2-v2/printables/ScanGrade-Grade1-2-Curriculum-Probe-V2-Packet.pdf
+public/worksheets/curriculum-probe-g1-g2-v2/printables/ScanGrade-Grade1-2-Curriculum-Probe-V2-Answer-Key.pdf
+```
+
+Generated layout JSON was written to all expected places:
+
+```text
+public/worksheets/curriculum-probe-g1-g2-v2/layouts/
+public/layouts/sg-v2-*.json
+layouts/sg-v2-*.json
+```
+
+V2 sheet set:
+
+- SG-V2-G1-01 Addition and Subtraction Within 20, 8 questions, fact rows with work line.
+- SG-V2-G1-02 Ten Frames to 20, 6 questions, visual count cards.
+- SG-V2-G1-03 Dot Collections to 20, 6 questions, visual count cards.
+- SG-V2-G1-04 Number Bonds to 20, 6 questions, part-part-whole diagram layout.
+- SG-V2-G1-05 Number Patterns and Missing Numbers, 6 questions, answer boxes embedded in sequences.
+- SG-V2-G2-06 Two-Digit Addition, Stacked, 6 questions, standard vertical algorithm.
+- SG-V2-G2-07 Two-Digit Subtraction, Stacked, 6 questions, standard vertical algorithm.
+- SG-V2-G2-08 Place Value to 200, 6 questions, three-slot work cards.
+- SG-V2-G2-09 Equal Groups and Sharing, 6 questions, work-card layout.
+- SG-V2-G2-10 Money in Cents, 6 questions, three-slot work cards.
+
+Important implementation notes:
+
+- Letter bubbles use fixed column rails and are centered on the full question block, not just the final answer box.
+- Six-question layouts intentionally trade question count for student work space.
+- Number-bond prompt text was removed after visual QA because it collided with missing-total answer boxes; the diagram now carries the task.
+- The packet did not change OCR, capture, homography, iPad fallback, confidence policy, model files, or app UI logic.
+
+Verification:
+
+- Generated all SVG worksheets, QR images, layout JSON files, HTML index, answer key, and PDFs with `node scripts/generate_curriculum_probe_g1_g2_v2_worksheets.mjs`.
+- Full-page Playwright visual QA checked SG-V2-G1-01, SG-V2-G1-02, SG-V2-G1-04, SG-V2-G1-05, SG-V2-G2-06, SG-V2-G2-08, SG-V2-G2-09, and SG-V2-G2-10.
+- Visual QA fixed the work-card work bands and number-bond text collision before final regeneration.
+- Structural check passed: `g1-g2 v2 manifest/layout structure ok: 10 templates`.
+- `npm run build` passed.
+
+Next action:
+
+- Open or print `public/worksheets/curriculum-probe-g1-g2-v2/printables/ScanGrade-Grade1-2-Curriculum-Probe-V2-Packet.pdf`.
+- Classroom-test with students before summer break, then score separately for scan success, QR/layout success, handwritten-truth OCR accuracy, confident-read coverage, confident-wrong count, and review count.
