@@ -2,7 +2,9 @@
   "layout_id": "sg-g1-lw-07-dot-collections",
   "version": 1,
   "answer_key": [
+    null,
     5,
+    null,
     8,
     1,
     2,
@@ -22,57 +24,57 @@
       "id": 0,
       "question_num": 1,
       "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3909,
+      "y": 0.36,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "optional_blank_or_digit",
+      "expected_digit": null
+    },
+    {
+      "id": 1,
+      "question_num": 1,
+      "digit_index": 1,
       "digit_place": "ones",
       "x": 0.4576,
-      "y": 0.4184,
+      "y": 0.36,
       "width": 0.0621,
       "height": 0.0592,
       "expected_type": "digit",
       "expected_digit": 5
     },
     {
-      "id": 1,
+      "id": 2,
       "question_num": 2,
       "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3909,
+      "y": 0.5711,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "optional_blank_or_digit",
+      "expected_digit": null
+    },
+    {
+      "id": 3,
+      "question_num": 2,
+      "digit_index": 1,
       "digit_place": "ones",
       "x": 0.4576,
-      "y": 0.6296,
+      "y": 0.5711,
       "width": 0.0621,
       "height": 0.0592,
       "expected_type": "digit",
       "expected_digit": 8
     },
     {
-      "id": 2,
+      "id": 4,
       "question_num": 3,
       "digit_index": 0,
       "digit_place": "tens",
       "x": 0.3909,
-      "y": 0.8407,
-      "width": 0.0621,
-      "height": 0.0592,
-      "expected_type": "digit",
-      "expected_digit": 1
-    },
-    {
-      "id": 3,
-      "question_num": 3,
-      "digit_index": 1,
-      "digit_place": "ones",
-      "x": 0.4576,
-      "y": 0.8407,
-      "width": 0.0621,
-      "height": 0.0592,
-      "expected_type": "digit",
-      "expected_digit": 2
-    },
-    {
-      "id": 4,
-      "question_num": 4,
-      "digit_index": 0,
-      "digit_place": "tens",
-      "x": 0.8055,
-      "y": 0.4184,
+      "y": 0.7823,
       "width": 0.0621,
       "height": 0.0592,
       "expected_type": "digit",
@@ -80,23 +82,23 @@
     },
     {
       "id": 5,
-      "question_num": 4,
+      "question_num": 3,
       "digit_index": 1,
       "digit_place": "ones",
-      "x": 0.8722,
-      "y": 0.4184,
+      "x": 0.4576,
+      "y": 0.7823,
       "width": 0.0621,
       "height": 0.0592,
       "expected_type": "digit",
-      "expected_digit": 3
+      "expected_digit": 2
     },
     {
       "id": 6,
-      "question_num": 5,
+      "question_num": 4,
       "digit_index": 0,
       "digit_place": "tens",
       "x": 0.8055,
-      "y": 0.6296,
+      "y": 0.36,
       "width": 0.0621,
       "height": 0.0592,
       "expected_type": "digit",
@@ -104,23 +106,23 @@
     },
     {
       "id": 7,
-      "question_num": 5,
+      "question_num": 4,
       "digit_index": 1,
       "digit_place": "ones",
       "x": 0.8722,
-      "y": 0.6296,
+      "y": 0.36,
       "width": 0.0621,
       "height": 0.0592,
       "expected_type": "digit",
-      "expected_digit": 6
+      "expected_digit": 3
     },
     {
       "id": 8,
-      "question_num": 6,
+      "question_num": 5,
       "digit_index": 0,
       "digit_place": "tens",
       "x": 0.8055,
-      "y": 0.8407,
+      "y": 0.5711,
       "width": 0.0621,
       "height": 0.0592,
       "expected_type": "digit",
@@ -128,11 +130,35 @@
     },
     {
       "id": 9,
+      "question_num": 5,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8722,
+      "y": 0.5711,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 6
+    },
+    {
+      "id": 10,
+      "question_num": 6,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8055,
+      "y": 0.7823,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 1
+    },
+    {
+      "id": 11,
       "question_num": 6,
       "digit_index": 1,
       "digit_place": "ones",
       "x": 0.8722,
-      "y": 0.8407,
+      "y": 0.7823,
       "width": 0.0621,
       "height": 0.0592,
       "expected_type": "digit",
@@ -145,24 +171,45 @@
       "problem": "How many dots?",
       "answer": 5,
       "digit_box_ids": [
-        0
+        0,
+        1
       ],
       "canonical_digits": [
+        null,
         5
       ],
       "guide_line": {
-        "type": "single_slot",
-        "slot_count": 1,
-        "printed": false,
-        "x_values": [],
-        "y1": 0.3592,
-        "y2": 0.4184
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3932
+        ],
+        "y1": 0.3007,
+        "y2": 0.36
       },
       "accepted_digit_responses": [
         {
-          "label": "5",
+          "label": "_5",
           "digits": [
+            null,
             5
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "05",
+          "digits": [
+            0,
+            5
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "5_",
+          "digits": [
+            5,
+            null
           ],
           "meaning": "accepted numeric placement for young-student handwriting"
         }
@@ -173,24 +220,45 @@
       "problem": "How many dots?",
       "answer": 8,
       "digit_box_ids": [
-        1
+        2,
+        3
       ],
       "canonical_digits": [
+        null,
         8
       ],
       "guide_line": {
-        "type": "single_slot",
-        "slot_count": 1,
-        "printed": false,
-        "x_values": [],
-        "y1": 0.5703,
-        "y2": 0.6296
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3932
+        ],
+        "y1": 0.5119,
+        "y2": 0.5711
       },
       "accepted_digit_responses": [
         {
-          "label": "8",
+          "label": "_8",
           "digits": [
+            null,
             8
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "08",
+          "digits": [
+            0,
+            8
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "8_",
+          "digits": [
+            8,
+            null
           ],
           "meaning": "accepted numeric placement for young-student handwriting"
         }
@@ -201,8 +269,8 @@
       "problem": "How many dots?",
       "answer": 12,
       "digit_box_ids": [
-        2,
-        3
+        4,
+        5
       ],
       "canonical_digits": [
         1,
@@ -215,8 +283,8 @@
         "x_values": [
           0.3932
         ],
-        "y1": 0.7815,
-        "y2": 0.8407
+        "y1": 0.7231,
+        "y2": 0.7823
       },
       "accepted_digit_responses": [
         {
@@ -234,8 +302,8 @@
       "problem": "How many dots?",
       "answer": 13,
       "digit_box_ids": [
-        4,
-        5
+        6,
+        7
       ],
       "canonical_digits": [
         1,
@@ -248,8 +316,8 @@
         "x_values": [
           0.8078
         ],
-        "y1": 0.3592,
-        "y2": 0.4184
+        "y1": 0.3007,
+        "y2": 0.36
       },
       "accepted_digit_responses": [
         {
@@ -267,8 +335,8 @@
       "problem": "How many dots?",
       "answer": 16,
       "digit_box_ids": [
-        6,
-        7
+        8,
+        9
       ],
       "canonical_digits": [
         1,
@@ -281,8 +349,8 @@
         "x_values": [
           0.8078
         ],
-        "y1": 0.5703,
-        "y2": 0.6296
+        "y1": 0.5119,
+        "y2": 0.5711
       },
       "accepted_digit_responses": [
         {
@@ -300,8 +368,8 @@
       "problem": "How many dots?",
       "answer": 19,
       "digit_box_ids": [
-        8,
-        9
+        10,
+        11
       ],
       "canonical_digits": [
         1,
@@ -314,8 +382,8 @@
         "x_values": [
           0.8078
         ],
-        "y1": 0.7815,
-        "y2": 0.8407
+        "y1": 0.7231,
+        "y2": 0.7823
       },
       "accepted_digit_responses": [
         {
@@ -338,7 +406,7 @@
       "width": 0.3854,
       "height": 0.1969,
       "letter_bubble": {
-        "x": 0.1223,
+        "x": 0.1403,
         "y": 0.3304
       }
     },
@@ -350,7 +418,7 @@
       "width": 0.3854,
       "height": 0.1969,
       "letter_bubble": {
-        "x": 0.1223,
+        "x": 0.1403,
         "y": 0.5415
       }
     },
@@ -362,7 +430,7 @@
       "width": 0.3854,
       "height": 0.1969,
       "letter_bubble": {
-        "x": 0.1223,
+        "x": 0.1403,
         "y": 0.7527
       }
     },
@@ -374,7 +442,7 @@
       "width": 0.3854,
       "height": 0.1969,
       "letter_bubble": {
-        "x": 0.5368,
+        "x": 0.5549,
         "y": 0.3304
       }
     },
@@ -386,7 +454,7 @@
       "width": 0.3854,
       "height": 0.1969,
       "letter_bubble": {
-        "x": 0.5368,
+        "x": 0.5549,
         "y": 0.5415
       }
     },
@@ -398,7 +466,7 @@
       "width": 0.3854,
       "height": 0.1969,
       "letter_bubble": {
-        "x": 0.5368,
+        "x": 0.5549,
         "y": 0.7527
       }
     }
@@ -409,7 +477,7 @@
       "x": 0.1658,
       "y": 0.2928,
       "width": 0.2927,
-      "height": 0.0578,
+      "height": 0.0286,
       "graded": false
     },
     {
@@ -417,7 +485,7 @@
       "x": 0.1658,
       "y": 0.5039,
       "width": 0.2927,
-      "height": 0.0578,
+      "height": 0.0286,
       "graded": false
     },
     {
@@ -425,7 +493,7 @@
       "x": 0.1658,
       "y": 0.7151,
       "width": 0.2927,
-      "height": 0.0578,
+      "height": 0.0286,
       "graded": false
     },
     {
@@ -433,7 +501,7 @@
       "x": 0.5804,
       "y": 0.2928,
       "width": 0.2927,
-      "height": 0.0578,
+      "height": 0.0286,
       "graded": false
     },
     {
@@ -441,7 +509,7 @@
       "x": 0.5804,
       "y": 0.5039,
       "width": 0.2927,
-      "height": 0.0578,
+      "height": 0.0286,
       "graded": false
     },
     {
@@ -449,7 +517,7 @@
       "x": 0.5804,
       "y": 0.7151,
       "width": 0.2927,
-      "height": 0.0578,
+      "height": 0.0286,
       "graded": false
     }
   ],
@@ -484,17 +552,17 @@
     "grade_level": 1,
     "layout_family": "dot_collections",
     "total_questions": 6,
-    "answer_box_count": 10,
+    "answer_box_count": 12,
     "printed_text_font_family": "Lexend",
     "required_font_files": [
       "public/fonts/Lexend-wght.ttf"
     ],
     "digit_box_width_mm": 13.4,
     "digit_box_height_mm": 16.55,
-    "answer_slots_per_question": "variable",
+    "answer_slots_per_question": 2,
     "answer_slot_counts": [
-      1,
-      1,
+      2,
+      2,
       2,
       2,
       2,
@@ -504,10 +572,10 @@
     "classroom_test_packet": true,
     "classroom_test_packet_date": "2026-06-17",
     "grading_policy": {
-      "answer_slots_per_question": "variable",
+      "answer_slots_per_question": 2,
       "answer_slot_counts": [
-        1,
-        1,
+        2,
+        2,
         2,
         2,
         2,

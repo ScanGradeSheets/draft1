@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-18T02:14:02.870Z",
+  "generated_at": "2026-06-18T12:07:57.332Z",
   "purpose": "Grade 1 last-week classroom test packet for final June evidence collection.",
   "templates": [
     {
@@ -119,23 +119,23 @@
       "worksheet_url": "worksheets/grade1-last-week-test-20260617/lw05-grade1-mixed-add-sub-within-20.svg",
       "layout_url": "layouts/sg-g1-lw-05-mixed-20.json",
       "packet_layout_url": "worksheets/grade1-last-week-test-20260617/layouts/sg-g1-lw-05-mixed-20.json",
-      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Asg-g1-lw-05-mixed-20%3A1%3A2287e0449c8c",
+      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Asg-g1-lw-05-mixed-20%3A1%3Ab47d86416630",
       "grade_level": 1,
       "layout_family": "fact_rows",
       "total_questions": 8,
-      "answer_box_count": 14,
-      "answer_slots_per_question": "variable",
+      "answer_box_count": 16,
+      "answer_slots_per_question": 2,
       "answer_slot_counts": [
         2,
-        1,
         2,
-        1,
+        2,
+        2,
         2,
         2,
         2,
         2
       ],
-      "answer_key_checksum": "2287e0449c8c"
+      "answer_key_checksum": "b47d86416630"
     },
     {
       "template_id": "sg-g1-lw-06-ten-frames",
@@ -146,21 +146,21 @@
       "worksheet_url": "worksheets/grade1-last-week-test-20260617/lw06-grade1-ten-frames-to-20.svg",
       "layout_url": "layouts/sg-g1-lw-06-ten-frames.json",
       "packet_layout_url": "worksheets/grade1-last-week-test-20260617/layouts/sg-g1-lw-06-ten-frames.json",
-      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Asg-g1-lw-06-ten-frames%3A1%3Acc1d5d0c62e0",
+      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Asg-g1-lw-06-ten-frames%3A1%3Ae8aaafa15381",
       "grade_level": 1,
       "layout_family": "ten_frames",
       "total_questions": 6,
-      "answer_box_count": 11,
-      "answer_slots_per_question": "variable",
+      "answer_box_count": 12,
+      "answer_slots_per_question": 2,
       "answer_slot_counts": [
-        1,
+        2,
         2,
         2,
         2,
         2,
         2
       ],
-      "answer_key_checksum": "cc1d5d0c62e0"
+      "answer_key_checksum": "e8aaafa15381"
     },
     {
       "template_id": "sg-g1-lw-07-dot-collections",
@@ -171,21 +171,21 @@
       "worksheet_url": "worksheets/grade1-last-week-test-20260617/lw07-grade1-dot-collections-to-20.svg",
       "layout_url": "layouts/sg-g1-lw-07-dot-collections.json",
       "packet_layout_url": "worksheets/grade1-last-week-test-20260617/layouts/sg-g1-lw-07-dot-collections.json",
-      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Asg-g1-lw-07-dot-collections%3A1%3Ae1a68054ee8f",
+      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Asg-g1-lw-07-dot-collections%3A1%3A2b48057686e1",
       "grade_level": 1,
       "layout_family": "dot_collections",
       "total_questions": 6,
-      "answer_box_count": 10,
-      "answer_slots_per_question": "variable",
+      "answer_box_count": 12,
+      "answer_slots_per_question": 2,
       "answer_slot_counts": [
-        1,
-        1,
+        2,
+        2,
         2,
         2,
         2,
         2
       ],
-      "answer_key_checksum": "e1a68054ee8f"
+      "answer_key_checksum": "2b48057686e1"
     },
     {
       "template_id": "sg-g1-lw-08-number-bonds",
@@ -221,21 +221,21 @@
       "worksheet_url": "worksheets/grade1-last-week-test-20260617/lw09-grade1-number-patterns.svg",
       "layout_url": "layouts/sg-g1-lw-09-number-patterns.json",
       "packet_layout_url": "worksheets/grade1-last-week-test-20260617/layouts/sg-g1-lw-09-number-patterns.json",
-      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Asg-g1-lw-09-number-patterns%3A1%3Ad55f355534ea",
+      "qr_payload_url": "https://scangradesheets.github.io/draft1/?sg=SG1%3Asg-g1-lw-09-number-patterns%3A1%3Ad04f54ce680d",
       "grade_level": 1,
       "layout_family": "patterns",
       "total_questions": 6,
-      "answer_box_count": 11,
-      "answer_slots_per_question": "variable",
+      "answer_box_count": 12,
+      "answer_slots_per_question": 2,
       "answer_slot_counts": [
-        1,
+        2,
         2,
         2,
         2,
         2,
         2
       ],
-      "answer_key_checksum": "d55f355534ea"
+      "answer_key_checksum": "d04f54ce680d"
     },
     {
       "template_id": "sg-g1-lw-10-place-value-50",

@@ -253,7 +253,7 @@
     },
     {
       "question_num": 2,
-      "problem": "24 - 9",
+      "problem": "19 - 4",
       "answer": 15,
       "digit_box_ids": [
         2,
@@ -286,7 +286,7 @@
     },
     {
       "question_num": 3,
-      "problem": "30 - 13",
+      "problem": "18 - 1",
       "answer": 17,
       "digit_box_ids": [
         4,
@@ -319,7 +319,7 @@
     },
     {
       "question_num": 4,
-      "problem": "28 - 14",
+      "problem": "20 - 6",
       "answer": 14,
       "digit_box_ids": [
         6,
@@ -352,7 +352,7 @@
     },
     {
       "question_num": 5,
-      "problem": "22 - 7",
+      "problem": "17 - 2",
       "answer": 15,
       "digit_box_ids": [
         8,
@@ -385,7 +385,7 @@
     },
     {
       "question_num": 6,
-      "problem": "35 - 18",
+      "problem": "19 - 2",
       "answer": 17,
       "digit_box_ids": [
         10,
@@ -418,7 +418,7 @@
     },
     {
       "question_num": 7,
-      "problem": "26 - 10",
+      "problem": "18 - 2",
       "answer": 16,
       "digit_box_ids": [
         12,
@@ -451,7 +451,7 @@
     },
     {
       "question_num": 8,
-      "problem": "40 - 22",
+      "problem": "20 - 2",
       "answer": 18,
       "digit_box_ids": [
         14,
@@ -492,7 +492,7 @@
       "width": 0.3775,
       "height": 0.1238,
       "letter_bubble": {
-        "x": 0.1278,
+        "x": 0.1691,
         "y": 0.301
       }
     },
@@ -504,7 +504,7 @@
       "width": 0.3775,
       "height": 0.1238,
       "letter_bubble": {
-        "x": 0.1278,
+        "x": 0.1691,
         "y": 0.4402
       }
     },
@@ -516,7 +516,7 @@
       "width": 0.3775,
       "height": 0.1238,
       "letter_bubble": {
-        "x": 0.1278,
+        "x": 0.1691,
         "y": 0.5795
       }
     },
@@ -528,7 +528,7 @@
       "width": 0.3775,
       "height": 0.1238,
       "letter_bubble": {
-        "x": 0.1278,
+        "x": 0.1691,
         "y": 0.7187
       }
     },
@@ -540,7 +540,7 @@
       "width": 0.3775,
       "height": 0.1238,
       "letter_bubble": {
-        "x": 0.5391,
+        "x": 0.5804,
         "y": 0.301
       }
     },
@@ -552,7 +552,7 @@
       "width": 0.3775,
       "height": 0.1238,
       "letter_bubble": {
-        "x": 0.5391,
+        "x": 0.5804,
         "y": 0.4402
       }
     },
@@ -564,7 +564,7 @@
       "width": 0.3775,
       "height": 0.1238,
       "letter_bubble": {
-        "x": 0.5391,
+        "x": 0.5804,
         "y": 0.5795
       }
     },
@@ -576,7 +576,7 @@
       "width": 0.3775,
       "height": 0.1238,
       "letter_bubble": {
-        "x": 0.5391,
+        "x": 0.5804,
         "y": 0.7187
       }
     }
