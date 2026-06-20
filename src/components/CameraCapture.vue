@@ -439,8 +439,58 @@ const props = defineProps({
   autoStart: { type: Boolean, default: false }
 })
 const DEFAULT_LAYOUT_URL = publicUrl('layouts/sg-10-box-v1.json')
-const KNOWN_GRADE2_FALLBACK_LAYOUT_ID = 'g2-mixed-within-50-v1'
-const KNOWN_GRADE2_LAYOUTS = Object.freeze([
+const MISSING_QR_FALLBACK_SEED_LAYOUT_ID = 'g2-mixed-within-50-v1'
+const KNOWN_TITLE_FALLBACK_LAYOUTS = Object.freeze([
+  {
+    layoutId: 'sg-g1-lw-01-add-1digit',
+    title: 'Addition: Single-Digit Answers',
+    humanCode: 'SG-G1-LW-01'
+  },
+  {
+    layoutId: 'sg-g1-lw-02-add-2digit',
+    title: 'Addition: Two-Digit Answers',
+    humanCode: 'SG-G1-LW-02'
+  },
+  {
+    layoutId: 'sg-g1-lw-03-sub-1digit',
+    title: 'Subtraction: Single-Digit Answers',
+    humanCode: 'SG-G1-LW-03'
+  },
+  {
+    layoutId: 'sg-g1-lw-04-sub-2digit',
+    title: 'Subtraction: Two-Digit Answers',
+    humanCode: 'SG-G1-LW-04'
+  },
+  {
+    layoutId: 'sg-g1-lw-05-mixed-20',
+    title: 'Mixed Addition and Subtraction',
+    humanCode: 'SG-G1-LW-05'
+  },
+  {
+    layoutId: 'sg-g1-lw-06-ten-frames',
+    title: 'Ten Frames to 20',
+    humanCode: 'SG-G1-LW-06'
+  },
+  {
+    layoutId: 'sg-g1-lw-07-dot-collections',
+    title: 'Dot Collections to 20',
+    humanCode: 'SG-G1-LW-07'
+  },
+  {
+    layoutId: 'sg-g1-lw-08-number-bonds',
+    title: 'Number Bonds to 20',
+    humanCode: 'SG-G1-LW-08'
+  },
+  {
+    layoutId: 'sg-g1-lw-09-number-patterns',
+    title: 'Number Patterns',
+    humanCode: 'SG-G1-LW-09'
+  },
+  {
+    layoutId: 'sg-g1-lw-10-place-value-50',
+    title: 'Place Value and Number Sense',
+    humanCode: 'SG-G1-LW-10'
+  },
   {
     layoutId: 'g2-add-within-20-v1',
     title: 'Addition Within 20',
@@ -3812,17 +3862,17 @@ function renderedTitleFeature(title, cols = 72, rows = 18) {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.font = '700 50px Lexend, Arial, sans-serif'
-  ctx.fillText(title, canvas.width / 2, canvas.height * 0.54)
+  ctx.fillText(title, canvas.width / 2, canvas.height * 0.54, canvas.width * 0.94)
   return imageDataToDarkFeature(ctx.getImageData(0, 0, canvas.width, canvas.height), cols, rows)
 }
 
-function classifyKnownGrade2LayoutFromWarped(warpedImage) {
+function classifyKnownWorksheetLayoutFromWarped(warpedImage) {
   const canvas = matToCanvas(warpedImage)
   const ctx = canvas?.getContext('2d')
   if (!ctx) return null
   const cols = 72
   const rows = 18
-  const expected = KNOWN_GRADE2_LAYOUTS
+  const expected = KNOWN_TITLE_FALLBACK_LAYOUTS
     .map((layout) => ({ ...layout, feature: renderedTitleFeature(layout.title, cols, rows) }))
     .filter((layout) => Array.isArray(layout.feature))
   if (!expected.length) return null
@@ -4923,6 +4973,8 @@ function buildLiveOcrErrorDebugPackage(err, partialDebug) {
     forcedFallbackReviewReason: partialDebug?.forcedFallbackReviewReason || null,
     reviewOnlyFallback: partialDebug?.reviewOnlyFallback === true,
     knownGrade2Fallback: partialDebug?.knownGrade2Fallback === true,
+    missingQrLayoutFallback: partialDebug?.missingQrLayoutFallback === true,
+    titleFallbackReranLayout: partialDebug?.titleFallbackReranLayout ?? null,
     printedTitleFallback: partialDebug?.printedTitleFallback || null,
     questionCorrect: partialDebug?.questionCorrect || null,
     questionReview: partialDebug?.questionReview || null,
@@ -5070,6 +5122,7 @@ const runRealOCR = async () => {
     predictions: [],
     answerKey: null,
     knownGrade2Fallback: null,
+    missingQrLayoutFallback: null,
     printedTitleFallback: null,
     reviewOnlyFallback: false,
     forcedFallbackReviewReason: null,
@@ -5107,17 +5160,18 @@ const runRealOCR = async () => {
       typeof window !== 'undefined' &&
       new URLSearchParams(window.location.search).get('allowDefaultLayout') === '1'
     partialDebug.allowDefaultLayout = allowDefaultLayout
-    const knownGrade2Fallback = !qrPayload && !allowDefaultLayout
-    partialDebug.knownGrade2Fallback = knownGrade2Fallback
+    const missingQrLayoutFallback = !qrPayload && !allowDefaultLayout
+    partialDebug.knownGrade2Fallback = missingQrLayoutFallback
+    partialDebug.missingQrLayoutFallback = missingQrLayoutFallback
     let layoutUrl = qrPayload?.layout_id
       ? layoutUrlForId(qrPayload.layout_id)
-      : knownGrade2Fallback
-        ? layoutUrlForId(KNOWN_GRADE2_FALLBACK_LAYOUT_ID)
+      : missingQrLayoutFallback
+        ? layoutUrlForId(MISSING_QR_FALLBACK_SEED_LAYOUT_ID)
         : DEFAULT_LAYOUT_URL
     partialDebug.layoutUrl = layoutUrl
     partialDebug.stage = 'loading layout'
     let layout = await fetchLayoutJson(layoutUrl)
-    if (!layout && !knownGrade2Fallback) {
+    if (!layout && !missingQrLayoutFallback) {
       layoutUrl = DEFAULT_LAYOUT_URL
       partialDebug.layoutUrl = layoutUrl
       layout = await fetchLayoutJson(layoutUrl)
@@ -5166,45 +5220,82 @@ const runRealOCR = async () => {
       throw new Error('Corner marker detection failed. Ensure 4 black square markers are visible.')
     }
 
-    const { warpedImage, rawCrops, processedTensors } = result
-    if (knownGrade2Fallback) {
+    let worksheetResult = result
+    let { warpedImage, rawCrops, processedTensors } = worksheetResult
+    const disposeWorksheetImages = (worksheet) => {
+      for (const crop of worksheet?.rawCrops || []) {
+        try {
+          crop.image?.delete?.()
+        } catch (_) {}
+      }
+      try {
+        worksheet?.warpedImage?.delete?.()
+      } catch (_) {}
+    }
+    if (missingQrLayoutFallback) {
       partialDebug.stage = 'identifying known worksheet title'
-      const titleMatch = classifyKnownGrade2LayoutFromWarped(warpedImage)
+      const titleMatch = classifyKnownWorksheetLayoutFromWarped(warpedImage)
       partialDebug.printedTitleFallback = titleMatch
       if (titleMatch?.accepted) {
         const matchedLayoutUrl = layoutUrlForId(titleMatch.layoutId)
+        const seedLayout = layout
         const matchedLayout = titleMatch.layoutId === layout.layout_id
           ? layout
           : await fetchLayoutJson(matchedLayoutUrl)
         if (matchedLayout) {
-          layout = matchedLayout
-          layoutUrl = matchedLayoutUrl
-          qrPayload = createQrPayloadForKnownLayout(titleMatch)
-          partialDebug.layoutUrl = layoutUrl
-          partialDebug.layoutId = layout.layout_id || null
-          partialDebug.qrPayload = qrPayload
+          const matchedResult = titleMatch.layoutId === layout.layout_id
+            ? worksheetResult
+            : processWorksheet(src, matchedLayout, { qrLocation: null })
+          if (matchedResult) {
+            if (matchedResult !== worksheetResult) {
+              disposeWorksheetImages(worksheetResult)
+              worksheetResult = matchedResult
+              ;({ warpedImage, rawCrops, processedTensors } = worksheetResult)
+              partialDebug.titleFallbackReranLayout = true
+            } else {
+              partialDebug.titleFallbackReranLayout = false
+            }
+            layout = matchedLayout
+            layoutUrl = matchedLayoutUrl
+            qrPayload = createQrPayloadForKnownLayout(titleMatch)
+            partialDebug.layoutUrl = layoutUrl
+            partialDebug.layoutId = layout.layout_id || null
+            partialDebug.qrPayload = qrPayload
+            partialDebug.reviewOnlyFallback = true
+            partialDebug.forcedFallbackReviewReason = 'qr-missing-title-layout-fallback-review'
+          } else {
+            layout = makeReviewOnlyLayout(seedLayout, 'known-title-layout-process-failed')
+            partialDebug.reviewOnlyFallback = true
+            partialDebug.forcedFallbackReviewReason = 'qr-missing-title-layout-process-failed-review'
+          }
         } else {
           layout = makeReviewOnlyLayout(layout, 'known-title-layout-fetch-failed')
           partialDebug.reviewOnlyFallback = true
+          partialDebug.forcedFallbackReviewReason = 'qr-missing-title-layout-fetch-failed-review'
         }
       } else {
         layout = makeReviewOnlyLayout(layout, 'known-title-not-confident')
         partialDebug.reviewOnlyFallback = true
+        partialDebug.forcedFallbackReviewReason = 'qr-missing-title-not-confident-review'
       }
+    }
+    partialDebug.activeHomography = {
+      anchors: layout?.homography?.anchors,
+      marker_size: layout?.homography?.marker_size
     }
     const saveRecognizedScanAsReview = () => {
       const hasAnswerKey = Array.isArray(layout?.answer_key) || Array.isArray(qrPayload?.answer_key)
       const hasQuestionGroups = Array.isArray(layout?.question_groups) && layout.question_groups.length > 0
       const hasQrTemplate = !!(qrPayload?.template_id || qrPayload?.layout_id)
       const hasKnownFallbackTemplate =
-        knownGrade2Fallback &&
+        missingQrLayoutFallback &&
         (
           partialDebug.printedTitleFallback?.accepted === true ||
           partialDebug.reviewOnlyFallback === true
         )
       return hasAnswerKey && hasQuestionGroups && (hasQrTemplate || hasKnownFallbackTemplate)
     }
-    let forcedFallbackReviewReason = null
+    let forcedFallbackReviewReason = partialDebug.forcedFallbackReviewReason || null
     const forceKnownFallbackReview = (reason) => {
       if (!saveRecognizedScanAsReview()) return false
       forcedFallbackReviewReason = reason
@@ -5215,7 +5306,7 @@ const runRealOCR = async () => {
 
     const sourceAnnotationContext = buildSourceAnnotationContext(
       rawCrops,
-      result.sourceAnchors,
+      worksheetResult.sourceAnchors,
       layout,
       warpedImage.cols,
       warpedImage.rows,
@@ -5650,6 +5741,8 @@ const runRealOCR = async () => {
         layoutId: layout.layout_id || null,
         qrPayload: partialDebug.qrPayload,
         knownGrade2Fallback: partialDebug.knownGrade2Fallback,
+        missingQrLayoutFallback: partialDebug.missingQrLayoutFallback,
+        titleFallbackReranLayout: partialDebug.titleFallbackReranLayout ?? null,
         printedTitleFallback: partialDebug.printedTitleFallback,
         reviewOnlyFallback: partialDebug.reviewOnlyFallback,
         forcedFallbackReviewReason,

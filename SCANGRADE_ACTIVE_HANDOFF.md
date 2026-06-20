@@ -136,6 +136,36 @@ Unrelated dirty worktree files existed before this handoff and should not be rev
 - Mission Control was restarted and the tailnet route returned `200`; a tailnet receiver-check upload saved successfully.
 - Next action remains: open a prepared debug URL whose token matches the running receiver, re-scan a 3-page sanity set, confirm folders arrive, then scan the full packet set.
 
+2026-06-20 19:02 EDT update:
+
+- Tony re-scanned the full 10-page packet and Mission Control received the batch.
+- The receiver saved all 10 scans with `captured.png`, `warped.png`, `marked-sheet.jpg`, `overlay-debug.json`, raw crops, model inputs, and debug JSON.
+- Two pages were visibly Grade 1 packet sheets but resolved as the legacy `g2-mixed-within-50-v1` layout because the QR payload was missing and the app's fallback path only knew the old Grade 2 title set.
+- A second fallback issue was found in the same path: after a printed-title fallback chose a layout, the app did not rerun `processWorksheet` with the matched layout, so varied packet formats could keep stale crops from the seed layout.
+
+Fix made:
+
+- Missing-QR title fallback now knows the 10 Grade 1 last-week packet layouts plus the 3 older Grade 2 layouts.
+- Long printed titles are rendered into the title matcher with a max width so Grade 1 titles such as `Subtraction: Single-Digit Answers` can be compared reliably.
+- When a printed-title fallback matches a different layout, the app reruns the homography/crop/tensor pipeline with the matched layout before OCR and annotation.
+- Any layout inferred from printed title instead of a real QR payload is forced into teacher-review mode with `forcedFallbackReviewReason: qr-missing-title-layout-fallback-review`. This prevents silent confident grading on a missing-QR fallback while still saving useful evidence.
+- Debug JSON now includes `missingQrLayoutFallback` and `titleFallbackReranLayout` so future packet analysis can separate real QR reads from fallback recovery.
+- Visible build label changed to `2026.06.20-1902-EDT-sg3-qr-fallback-guard`.
+
+Verification completed:
+
+```text
+npm run build
+npm run build:github
+dist sanity check: build label present, Grade 1 page 3/page 5 layout IDs present, missing-QR fallback reason present
+```
+
+Next test:
+
+- Re-scan the same 10-page packet on the public build once deployed.
+- If a QR still fails on pages such as `SG-G1-LW-03` or `SG-G1-LW-05`, the scan should no longer resolve as `g2-mixed-within-50-v1`; it should either use the matched Grade 1 layout in teacher-review mode or fail safely as review-only.
+- Normal grading should still require a real QR payload from the page URL or image decode.
+
 ## Grade 1 Last-Week Classroom Test Packet
 
 On 2026-06-17, SG 3 generated a new 10-page Grade 1 packet for Tony's final classroom testing window before summer break.

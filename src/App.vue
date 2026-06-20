@@ -340,7 +340,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.06.20-0820-EDT-sg3-classroom-debug-fix'
+const APP_BUILD_LABEL = '2026.06.20-1902-EDT-sg3-qr-fallback-guard'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
