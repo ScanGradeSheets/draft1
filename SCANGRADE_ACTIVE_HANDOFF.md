@@ -1242,3 +1242,71 @@ Next action:
 
 - Open or print `public/worksheets/curriculum-probe-g1-g2-v2/printables/ScanGrade-Grade1-2-Curriculum-Probe-V2-Packet.pdf`.
 - Classroom-test with students before summer break, then score separately for scan success, QR/layout success, handwritten-truth OCR accuracy, confident-read coverage, confident-wrong count, and review count.
+
+## 2026-07-01 / SG 3 Classroom Debug Packet Rescan
+
+What changed:
+
+- Tony scanned the Grade 1 last-week packet through the public debug-upload link on an iPhone 16.
+- Mission Control received 9 completed page uploads; page 10 got stuck on "grading" and never uploaded.
+- The local Mission Control receiver was running with `SG_DEBUG_UPLOAD_TOKEN=sg3classroom node mission-control/server.mjs` and the tailnet route was reachable.
+- A narrow OCR patch was made for the highest-frequency failure family in the received pages: handwritten left-slot `1`s in two-digit answer boxes being read as `7`, `4`, `8`, or `9`.
+- A digit-engine timeout guard was added so a stalled model operation can fall back to saved teacher review instead of leaving the scanner spinning with no debug artifact.
+- Visible build label changed to `2026.07.01-2220-EDT-sg3-left-slot-timeout`.
+
+Evidence used:
+
+```text
+private-evidence/debug-scans/2026-07-01/2026-07-01_21-42-01-660-sg-g1-lw-07-dot-collections-7d7f6066
+private-evidence/debug-scans/2026-07-01/2026-07-01_21-42-10-500-sg-g1-lw-06-ten-frames-6e00d7f1
+private-evidence/debug-scans/2026-07-01/2026-07-01_21-42-18-443-sg-g1-lw-01-add-1digit-11738328
+private-evidence/debug-scans/2026-07-01/2026-07-01_21-42-28-270-sg-g1-lw-02-add-2digit-4b87402b
+private-evidence/debug-scans/2026-07-01/2026-07-01_21-42-37-394-sg-g1-lw-03-sub-1digit-9960366f
+private-evidence/debug-scans/2026-07-01/2026-07-01_21-42-53-505-sg-g1-lw-04-sub-2digit-8c2f4f42
+private-evidence/debug-scans/2026-07-01/2026-07-01_21-43-40-999-sg-g1-lw-05-mixed-20-2e6fd780
+private-evidence/debug-scans/2026-07-01/2026-07-01_21-43-59-139-sg-g1-lw-08-number-bonds-dc760005
+private-evidence/debug-scans/2026-07-01/2026-07-01_21-44-09-274-sg-g1-lw-09-number-patterns-f8e34890
+```
+
+Results:
+
+- All 9 completed uploads had `qr_decode_source: full-frame:direct`; the QR/layout fallback bug was not the issue in this batch.
+- No `sg-g1-lw-10-place-value-50` folder appeared for the July 1 packet run, confirming page 10 failed before debug upload.
+- Saved-JSON simulation of the left-slot `1` rule changed 5 left-slot digits, improved answer-key outcomes from `19/64` to `22/64`, and introduced `0` answer-key regressions across the 9 completed packet pages.
+- This simulation is not a handwritten-truth score; it is a regression guard. Visual inspection confirmed the changed cases are the handwritten left-slot `1` family.
+
+Commands run:
+
+```text
+npm run build
+npm run build:github
+node -e <July 1 saved-debug simulation>
+```
+
+Files changed:
+
+```text
+src/ocr-pipeline.js
+src/components/CameraCapture.vue
+src/App.vue
+SCANGRADE_ACTIVE_HANDOFF.md
+```
+
+Rollback point:
+
+```text
+Previous pushed source commit before this patch: 2ca91b0 Guard missing QR layout fallback
+Previous public deploy commit before this patch: 822838e Deploy QR fallback guard build
+```
+
+Next action:
+
+- Commit and deploy this patch to `gh-pages`.
+- Ask Tony to refresh the public debug link and rescan page 10 alone first, then one two-digit page and one number-bond page.
+- Confirm the visible build label is `2026.07.01-2220-EDT-sg3-left-slot-timeout`.
+
+Open risks:
+
+- Page 10 hang is not yet reproduced with a saved artifact; the timeout guard should make the next failure observable as an `ocr-error`/review-save bundle if it happens again.
+- Visual-format pages still over-review heavily and need separate layout/crop/OCR analysis after the left-slot `1` family is handled.
+- Do not call the varied Grade 1 packet reliable yet; this patch is a narrow evidence-backed fix.

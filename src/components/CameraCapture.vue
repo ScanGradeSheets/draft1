@@ -524,6 +524,7 @@ const TWO_DIGIT_RIGHT_SLOT_AUTO_X_CONFIDENCE_THRESHOLD = 0.92
 const TWO_DIGIT_RIGHT_SLOT_AUTO_X_MARGIN_THRESHOLD = 0.28
 const TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD = 0.92
 const TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD = 0.50
+const DIGIT_ENGINE_OPERATION_TIMEOUT_MS = 30000
 const OCR_CONFIDENCE_CLEAR_REASONS = Object.freeze(new Set([
   'box-safe-default',
   'left-slot-low-three-rescue',
@@ -5089,6 +5090,22 @@ function warmStudentDigitModel() {
     })
 }
 
+async function withDigitEngineTimeout(promise, label, timeoutMs = DIGIT_ENGINE_OPERATION_TIMEOUT_MS) {
+  let timer = null
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = window.setTimeout(() => {
+          reject(new Error(`Digit engine timed out while ${label}`))
+        }, timeoutMs)
+      })
+    ])
+  } finally {
+    if (timer != null) window.clearTimeout(timer)
+  }
+}
+
 const runRealOCR = async () => {
   processing.value = true
   ocrResult.value = null
@@ -5446,7 +5463,7 @@ const runRealOCR = async () => {
 
     try {
       partialDebug.stage = 'initializing digit model'
-      await initDigitModel()
+      await withDigitEngineTimeout(initDigitModel(), 'initializing digit model')
       modelInfoSnapshot.value = getDigitModelInfo()
 
       partialDebug.stage = 'running digit model'
@@ -5463,16 +5480,25 @@ const runRealOCR = async () => {
           Array.isArray(proc.tensorVariants) &&
           proc.tensorVariants.length > 1
         if (hasPreprocessVariants) {
-          digitResult = await recognizeDigitsWithPreprocessVariants(proc.tensorVariants, null, {
-            digitIndex: proc.digitIndex
-          })
+          digitResult = await withDigitEngineTimeout(
+            recognizeDigitsWithPreprocessVariants(proc.tensorVariants, null, {
+              digitIndex: proc.digitIndex
+            }),
+            `recognizing digit ${proc.id}`
+          )
         } else {
-          digitResult = await recognizeDigits(data)
+          digitResult = await withDigitEngineTimeout(
+            recognizeDigits(data),
+            `recognizing digit ${proc.id}`
+          )
           const baseTopK = digitResult[0].topK || []
           const baseTopGap = baseTopK.length >= 2 ? (baseTopK[0].confidence - baseTopK[1].confidence) : 1
           const forceRobust = proc.isVirtualDigitBox === true
           if (forceRobust || digitResult[0].confidence < ROBUST_RETRY_CONFIDENCE_THRESHOLD || baseTopGap < ROBUST_RETRY_MARGIN_THRESHOLD) {
-            digitResult = await recognizeDigitsRobust(data, digitResult[0], { force: forceRobust })
+            digitResult = await withDigitEngineTimeout(
+              recognizeDigitsRobust(data, digitResult[0], { force: forceRobust }),
+              `checking digit ${proc.id}`
+            )
           }
         }
         const digit = digitResult[0].digit

@@ -1009,6 +1009,18 @@ function findVariantAgreement(variantResults, names, minConfidence, minGap) {
   return { digit, variants };
 }
 
+function countVariantDigitSupport(variantResults, digit, options = {}) {
+  const minConfidence = options.minConfidence ?? 0.30;
+  const minGap = options.minGap ?? 0.01;
+  return variantResults.filter((variant) => (
+    variant?.result?.digit === digit &&
+    (
+      (variant.result.confidence || 0) >= minConfidence ||
+      digitTopGap(variant.result) >= minGap
+    )
+  )).length;
+}
+
 function findStrongSlotMajority(variantResults, options = {}) {
   const slotNames = new Set([
     'gentle',
@@ -1682,6 +1694,15 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
   const rightSlotExpectedEdgeResult = rightSlotExpectedEdgeProbs
     ? digitResultFromProbs(rightSlotExpectedEdgeProbs)
     : null;
+  const leftSlotOneSupportCount = digitIndex === 0
+    ? countVariantDigitSupport(variantResults, 1, { minConfidence: 0.30, minGap: 0.01 })
+    : 0;
+  const strongLeftSlotOneVote =
+    digitIndex === 0 &&
+    votes.top?.digit === 1 &&
+    votes.top.share >= 0.52 &&
+    votes.margin >= 0.14 &&
+    leftSlotOneSupportCount >= 4;
   let result;
   let selectionReason = 'weighted-average';
   let postSelectionRescue = false;
@@ -1700,6 +1721,13 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
       robustOverride: dominant.reason
     });
     selectionReason = dominant.reason;
+  } else if (strongLeftSlotOneVote) {
+    result = digitResultFromVotedDigit(averagedProbs, 1, {
+      robust: true,
+      variantCount: variants.length,
+      robustOverride: 'left-slot-one-weighted-vote'
+    });
+    selectionReason = 'left-slot-one-weighted-vote';
   } else if (
     rightSlotExpectedEdgeResult &&
     options.preferRightSlotExpectedEdge !== false
@@ -1784,6 +1812,12 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
     if (
       digitIndex === 0 &&
       result.digit === 1 &&
+      !(
+        votes.top?.digit === 1 &&
+        votes.top.share >= 0.62 &&
+        votes.margin >= 0.30 &&
+        leftSlotOneSupportCount >= 4
+      ) &&
       strictShape.centerX >= 13.5 &&
       strictShape.rightLongest >= 12 &&
       strictShape.leftLongest <= 6 &&
