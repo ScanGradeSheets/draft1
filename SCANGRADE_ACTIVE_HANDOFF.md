@@ -129,6 +129,19 @@ Open risk:
 
 - If Codex or the local receiver process dies again, Tony's phone may still have a stored token/upload URL that no longer matches a running receiver. Restart Mission Control and send a fresh prepared URL before any large batch.
 
+2026-07-01 23:37 EDT update:
+
+- Tony scanned one page using the fresh debug URL and Mission Control received it.
+- Saved folder: `private-evidence/debug-scans/2026-07-02/2026-07-02_03-36-58-172-sg-g1-lw-07-dot-collections-1325aaf9/`.
+- The folder date is `2026-07-02` because the server uses UTC timestamps; the local scan time was still July 1 EDT.
+- Saved evidence includes `captured.png`, `warped.png`, `marked-sheet.jpg`, `overlay-debug.json`, `debug.json`, `raw-crops/`, and `model-inputs/`.
+- QR/layout path worked: layout was read directly as `sg-g1-lw-07-dot-collections` from `full-frame:direct`.
+- Grading result remained weak on this dot-collections page: `questionScore: 1/6`, `questionReviewCount: 6/6`, `needsReviewCount: 8`, with several false two-digit answers such as `5 -> 51`, `8 -> 81`, `12 -> 92`, `16 -> 76`, and `19 -> 79`.
+
+Next action:
+
+- Tony can scan the remaining packet pages now because upload is working again. After the batch lands, compare this new run against the earlier July 1 batch by worksheet type.
+
 Recommended scan protocol:
 
 1. Before scanning a full stack, open the public test URL and confirm the build label is `2026.06.20-0820-EDT-sg3-classroom-debug-fix`.
