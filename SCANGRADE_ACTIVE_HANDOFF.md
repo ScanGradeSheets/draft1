@@ -1562,3 +1562,11 @@ Remaining reliability bottlenecks:
 - Number bonds, dot collections, ten frames, and mixed two-slot sheets remain review-heavy.
 - Two-digit pages still hit the unusable-scan guard on 8/54 captures, concentrated in add-2digit, sub-2digit, and mixed-20 pages.
 - The next meaningful jump toward market-readiness should come from labeled handwritten-truth evaluation/training on these classroom scans, plus layout/crop improvements for the visual worksheet formats. Do not loosen confidence thresholds to inflate apparent confidence.
+
+Deploy follow-up:
+
+- Source commit pushed: `395f263 Tighten classroom OCR confidence policy` on `autobuild/safe-20260223`.
+- GitHub Pages worktree commits pushed on `gh-pages`: `ad9e5e0 Deploy classroom OCR rescue build`, `fac1e25 Refresh deploy asset names`, and `fe26a69 Force static Pages publish`.
+- Commit-specific raw GitHub content for `fac1e25` showed the expected `index-CscVcfNN-r1.js` / `index-Clbz-Bwe-r1.css` asset references, and the JS asset existed.
+- Public `https://scangradesheets.github.io/draft1/` still served the previous `6dd8833` artifact after cache expiry and after the `.nojekyll` trigger commit. The visible public site should be treated as not yet updated until a later check shows build label `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard`.
+- Local Vite dev server on port `5175` was stopped after verification.
