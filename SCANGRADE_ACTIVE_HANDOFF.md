@@ -110,6 +110,25 @@ Expected visible build label: 2026.06.20-0820-EDT-sg3-classroom-debug-fix
 
 The immediate next move is evidence collection, not another blind app tweak. Use the current build to gather more classroom scans because the debug receiver now preserves enough evidence to diagnose the real failures.
 
+2026-07-01 23:25 EDT update:
+
+- Tony reported re-scanning all 10 pages from the same package for comparison after the `2026.07.01-2230-EDT-sg3-optional-leading-review` deploy.
+- Local time was confirmed as `2026-07-01 23:24 EDT`; do not look only under `2026-07-02` for this batch.
+- A modification-time scan across `private-evidence/debug-scans/` showed no new folders after `private-evidence/debug-scans/2026-07-01/2026-07-01_23-55-43-064-sg-g1-lw-05-mixed-20-92967803/`.
+- Mission Control was no longer running, so the late 10-page rescan should be treated as not received unless another upload path is later found.
+- Mission Control was restarted on `127.0.0.1:8787` with a fresh per-session debug upload token. The token was shared in chat via a prepared debug URL and intentionally not written here.
+- Local receiver check returned `HTTP 200`; tailnet Mission Control check at `https://hobbes-mac-mini.tail9a3379.ts.net/mission-control/` returned `HTTP 200`.
+
+Next action:
+
+1. Tony should open the fresh prepared debug URL on the scan device, use `Debug Scan (exports)`, scan one page, and wait for the visible `Debug saved` confirmation.
+2. Confirm that a new folder appears under `private-evidence/debug-scans/2026-07-01/`.
+3. Only then re-scan the remaining packet pages for comparison.
+
+Open risk:
+
+- If Codex or the local receiver process dies again, Tony's phone may still have a stored token/upload URL that no longer matches a running receiver. Restart Mission Control and send a fresh prepared URL before any large batch.
+
 Recommended scan protocol:
 
 1. Before scanning a full stack, open the public test URL and confirm the build label is `2026.06.20-0820-EDT-sg3-classroom-debug-fix`.
