@@ -522,6 +522,8 @@ const TWO_DIGIT_AUTO_X_CONFIDENCE_THRESHOLD = 0.88
 const TWO_DIGIT_AUTO_X_MARGIN_THRESHOLD = 0.20
 const TWO_DIGIT_RIGHT_SLOT_AUTO_X_CONFIDENCE_THRESHOLD = 0.92
 const TWO_DIGIT_RIGHT_SLOT_AUTO_X_MARGIN_THRESHOLD = 0.28
+const TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_CONFIDENCE_THRESHOLD = 0.92
+const TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_MARGIN_THRESHOLD = 0.50
 const TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD = 0.92
 const TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD = 0.50
 const DIGIT_ENGINE_OPERATION_TIMEOUT_MS = 30000
@@ -786,6 +788,8 @@ function chosenDigitProbability(result) {
 function confidencePolicyClearanceForDigit(proc, result, topGap, correct, reviewSignals) {
   const reviewReason = reviewSignals?.structuralReview
     ? 'two-digit-leading-zero-structural-review'
+    : reviewSignals?.unexpectedLeadingDigitReview
+      ? 'two-digit-optional-leading-digit-review'
     : reviewSignals?.highRiskMismatchReview
       ? 'two-digit-mismatch-low-trust-review'
       : reviewSignals?.highRiskPreprocessReview
@@ -839,6 +843,19 @@ function structuralTwoDigitReview(proc, result, expectedDigit) {
   const digit = Number(result.digit)
   const expected = Number(expectedDigit)
   return digit === 0 && Number.isFinite(expected) && expected !== 0
+}
+
+function unexpectedOptionalLeadingDigitReview(proc, result, expectedDigit) {
+  if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 0 || !result) return false
+  if (expectedDigit != null) return false
+  const digit = Number(result.digit)
+  if (!Number.isInteger(digit) || digit < 0 || digit > 9) return false
+  const rawConfidence = chosenDigitProbability(result)
+  const gap = preprocessTopGap(result)
+  return (
+    rawConfidence < TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_CONFIDENCE_THRESHOLD ||
+    gap < TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_MARGIN_THRESHOLD
+  )
 }
 
 function highRiskTwoDigitMismatchReview(proc, result, expectedDigit) {
@@ -5519,6 +5536,7 @@ const runRealOCR = async () => {
           topGap < LOW_MARGIN_THRESHOLD
         const highRiskPreprocessReview = highRiskRightSlotPreprocessReview(proc, digitResult[0])
         const structuralReview = structuralTwoDigitReview(proc, digitResult[0], expectedDigit)
+        const unexpectedLeadingDigitReview = unexpectedOptionalLeadingDigitReview(proc, digitResult[0], expectedDigit)
         const highRiskMismatchReview = highRiskTwoDigitMismatchReview(proc, digitResult[0], expectedDigit)
         const confidencePolicyClearance = confidencePolicyClearanceForDigit(
           proc,
@@ -5528,6 +5546,7 @@ const runRealOCR = async () => {
           {
             highRiskPreprocessReview,
             structuralReview,
+            unexpectedLeadingDigitReview,
             highRiskMismatchReview,
             cameraCapture: !!partialDebug.captureQuality
           }
@@ -5535,7 +5554,7 @@ const runRealOCR = async () => {
         const reviewNeeded = confidencePolicyClearance.allowed ? false
           : correct === true
             ? !autoCheckAllowed
-            : highRiskPreprocessReview || structuralReview || highRiskMismatchReview ? true
+            : highRiskPreprocessReview || structuralReview || unexpectedLeadingDigitReview || highRiskMismatchReview ? true
             : correct === false
               ? !autoXAllowed
               : lowSignal
@@ -5559,6 +5578,8 @@ const runRealOCR = async () => {
           preprocessDisagreement: digitResult[0].preprocessDisagreement === true,
           preprocessReviewReason: reviewNeeded && structuralReview
             ? 'two-digit-leading-zero-structural-review'
+            : reviewNeeded && unexpectedLeadingDigitReview
+            ? 'two-digit-optional-leading-digit-review'
             : reviewNeeded && highRiskMismatchReview
             ? 'two-digit-mismatch-low-trust-review'
             : reviewNeeded && highRiskPreprocessReview
@@ -5569,6 +5590,7 @@ const runRealOCR = async () => {
           originalChosenDigitConfidence: chosenDigitProbability(digitResult[0]),
           highRiskPreprocessReview,
           structuralReview,
+          unexpectedLeadingDigitReview,
           preprocessVariants: digitResult[0].preprocessVariants || null,
           preprocessVoteSummary: digitResult[0].preprocessVoteSummary || null,
           ...(correct !== undefined && { correct })

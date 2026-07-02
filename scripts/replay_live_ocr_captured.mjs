@@ -21,6 +21,8 @@ const TWO_DIGIT_AUTO_X_CONFIDENCE_THRESHOLD = 0.88;
 const TWO_DIGIT_AUTO_X_MARGIN_THRESHOLD = 0.20;
 const TWO_DIGIT_RIGHT_SLOT_AUTO_X_CONFIDENCE_THRESHOLD = 0.92;
 const TWO_DIGIT_RIGHT_SLOT_AUTO_X_MARGIN_THRESHOLD = 0.28;
+const TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_CONFIDENCE_THRESHOLD = 0.92;
+const TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_MARGIN_THRESHOLD = 0.50;
 
 function normalizeGradingDigit(value) {
   if (value == null || value === '' || value === '_') return null;
@@ -785,6 +787,8 @@ for (const file of files) {
     const TWO_DIGIT_AUTO_X_MARGIN_THRESHOLD = 0.20;
     const TWO_DIGIT_RIGHT_SLOT_AUTO_X_CONFIDENCE_THRESHOLD = 0.92;
     const TWO_DIGIT_RIGHT_SLOT_AUTO_X_MARGIN_THRESHOLD = 0.28;
+    const TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_CONFIDENCE_THRESHOLD = 0.92;
+    const TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_MARGIN_THRESHOLD = 0.50;
     const TWO_DIGIT_AUTO_X_CALIBRATED_CONFIDENCE_THRESHOLD = 0.92;
     const TWO_DIGIT_AUTO_X_CALIBRATED_MARGIN_THRESHOLD = 0.50;
     const OCR_CONFIDENCE_CLEAR_REASONS = new Set([
@@ -928,6 +932,19 @@ for (const file of files) {
       return digit === 0 && Number.isFinite(expected) && expected !== 0;
     };
 
+    const unexpectedOptionalLeadingDigitReview = (proc, result, expectedDigit) => {
+      if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 0 || !result) return false;
+      if (expectedDigit != null) return false;
+      const digit = Number(result.digit);
+      if (!Number.isInteger(digit) || digit < 0 || digit > 9) return false;
+      const rawConfidence = chosenDigitProbability(result);
+      const gap = digitTopGap(result);
+      return (
+        rawConfidence < TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_CONFIDENCE_THRESHOLD ||
+        gap < TWO_DIGIT_OPTIONAL_LEADING_AUTO_X_MARGIN_THRESHOLD
+      );
+    };
+
     const highRiskTwoDigitMismatchReview = (proc, result, expectedDigit) => {
       if (!proc?.isVirtualDigitBox || !result) return false;
       const digit = Number(result.digit);
@@ -949,6 +966,8 @@ for (const file of files) {
     const confidencePolicyClearanceForDigit = (proc, result, topGap, correct, reviewSignals) => {
       const reviewReason = reviewSignals?.structuralReview
         ? 'two-digit-leading-zero-structural-review'
+        : reviewSignals?.unexpectedLeadingDigitReview
+          ? 'two-digit-optional-leading-digit-review'
         : reviewSignals?.highRiskMismatchReview
           ? 'two-digit-mismatch-low-trust-review'
           : reviewSignals?.highRiskPreprocessReview
@@ -1113,6 +1132,7 @@ for (const file of files) {
         robustTopGap < LOW_MARGIN_THRESHOLD;
       const highRiskPreprocessReview = highRiskRightSlotPreprocessReview(tensor, prediction);
       const structuralReview = structuralTwoDigitReview(tensor, prediction, expected);
+      const unexpectedLeadingDigitReview = unexpectedOptionalLeadingDigitReview(tensor, prediction, expected);
       const highRiskMismatchReview = highRiskTwoDigitMismatchReview(tensor, prediction, expected);
       const confidencePolicyClearance = confidencePolicyClearanceForDigit(
         tensor,
@@ -1122,6 +1142,7 @@ for (const file of files) {
         {
           highRiskPreprocessReview,
           structuralReview,
+          unexpectedLeadingDigitReview,
           highRiskMismatchReview,
           cameraCapture: !!debug.captureQuality
         }
@@ -1129,7 +1150,7 @@ for (const file of files) {
       const reviewNeeded = confidencePolicyClearance.allowed ? false
         : correct === true
           ? !autoCheckAllowed
-          : highRiskPreprocessReview || structuralReview || highRiskMismatchReview ? true
+          : highRiskPreprocessReview || structuralReview || unexpectedLeadingDigitReview || highRiskMismatchReview ? true
           : correct === false
             ? !autoXAllowed
             : lowSignal;
@@ -1149,6 +1170,8 @@ for (const file of files) {
         preprocessDisagreement: prediction.preprocessDisagreement === true,
         preprocessReviewReason: reviewNeeded && structuralReview
           ? 'two-digit-leading-zero-structural-review'
+          : reviewNeeded && unexpectedLeadingDigitReview
+            ? 'two-digit-optional-leading-digit-review'
           : reviewNeeded && highRiskMismatchReview
             ? 'two-digit-mismatch-low-trust-review'
           : reviewNeeded && highRiskPreprocessReview
@@ -1159,6 +1182,7 @@ for (const file of files) {
         originalChosenDigitConfidence: chosenDigitProbability(prediction),
         highRiskPreprocessReview,
         structuralReview,
+        unexpectedLeadingDigitReview,
         highRiskMismatchReview,
         preprocessVariants: prediction.preprocessVariants || null,
         preprocessVoteSummary: prediction.preprocessVoteSummary || null,

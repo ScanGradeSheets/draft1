@@ -1359,3 +1359,61 @@ Recommended next action:
 - Build a targeted eval set from the new `private-evidence/debug-scans/2026-07-01` bundles with handwritten-truth labels, especially page 10 C/E and mixed-sheet A/F/G/H.
 - Prototype crop/variant changes for border-hugging digits and replay from captured images, not saved tensors, because crop changes require reprocessing the original captured image.
 - Keep public build `2026.07.01-2220-EDT-sg3-left-slot-timeout` live until a crop-level patch passes replay.
+
+## 2026-07-01 / Optional Leading Digit Review Patch
+
+What changed:
+
+- A rejected `faint-pencil-slot` crop/preprocess experiment was removed; it did not improve the two latest rescans and was not shipped.
+- Added a narrow confidence-policy guard for two-slot answer boxes whose correct answer is single digit.
+- If the left slot is optional in the answer key but the OCR sees an extra leading digit, ScanGrade now requires stronger evidence (`confidence >= 0.92` and `topGap >= 0.50`) before avoiding teacher review.
+- Mirrored the same rule in `scripts/replay_live_ocr_captured.mjs` so future app-level replays test the same policy.
+- Visible build label changed to `2026.07.01-2230-EDT-sg3-optional-leading-review`.
+
+Why:
+
+- In the latest `sg-g1-lw-05-mixed-20` scan, question B expected a single-digit answer (`7`) but the student wrote a two-digit wrong answer. The OCR read the optional leading slot as `7` with confidence `0.824`, producing `72`. Previously that leading digit was not yellow because the answer key had `null` for the optional slot.
+- This is not a digit-recognition fix; it is a trust/routing fix so uncertain unexpected leading digits go to review instead of silently becoming part of an automatic wrong answer.
+
+Evidence used:
+
+```text
+private-evidence/debug-scans/2026-07-01/2026-07-01_23-54-29-490-sg-g1-lw-10-place-value-50-fd76390e
+private-evidence/debug-scans/2026-07-01/2026-07-01_23-55-43-064-sg-g1-lw-05-mixed-20-92967803
+```
+
+Verification:
+
+```text
+node scripts/score_live_ocr_debug_truth.mjs --truth /tmp/sg-latest-truth.json /tmp/sg-live-debug-unwrapped/2026-07-01_23-54-29-490-sg-g1-lw-10-place-value-50-fd76390e.json /tmp/sg-live-debug-unwrapped/2026-07-01_23-55-43-064-sg-g1-lw-05-mixed-20-92967803.json
+node scripts/eval_live_ocr_reprocess.mjs --url https://localhost:5174 --grid /tmp/sg-live-debug-unwrapped/2026-07-01_23-54-29-490-sg-g1-lw-10-place-value-50-fd76390e.json /tmp/sg-live-debug-unwrapped/2026-07-01_23-55-43-064-sg-g1-lw-05-mixed-20-92967803.json
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://localhost:5174 --out-dir /tmp/sg-replay-after-leading /tmp/sg-live-debug-unwrapped/2026-07-01_23-54-29-490-sg-g1-lw-10-place-value-50-fd76390e.json /tmp/sg-live-debug-unwrapped/2026-07-01_23-55-43-064-sg-g1-lw-05-mixed-20-92967803.json
+npm run build
+```
+
+Key outputs:
+
+- Handwritten-truth score on the two latest saved debug JSONs before this patch: `Answer OCR truth: 8/14`, `Confident answers: 7/14`, `Confident answer accuracy: 6/7`, `Confident wrong answers: 1`.
+- App-level replay after the patch: page 10 remains `qscore=4/6`, `qreview=2`, guard pass.
+- App-level replay after the patch: mixed sheet is forced into review by the existing unusable-scan guard, and the optional leading slots now show `two-digit-optional-leading-digit-review`.
+- Confirmed in `/tmp/sg-replay-after-leading/2026-07-01_23-55-43-064-sg-g1-lw-05-mixed-20-92967803-replay-result.json` that q2 left slot has `reviewNeeded: true`, `unexpectedLeadingDigitReview: true`, `preprocessReviewReason: two-digit-optional-leading-digit-review`.
+- `npm run build` passed.
+
+Files changed in this patch:
+
+```text
+src/components/CameraCapture.vue
+src/App.vue
+scripts/replay_live_ocr_captured.mjs
+SCANGRADE_ACTIVE_HANDOFF.md
+```
+
+Current receiver status:
+
+- Local dev server and Mission Control server were running.
+- The extra "one more 2-digit page" Tony mentioned after the 23:55 scan was not found under `private-evidence/debug-scans`; latest visible saved bundles remain the 23:54 and 23:55 folders above.
+
+Open risks:
+
+- This patch should reduce silent trust errors for optional leading digits, but it does not improve crop/model recognition of border-hugging handwritten `4`, `3`, or `0`.
+- The big reliability jump to 90-95% confident reads still likely requires turning the classroom scans into labeled training/eval data, not more hand-tuned crop guesses.
