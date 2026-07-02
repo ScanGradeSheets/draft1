@@ -1310,3 +1310,52 @@ Open risks:
 - Page 10 hang is not yet reproduced with a saved artifact; the timeout guard should make the next failure observable as an `ocr-error`/review-save bundle if it happens again.
 - Visual-format pages still over-review heavily and need separate layout/crop/OCR analysis after the left-slot `1` family is handled.
 - Do not call the varied Grade 1 packet reliable yet; this patch is a narrow evidence-backed fix.
+
+## 2026-07-01 / Post-Deploy Debug Rescans
+
+What happened:
+
+- Tony rescanned page 10 using the public debug-upload link for build `2026.07.01-2220-EDT-sg3-left-slot-timeout`.
+- Page 10 no longer got stuck on "grading"; Mission Control received a complete `ocr-complete` bundle.
+- Tony then scanned one more two-digit-style sheet; Mission Control also received a complete bundle.
+
+New evidence:
+
+```text
+private-evidence/debug-scans/2026-07-01/2026-07-01_23-54-29-490-sg-g1-lw-10-place-value-50-fd76390e
+private-evidence/debug-scans/2026-07-01/2026-07-01_23-55-43-064-sg-g1-lw-05-mixed-20-92967803
+```
+
+Observed results:
+
+- Page 10 summary: `uploadReason: ocr-complete`, `qr_decode_source: full-frame:direct`, `digitEngineFallback: false`, `digitEngineError: null`, score `4/6`, review count `2`.
+- The timeout guard appears to have fixed the page-10 hang/recovery problem for this scan.
+- Page 10 still misread/reviewed visually readable but border-hugging answers:
+  - C (`before 50`) student wrote `49`; raw left-digit crop included a partial `4`, but model output was `1`.
+  - E (`10 + 10 + 10`) student wrote `30`; raw crops showed a clear-ish `3` and a clipped `0`, but model output was `52` and correctly stayed in review.
+- The second two-digit-style scan (`sg-g1-lw-05-mixed-20`) completed with score `3/8`, review count `5`, needs-review count `7`.
+- The new `left-slot-one-weighted-vote` rule fired on A and C of the second scan, but A still stayed yellow because the confidence layer did not clear it; H was a harder miss with variant disagreement between `1`, `9`, and `7`.
+
+Rejected experiment:
+
+- Tried temporarily removing the decisive-`1` block from `left-slot-sparse-four-shape-from-one-rescue`.
+- Replay command:
+
+```text
+node scripts/eval_live_ocr_production.mjs --url https://localhost:5174 /tmp/sg-live-debug-unwrapped/*.json
+```
+
+- The experiment did not fix page 10 C and introduced additional `1 -> 4` risk on other saved scans, so it was immediately reverted.
+- Current source diff after the revert: no OCR source diff from the rejected experiment.
+
+Current diagnosis:
+
+- QR/layout/upload path is working on the new build.
+- The remaining reliability bottleneck is two-digit slot crop/segmentation plus the digit model's handling of border-hugging Grade 1 handwriting.
+- Do not simply raise confidence on `left-slot-one-weighted-vote`; page 10 C proves that a visually written `4` can collapse into a decisive model `1` when the crop/processing loses shape context.
+
+Recommended next action:
+
+- Build a targeted eval set from the new `private-evidence/debug-scans/2026-07-01` bundles with handwritten-truth labels, especially page 10 C/E and mixed-sheet A/F/G/H.
+- Prototype crop/variant changes for border-hugging digits and replay from captured images, not saved tensors, because crop changes require reprocessing the original captured image.
+- Keep public build `2026.07.01-2220-EDT-sg3-left-slot-timeout` live until a crop-level patch passes replay.
