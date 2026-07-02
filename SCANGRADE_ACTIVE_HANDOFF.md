@@ -142,6 +142,43 @@ Next action:
 
 - Tony can scan the remaining packet pages now because upload is working again. After the batch lands, compare this new run against the earlier July 1 batch by worksheet type.
 
+2026-07-02 00:05 EDT update:
+
+- Tony scanned the remaining 9 pages from the same packet. All 10 pages are now saved in `private-evidence/debug-scans/2026-07-02/` with local modification times from July 1 23:36-23:41 EDT.
+- Layout/QR intake worked for all 10 pages; each page resolved from QR as the expected `sg-g1-lw-*` layout, not title fallback.
+- Raw saved summary from the current public build:
+  - `sg-g1-lw-01-add-1digit`: `6/8`, review `2/8`.
+  - `sg-g1-lw-02-add-2digit`: `2/8`, review `5/8`.
+  - `sg-g1-lw-03-sub-1digit`: `5/8`, review `1/8`.
+  - `sg-g1-lw-04-sub-2digit`: `3/8`, review `5/8`.
+  - `sg-g1-lw-05-mixed-20`: `2/8`, review `7/8`.
+  - `sg-g1-lw-06-ten-frames`: `0/6`, review `6/6`.
+  - `sg-g1-lw-07-dot-collections`: `1/6`, review `6/6`.
+  - `sg-g1-lw-08-number-bonds`: `4/6`, review `1/6`.
+  - `sg-g1-lw-09-number-patterns`: `0/6`, review `6/6`.
+  - `sg-g1-lw-10-place-value-50`: `4/6`, review `2/6`.
+- Visual inspection and replay separated two failure families:
+  1. Two-slot boxes used for one-digit answers: students often wrote the single digit in the left slot and left the right slot blank. The app sometimes read the right divider/blank as a companion digit, e.g. `5 -> 51`, `8 -> 81`, `9 -> 91`.
+  2. True two-digit answers with a leading `1`: the leading `1` is often misread as `7`, `8`, or `9` in dot collections, two-digit fact rows, number patterns, and place value.
+- Patch made: generalized `applyOptionalSingleDigitBlankOverrides` so a two-slot one-digit answer can collapse the artifact/blank slot even when the real digit is not the answer-key digit. It only auto-clears review when the remaining digit has strong model margin and clean ink; weaker reads still stay yellow review.
+- Mirrored the policy in `scripts/replay_live_ocr_captured.mjs`.
+- Replay after patch on the 10 saved captures:
+  - Rescued dot collections A/B from `51/81` to `5_/8_`.
+  - Rescued ten frames A from `51` to `5_` while still marking it wrong against the answer key.
+  - Rescued mixed D from `91` to `9_`.
+  - Did not collapse mixed B `72`, because the student visibly wrote a two-digit wrong answer (`12`) and both slots were real handwriting; this is correct conservative behavior.
+  - Remaining weak pages are dominated by true leading-`1` recognition/crop failures, not optional blank policy.
+- Verification:
+  - `node --check scripts/replay_live_ocr_captured.mjs`
+  - `npm run build`
+  - `npm run build:github`
+  - Local replay against `https://127.0.0.1:5174` with `/tmp/sg-latest-debug-unwrapped/*.json`.
+- New visible build label pending commit/deploy: `2026.07.02-0005-EDT-sg3-flex-one-digit-slots`.
+
+Next action:
+
+- Deploy this narrow fix, then collect/label leading-`1` failures as a separate OCR/model/crop improvement track. Do not loosen confidence thresholds to make those reads look better; they are still real OCR failures.
+
 Recommended scan protocol:
 
 1. Before scanning a full stack, open the public test URL and confirm the build label is `2026.06.20-0820-EDT-sg3-classroom-debug-fix`.

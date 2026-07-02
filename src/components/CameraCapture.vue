@@ -3557,6 +3557,51 @@ function matchingOptionalDigitLooksUsable(prediction, quality) {
   )
 }
 
+function plausibleSingleDigitResponseSlot(prediction, quality) {
+  if (!prediction) return false
+  const digit = normalizeGradingDigit(
+    prediction.blank === true || prediction.empty === true ? null : prediction.digit
+  )
+  if (digit === null || digit === undefined) return false
+  const confidence = numberOrZero(prediction.confidence)
+  const topGap = numberOrZero(prediction.topGap)
+  const inkPixels = numberOrZero(quality?.inkPixels)
+  const inkW = numberOrZero(quality?.inkW)
+  const inkH = numberOrZero(quality?.inkH)
+  const weakRatio = numberOrZero(quality?.weakVariantRatio)
+  const artifactRatio = numberOrZero(quality?.artifactVariantRatio)
+  if (
+    quality?.lineArtifactLikely === true ||
+    quality?.horizontalArtifactLikely === true ||
+    quality?.edgeArtifactLikely === true ||
+    artifactRatio >= 0.30 ||
+    weakRatio >= 0.55
+  ) {
+    return false
+  }
+  if (quality?.ok && inkPixels >= 42 && inkW >= 9 && inkH >= 10 && weakRatio < 0.55 && artifactRatio < 0.30) {
+    return true
+  }
+  return confidence >= 0.66 && topGap >= 0.34 && inkPixels >= 28 && inkW >= 7 && inkH >= 9 && weakRatio < 0.55 && artifactRatio < 0.35
+}
+
+function oneDigitResponseSlotCanAutoGrade(prediction, quality) {
+  if (!prediction || !plausibleSingleDigitResponseSlot(prediction, quality)) return false
+  const confidence = numberOrZero(prediction.confidence)
+  const topGap = numberOrZero(prediction.topGap)
+  const weakRatio = numberOrZero(quality?.weakVariantRatio)
+  const artifactRatio = numberOrZero(quality?.artifactVariantRatio)
+  return (
+    confidence >= 0.82 &&
+    topGap >= 0.52 &&
+    weakRatio < 0.25 &&
+    artifactRatio < 0.12 &&
+    prediction.highRiskPreprocessReview !== true &&
+    prediction.structuralReview !== true &&
+    prediction.highRiskMismatchReview !== true
+  )
+}
+
 function optionalBlankSlotLooksLikeArtifact(prediction, quality) {
   if (!prediction) return false
   const confidence = numberOrZero(prediction.confidence)
@@ -3613,19 +3658,25 @@ function applyOptionalSingleDigitBlankOverrides(questionGroups, predictions, cro
     }))
     if (slots.some((slot) => !slot.prediction)) continue
 
-    const matchingSlots = slots.filter((slot) => (
+    const expectedMatchingSlots = slots.filter((slot) => (
       slot.prediction.digit === expectedDigit &&
       matchingOptionalDigitLooksUsable(slot.prediction, slot.quality)
     ))
+    const plausibleDigitSlots = slots.filter((slot) => plausibleSingleDigitResponseSlot(slot.prediction, slot.quality))
+    const matchingSlots = expectedMatchingSlots.length === 1 ? expectedMatchingSlots : plausibleDigitSlots
     if (matchingSlots.length !== 1) continue
 
     const blankSlot = slots.find((slot) => slot.slotIndex !== matchingSlots[0].slotIndex)
-    if (!blankSlot || blankSlot.prediction.digit === expectedDigit) continue
+    if (!blankSlot) continue
+    if (expectedMatchingSlots.length === 1 && blankSlot.prediction.digit === expectedDigit) continue
     if (!optionalBlankSlotLooksLikeArtifact(blankSlot.prediction, blankSlot.quality)) continue
 
     const matchedPrediction = matchingSlots[0].prediction
     const blankPrediction = blankSlot.prediction
-    if (matchedPrediction.reviewNeeded === true) {
+    const canAutoGrade = expectedMatchingSlots.length === 1
+      ? matchingOptionalDigitLooksUsable(matchedPrediction, matchingSlots[0].quality)
+      : oneDigitResponseSlotCanAutoGrade(matchedPrediction, matchingSlots[0].quality)
+    if (matchedPrediction.reviewNeeded === true && canAutoGrade) {
       matchedPrediction.reviewNeeded = false
       matchedPrediction.preprocessReviewReason = matchedPrediction.preprocessReviewReason || 'flexible-one-digit-answer'
       matchedPrediction.confidencePolicyCleared = true
@@ -3646,6 +3697,9 @@ function applyOptionalSingleDigitBlankOverrides(questionGroups, predictions, cro
       matchedSlotIndex: matchingSlots[0].slotIndex,
       blankSlotIndex: blankSlot.slotIndex,
       blankDigitBoxId: blankSlot.id,
+      matchedDigit: matchedPrediction.digit,
+      expectedMatch: expectedMatchingSlots.length === 1,
+      autoGradeCleared: canAutoGrade,
       originalDigit: blankPrediction.originalDigitBeforeBlankOverride,
       reason: blankPrediction.preprocessReviewReason
     })
