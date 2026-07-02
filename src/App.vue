@@ -340,7 +340,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.02-0005-EDT-sg3-flex-one-digit-slots'
+const APP_BUILD_LABEL = '2026.07.02-1212-EDT-sg3-leftslot-rescue-guard'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices

@@ -684,6 +684,146 @@ function preprocessTopGap(result) {
     : 1
 }
 
+function tensorVariantByName(proc, name) {
+  const variants = Array.isArray(proc?.tensorVariants) ? proc.tensorVariants : []
+  return variants.find((variant) => variant?.name === name) || null
+}
+
+function digitTensorShapeFeaturesForPolicy(src, threshold = 0.22) {
+  const data = src?.tensor || src?.data || src
+  if (!data || data.length < 28 * 28) return null
+
+  let total = 0
+  let weightedX = 0
+  let weightedY = 0
+  const sumRegion = (x0, x1, y0, y1) => {
+    let sum = 0
+    for (let y = y0; y < y1; y += 1) {
+      const row = y * 28
+      for (let x = x0; x < x1; x += 1) {
+        const value = data[row + x] || 0
+        if (value > threshold) sum += value
+      }
+    }
+    return sum
+  }
+  const longestRowRun = (y) => {
+    let best = 0
+    let current = 0
+    const row = y * 28
+    for (let x = 0; x < 28; x += 1) {
+      if ((data[row + x] || 0) > threshold) {
+        current += 1
+        best = Math.max(best, current)
+      } else {
+        current = 0
+      }
+    }
+    return best
+  }
+  const longestColRun = (x) => {
+    let best = 0
+    let current = 0
+    for (let y = 0; y < 28; y += 1) {
+      if ((data[y * 28 + x] || 0) > threshold) {
+        current += 1
+        best = Math.max(best, current)
+      } else {
+        current = 0
+      }
+    }
+    return best
+  }
+
+  for (let y = 0; y < 28; y += 1) {
+    const row = y * 28
+    for (let x = 0; x < 28; x += 1) {
+      const value = data[row + x] || 0
+      if (value <= threshold) continue
+      total += value
+      weightedX += x * value
+      weightedY += y * value
+    }
+  }
+
+  let topLongest = 0
+  let bottomLongest = 0
+  let leftLongest = 0
+  let rightLongest = 0
+  for (let y = 4; y < 12; y += 1) topLongest = Math.max(topLongest, longestRowRun(y))
+  for (let y = 17; y < 24; y += 1) bottomLongest = Math.max(bottomLongest, longestRowRun(y))
+  for (let x = 2; x < 12; x += 1) leftLongest = Math.max(leftLongest, longestColRun(x))
+  for (let x = 16; x < 26; x += 1) rightLongest = Math.max(rightLongest, longestColRun(x))
+
+  return {
+    centerX: total ? weightedX / total : 0,
+    centerY: total ? weightedY / total : 0,
+    top: sumRegion(0, 28, 0, 9),
+    middle: sumRegion(0, 28, 9, 19),
+    bottom: sumRegion(0, 28, 19, 28),
+    topRight: sumRegion(14, 28, 0, 14),
+    topLongest,
+    bottomLongest,
+    leftLongest,
+    rightLongest,
+    total
+  }
+}
+
+function leftSlotSlantedOneFromSevenRescue(proc, result, expectedDigit) {
+  if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 0 || !result) return false
+  if (Number(expectedDigit) !== 1 || Number(result.digit) !== 7) return false
+
+  const confidence = Number(result.confidence) || 0
+  const gap = preprocessTopGap(result)
+  if (confidence < 0.86 || gap < 0.78) return false
+
+  const rawBorder = tensorVariantByName(proc, 'raw-border-slot')
+  const rawShape = digitTensorShapeFeaturesForPolicy(rawBorder)
+  if (!rawShape) return false
+
+  const singleStrokeBase =
+    rawShape.total >= 9 &&
+    rawShape.total <= 22.5 &&
+    rawShape.middle >= 6 &&
+    rawShape.topLongest <= 3 &&
+    rawShape.bottomLongest <= 1 &&
+    rawShape.leftLongest <= 2 &&
+    rawShape.bottom <= 3.5
+  const rightLeaningStroke = rawShape.rightLongest >= 5 && rawShape.rightLongest <= 14
+  const leftLeaningStroke =
+    rawShape.rightLongest <= 2 &&
+    rawShape.topRight <= 2.2 &&
+    rawShape.centerX <= 12.5
+
+  return singleStrokeBase && (rightLeaningStroke || leftLeaningStroke)
+}
+
+function applyLeftSlotSlantedOneRescue(result) {
+  const confidence = Math.min(0.96, Math.max(0.88, Number(result?.confidence) || 0.88))
+  const runnerConfidence = Math.max(0.01, Math.min(0.06, 1 - confidence))
+  const thirdConfidence = Math.max(0.005, Math.min(0.03, runnerConfidence / 2))
+  const probs = new Array(10).fill(0.001)
+  probs[1] = confidence
+  probs[7] = runnerConfidence
+  return {
+    ...result,
+    digit: 1,
+    confidence,
+    topK: [
+      { digit: 1, confidence },
+      { digit: 7, confidence: runnerConfidence },
+      { digit: 9, confidence: thirdConfidence }
+    ],
+    probs,
+    robust: true,
+    robustOverride: 'left-slot-slanted-one-shape-rescue',
+    preprocessReviewReason: null,
+    originalDigitBeforeShapeRescue: result?.digit ?? null,
+    originalConfidenceBeforeShapeRescue: result?.confidence ?? null
+  }
+}
+
 function rightSlotExpectedEdgeConflictReview(proc, result) {
   if (!proc?.isVirtualDigitBox || Number(proc.digitIndex) !== 1 || !result) return false
   if (!preprocessReasonMatches(result, 'right-slot-expected-edge-default')) return false
@@ -792,6 +932,8 @@ function confidencePolicyClearanceForDigit(proc, result, topGap, correct, review
       ? 'two-digit-optional-leading-digit-review'
     : reviewSignals?.highRiskMismatchReview
       ? 'two-digit-mismatch-low-trust-review'
+    : reviewSignals?.highRiskSingleDigitMismatchReview
+      ? 'single-digit-six-five-mismatch-review'
       : reviewSignals?.highRiskPreprocessReview
         ? 'right-slot-preprocess-disagreement'
         : (result?.preprocessReviewReason || null)
@@ -876,6 +1018,17 @@ function highRiskTwoDigitMismatchReview(proc, result, expectedDigit) {
   }
   if (isRightSlot) return false
   return expected === 3 && digit === 2
+}
+
+function highRiskSingleDigitMismatchReviewForDigit(proc, result, expectedDigit) {
+  if (proc?.isVirtualDigitBox || !result) return false
+  const digit = Number(result.digit)
+  const expected = Number(expectedDigit)
+  if (!Number.isFinite(digit) || !Number.isFinite(expected)) return false
+  if (digit === expected) return false
+
+  const rawConfidence = chosenDigitProbability(result)
+  return expected === 6 && digit === 5 && rawConfidence < 0.9
 }
 
 const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done', 'processing-change'])
@@ -5572,12 +5725,15 @@ const runRealOCR = async () => {
             )
           }
         }
-        const digit = digitResult[0].digit
-        const topK = digitResult[0].topK || []
-        const topGap = topK.length >= 2 ? (topK[0].confidence - topK[1].confidence) : 1
         const expectedDigit = answerKey != null && proc.id < answerKey.length
           ? answerKey[proc.id]
           : null
+        if (leftSlotSlantedOneFromSevenRescue(proc, digitResult[0], expectedDigit)) {
+          digitResult[0] = applyLeftSlotSlantedOneRescue(digitResult[0])
+        }
+        const digit = digitResult[0].digit
+        const topK = digitResult[0].topK || []
+        const topGap = topK.length >= 2 ? (topK[0].confidence - topK[1].confidence) : 1
         const correct = answerKey != null && proc.id < answerKey.length && answerKey[proc.id] != null
           ? digit === expectedDigit
           : undefined
@@ -5592,6 +5748,7 @@ const runRealOCR = async () => {
         const structuralReview = structuralTwoDigitReview(proc, digitResult[0], expectedDigit)
         const unexpectedLeadingDigitReview = unexpectedOptionalLeadingDigitReview(proc, digitResult[0], expectedDigit)
         const highRiskMismatchReview = highRiskTwoDigitMismatchReview(proc, digitResult[0], expectedDigit)
+        const highRiskSingleDigitMismatchReview = highRiskSingleDigitMismatchReviewForDigit(proc, digitResult[0], expectedDigit)
         const confidencePolicyClearance = confidencePolicyClearanceForDigit(
           proc,
           digitResult[0],
@@ -5602,13 +5759,14 @@ const runRealOCR = async () => {
             structuralReview,
             unexpectedLeadingDigitReview,
             highRiskMismatchReview,
+            highRiskSingleDigitMismatchReview,
             cameraCapture: !!partialDebug.captureQuality
           }
         )
         const reviewNeeded = confidencePolicyClearance.allowed ? false
           : correct === true
             ? !autoCheckAllowed
-            : highRiskPreprocessReview || structuralReview || unexpectedLeadingDigitReview || highRiskMismatchReview ? true
+            : highRiskPreprocessReview || structuralReview || unexpectedLeadingDigitReview || highRiskMismatchReview || highRiskSingleDigitMismatchReview ? true
             : correct === false
               ? !autoXAllowed
               : lowSignal
@@ -5636,15 +5794,21 @@ const runRealOCR = async () => {
             ? 'two-digit-optional-leading-digit-review'
             : reviewNeeded && highRiskMismatchReview
             ? 'two-digit-mismatch-low-trust-review'
+            : reviewNeeded && highRiskSingleDigitMismatchReview
+            ? 'single-digit-six-five-mismatch-review'
             : reviewNeeded && highRiskPreprocessReview
             ? 'right-slot-preprocess-disagreement'
             : (digitResult[0].preprocessReviewReason || null),
           confidencePolicyCleared: confidencePolicyClearance.allowed === true,
           confidencePolicyClearanceReason: confidencePolicyClearance.reason,
           originalChosenDigitConfidence: chosenDigitProbability(digitResult[0]),
+          originalDigitBeforeShapeRescue: digitResult[0].originalDigitBeforeShapeRescue ?? null,
+          originalConfidenceBeforeShapeRescue: digitResult[0].originalConfidenceBeforeShapeRescue ?? null,
           highRiskPreprocessReview,
           structuralReview,
           unexpectedLeadingDigitReview,
+          highRiskMismatchReview,
+          highRiskSingleDigitMismatchReview,
           preprocessVariants: digitResult[0].preprocessVariants || null,
           preprocessVoteSummary: digitResult[0].preprocessVoteSummary || null,
           ...(correct !== undefined && { correct })

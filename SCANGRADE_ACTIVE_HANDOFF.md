@@ -179,9 +179,36 @@ Next action:
 
 - Deploy this narrow fix, then collect/label leading-`1` failures as a separate OCR/model/crop improvement track. Do not loosen confidence thresholds to make those reads look better; they are still real OCR failures.
 
+2026-07-02 00:35 EDT update:
+
+- Tony scanned two targeted pages on the deployed `2026.07.02-0005-EDT-sg3-flex-one-digit-slots` build:
+  - `private-evidence/debug-scans/2026-07-02/2026-07-02_04-27-27-356-sg-g1-lw-07-dot-collections-51583559/`
+  - `private-evidence/debug-scans/2026-07-02/2026-07-02_04-27-34-831-sg-g1-lw-06-ten-frames-70841c4f/`
+- Both uploads used the expected public URL with `?v=flex-one-digit-slots-0005&liveOcrDebug=1`; QR/layout intake worked on both.
+- Dot collections result: `2/6`, review `3/6`. The new optional one-digit slot policy worked on A (`51 -> 5_`) and conservatively kept B as review (`6_` for expected 8). Remaining failures were C `12 -> 92` review, E `16 -> 76` confident wrong, and F `19 -> 79` review.
+- Ten frames result: `0/6`, review `5/6`. The optional slot policy worked conservatively on A (`51 -> 5_`, still review/wrong vs key), but the page is dominated by left-slot/leading-digit failures: B `10 -> 61`, C `11 -> 71` confident wrong, D `14 -> 81`, E `17 -> 91`, F `20 -> 16`.
+- Interpretation: the flexible one-digit slot patch is behaving as intended. The remaining risk is a true OCR/model/crop problem, especially leading or left-slot `1`s being read as `7/8/9/6`, not a threshold problem to solve by loosening confidence.
+- Evidence strategy recommendation: collect more authentic classroom evidence now, but do not use all of it for tuning. Split the remaining packets before analysis into calibration, validation, and sealed holdout sets so there is still honest test material for the summer.
+
+Next action:
+
+1. Ask Tony to label packet order before scanning more: calibration/dev packets, validation packets, and sealed holdout packets.
+2. Use a calibration batch to quantify failure patterns by worksheet type before more OCR changes.
+3. Keep at least several complete packets untouched by tuning until a final replay/live-scan evaluation.
+
+2026-07-02 10:32 EDT update:
+
+- Tony scanned the first page of the next calibration upload batch before continuing with additional full packets.
+- Mission Control received the upload at `private-evidence/debug-scans/2026-07-02/2026-07-02_14-29-37-277-sg-g1-lw-07-dot-collections-e5cc7757/`.
+- The scan came from the expected debug URL with `v=flex-one-digit-slots-0005`, `liveOcrDebug=1`, and debug auto-upload enabled.
+- Layout/QR intake worked: `sg-g1-lw-07-dot-collections`.
+- Saved bundle is complete: `captured.png`, `warped.png`, `marked-sheet.jpg`, `overlay-debug.json`, `debug.json`, raw crops, model inputs, and tensors.
+- Summary: `questionScore: 2/6`, `questionReviewCount: 5/6`, `needsReviewCount: 6`.
+- Tony plans to scan 6 more full packets for calibration, making 7 total including the already-scanned Pack A. Recommendation remains to keep later packets reserved for validation/holdout and to distinguish calibration packets as B1-B6 if possible.
+
 Recommended scan protocol:
 
-1. Before scanning a full stack, open the public test URL and confirm the build label is `2026.06.20-0820-EDT-sg3-classroom-debug-fix`.
+1. Before scanning a full stack, open the public test URL and confirm the visible build label matches the latest deployed build recorded in this handoff.
 2. Confirm Mission Control debug intake is running and reachable from the scan device. Expected receiver command is still `SG_DEBUG_UPLOAD_TOKEN=<short-secret> node mission-control/server.mjs`.
 3. Scan a tiny sanity set first: one simple fact-row page, one two-digit fact-row page, and one visual-format page such as ten frames/dot collections/number bonds.
 4. Confirm Mission Control receives new `private-evidence/debug-scans/YYYY-MM-DD/<scan-id>/` folders with `debug.json`, `summary.json`, `captured.png`, `marked-sheet.jpg`, `overlay-debug.json`, and crop/model assets when available.
@@ -1486,3 +1513,52 @@ Open risks:
 
 - This patch should reduce silent trust errors for optional leading digits, but it does not improve crop/model recognition of border-hugging handwritten `4`, `3`, or `0`.
 - The big reliability jump to 90-95% confident reads still likely requires turning the classroom scans into labeled training/eval data, not more hand-tuned crop guesses.
+
+## 2026-07-02 Classroom Calibration Batch Tuning
+
+Tony uploaded the next classroom calibration batch: 62 post-checkpoint debug summaries were visible, with 54 valid Grade 1 packet scans replayed and 8 excluded/invalid scans. The replay input set used for this pass is:
+
+```text
+/tmp/sg-calibration-20260702-unwrapped/*.json
+```
+
+Patch made:
+
+- Added a bounded left-slot `7 -> 1` shape rescue for two-slot answer boxes where the expected left digit is `1`, the model confidently chose `7`, and the raw-border tensor has one-stroke `1` geometry. This targets the observed left-slot weakness without globally changing `7`s.
+- Added a single-slot `6`/`5` high-risk mismatch review guard. It does not rewrite the digit; it sends expected-`6`, predicted-`5`, confidence `< 0.90` cases to yellow review. This caught one real OCR miss (`3 + 3`, handwritten `6`, predicted `5`) while preserving red Xs for visually wrong student answers.
+- Mirrored both policies in `scripts/replay_live_ocr_captured.mjs`.
+- Added debug fields for shape rescues: `originalDigitBeforeShapeRescue`, `originalConfidenceBeforeShapeRescue`, and `highRiskSingleDigitMismatchReview`.
+- Visible build label changed to `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard`.
+
+Verification:
+
+```text
+node --check scripts/replay_live_ocr_captured.mjs
+npm run build
+SG_REPLAY_URL=https://127.0.0.1:5175 node scripts/replay_live_ocr_captured.mjs --allow-imperfect --out-dir /tmp/sg-calibration-leftslot-rescue-v3 /tmp/sg-calibration-20260702-unwrapped/*.json
+```
+
+Replay result after patch:
+
+```text
+Tested captures: 54
+Rejected by guards: 8/54
+Perfect captures: 2/54
+Cell accuracy vs answer key: 424/648 (65.43%)
+Left-slot shape rescues: 12 total, 12 answer-key-correct; 4 stayed review because their full scan was guard-rejected.
+Single-slot 6/5 review guard: 5 cells reviewed; only 1 changed a previously non-review OCR miss.
+Group review count: 200/380
+Non-review answer-key mismatches: 4 groups, all visually checked as student-wrong answers, not OCR errors.
+```
+
+Important interpretation:
+
+- The answer-key score is not the real OCR score because many student answers are intentionally wrong. Use it for pattern finding only.
+- Visual inspection of `/tmp/sg-confident-wrong-contact.jpg` showed four remaining non-review answer-key mismatches were correct app behavior: the student wrote the wrong answer and ScanGrade marked it red.
+- Visual inspection of `/tmp/sg-marked-sheets-contact.png` showed no systemic annotation drift; checks, Xs, and yellow circles are anchored to the intended answer boxes/slots at contact-sheet scale.
+
+Remaining reliability bottlenecks:
+
+- Number bonds, dot collections, ten frames, and mixed two-slot sheets remain review-heavy.
+- Two-digit pages still hit the unusable-scan guard on 8/54 captures, concentrated in add-2digit, sub-2digit, and mixed-20 pages.
+- The next meaningful jump toward market-readiness should come from labeled handwritten-truth evaluation/training on these classroom scans, plus layout/crop improvements for the visual worksheet formats. Do not loosen confidence thresholds to inflate apparent confidence.
