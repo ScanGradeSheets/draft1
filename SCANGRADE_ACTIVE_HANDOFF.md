@@ -1607,3 +1607,18 @@ Next action:
 - Publish the leaner `dist/` to the `gh-pages` worktree and push source/deploy commits.
 - Recheck `https://scangradesheets.github.io/draft1/` after the Pages workflow succeeds.
 - Tony should not scan more packets until the visible public build label is `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard`.
+
+Follow-up:
+
+- Source commit pushed: `c46084f Prune GitHub Pages deploy assets`.
+- `gh-pages` deploy commit pushed: `5d6f7e1 Deploy lean classroom OCR build`.
+- Empty retry commit pushed: `21913d9 Retry lean Pages deploy`.
+- GitHub Pages Run 96 (`28637674516`) and Run 97 (`28637813499`) both built and uploaded the smaller `github-pages` artifact successfully, but failed at the GitHub-managed deploy job with: `Deployment failed, try again later.`
+- Run 97 artifact size was `32.6 MB`, so the artifact-size reduction worked.
+- GitHub connector could read jobs but could not rerun the deploy job: GitHub returned `403 Resource not accessible by integration`.
+- Older Run 95 (`28607104764`) still appeared queued while Runs 96/97 failed quickly. If Pages remains stuck, Tony should cancel the queued Run 95 and rerun failed jobs on the newest run from the GitHub UI.
+
+Current public status:
+
+- `https://scangradesheets.github.io/draft1/` still served stale assets `index-Cg8MFGrt.js` / `index-DGF2K3Sz.css`.
+- Do not use the public scanner for new evidence until the page updates to the `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard` build.
