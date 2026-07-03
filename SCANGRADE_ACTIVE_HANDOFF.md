@@ -1622,3 +1622,33 @@ Current public status:
 
 - `https://scangradesheets.github.io/draft1/` still served stale assets `index-Cg8MFGrt.js` / `index-DGF2K3Sz.css`.
 - Do not use the public scanner for new evidence until the page updates to the `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard` build.
+
+## 2026-07-03 Morning Pages / GitHub Connector Status
+
+Checked again on 2026-07-03 at about 10:35 EDT:
+
+- Public `https://scangradesheets.github.io/draft1/` still served the stale July 2 artifact:
+  - `last-modified: Thu, 02 Jul 2026 04:14:05 GMT`
+  - assets `index-Cg8MFGrt.js` / `index-DGF2K3Sz.css`
+- GitHub Actions list still reported:
+  - Run 97 `queued` for `21913d9 Retry lean Pages deploy`
+  - Run 96 `completed/failure` for `5d6f7e1 Deploy lean classroom OCR build`
+  - Run 95 `queued` for `fe26a69 Force static Pages publish`
+- Public API for job `84927698768` showed the truth for Run 97:
+  - job status `completed`
+  - conclusion `failure`
+  - failed step `Deploy to GitHub Pages`
+  - started `2026-07-03T04:10:25Z`, completed `2026-07-03T04:10:34Z`
+- The GitHub connector inside Codex still returns `401 token_expired`, even after Tony disconnected/reconnected in the UI and the UI appeared to say connected.
+
+Current blocker:
+
+- Need the private GitHub Pages deploy log for job `84927698768`, or another authenticated way to rerun/fix the newest Pages deploy.
+
+Recommended next paths:
+
+1. Try a full Codex app restart or a fresh SG thread after reconnecting the GitHub connector, then test with `mcp__codex_apps__github._list_installed_accounts`.
+2. If connector remains expired, use Tony's browser/GitHub UI to open `https://github.com/ScanGradeSheets/draft1/actions/runs/28637813499/job/84927698768` and copy the failure text from the `Deploy to GitHub Pages` step.
+3. If Tony approves use of local GitHub credentials from the macOS keychain, fetch the job log with authenticated GitHub API without printing or storing the token.
+
+Do not scan more classroom packets until the public page visibly updates to build `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard`.
