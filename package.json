@@ -6,7 +6,7 @@
     "start": "vite --host 0.0.0.0",
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "build:github": "SG_BASE=/draft1/ vite build",
+    "build:github": "SG_BASE=/draft1/ SG_PRUNE_DEPLOY=1 vite build",
     "preview": "vite preview",
     "dataset:worksheet-curated": "node scripts/build_curated_worksheet_dataset.mjs",
     "dataset:worksheet-current": "node scripts/build_current_pipeline_dataset.mjs",

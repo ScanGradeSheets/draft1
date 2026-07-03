@@ -1570,3 +1570,40 @@ Deploy follow-up:
 - Commit-specific raw GitHub content for `fac1e25` showed the expected `index-CscVcfNN-r1.js` / `index-Clbz-Bwe-r1.css` asset references, and the JS asset existed.
 - Public `https://scangradesheets.github.io/draft1/` still served the previous `6dd8833` artifact after cache expiry and after the `.nojekyll` trigger commit. The visible public site should be treated as not yet updated until a later check shows build label `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard`.
 - Local Vite dev server on port `5175` was stopped after verification.
+
+## 2026-07-02 Pages Deploy Queue / Artifact Prune
+
+Tony reran the GitHub Pages workflow for `fe26a69` and reported that it showed as queued. A public check still showed the stale Pages HTML (`last-modified: Thu, 02 Jul 2026 04:14:06 GMT`), so the public scanner remained unsafe to use for the classroom debug batch.
+
+Deploy issue found:
+
+- The Pages artifact for the failed run was 79.2 MB compressed.
+- Local `dist/` was 218 MB because Vite copied every old ONNX model experiment and every ONNX Runtime WASM/MJS variant from `public/`.
+- The current app runtime only needs the current primary model, right-slot model, legacy/ensemble support models, OpenCV, and the two ONNX Runtime WASM binaries referenced by `src/ocr-pipeline.js`.
+
+Patch made:
+
+- Added a deploy-only prune in `vite.config.js`, enabled only by `SG_PRUNE_DEPLOY=1`.
+- Updated `npm run build:github` to set `SG_PRUNE_DEPLOY=1`.
+- Normal local builds remain unpruned so lab/eval assets stay available.
+
+Verification:
+
+```text
+npm run build:github
+dist size after deploy prune: 69M
+dist/models after prune: 4.4M
+kept runtime files:
+- ort-wasm-nosimd.wasm
+- ort-wasm-simd-1.17.wasm
+- models/mnist-model.onnx
+- models/worksheet-digit-generalist.onnx
+- models/worksheet-digit-live-trusted-temp.onnx
+- models/worksheet-digit-tony-generalist-noaug-20260601.onnx
+```
+
+Next action:
+
+- Publish the leaner `dist/` to the `gh-pages` worktree and push source/deploy commits.
+- Recheck `https://scangradesheets.github.io/draft1/` after the Pages workflow succeeds.
+- Tony should not scan more packets until the visible public build label is `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard`.
