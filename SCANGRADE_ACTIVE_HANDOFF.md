@@ -1652,3 +1652,15 @@ Recommended next paths:
 3. If Tony approves use of local GitHub credentials from the macOS keychain, fetch the job log with authenticated GitHub API without printing or storing the token.
 
 Do not scan more classroom packets until the public page visibly updates to build `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard`.
+
+Update:
+
+- GitHub connector recovered after Codex restart and confirmed access to `ScanGradeSheets`.
+- Run 97 deploy logs showed the generic GitHub Pages failure only:
+  - artifact found
+  - Pages deployment created for `21913d9`
+  - failed with `Deployment failed, try again later.`
+- Rerun via connector failed because GitHub still reported the workflow as already running.
+- Because there was no visible cancel control in Tony's signed-in browser, pushed the same lean deploy tree to a fresh branch:
+  - `gh-pages-v2` at `21913d9`
+- Clean recovery path now: in GitHub repo Settings -> Pages, switch deploy branch from `gh-pages` to `gh-pages-v2` and save. The public QR URL should remain `https://scangradesheets.github.io/draft1/` because the repository name remains `draft1`.
