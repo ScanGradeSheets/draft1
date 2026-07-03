@@ -1664,3 +1664,59 @@ Update:
 - Because there was no visible cancel control in Tony's signed-in browser, pushed the same lean deploy tree to a fresh branch:
   - `gh-pages-v2` at `21913d9`
 - Clean recovery path now: in GitHub repo Settings -> Pages, switch deploy branch from `gh-pages` to `gh-pages-v2` and save. The public QR URL should remain `https://scangradesheets.github.io/draft1/` because the repository name remains `draft1`.
+
+## 2026-07-03 Pages Recovery Confirmed
+
+Date / thread: 2026-07-03, SG 3.
+
+What changed:
+
+- Tony switched the GitHub Pages publishing branch from `gh-pages` to `gh-pages-v2`.
+- GitHub Pages created a fresh successful deploy from `gh-pages-v2`.
+- The public QR URL did not change: `https://scangradesheets.github.io/draft1/`.
+
+Evidence used:
+
+- GitHub Actions public API.
+- Live public HTML and asset headers from `https://scangradesheets.github.io/draft1/`.
+- Live public JavaScript bundle content.
+
+Commands run:
+
+```text
+curl -sL 'https://api.github.com/repos/ScanGradeSheets/draft1/actions/runs?per_page=12'
+curl -sI https://scangradesheets.github.io/draft1/
+curl -sL https://scangradesheets.github.io/draft1/
+curl -sL https://scangradesheets.github.io/draft1/assets/index-CscVcfNN.js
+git ls-remote origin refs/heads/gh-pages-v2
+```
+
+Results:
+
+- Run 98 completed successfully on `gh-pages-v2` at commit `21913d9`.
+- Public HTML `last-modified` changed to `Fri, 03 Jul 2026 15:13:45 GMT`.
+- Public HTML now references fresh assets:
+  - `/draft1/assets/index-CscVcfNN.js`
+  - `/draft1/assets/index-Clbz-Bwe.css`
+- Old stale asset `/draft1/assets/index-Cg8MFGrt.js` now returns `404`.
+- Live JavaScript bundle contains expected build label:
+  - `2026.07.02-1212-EDT-sg3-leftslot-rescue-guard`
+
+Files changed:
+
+- This handoff entry only.
+
+Rollback point:
+
+- Public deploy branch `gh-pages-v2` at `21913d9`.
+- Source branch `autobuild/safe-20260223` at `4e59cfb`.
+
+Next action:
+
+- Tony can resume classroom evidence scanning from the public QR URL or prepared debug URL, but use `Debug Scan (exports)` for evidence collection so Mission Control receives the full debug bundle.
+- Keep checking the visible build label on the scan device before large batches.
+
+Open risks:
+
+- Old queued Runs 95 and 97 on the abandoned `gh-pages` branch may still appear in the Actions list, but the live Pages source is now `gh-pages-v2` and Run 98 is the successful deploy that matters.
+- Continue preserving `private-evidence/` locally only; do not commit student evidence.
