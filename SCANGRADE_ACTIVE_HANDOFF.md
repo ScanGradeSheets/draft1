@@ -4523,3 +4523,14 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - Private-only build label: `2026.07.15-core-crop-private-beta-4`. Immediate rollback remains `?consensusCandidate=0`. Public GitHub Pages remains unchanged.
 - Source commit `535e5bb` (`Promote selected core-crop private beta`) was pushed to `origin/autobuild/safe-20260223`. Live private source, build identity, both model health routes, and the rollback route were verified. Candidate freeze verified 71/71 files.
 - Deployment report: `docs/SCANGRADE_CORE_CROP_PRIVATE_BETA4_DEPLOYMENT_20260715.md`.
+
+## 2026-07-15 shared-frame latency private beta 5
+
+- Profiling showed the adapted strong model was not the main source of the 21.6-second difficult-page delay: primary inference took about 1.28 seconds and combined corroboration about 0.56 seconds. The browser spent about 6.0 seconds preparing primary burst crops and another 8.6 seconds redundantly re-registering the same frames for alternate crops.
+- Candidate 5 creates primary and alternate crops during one page-registration pass, then sends alternate/core corroboration together only for unresolved safe candidates. Recognition thresholds and all ambiguity, confidence-safety, length, and 3/3 frame requirements are unchanged.
+- Safari/WebKit difficult-page timing improved from 21.64 seconds to 12.02 seconds (44.5% faster); warm repeat was 12.54 seconds. The local result still appeared in about 3.85 seconds and the overwritten `34/39` stayed yellow.
+- Exact 40-page replay remained 250/275 automatic (90.9%), 250/250 correct, with the same 25 yellows and identical final answer groups on all 40 pages. Five correct promotions now record stronger two-crop/six-read support instead of selected-core support because the formerly contending alternate request completes reliably; no transcription, grade, or review state changed.
+- Across the 40-page replay, optional processing after the local result averaged 6.28 seconds (median 6.57, p90 9.81, maximum 11.95). Sixteen pages requested combined corroboration.
+- Release gates: 110/110 tests, standard and pruned-public builds, secure WebKit cold/warm smoke, complete scored replay, final-output parity, and full model-outage/manual-recovery test all passed.
+- Private build label: `2026.07.15-shared-frame-private-beta-5`. Public GitHub Pages remains unchanged. Rollback remains `?consensusCandidate=0`.
+- Deployment report: `docs/SCANGRADE_SHARED_FRAME_PRIVATE_BETA5_DEPLOYMENT_20260715.md`.

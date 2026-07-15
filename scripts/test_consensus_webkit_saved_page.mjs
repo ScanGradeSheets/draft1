@@ -68,6 +68,8 @@ Object.entries({
   v3EightFrameColumnOrder: '1', v3LocalFirstReview: '1', v3ConfidenceSafety: '1',
   v3ConsensusPromotion: '1', v3NumberBondShiftDown: '1', v3NonrowTrimEvidence: '1',
   v3CoreCropEvidence: '1', reviewModelUrl: LARGE, v3CompactModelUrl: COMPACT,
+  ...(process.env.SG_DEFER_CORROBORATION === '1' ? { v3DeferredCorroboration: '1' } : {}),
+  ...(process.env.SG_SHARED_FRAME_PROCESSING === '1' ? { v3SharedFrameProcessing: '1' } : {}),
   modelPath: '/models/worksheet-digit-tony-generalist-aug-strong-20260601.onnx',
   rightSlotModelPath: '/models/worksheet-digit-tony-generalist-noaug-20260601.onnx',
 }).forEach(([key, value]) => url.searchParams.set(key, value))
@@ -123,6 +125,7 @@ try {
     } : null,
     pageCompleted: debug.v3Shadow?.status === 'complete',
     consensusPromotionCount: Number(debug.v3Shadow?.consensusPromotionCount || 0),
+    stageTimingsMs: debug.v3Shadow?.stageTimingsMs || null,
     consensusAffectedGrade: debug.v3Shadow?.affectsGrade === true,
     overwrittenQuestionOne: {
       read: q1?.answerText || null,

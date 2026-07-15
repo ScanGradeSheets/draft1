@@ -30,6 +30,8 @@ function parseArgs(argv) {
     numberBondShiftDown: false,
     nonrowTrimEvidence: false,
     coreCropEvidence: false,
+    deferredCorroboration: false,
+    sharedFrameProcessing: false,
     frameRegistrationMode: null,
   }
   for (let index = 0; index < argv.length; index += 1) {
@@ -50,6 +52,8 @@ function parseArgs(argv) {
     else if (value === '--number-bond-shift-down') options.numberBondShiftDown = true
     else if (value === '--nonrow-trim-evidence') options.nonrowTrimEvidence = true
     else if (value === '--core-crop-evidence') options.coreCropEvidence = true
+    else if (value === '--deferred-corroboration') options.deferredCorroboration = true
+    else if (value === '--shared-frame-processing') options.sharedFrameProcessing = true
     else if (value === '--frame-registration-mode') options.frameRegistrationMode = argv[++index]
     else throw new Error(`unknown argument: ${value}`)
   }
@@ -155,6 +159,8 @@ function main() {
     ...(options.numberBondShiftDown ? { v3NumberBondShiftDown: '1' } : {}),
     ...(options.nonrowTrimEvidence ? { v3NonrowTrimEvidence: '1' } : {}),
     ...(options.coreCropEvidence ? { v3CoreCropEvidence: '1' } : {}),
+    ...(options.deferredCorroboration ? { v3DeferredCorroboration: '1' } : {}),
+    ...(options.sharedFrameProcessing ? { v3SharedFrameProcessing: '1' } : {}),
     ...(options.frameRegistrationMode ? { v3FrameRegistrationMode: options.frameRegistrationMode } : {}),
   }).toString()
   for (const packetId of options.packets) {

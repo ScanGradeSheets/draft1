@@ -2352,6 +2352,14 @@ function v3CoreCropEvidenceEnabled() {
   return consensusFeatureEnabled('v3CoreCropEvidence')
 }
 
+function v3DeferredCorroborationEnabled() {
+  return consensusFeatureEnabled('v3DeferredCorroboration')
+}
+
+function v3SharedFrameProcessingEnabled() {
+  return consensusFeatureEnabled('v3SharedFrameProcessing')
+}
+
 function v3AnswerZoneOptions(rawCrops, layout = null) {
   return {
     cv,
@@ -6390,6 +6398,7 @@ async function buildV3BurstShadowItems({
   selectedSequenceItems,
   selectedCompactItems,
   selectedZones,
+  selectedAlternateItems = [],
   burstFrames,
   reviewQuestionNums,
   includeCompactItems = true,
@@ -6400,6 +6409,11 @@ async function buildV3BurstShadowItems({
   const sequenceItems = filterItemsToYellowQuestions(selectedSequenceItems, reviewQuestionNums).map((item) => ({
     ...item,
     id: `${item.id}-frame-${selectedFrameIndex ?? 'selected'}`,
+    frameIndex: selectedFrameIndex,
+  }))
+  const alternateSequenceItems = filterItemsToYellowQuestions(selectedAlternateItems, reviewQuestionNums).map((item) => ({
+    ...item,
+    id: `${item.id}-alternate-crop-frame-${selectedFrameIndex ?? 'selected'}`,
     frameIndex: selectedFrameIndex,
   }))
   const compactItems = filterItemsToYellowQuestions(selectedCompactItems, reviewQuestionNums).map((item) => ({
@@ -6420,12 +6434,24 @@ async function buildV3BurstShadowItems({
     processed: true,
     itemCount: sequenceItems.length,
   }]
+  const alternateFrames = alternateSequenceItems.length ? [{
+    frameIndex: selectedFrameIndex,
+    selected: true,
+    processed: true,
+    itemCount: alternateSequenceItems.length,
+  }] : []
+  const layoutId = String(layout?.layout_id || layout?.id || '')
+  const sharedNumberBondShift = v3SharedFrameProcessingEnabled() &&
+    v3NumberBondShiftEvidenceEnabled() && layoutId === 'sg-g1-lw-08-number-bonds'
+  const sharedNonrowTrim = v3SharedFrameProcessingEnabled() &&
+    v3NonrowTrimEvidenceEnabled() && /sg-g1-lw-(06|07|09|10)-/.test(layoutId)
 
   for (const frame of framesSnapshot) {
     if (frame === selectedFrame || frame.selected) continue
     let src = null
     let worksheet = null
     let zones = []
+    let alternateZones = []
     try {
       const canvas = await canvasFromDataUrl(frame.imageDataUrl)
       src = cv.imread(canvas)
@@ -6458,6 +6484,29 @@ async function buildV3BurstShadowItems({
           })), reviewQuestionNums)
         : []
       sequenceItems.push(...frameSequenceItems)
+      let frameAlternateItems = []
+      if (sharedNonrowTrim) {
+        frameAlternateItems = trimmedWholeAnswerSequenceItemsFromZones(zones, frame.index, 0.04)
+          .filter((item) => reviewQuestionNums.includes(Number(item.questionNum)))
+          .map((item) => ({ ...item, id: `${item.id}-alternate-crop`, cropVariant: 'nonrow-trim-all-0.04' }))
+      } else if (sharedNumberBondShift) {
+        alternateZones = extractContinuousAnswerZones(worksheet.warpedImage, layout, {
+          ...v3AnswerZoneOptions(worksheet.rawCrops, layout),
+          offsetYFraction: 0.04,
+        })
+        frameAlternateItems = wholeAnswerSequenceItemsFromZones(alternateZones, frame.index)
+          .filter((item) => reviewQuestionNums.includes(Number(item.questionNum)))
+          .map((item) => ({ ...item, id: `${item.id}-alternate-crop`, cropVariant: 'number-bond-down-0.04' }))
+      }
+      alternateSequenceItems.push(...frameAlternateItems)
+      if (sharedNonrowTrim || sharedNumberBondShift) {
+        alternateFrames.push({
+          frameIndex: frame.index,
+          selected: false,
+          processed: true,
+          itemCount: frameAlternateItems.length,
+        })
+      }
       compactItems.push(...frameCompactItems)
       zoneEvidence.push(...zones.map((zone) => ({
         questionNum: zone.questionNum,
@@ -6473,6 +6522,9 @@ async function buildV3BurstShadowItems({
       for (const zone of zones) {
         try { zone.image?.delete?.() } catch (_) {}
       }
+      for (const zone of alternateZones) {
+        try { zone.image?.delete?.() } catch (_) {}
+      }
       for (const crop of worksheet?.rawCrops || []) {
         try { crop.image?.delete?.() } catch (_) {}
       }
@@ -6480,7 +6532,7 @@ async function buildV3BurstShadowItems({
       try { src?.delete?.() } catch (_) {}
     }
   }
-  return { sequenceItems, compactItems, zoneEvidence, frames }
+  return { sequenceItems, compactItems, zoneEvidence, frames, alternateSequenceItems, alternateFrames }
 }
 
 async function buildV3AlternateCropReviewItems({ questionGroups, questionReview, layout, qrLocation, burstFrames }) {
@@ -7313,6 +7365,7 @@ const runRealOCR = async () => {
       }
     }
     let selectedCoreCropSequenceItems = []
+    let selectedAlternateCropSequenceItems = []
     if (hybridV3Enabled()) {
       let zones = []
       try {
@@ -7344,6 +7397,27 @@ const runRealOCR = async () => {
               cropVariant: 'core-trim-all-0.04',
             })),
           ]
+        }
+        if (v3SharedFrameProcessingEnabled()) {
+          const layoutId = String(layout?.layout_id || layout?.id || '')
+          if (v3NonrowTrimEvidenceEnabled() && /sg-g1-lw-(06|07|09|10)-/.test(layoutId)) {
+            selectedAlternateCropSequenceItems = trimmedWholeAnswerSequenceItemsFromZones(zones, 0, 0.04)
+              .map((item) => ({ ...item, cropVariant: 'nonrow-trim-all-0.04' }))
+          } else if (v3NumberBondShiftEvidenceEnabled() && layoutId === 'sg-g1-lw-08-number-bonds') {
+            let shiftedZones = []
+            try {
+              shiftedZones = extractContinuousAnswerZones(warpedImage, layout, {
+                ...v3AnswerZoneOptions(rawCrops, layout),
+                offsetYFraction: 0.04,
+              })
+              selectedAlternateCropSequenceItems = wholeAnswerSequenceItemsFromZones(shiftedZones, 0)
+                .map((item) => ({ ...item, cropVariant: 'number-bond-down-0.04' }))
+            } finally {
+              for (const zone of shiftedZones) {
+                try { zone.image?.delete?.() } catch (_) {}
+              }
+            }
+          }
         }
         if (v3LocalFirstReviewEnabled()) {
           const rescue = geometryRescuePlan({
@@ -7915,6 +7989,9 @@ const runRealOCR = async () => {
       const v3Run = startAsyncV3Shadow({
         localResult: payload,
         work: async () => {
+          const timingStarted = performance.now()
+          const stageTimingsMs = {}
+          const markStage = (name) => { stageTimingsMs[name] = Math.round(performance.now() - timingStarted) }
           const reviewQuestionNums = displayedYellowQuestionNumbers(
             layout.question_groups,
             questionReview,
@@ -8037,6 +8114,7 @@ const runRealOCR = async () => {
             }
             ocrResult.value = { ...payload }
           }
+          markStage('compactReady')
           const burst = await buildV3BurstShadowItems({
             questionGroups: layout.question_groups,
             layout,
@@ -8044,11 +8122,15 @@ const runRealOCR = async () => {
             selectedSequenceItems: v3SequenceItems,
             selectedCompactItems,
             selectedZones: partialDebug.v3AnswerZones,
+            selectedAlternateItems: selectedAlternateCropSequenceItems,
             burstFrames: burstFramesSnapshot,
             reviewQuestionNums,
             includeCompactItems: !localFirstMode,
           })
-          const alternateCrop = localFirstMode && !v3NumberBondShiftEvidenceEnabled() && !v3NonrowTrimEvidenceEnabled()
+          markStage('primaryFrameCropsReady')
+          const alternateCrop = v3SharedFrameProcessingEnabled()
+            ? { sequenceItems: burst.alternateSequenceItems, frames: burst.alternateFrames }
+            : localFirstMode && !v3NumberBondShiftEvidenceEnabled() && !v3NonrowTrimEvidenceEnabled()
             ? { sequenceItems: [], frames: [] }
             : await buildV3AlternateCropReviewItems({
                 questionGroups: layout.question_groups,
@@ -8057,12 +8139,15 @@ const runRealOCR = async () => {
                 qrLocation: qrPayload?.qr_location || null,
                 burstFrames: burstFramesSnapshot,
               })
+          markStage('alternateFrameCropsReady')
           const availableCoreCropItems = v3CoreCropEvidenceEnabled()
             ? filterItemsToYellowQuestions(selectedCoreCropSequenceItems, reviewQuestionNums)
             : []
           let coreCropItems = []
           let coreCropReads = []
           let coreCropDecisions = []
+          const deferCorroboration = v3DeferredCorroborationEnabled()
+          let alternateCropItemsRequested = deferCorroboration ? [] : alternateCrop.sequenceItems
           partialDebug.hybridBurstProcessing = burst.frames
           const [sequenceReads, compactReads, alternateSequenceReads] = await Promise.all([
             v3LargeModelUrl && (!localFirstMode || v3ConsensusPromotionEnabled())
@@ -8082,15 +8167,16 @@ const runRealOCR = async () => {
                   onError: (error) => console.warn('[ScanGrade] Optional V3 compact model unavailable:', error)
                 })
               : Promise.resolve(immediateCompactReads),
-            v3LargeModelUrl && alternateCrop.sequenceItems.length
+            v3LargeModelUrl && alternateCropItemsRequested.length
               ? requestWholeAnswerReviewSuggestions(
                   layout.question_groups,
                   questionReview,
                   rawCrops,
-                  alternateCrop.sequenceItems
+                  alternateCropItemsRequested
                 )
               : Promise.resolve([]),
           ])
+          markStage('initialModelReadsReady')
           const decisions = buildV3ShadowDecisions({
             questionGroups: layout.question_groups,
             predictions,
@@ -8111,6 +8197,7 @@ const runRealOCR = async () => {
                 requireCompact: false,
               })
             : []
+          let effectiveAlternateDecisions = alternateDecisions
           const consensusPromotionDecisions = []
           let consensusApplication = null
           if (v3ConsensusPromotionEnabled()) {
@@ -8119,7 +8206,7 @@ const runRealOCR = async () => {
               group,
             ]))
             const shadowByQuestion = new Map(decisions.map((decision) => [Number(decision.questionNum), decision]))
-            const alternateShadowByQuestion = new Map(alternateDecisions.map((decision) => [Number(decision.questionNum), decision]))
+            let alternateShadowByQuestion = new Map(effectiveAlternateDecisions.map((decision) => [Number(decision.questionNum), decision]))
             const predictionsById = new Map(predictions.map((prediction) => [Number(prediction.id), prediction]))
             const compactByQuestion = new Map()
             for (const read of compactReads || []) {
@@ -8156,16 +8243,42 @@ const runRealOCR = async () => {
               })
             }
             const preliminaryDecisions = buildPromotionDecisions()
-            if (v3LargeModelUrl && availableCoreCropItems.length) {
+            if (v3LargeModelUrl && (availableCoreCropItems.length || (deferCorroboration && alternateCrop.sequenceItems.length))) {
               const eligibleQuestionNums = coreCropReviewEligibleQuestionNums(preliminaryDecisions)
               coreCropItems = filterItemsToYellowQuestions(availableCoreCropItems, eligibleQuestionNums)
-              if (coreCropItems.length) {
-                coreCropReads = await requestWholeAnswerReviewSuggestions(
+              const deferredAlternateItems = deferCorroboration
+                ? filterItemsToYellowQuestions(alternateCrop.sequenceItems, eligibleQuestionNums)
+                : []
+              alternateCropItemsRequested.push(...deferredAlternateItems)
+              const corroborationItems = [...deferredAlternateItems, ...coreCropItems]
+              if (corroborationItems.length) {
+                const corroborationReads = await requestWholeAnswerReviewSuggestions(
                   layout.question_groups,
                   questionReview,
                   rawCrops,
-                  coreCropItems
+                  corroborationItems
                 )
+                if (deferCorroboration) {
+                  const deferredAlternateReads = corroborationReads.filter((read) =>
+                    !String(read?.cropVariant || '').startsWith('core-'))
+                  alternateSequenceReads.push(...deferredAlternateReads)
+                  effectiveAlternateDecisions = alternateSequenceReads.length
+                    ? buildV3ShadowDecisions({
+                        questionGroups: layout.question_groups,
+                        predictions,
+                        sequenceReads: alternateSequenceReads,
+                        compactReads: [],
+                        zones: partialDebug.v3AnswerZones,
+                        requireCompact: false,
+                      })
+                    : []
+                  alternateShadowByQuestion = new Map(effectiveAlternateDecisions.map((decision) => [
+                    Number(decision.questionNum),
+                    decision,
+                  ]))
+                }
+                coreCropReads = corroborationReads.filter((read) =>
+                  String(read?.cropVariant || '').startsWith('core-'))
               }
             }
             coreCropDecisions = coreCropReads.length
@@ -8178,6 +8291,7 @@ const runRealOCR = async () => {
                   requireCompact: false,
                 })
               : []
+            markStage('corroborationReadsReady')
             consensusPromotionDecisions.push(...(coreCropDecisions.length
               ? buildPromotionDecisions(coreCropDecisions)
               : preliminaryDecisions))
@@ -8260,6 +8374,7 @@ const runRealOCR = async () => {
               payload,
             }
           }
+          markStage('complete')
           return {
             shadow: {
               status: 'complete', policyVersion: V3_POLICY_VERSION,
@@ -8285,10 +8400,11 @@ const runRealOCR = async () => {
                 variant: v3NumberBondShiftEvidenceEnabled()
                   ? 'number-bond-down-0.04'
                   : v3NonrowTrimEvidenceEnabled() ? 'nonrow-trim-all-0.04' : 'eight-frame-column-order-alternate',
-                itemCount: alternateCrop.sequenceItems.length,
+                deferred: deferCorroboration,
+                itemCount: alternateCropItemsRequested.length,
                 frames: alternateCrop.frames,
                 suggestionCount: alternateSequenceReads.length,
-                decisions: alternateDecisions,
+                decisions: effectiveAlternateDecisions,
                 affectsGrade: (v3NumberBondShiftEvidenceEnabled() || v3NonrowTrimEvidenceEnabled()) && v3ConsensusPromotionEnabled(),
               },
               coreCropReview: {
@@ -8300,7 +8416,8 @@ const runRealOCR = async () => {
                 affectsGrade: v3CoreCropEvidenceEnabled() && v3ConsensusPromotionEnabled(),
               },
               largeModelAvailable: sequenceReads.length > 0,
-              compactModelAvailable: compactReads.length > 0
+              compactModelAvailable: compactReads.length > 0,
+              stageTimingsMs,
             },
             suggestions,
           }

@@ -11,6 +11,7 @@ import argparse
 import json
 import ssl
 import threading
+import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -49,6 +50,7 @@ def handler(remote_prefix: str, allowed_path: str):
                 method=self.command,
                 headers={"Content-Type": "application/json", "Origin": REMOTE_ORIGIN},
             )
+            started = time.perf_counter()
             try:
                 with urllib.request.urlopen(request, timeout=90, context=ssl.create_default_context()) as response:
                     payload, status = response.read(), response.status
@@ -56,6 +58,16 @@ def handler(remote_prefix: str, allowed_path: str):
                 payload, status = error.read(), error.code
             except Exception as error:
                 payload, status = json.dumps({"error": str(error)}).encode(), 502
+            elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
+            try:
+                inference_ms = json.loads(payload).get("inferenceMs")
+            except Exception:
+                inference_ms = None
+            print(
+                f"[{self.server.server_port}] upstream path={suffix} bytes={len(body or b'')} "
+                f"elapsedMs={elapsed_ms} inferenceMs={inference_ms}",
+                flush=True,
+            )
             self.headers_for(status, len(payload))
             self.wfile.write(payload)
 

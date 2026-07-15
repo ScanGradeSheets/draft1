@@ -40,6 +40,7 @@ const requiredFiles = [
   'scripts/evaluate_number_bond_crop_variants.mjs',
   'docs/SCANGRADE_CORE_CROP_RESCUE_RESULT_20260715.md',
   'docs/SCANGRADE_CORE_CROP_PRIVATE_BETA4_DEPLOYMENT_20260715.md',
+  'docs/SCANGRADE_SHARED_FRAME_PRIVATE_BETA5_DEPLOYMENT_20260715.md',
   'private-evidence/models/v3-sequence-live/model.onnx',
   'public/models/worksheet-digit-tony-generalist-noaug-20260601.onnx',
   'public/models/worksheet-digit-live-trusted-temp.onnx',
@@ -59,6 +60,9 @@ const requiredFiles = [
   'private-evidence/reports/core-crop-second-stage-score-20260715.json',
   'private-evidence/reports/core-crop-second-stage-parity-20260715.json',
   'private-evidence/reports/core-crop-second-stage-production-path-webkit-20260715.json',
+  'private-evidence/reports/shared-frame-deferred-score-20260715.json',
+  'private-evidence/reports/shared-frame-deferred-parity-20260715.json',
+  'private-evidence/reports/shared-frame-deferred-webkit-20260715.json',
 ]
 for (let index = 1; index <= 10; index += 1) {
   const filename = `sg-g1-lw-${String(index).padStart(2, '0')}-${[
@@ -83,7 +87,7 @@ const gitStatus = execFileSync('git', ['status', '--short'], { cwd: ROOT, encodi
 const manifest = {
   schemaVersion: 2,
   generatedAt: new Date().toISOString(),
-  candidate: 'ScanGrade selected-core-crop private beta 4',
+  candidate: 'ScanGrade shared-frame latency private beta 5',
   policyVersions: {
     confidenceSafety: 'confidence-safety-1',
     consensusPromotion: 'consensus-promotion-shadow-2',
@@ -104,6 +108,8 @@ const manifest = {
     v3NumberBondShiftDown: 1,
     v3NonrowTrimEvidence: 1,
     v3CoreCropEvidence: 1,
+    v3DeferredCorroboration: 1,
+    v3SharedFrameProcessing: 1,
   },
   modelIdentity: {
     strongBaseModel: 'microsoft/trocr-base-handwritten',
@@ -131,7 +137,11 @@ const manifest = {
     reproducibilityPages: 40,
     reproducibilityMismatches: 0,
     coreCropImagesBeforeSecondStage: 309,
-    coreCropImagesAfterSecondStage: 48,
+    coreCropImagesAfterSharedFrameRouting: 57,
+    alternateImagesAfterSharedFrameRouting: 36,
+    finalAnswerGroupMismatches: 0,
+    webkitDifficultPageBeforeMs: 21636,
+    webkitDifficultPageAfterMs: 12016,
   },
   git: {
     head: gitHead,
