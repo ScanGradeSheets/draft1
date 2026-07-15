@@ -47,6 +47,16 @@ Five correct promotions now cite two-crop/six-read agreement rather than selecte
 - Final-output comparison found zero changed answer groups.
 - Strong-plus-compact outage remained fail-open; no unsafe promotion occurred and manual correction worked.
 - Answer keys remain excluded from recognition requests.
+- Candidate freeze verified 75/75 SHA-256 file identities.
+
+## Source control and live verification
+
+- Source commit: `30372dd` (`Reduce private grading latency with shared frame processing`).
+- Branch: `autobuild/safe-20260223`.
+- The source commit was pushed and independently confirmed by `git ls-remote`.
+- Live private source served build label `2026.07.15-shared-frame-private-beta-5`, release identifier `shared-frame-private-beta-5`, deferred corroboration, and shared-frame processing as private defaults.
+- Live adapted and compact model health routes both returned OK; the adapted reader reported Apple MPS and offline local-model loading.
+- No student images, private evidence, truth labels, or model weights were committed.
 
 ## Boundary and rollback
 

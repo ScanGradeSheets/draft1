@@ -4533,4 +4533,5 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - Across the 40-page replay, optional processing after the local result averaged 6.28 seconds (median 6.57, p90 9.81, maximum 11.95). Sixteen pages requested combined corroboration.
 - Release gates: 110/110 tests, standard and pruned-public builds, secure WebKit cold/warm smoke, complete scored replay, final-output parity, and full model-outage/manual-recovery test all passed.
 - Private build label: `2026.07.15-shared-frame-private-beta-5`. Public GitHub Pages remains unchanged. Rollback remains `?consensusCandidate=0`.
+- Source commit `30372dd` (`Reduce private grading latency with shared frame processing`) was pushed to `origin/autobuild/safe-20260223`. Live private build identity, both new runtime defaults, both model routes, and the remote source SHA were verified. Candidate freeze verified 75/75 files.
 - Deployment report: `docs/SCANGRADE_SHARED_FRAME_PRIVATE_BETA5_DEPLOYMENT_20260715.md`.
