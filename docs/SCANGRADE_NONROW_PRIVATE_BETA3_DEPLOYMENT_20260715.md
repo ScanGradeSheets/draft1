@@ -45,7 +45,8 @@ Public and non-tailnet hosts keep both features off unless explicitly enabled fo
 
 - Branch: `autobuild/safe-20260223`
 - Release commit: `6883acf` (`Promote non-row dual-crop private candidate`)
-- Remote source branch verified at the exact release commit.
+- Deployment-record commit: `d3cdcd3` (`Record candidate 3 private deployment`)
+- Remote source branch verified at `d3cdcd3`; the release commit is its direct parent.
 - Private evidence, student images, model experiments, Mission Control state, and unrelated dirty-worktree files were not committed.
 
 ## Rollback

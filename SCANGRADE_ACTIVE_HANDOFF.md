@@ -4483,4 +4483,5 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - Live private verification: root loaded with the new build label; strong and compact health routes returned OK; served source contains both candidate 3 feature gates.
 - Public GitHub Pages was intentionally not replaced and still serves build `2026.07.14-consensus-private-beta-1` from `gh-pages-v2` commit `5ff62c2`.
 - Candidate source commit `6883acf` was pushed to `origin/autobuild/safe-20260223`. Private evidence, student images, model experiments, Mission Control state, and unrelated dirty files were excluded.
+- Deployment record commit `d3cdcd3` was also pushed; it directly follows the candidate source commit.
 - Deployment report: `docs/SCANGRADE_NONROW_PRIVATE_BETA3_DEPLOYMENT_20260715.md`.
