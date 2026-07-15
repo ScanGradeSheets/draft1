@@ -4521,4 +4521,5 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - Model-outage recovery passed: local grading completed, no automatic promotion occurred, manual correction worked, and failed optional services changed no local result.
 - Release validation: 110/110 JavaScript tests, standard build, pruned public build, `git diff --check`, exact 40-page replay, workload parity comparison, secure WebKit, and outage recovery.
 - Private-only build label: `2026.07.15-core-crop-private-beta-4`. Immediate rollback remains `?consensusCandidate=0`. Public GitHub Pages remains unchanged.
+- Source commit `535e5bb` (`Promote selected core-crop private beta`) was pushed to `origin/autobuild/safe-20260223`. Live private source, build identity, both model health routes, and the rollback route were verified. Candidate freeze verified 71/71 files.
 - Deployment report: `docs/SCANGRADE_CORE_CROP_PRIVATE_BETA4_DEPLOYMENT_20260715.md`.

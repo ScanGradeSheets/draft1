@@ -40,6 +40,17 @@ These are correlated development packets and do not justify a market-facing accu
 - Local result: 3.93 s; optional consensus: 21.64 s.
 - Warm repeat: 4.02 s / 21.32 s.
 - Deliberate strong-plus-compact outage completed local grading, made no promotion, preserved manual correction, and leaked no token.
+- Candidate freeze verified 71/71 SHA-256 file identities.
+
+## Source control and live verification
+
+- Source commit: `535e5bb` (`Promote selected core-crop private beta`).
+- Branch: `autobuild/safe-20260223`.
+- The commit was pushed to `origin/autobuild/safe-20260223` and independently confirmed by `git ls-remote`.
+- The live private app served build label `2026.07.15-core-crop-private-beta-4`, release identifier `core-crop-private-beta-4`, and the second-stage core-crop routing source.
+- The live strong route reported the adapted TrOCR model loaded offline on Apple MPS and rejected answer-key input by contract. The compact route reported healthy.
+- The rollback URL returned HTTP 200.
+- No private evidence, student scans, truth labels, or model files were committed.
 
 ## Boundaries and rollback
 
