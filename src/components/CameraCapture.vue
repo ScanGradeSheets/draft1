@@ -476,7 +476,10 @@ import {
   wholeAnswerReviewModeEligible,
   yellowQuestionNumbers,
 } from '../v3/review-suggestion-display.js'
-import { consensusPromotionDecision } from '../v3/consensus-promotion.js'
+import {
+  consensusPromotionDecision,
+  coreCropReviewEligibleQuestionNums,
+} from '../v3/consensus-promotion.js'
 import { detectAnswerAmbiguity } from '../v3/ambiguity-detector.js'
 import { applyConsensusPromotionsToPredictions } from '../v3/consensus-application.js'
 import { consensusFeatureEnabled, consensusModelEndpoint } from '../v3/production-runtime.js'
@@ -2343,6 +2346,10 @@ function v3NumberBondShiftEvidenceEnabled() {
 
 function v3NonrowTrimEvidenceEnabled() {
   return consensusFeatureEnabled('v3NonrowTrimEvidence')
+}
+
+function v3CoreCropEvidenceEnabled() {
+  return consensusFeatureEnabled('v3CoreCropEvidence')
 }
 
 function v3AnswerZoneOptions(rawCrops, layout = null) {
@@ -7305,6 +7312,7 @@ const runRealOCR = async () => {
         console.warn('[ScanGrade] tensor debug export failed:', e)
       }
     }
+    let selectedCoreCropSequenceItems = []
     if (hybridV3Enabled()) {
       let zones = []
       try {
@@ -7319,6 +7327,24 @@ const runRealOCR = async () => {
           blankArtifact: zone.blankArtifact,
           imageDataUrl: matToDataURL(zone.image, `v3-answer-${zone.questionNum}`)
         }))
+        if (v3CoreCropEvidenceEnabled()) {
+          selectedCoreCropSequenceItems = [
+            ...wholeAnswerSequenceItemsFromZones(zones).map((item) => ({
+              ...item,
+              id: `${item.id}-core-original`,
+              frameIndex: 1000,
+              cropVariant: 'core-original',
+            })),
+            ...trimmedWholeAnswerSequenceItemsFromZones(zones, 1001, 0.02).map((item) => ({
+              ...item,
+              cropVariant: 'core-trim-all-0.02',
+            })),
+            ...trimmedWholeAnswerSequenceItemsFromZones(zones, 1002, 0.04).map((item) => ({
+              ...item,
+              cropVariant: 'core-trim-all-0.04',
+            })),
+          ]
+        }
         if (v3LocalFirstReviewEnabled()) {
           const rescue = geometryRescuePlan({
             layout,
@@ -8031,6 +8057,12 @@ const runRealOCR = async () => {
                 qrLocation: qrPayload?.qr_location || null,
                 burstFrames: burstFramesSnapshot,
               })
+          const availableCoreCropItems = v3CoreCropEvidenceEnabled()
+            ? filterItemsToYellowQuestions(selectedCoreCropSequenceItems, reviewQuestionNums)
+            : []
+          let coreCropItems = []
+          let coreCropReads = []
+          let coreCropDecisions = []
           partialDebug.hybridBurstProcessing = burst.frames
           const [sequenceReads, compactReads, alternateSequenceReads] = await Promise.all([
             v3LargeModelUrl && (!localFirstMode || v3ConsensusPromotionEnabled())
@@ -8100,25 +8132,55 @@ const runRealOCR = async () => {
               ...(confidenceClearanceVetoRecords || []),
               ...(confidenceSafetyVetoRecords || []),
             ].map((veto) => Number(veto.questionNum)))
-            for (const group of layout.question_groups || []) {
-              const questionNum = Number(group?.question_num)
-              const answerGroup = answerByQuestion.get(questionNum)
-              const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-              const groupPredictions = ids.map((id) => predictionsById.get(Number(id))).filter(Boolean)
-              const ambiguity = detectAnswerAmbiguity({ predictions: groupPredictions })
-              const decision = consensusPromotionDecision({
-                currentRead: answerGroup?.answerText || '',
-                currentAutomatic: answerGroup?.reviewNeeded !== true,
-                currentPredictions: groupPredictions,
-                confidenceSafetyVetoed: safetyVetoQuestions.has(questionNum),
-                sequenceFrameConsensus: shadowByQuestion.get(questionNum)?.sequenceFrameConsensus || null,
-                alternateSequenceFrameConsensus: alternateShadowByQuestion.get(questionNum)?.sequenceFrameConsensus || null,
-                compactReads: compactByQuestion.get(questionNum) || [],
-                slotCount: maxHandwrittenDigitsForGroup(group),
-                ambiguity,
+            const buildPromotionDecisions = (coreDecisions = []) => {
+              const coreCropShadowByQuestion = new Map(coreDecisions.map((decision) => [Number(decision.questionNum), decision]))
+              return (layout.question_groups || []).map((group) => {
+                const questionNum = Number(group?.question_num)
+                const answerGroup = answerByQuestion.get(questionNum)
+                const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+                const groupPredictions = ids.map((id) => predictionsById.get(Number(id))).filter(Boolean)
+                const ambiguity = detectAnswerAmbiguity({ predictions: groupPredictions })
+                const decision = consensusPromotionDecision({
+                  currentRead: answerGroup?.answerText || '',
+                  currentAutomatic: answerGroup?.reviewNeeded !== true,
+                  currentPredictions: groupPredictions,
+                  confidenceSafetyVetoed: safetyVetoQuestions.has(questionNum),
+                  sequenceFrameConsensus: shadowByQuestion.get(questionNum)?.sequenceFrameConsensus || null,
+                  alternateSequenceFrameConsensus: alternateShadowByQuestion.get(questionNum)?.sequenceFrameConsensus || null,
+                  coreCropConsensus: coreCropShadowByQuestion.get(questionNum)?.sequenceFrameConsensus || null,
+                  compactReads: compactByQuestion.get(questionNum) || [],
+                  slotCount: maxHandwrittenDigitsForGroup(group),
+                  ambiguity,
+                })
+                return { questionNum, ...decision, ambiguity }
               })
-              consensusPromotionDecisions.push({ questionNum, ...decision, ambiguity })
             }
+            const preliminaryDecisions = buildPromotionDecisions()
+            if (v3LargeModelUrl && availableCoreCropItems.length) {
+              const eligibleQuestionNums = coreCropReviewEligibleQuestionNums(preliminaryDecisions)
+              coreCropItems = filterItemsToYellowQuestions(availableCoreCropItems, eligibleQuestionNums)
+              if (coreCropItems.length) {
+                coreCropReads = await requestWholeAnswerReviewSuggestions(
+                  layout.question_groups,
+                  questionReview,
+                  rawCrops,
+                  coreCropItems
+                )
+              }
+            }
+            coreCropDecisions = coreCropReads.length
+              ? buildV3ShadowDecisions({
+                  questionGroups: layout.question_groups,
+                  predictions,
+                  sequenceReads: coreCropReads,
+                  compactReads: [],
+                  zones: partialDebug.v3AnswerZones,
+                  requireCompact: false,
+                })
+              : []
+            consensusPromotionDecisions.push(...(coreCropDecisions.length
+              ? buildPromotionDecisions(coreCropDecisions)
+              : preliminaryDecisions))
             const manualCorrectionActive = predictions.some((prediction) => prediction?.manualCorrected === true) ||
               Object.keys(payload.manualCorrections || {}).length > 0
             if (!manualCorrectionActive) {
@@ -8228,6 +8290,14 @@ const runRealOCR = async () => {
                 suggestionCount: alternateSequenceReads.length,
                 decisions: alternateDecisions,
                 affectsGrade: (v3NumberBondShiftEvidenceEnabled() || v3NonrowTrimEvidenceEnabled()) && v3ConsensusPromotionEnabled(),
+              },
+              coreCropReview: {
+                enabled: v3CoreCropEvidenceEnabled(),
+                variant: 'selected-original-plus-trim-0.02-and-0.04',
+                itemCount: coreCropItems.length,
+                suggestionCount: coreCropReads.length,
+                decisions: coreCropDecisions,
+                affectsGrade: v3CoreCropEvidenceEnabled() && v3ConsensusPromotionEnabled(),
               },
               largeModelAvailable: sequenceReads.length > 0,
               compactModelAvailable: compactReads.length > 0

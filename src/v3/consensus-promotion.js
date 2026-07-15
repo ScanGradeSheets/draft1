@@ -11,6 +11,22 @@ export const CONSENSUS_BROWSER_MAJORITY_SHARE = 0.85
 export const CONSENSUS_BROWSER_SECONDARY_MIN_FRAME_CONFIDENCE = 0.98
 export const CONSENSUS_BROWSER_SECONDARY_LIMIT = 2
 export const CONSENSUS_BROWSER_SECONDARY_MIN_PROBABILITY = 0.05
+export const CONSENSUS_REQUIRED_CORE_CROPS = 3
+export const CORE_CROP_REVIEW_ELIGIBLE_REASONS = new Set([
+  'whole-answer-compact-model-does-not-support-consensus',
+  'whole-answer-compact-support-too-weak',
+  'second-choice-compact-support-too-weak',
+  'browser-preprocessing-stably-conflicts',
+])
+
+export function coreCropReviewEligibleQuestionNums(decisions = []) {
+  return decisions
+    .filter((decision) =>
+      CORE_CROP_REVIEW_ELIGIBLE_REASONS.has(decision?.reason) &&
+      decision?.ambiguity?.detected !== true)
+    .map((decision) => Number(decision?.questionNum))
+    .filter(Number.isFinite)
+}
 
 function review(reason, evidence = {}) {
   return {
@@ -46,6 +62,20 @@ function exactThreeFrameConsensus(consensus) {
     consensus?.tied !== true &&
     count === CONSENSUS_REQUIRED_FRAMES &&
     usable === CONSENSUS_REQUIRED_FRAMES &&
+    confidence >= CONSENSUS_MIN_FRAME_CONFIDENCE
+  )
+}
+
+function exactCoreCropConsensus(consensus) {
+  const text = normalizeTranscription(consensus?.text ?? consensus?.read)
+  const count = Number(consensus?.count ?? consensus?.agreeingFrames)
+  const usable = Number(consensus?.usableFrameCount ?? consensus?.usableCrops)
+  const confidence = Number(consensus?.minConfidence)
+  return Boolean(
+    text &&
+    consensus?.tied !== true &&
+    count === CONSENSUS_REQUIRED_CORE_CROPS &&
+    usable === CONSENSUS_REQUIRED_CORE_CROPS &&
     confidence >= CONSENSUS_MIN_FRAME_CONFIDENCE
   )
 }
@@ -124,6 +154,7 @@ export function consensusPromotionDecision({
   confidenceSafetyVetoed = false,
   sequenceFrameConsensus = null,
   alternateSequenceFrameConsensus = null,
+  coreCropConsensus = null,
   compactReads = [],
   slotCount = null,
   ambiguityDetected = false,
@@ -138,7 +169,12 @@ export function consensusPromotionDecision({
   const alternateProposed = normalizeTranscription(
     alternateSequenceFrameConsensus?.text ?? alternateSequenceFrameConsensus?.read
   )
+  const coreCropProposed = normalizeTranscription(coreCropConsensus?.text ?? coreCropConsensus?.read)
   const spatiallyStable = exactThreeFrameConsensus(alternateSequenceFrameConsensus) && alternateProposed === proposed
+  // Repeated views from one model may replace weak compact support, but they
+  // must never weaken an existing handwriting-ambiguity signal.
+  const coreCropStable = exactCoreCropConsensus(coreCropConsensus) && coreCropProposed === proposed &&
+    ambiguityDetected !== true && ambiguity?.detected !== true
   const ambiguityReasons = Array.isArray(ambiguity?.reasons) ? ambiguity.reasons : []
   const unconditionalAmbiguity = ambiguityReasons.some((item) =>
     item?.reason === 'model-families-disagree' || item?.reason === 'answer-ink-may-be-clipped')
@@ -159,7 +195,7 @@ export function consensusPromotionDecision({
   const compactRankIndex = compactChoices.findIndex((choice) => choice.text === proposed)
   const browserSecondarySupport = Number(sequenceFrameConsensus?.minConfidence || 0) >= CONSENSUS_BROWSER_SECONDARY_MIN_FRAME_CONFIDENCE &&
     browserSupportsProposedRead(proposed, currentPredictions)
-  if (compactRankIndex < 0 && !browserSecondarySupport && !spatiallyStable) {
+  if (compactRankIndex < 0 && !browserSecondarySupport && !spatiallyStable && !coreCropStable) {
     return review('whole-answer-compact-model-does-not-support-consensus', {
       proposedRead: proposed,
       compactChoices: compactChoices.map((choice) => choice.text),
@@ -168,7 +204,7 @@ export function consensusPromotionDecision({
 
   const compactChoice = compactRankIndex >= 0 ? compactChoices[compactRankIndex] : null
   const joint = Number(compactChoice?.bestJointProbability || 0)
-  if (joint < CONSENSUS_MIN_COMPACT_JOINT_PROBABILITY && !browserSecondarySupport && !spatiallyStable) {
+  if (joint < CONSENSUS_MIN_COMPACT_JOINT_PROBABILITY && !browserSecondarySupport && !spatiallyStable && !coreCropStable) {
     return review('whole-answer-compact-support-too-weak', {
       proposedRead: proposed,
       compactRank: compactRankIndex + 1,
@@ -178,7 +214,7 @@ export function consensusPromotionDecision({
 
   const topJoint = Number(compactChoices[0]?.bestJointProbability || 0)
   const relativeSupport = topJoint > 0 ? joint / topJoint : 0
-  if (compactRankIndex > 0 && relativeSupport < CONSENSUS_MIN_SECOND_TO_FIRST_RATIO && !browserSecondarySupport && !spatiallyStable) {
+  if (compactRankIndex > 0 && relativeSupport < CONSENSUS_MIN_SECOND_TO_FIRST_RATIO && !browserSecondarySupport && !spatiallyStable && !coreCropStable) {
     return review('second-choice-compact-support-too-weak', {
       proposedRead: proposed,
       compactRank: compactRankIndex + 1,
@@ -189,7 +225,7 @@ export function consensusPromotionDecision({
   }
 
   const stableBrowserConflict = browserHasStableConflictingEvidence(current, proposed, currentPredictions)
-  if (stableBrowserConflict && !browserSecondarySupport) {
+  if (stableBrowserConflict && !browserSecondarySupport && !coreCropStable) {
     return review('browser-preprocessing-stably-conflicts', { currentRead: current, proposedRead: proposed })
   }
 
@@ -197,7 +233,9 @@ export function consensusPromotionDecision({
     joint >= CONSENSUS_MIN_COMPACT_JOINT_PROBABILITY &&
     (compactRankIndex === 0 || relativeSupport >= CONSENSUS_MIN_SECOND_TO_FIRST_RATIO)
   const usedSpatialStability = spatiallyStable && !compactFullySupported
-  const usedBrowserSecondary = !usedSpatialStability && browserSecondarySupport && (!compactFullySupported || stableBrowserConflict)
+  const usedCoreCropStability = !usedSpatialStability && coreCropStable && (!compactFullySupported || stableBrowserConflict)
+  const usedBrowserSecondary = !usedSpatialStability && !usedCoreCropStability &&
+    browserSecondarySupport && (!compactFullySupported || stableBrowserConflict)
 
   return automatic(proposed, {
     proposedRead: proposed,
@@ -209,11 +247,16 @@ export function consensusPromotionDecision({
     compactRelativeSupport: relativeSupport,
     alternateAgreeingFrames: spatiallyStable ? CONSENSUS_REQUIRED_FRAMES : null,
     alternateMinFrameConfidence: spatiallyStable ? Number(alternateSequenceFrameConsensus.minConfidence) : null,
+    coreCropAgreeingReads: coreCropStable ? CONSENSUS_REQUIRED_CORE_CROPS : null,
+    coreCropMinConfidence: coreCropStable ? Number(coreCropConsensus.minConfidence) : null,
     supportSource: usedSpatialStability
       ? 'six-read-two-crop-grayscale-stability'
+      : usedCoreCropStability ? 'three-frame-plus-selected-three-crop-grayscale-stability'
       : usedBrowserSecondary ? 'three-frame-grayscale-plus-browser-top-two' : 'three-frame-grayscale-plus-compact',
   }, usedSpatialStability
     ? 'two-crop-six-read-grayscale-consensus'
+    : usedCoreCropStability
+      ? 'three-frame-plus-selected-three-crop-grayscale-consensus'
     : usedBrowserSecondary
       ? 'independent-three-frame-and-browser-secondary-consensus'
       : 'independent-three-frame-and-compact-consensus')

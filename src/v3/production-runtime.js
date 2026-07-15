@@ -1,4 +1,4 @@
-export const CONSENSUS_PRODUCTION_RELEASE = 'nonrow-dual-crop-private-beta-3'
+export const CONSENSUS_PRODUCTION_RELEASE = 'core-crop-private-beta-4'
 
 const FALSE_VALUES = new Set(['0', 'false', 'off', 'no'])
 const TRUE_VALUES = new Set(['1', 'true', 'on', 'yes'])

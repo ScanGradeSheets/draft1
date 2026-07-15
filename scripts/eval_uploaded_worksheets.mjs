@@ -26,6 +26,7 @@ const BROWSER_ENGINE = process.env.SG_EVAL_BROWSER === 'webkit' ? 'webkit' : 'ch
 const OLD_IPAD_EMULATION = process.env.SG_EVAL_OLD_IPAD === '1';
 const V3_BURST_FILES = String(process.env.SG_V3_BURST_FILES || '').split(';').map((value) => value.trim()).filter(Boolean);
 const V3_BURST_SIBLINGS = process.env.SG_V3_BURST_SIBLINGS === '1';
+const COMPACT_DEBUG = process.env.SG_EVAL_COMPACT_DEBUG === '1';
 
 async function burstFilesForInput(file) {
   if (V3_BURST_FILES.length) return V3_BURST_FILES;
@@ -68,7 +69,9 @@ function predictedAnswersForRow(row) {
   const byId = new Map((row.predictions || []).map((prediction) => [prediction.id, prediction]));
   if (groups.length > 0) {
     return groups.map((group) => {
-      const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : [];
+      const ids = Array.isArray(group?.digitBoxIds)
+        ? group.digitBoxIds
+        : Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : [];
       return ids.map((id) => byId.get(id)?.digit ?? '').join('');
     });
   }
@@ -149,6 +152,15 @@ function dataUrlToBuffer(dataUrl) {
   if (typeof dataUrl !== 'string') return null;
   const match = dataUrl.match(/^data:image\/(?:png|jpeg);base64,(.+)$/);
   return match ? Buffer.from(match[1], 'base64') : null;
+}
+
+function withoutEmbeddedImages(value) {
+  if (Array.isArray(value)) return value.map(withoutEmbeddedImages);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+    key,
+    typeof item === 'string' && item.startsWith('data:image/') ? '[embedded image omitted]' : withoutEmbeddedImages(item)
+  ]));
 }
 
 function pct(value) {
@@ -369,7 +381,8 @@ for (const file of files) {
       v3Shadow: data.debug.v3Shadow || null
     };
     rows.push(row);
-    await fs.writeFile(path.join(debugDir, 'ocr-debug.json'), JSON.stringify(data.debug, null, 2));
+    const savedDebug = COMPACT_DEBUG ? withoutEmbeddedImages(data.debug) : data.debug;
+    await fs.writeFile(path.join(debugDir, 'ocr-debug.json'), JSON.stringify(savedDebug, null, 2));
     const imageSets = [
       ['captured', [data.debug.capturedImageDataUrl]],
       ['warped', [data.debug.warpedDataUrl]],
@@ -377,7 +390,7 @@ for (const file of files) {
       ['model-input-q', data.debug.modelInputDataUrls || []],
       ['v3-zone-q', (data.debug.v3AnswerZones || []).map((zone) => zone.imageDataUrl)]
     ];
-    for (const [prefix, dataUrls] of imageSets) {
+    for (const [prefix, dataUrls] of COMPACT_DEBUG ? [] : imageSets) {
       for (let i = 0; i < dataUrls.length; i++) {
         const buffer = dataUrlToBuffer(dataUrls[i]);
         if (!buffer) continue;

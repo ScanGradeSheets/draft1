@@ -4497,3 +4497,28 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - A complete checksum-mode rsync comparison reread all included source and destination files, returned exit status 0, and reported zero differences.
 - Full restore and verification instructions: `docs/SCANGRADE_CANDIDATE3_RUGGED_BACKUP_20260715.md`.
 - This protects against loss of the Mac, but not simultaneous loss of both the Mac and rugged drive. An encrypted off-site backup remains the next redundancy layer.
+
+## 2026-07-15 selected-core-crop rescue checkpoint
+
+- Candidate 3 remains the deployed/frozen control: 237/275 automatic (86.2%), zero observed errors.
+- A new opt-in research flag, `v3CoreCropEvidence=1`, asks the adapted strong reader to read the selected grayscale answer image plus 2% and 4% interior trims. It may bypass a compact/browser veto only when all three selected crops and all three retained frames agree exactly, the answer fits the slot contract, and no ambiguity or confidence-safety veto exists.
+- Final exact 40-page development replay: 250/275 automatic (90.9%), 250/250 correct; rows 150/160 (93.8%), non-row 100/115 (87.0%), 25 yellows.
+- The lane adds 13 correct automatic transcriptions over Candidate 3. The overwritten `34→39` remains yellow because the selected crops disagree. A correct written `15` also remains yellow because its existing ambiguity flag is absolute.
+- Two complete 40-page replays reproduced strong, alternate, core, and compact evidence. The only final difference was the intended ambiguity-guard demotion. Full JavaScript suite 109/109, production build, and diff checks pass.
+- The current compact model cannot replace the strong reader: it scored only 6/38 original yellow crops, at best 8/38 on a variant, and its three-view agreement selected 11/11 wrong compact-veto reads.
+- The 18 frame instabilities and 4 safety vetoes were investigated. Post-hoc rules could select 1 and 2 correct answers respectively, but remain rejected as same-set overfitting. Final residuals: 18 frame/strong-confidence instabilities, 4 safety vetoes, and 3 compact vetoes.
+- Secure WebKit/mobile emulation passed and kept the overwritten answer yellow, but optional consensus completion increased from 13.59 s to 26.96 s because the research integration eagerly requests core crops for every initial yellow. Before deployment, make this a second-stage request only for the small set still vetoed after Candidate 3.
+- Architecture conclusion: the Mac mini cannot yet be removed while retaining the demonstrated 90.9% coverage because the gain depends on adapted TrOCR. It is not a total single point of failure: reader outage fails open to browser grading, more yellow reviews, and manual correction. The recommended public architecture is local browser grading plus an authenticated hosted strong service for unresolved yellows, while training/distilling a stronger browser model.
+- Nothing in this checkpoint was deployed, committed, or pushed. Candidate 3 remains live. Full report: `docs/SCANGRADE_CORE_CROP_RESCUE_RESULT_20260715.md`.
+
+## 2026-07-15 selected-core-crop private beta 4 release
+
+- Tony authorized completing and deploying the selected-core-crop candidate when release gates passed.
+- The extra strong-reader crop lane is now a true second stage. Candidate 3 runs first; only unresolved compact-support/browser-conflict vetoes without an ambiguity flag request the selected original, 2% trim, and 4% trim. Confidence-safety, ambiguity, slot-length, and frame-stability vetoes remain absolute.
+- Exact 40-page second-stage replay preserved the final candidate result: 250/275 automatic (90.9%), 250/250 correct, 25 yellow; rows 150/160 (93.8%), non-row 100/115 (87.0%). Final answer groups matched the prior eager implementation on all 40 pages.
+- Extra strong-reader workload fell from 309 to 48 core-crop images (84.5% fewer), and only 14/40 pages made a second-stage request instead of 36/40.
+- Real warmed Tailscale/Safari-WebKit smoke: local result 3.93 s, optional consensus 21.64 s; warm repeat 4.02 s / 21.32 s. All gates passed and the overwritten `34/39` remained yellow. This latency is acceptable for private evaluation, not a public performance promise.
+- Model-outage recovery passed: local grading completed, no automatic promotion occurred, manual correction worked, and failed optional services changed no local result.
+- Release validation: 110/110 JavaScript tests, standard build, pruned public build, `git diff --check`, exact 40-page replay, workload parity comparison, secure WebKit, and outage recovery.
+- Private-only build label: `2026.07.15-core-crop-private-beta-4`. Immediate rollback remains `?consensusCandidate=0`. Public GitHub Pages remains unchanged.
+- Deployment report: `docs/SCANGRADE_CORE_CROP_PRIVATE_BETA4_DEPLOYMENT_20260715.md`.

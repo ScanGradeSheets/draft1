@@ -29,6 +29,7 @@ function parseArgs(argv) {
     cleanPrintedFrames: false,
     numberBondShiftDown: false,
     nonrowTrimEvidence: false,
+    coreCropEvidence: false,
     frameRegistrationMode: null,
   }
   for (let index = 0; index < argv.length; index += 1) {
@@ -48,6 +49,7 @@ function parseArgs(argv) {
     else if (value === '--clean-printed-frames') options.cleanPrintedFrames = true
     else if (value === '--number-bond-shift-down') options.numberBondShiftDown = true
     else if (value === '--nonrow-trim-evidence') options.nonrowTrimEvidence = true
+    else if (value === '--core-crop-evidence') options.coreCropEvidence = true
     else if (value === '--frame-registration-mode') options.frameRegistrationMode = argv[++index]
     else throw new Error(`unknown argument: ${value}`)
   }
@@ -152,6 +154,7 @@ function main() {
     ...(options.cleanPrintedFrames ? { v3CleanPrintedFrames: '1' } : {}),
     ...(options.numberBondShiftDown ? { v3NumberBondShiftDown: '1' } : {}),
     ...(options.nonrowTrimEvidence ? { v3NonrowTrimEvidence: '1' } : {}),
+    ...(options.coreCropEvidence ? { v3CoreCropEvidence: '1' } : {}),
     ...(options.frameRegistrationMode ? { v3FrameRegistrationMode: options.frameRegistrationMode } : {}),
   }).toString()
   for (const packetId of options.packets) {
@@ -168,7 +171,12 @@ function main() {
       ...files,
     ], {
       cwd: ROOT,
-      env: { ...process.env, SG_EVAL_QUERY: query, SG_V3_BURST_SIBLINGS: '1' },
+      env: {
+        ...process.env,
+        SG_EVAL_QUERY: query,
+        SG_V3_BURST_SIBLINGS: '1',
+        SG_EVAL_COMPACT_DEBUG: '1',
+      },
       stdio: 'inherit',
     })
     if (result.error) throw result.error

@@ -11,6 +11,7 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const APP = process.env.SG_APP_URL || 'https://127.0.0.1:5191'
 const LARGE = process.env.SG_LARGE_URL || 'https://127.0.0.1:8894'
 const COMPACT = process.env.SG_COMPACT_URL || 'https://127.0.0.1:8895'
+const LARGE_DEVICE = process.env.SG_LARGE_DEVICE || 'cpu'
 const token = randomBytes(32).toString('base64url')
 const tlsPem = path.join(ROOT, 'node_modules/.vite/basic-ssl/_cert.pem')
 const logs = []
@@ -35,7 +36,7 @@ async function health(url, child) {
 const origin = new URL(APP).origin
 const ownedServices = !process.env.SG_LARGE_URL && !process.env.SG_COMPACT_URL
 const largeService = ownedServices ? start(path.join(ROOT, '.venv/bin/python'), [
-  'scripts/serve_trocr_review.py', '--host', '127.0.0.1', '--port', '8894', '--device', 'cpu', '--offline',
+  'scripts/serve_trocr_review.py', '--host', '127.0.0.1', '--port', '8894', '--device', LARGE_DEVICE, '--offline',
   '--adapter', 'private-evidence/models/trocr-lora-calibrated-2epoch-20260709',
 ], {
   SCANGRADE_REVIEW_TOKEN: token, SCANGRADE_REVIEW_ALLOWED_ORIGINS: origin,
@@ -65,7 +66,8 @@ Object.entries({
   mode: 'teacher', ocrdebug: '1', ignoreQrHomography: '1', hybridV3: '1',
   v3BurstReplay: '1', v3PristineWarp: '1', v3SequenceFromZones: '1',
   v3EightFrameColumnOrder: '1', v3LocalFirstReview: '1', v3ConfidenceSafety: '1',
-  v3ConsensusPromotion: '1', reviewModelUrl: LARGE, v3CompactModelUrl: COMPACT,
+  v3ConsensusPromotion: '1', v3NumberBondShiftDown: '1', v3NonrowTrimEvidence: '1',
+  v3CoreCropEvidence: '1', reviewModelUrl: LARGE, v3CompactModelUrl: COMPACT,
   modelPath: '/models/worksheet-digit-tony-generalist-aug-strong-20260601.onnx',
   rightSlotModelPath: '/models/worksheet-digit-tony-generalist-noaug-20260601.onnx',
 }).forEach(([key, value]) => url.searchParams.set(key, value))
@@ -81,26 +83,44 @@ try {
   await context.addInitScript(({ key, value }) => sessionStorage.setItem(key, value), {
     key: 'scangrade.reviewAccessToken.v1', value: token,
   })
-  const page = await context.newPage()
-  page.setDefaultTimeout(120_000)
-  await page.goto(url.toString(), { waitUntil: 'networkidle' })
-  await page.waitForFunction(() => !!window.cv?.Mat)
-  await page.evaluate((value) => window.__SCANGRADE_SET_V3_BURST_FRAMES?.(value), frames)
-  const started = Date.now()
-  await page.setInputFiles('input[type=file]', captured)
-  await page.waitForFunction(() => Array.isArray(window.__SCANGRADE_LIVE_OCR_DEBUG?.predictions))
-  const localReadyMs = Date.now() - started
-  await page.waitForFunction(() => ['complete', 'unavailable'].includes(window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.status))
-  const completeMs = Date.now() - started
-  const debug = await page.evaluate(() => window.__SCANGRADE_LIVE_OCR_DEBUG)
+  const runSavedPage = async () => {
+    const page = await context.newPage()
+    page.setDefaultTimeout(120_000)
+    try {
+      await page.goto(url.toString(), { waitUntil: 'networkidle' })
+      await page.waitForFunction(() => !!window.cv?.Mat)
+      await page.evaluate((value) => window.__SCANGRADE_SET_V3_BURST_FRAMES?.(value), frames)
+      const started = Date.now()
+      await page.setInputFiles('input[type=file]', captured)
+      await page.waitForFunction(() => Array.isArray(window.__SCANGRADE_LIVE_OCR_DEBUG?.predictions))
+      const localReadyMs = Date.now() - started
+      await page.waitForFunction(() => ['complete', 'unavailable'].includes(window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.status))
+      const completeMs = Date.now() - started
+      const debug = await page.evaluate(() => window.__SCANGRADE_LIVE_OCR_DEBUG)
+      return { page, debug, localReadyMs, completeMs }
+    } catch (error) {
+      await page.close()
+      throw error
+    }
+  }
+  const first = await runSavedPage()
+  const warm = process.env.SG_WEBKIT_WARM_REPEAT === '1' ? await runSavedPage() : null
+  const page = first.page
+  const debug = first.debug
   const q1 = debug.answerGroups.find((group) => Number(group.questionNum) === 1)
   report = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     engine: 'playwright-webkit-mobile-emulation',
     userAgent: await page.evaluate(() => navigator.userAgent),
-    localReadyMs,
-    consensusCompleteMs: completeMs,
+    localReadyMs: first.localReadyMs,
+    consensusCompleteMs: first.completeMs,
+    warmRepeat: warm ? {
+      localReadyMs: warm.localReadyMs,
+      consensusCompleteMs: warm.completeMs,
+      pageCompleted: warm.debug.v3Shadow?.status === 'complete',
+      consensusPromotionCount: Number(warm.debug.v3Shadow?.consensusPromotionCount || 0),
+    } : null,
     pageCompleted: debug.v3Shadow?.status === 'complete',
     consensusPromotionCount: Number(debug.v3Shadow?.consensusPromotionCount || 0),
     consensusAffectedGrade: debug.v3Shadow?.affectsGrade === true,
@@ -117,7 +137,10 @@ try {
     experimentalPromotionsApplied: report.consensusPromotionCount > 0 && report.consensusAffectedGrade,
     overwrittenWorkStayedReview: report.overwrittenQuestionOne.reviewNeeded && !report.overwrittenQuestionOne.promoted,
     markedSheetRegenerated: report.markedSheetAvailable,
+    warmRepeatCompleted: !warm || (report.warmRepeat.pageCompleted && report.warmRepeat.consensusPromotionCount > 0),
   }
+  await first.page.close()
+  if (warm) await warm.page.close()
 } finally {
   await browser.close()
   for (const child of [largeService, compactService].filter(Boolean)) {
@@ -127,6 +150,6 @@ try {
 }
 
 if (!Object.values(report.gates).every(Boolean)) throw new Error(`WebKit consensus gates failed: ${JSON.stringify(report)}`)
-const destination = path.join(ROOT, 'private-evidence/reports/consensus-webkit-saved-page-20260714.json')
+const destination = path.join(ROOT, process.env.SG_WEBKIT_OUT || 'private-evidence/reports/consensus-webkit-saved-page-20260714.json')
 fs.writeFileSync(destination, `${JSON.stringify(report, null, 2)}\n`)
 console.log(JSON.stringify({ destination: path.relative(ROOT, destination), ...report }, null, 2))

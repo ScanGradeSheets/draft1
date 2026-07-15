@@ -4,6 +4,7 @@ import {
   browserHasStableConflictingEvidence,
   browserSupportsProposedRead,
   consensusPromotionDecision,
+  coreCropReviewEligibleQuestionNums,
 } from '../src/v3/consensus-promotion.js'
 
 function consensus(text = '12', overrides = {}) {
@@ -30,6 +31,21 @@ function prediction(index, digit, share = 0.90) {
 function probabilityPrediction(index, probabilities) {
   return { digitIndex: index, probs: probabilities }
 }
+
+test('routes only unresolved model-support vetoes to selected core-crop review', () => {
+  const decisions = [
+    { questionNum: 1, reason: 'whole-answer-compact-model-does-not-support-consensus' },
+    { questionNum: 2, reason: 'whole-answer-compact-support-too-weak' },
+    { questionNum: 3, reason: 'second-choice-compact-support-too-weak' },
+    { questionNum: 4, reason: 'browser-preprocessing-stably-conflicts' },
+    { questionNum: 5, reason: 'confidence-safety-veto-dominates' },
+    { questionNum: 6, reason: 'handwriting-ambiguity-detected' },
+    { questionNum: 7, reason: 'whole-answer-compact-support-too-weak', ambiguity: { detected: true } },
+    { questionNum: 8, reason: 'already-automatic-not-a-promotion-candidate' },
+    { questionNum: 'not-a-question', reason: 'whole-answer-compact-support-too-weak' },
+  ]
+  assert.deepEqual(coreCropReviewEligibleQuestionNums(decisions), [1, 2, 3, 4])
+})
 
 test('promotes exact three-frame grayscale consensus supported by compact top choice', () => {
   const result = consensusPromotionDecision({
@@ -176,6 +192,70 @@ test('alternate-crop disagreement or weak frame evidence cannot replace compact 
     })
     assert.equal(result.promote, false)
   }
+})
+
+test('selected original, two-percent trim, and four-percent trim may replace a compact veto', () => {
+  const result = consensusPromotionDecision({
+    currentRead: '17',
+    sequenceFrameConsensus: consensus('12', { minConfidence: 0.82 }),
+    coreCropConsensus: consensus('12', { minConfidence: 0.79 }),
+    compactReads: compact({ read: '17', jointProbability: 0.9, minComponentProbability: 0.9 }),
+    slotCount: 2,
+  })
+  assert.equal(result.promote, true)
+  assert.equal(result.automaticText, '12')
+  assert.equal(result.reason, 'three-frame-plus-selected-three-crop-grayscale-consensus')
+  assert.equal(result.evidence.supportSource, 'three-frame-plus-selected-three-crop-grayscale-stability')
+})
+
+test('selected crop stability cannot override an existing ambiguity signal', () => {
+  const result = consensusPromotionDecision({
+    currentRead: '13',
+    sequenceFrameConsensus: consensus('15', { minConfidence: 0.90 }),
+    coreCropConsensus: consensus('15', { minConfidence: 0.94 }),
+    compactReads: compact({ read: '17', jointProbability: 0.9, minComponentProbability: 0.9 }),
+    slotCount: 2,
+    ambiguity: { detected: true, reasons: [{ reason: 'override-retained-material-rival' }] },
+  })
+  assert.equal(result.promote, false)
+  assert.equal(result.reason, 'whole-answer-compact-model-does-not-support-consensus')
+})
+
+test('selected crop disagreement blocks the overwritten 34 to 39 case', () => {
+  for (const coreCropConsensus of [
+    consensus('30', { minConfidence: 0.8 }),
+    consensus('39', { count: 2, minConfidence: 0.9 }),
+    consensus('39', { minConfidence: 0.69 }),
+  ]) {
+    const result = consensusPromotionDecision({
+      currentRead: '37',
+      sequenceFrameConsensus: consensus('39', { minConfidence: 0.94 }),
+      coreCropConsensus,
+      compactReads: compact({ read: '22', jointProbability: 0.9, minComponentProbability: 0.9 }),
+      slotCount: 2,
+    })
+    assert.equal(result.promote, false)
+    assert.equal(result.reason, 'whole-answer-compact-model-does-not-support-consensus')
+  }
+})
+
+test('three selected crops can resolve a stable browser conflict but never a safety veto', () => {
+  const evidence = {
+    currentRead: '81',
+    currentPredictions: [prediction(0, 8), prediction(1, 1)],
+    sequenceFrameConsensus: consensus('8', { minConfidence: 0.99 }),
+    coreCropConsensus: consensus('8', { minConfidence: 0.99 }),
+    compactReads: compact({ read: '8', jointProbability: 0.9, minComponentProbability: 0.9 }),
+    slotCount: 2,
+  }
+  const resolved = consensusPromotionDecision(evidence)
+  assert.equal(resolved.promote, true)
+  assert.equal(resolved.automaticText, '8')
+  assert.equal(resolved.reason, 'three-frame-plus-selected-three-crop-grayscale-consensus')
+
+  const vetoed = consensusPromotionDecision({ ...evidence, confidenceSafetyVetoed: true })
+  assert.equal(vetoed.promote, false)
+  assert.equal(vetoed.reason, 'confidence-safety-veto-dominates')
 })
 
 test('browser secondary evidence cannot rescue weak grayscale confidence or a third-choice digit', () => {
