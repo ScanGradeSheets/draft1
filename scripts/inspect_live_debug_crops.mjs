@@ -11,7 +11,10 @@ if (!debugPath) {
 }
 
 const url = process.env.SG_REPLAY_URL || 'https://127.0.0.1:5174';
-const debug = JSON.parse(await fs.readFile(debugPath, 'utf8'));
+const parsedDebug = JSON.parse(await fs.readFile(debugPath, 'utf8'));
+const debug = parsedDebug?.debug && typeof parsedDebug.debug === 'object'
+  ? parsedDebug.debug
+  : parsedDebug;
 await fs.mkdir(outDir, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });

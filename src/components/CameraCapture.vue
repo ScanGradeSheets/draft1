@@ -88,6 +88,18 @@
               {{ choice.text }}
             </button>
           </div>
+          <button
+            v-if="showLocalFirstStrongFallback"
+            type="button"
+            class="btn btn-secondary local-first-none-btn"
+            :disabled="localFirstStrongLoading"
+            @click="requestStrongChoicesForActiveQuestion"
+          >
+            {{ localFirstStrongButtonLabel }}
+          </button>
+          <p v-if="localFirstStrongMessage" class="local-first-strong-message">
+            {{ localFirstStrongMessage }}
+          </p>
           <p v-if="correctionError" class="student-correction-error">{{ correctionError }}</p>
         </div>
       </div>
@@ -421,7 +433,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { processWorksheet, detectCornerMarkers } from '../homography.js'
+import { processWorksheet, detectCornerMarkers, warpToTemplate } from '../homography.js'
 import {
   initDigitModel,
   recognizeDigits,
@@ -431,6 +443,41 @@ import {
 } from '../ocr-pipeline.js'
 import { decodeQrFromCanvas, decodeQrFromPageUrl } from '../qr-decode.js'
 import { publicUrl } from '../public-paths.js'
+import {
+  buildHybridAnswerDecision,
+  crossFrameConsensus,
+  retainTopCaptureCandidates,
+} from '../hybrid-recognition.js'
+import { requestKeyBlindWholeAnswers } from '../hybrid-review-client.js'
+import { extractContinuousAnswerZones } from '../v3/answer-zones.js'
+import { geometryRescuePlan } from '../v3/geometry-rescue.js'
+import { V3_POLICY_VERSION } from '../v3/decision-policy.js'
+import { requestCompactWholeAnswers } from '../v3/compact-client.js'
+import {
+  cellsForReviewText,
+  compactSuggestionsByQuestion,
+  localFirstReviewState,
+} from '../v3/local-first-review.js'
+import { buildV3ShadowDecisions } from '../v3/shadow-evaluation.js'
+import { startAsyncV3Shadow } from '../v3/async-shadow-review.js'
+import {
+  applyConfidenceSafetyVetoes,
+  confidenceSafetyCandidateQuestionNumbers,
+  confidenceClearanceVetoes,
+  confidenceSafetyVetoes,
+} from '../v3/confidence-safety.js'
+import {
+  displayedYellowQuestionNumbers,
+  filterItemsToYellowQuestions,
+  nextYellowReviewGroup,
+  reviewSuggestionDisplayEligible,
+  wholeAnswerReviewModeEligible,
+  yellowQuestionNumbers,
+} from '../v3/review-suggestion-display.js'
+import { consensusPromotionDecision } from '../v3/consensus-promotion.js'
+import { detectAnswerAmbiguity } from '../v3/ambiguity-detector.js'
+import { applyConsensusPromotionsToPredictions } from '../v3/consensus-application.js'
+import { consensusFeatureEnabled, consensusModelEndpoint } from '../v3/production-runtime.js'
 
 const props = defineProps({
   studentMode: { type: Boolean, default: false },
@@ -566,6 +613,8 @@ const AUTO_GATE_FOCUS_SCORE_MIN_PORTRAIT = 300
 const AUTO_CAPTURE_FINAL_FOCUS_SCORE_MIN_PORTRAIT = 650
 const AUTO_CAPTURE_BURST_FRAMES = 8
 const AUTO_CAPTURE_BURST_DELAY_MS = 110
+const HYBRID_BURST_EVIDENCE_FRAMES = 3
+const HYBRID_BURST_JPEG_QUALITY = 0.92
 // Contour gate: full-frame so sheet can be anywhere in viewfinder
 const CONTOUR_W = 160
 const CONTOUR_H = 120
@@ -595,9 +644,66 @@ function hasDebugQueryFlag(...names) {
   })
 }
 
+function prospectiveEvaluationMetadata() {
+  if (typeof window === 'undefined') return {}
+  const params = new URLSearchParams(window.location.search)
+  const clean = (name, pattern, maxLength = 64) => {
+    const value = String(params.get(name) || '').trim()
+    return value && value.length <= maxLength && pattern.test(value) ? value : null
+  }
+  return {
+    packetId: clean('packetId', /^[A-Za-z0-9_-]+$/, 24),
+    captureRole: clean('captureRole', /^(development-[123]|locked-test)$/, 24),
+    capturePlanSeed: clean('capturePlanSeed', /^[a-f0-9]+$/i, 64),
+  }
+}
+
+function newScanSessionId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `scan-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function newCaptureGateTelemetry() {
+  return {
+    startedAt: new Date().toISOString(),
+    attempts: 0,
+    accepted: 0,
+    rejectionCounts: {},
+    recentRejections: [],
+  }
+}
+
+function recordCaptureGate(reason, source, details = {}) {
+  captureGateTelemetry.attempts += 1
+  if (reason === 'accepted') {
+    captureGateTelemetry.accepted += 1
+    captureGateTelemetry.completedAt = new Date().toISOString()
+    captureGateTelemetry.elapsedMs = Math.max(
+      0,
+      Date.now() - Date.parse(captureGateTelemetry.startedAt)
+    )
+    return
+  }
+  captureGateTelemetry.rejectionCounts[reason] = (captureGateTelemetry.rejectionCounts[reason] || 0) + 1
+  captureGateTelemetry.recentRejections.push({
+    at: new Date().toISOString(),
+    reason,
+    source,
+    ...details,
+  })
+  captureGateTelemetry.recentRejections = captureGateTelemetry.recentRejections.slice(-10)
+}
+
+function captureGateSnapshot() {
+  return JSON.parse(JSON.stringify(captureGateTelemetry))
+}
+
 const DEBUG_UPLOAD_URL_KEY = 'scangrade.debugUploadUrl.v1'
 const DEBUG_UPLOAD_TOKEN_KEY = 'scangrade.debugUploadToken.v1'
 const DEBUG_AUTO_UPLOAD_KEY = 'scangrade.debugAutoUpload.v1'
+const REVIEW_ACCESS_TOKEN_SESSION_KEY = 'scangrade.reviewAccessToken.v1'
 
 function parseDebugBoolean(value) {
   if (value == null) return null
@@ -631,6 +737,16 @@ function safeStorageSet(key, value) {
     }
   } catch {
     // Debug upload is a convenience path; blocked storage should not affect scanning.
+  }
+}
+
+function optionalReviewAccessToken() {
+  if (typeof window === 'undefined') return ''
+  try {
+    const value = String(window.sessionStorage.getItem(REVIEW_ACCESS_TOKEN_SESSION_KEY) || '').trim()
+    return value.length <= 4096 ? value : ''
+  } catch {
+    return ''
   }
 }
 
@@ -933,7 +1049,7 @@ function confidencePolicyClearanceForDigit(proc, result, topGap, correct, review
     : reviewSignals?.highRiskMismatchReview
       ? 'two-digit-mismatch-low-trust-review'
     : reviewSignals?.highRiskSingleDigitMismatchReview
-      ? 'single-digit-six-five-mismatch-review'
+      ? 'single-digit-six-shape-mismatch-review'
       : reviewSignals?.highRiskPreprocessReview
         ? 'right-slot-preprocess-disagreement'
         : (result?.preprocessReviewReason || null)
@@ -944,10 +1060,15 @@ function confidencePolicyClearanceForDigit(proc, result, topGap, correct, review
     : (reviewReason || selectionReason)
   const rawConfidence = chosenDigitProbability(result)
   const gap = Number.isFinite(topGap) ? topGap : 0
+  const isSingleSlotVirtualMismatch =
+    proc?.isVirtualDigitBox === true &&
+    Number(proc?.slotCount) === 1 &&
+    correct === false
 
   if (
     reason &&
     OCR_CONFIDENCE_CLEAR_REASONS.has(reason) &&
+    !isSingleSlotVirtualMismatch &&
     !rightSlotExpectedEdgeConflictReview(proc, result) &&
     (
       correct === true ||
@@ -965,6 +1086,7 @@ function confidencePolicyClearanceForDigit(proc, result, topGap, correct, review
 
   const isTwoDigitMismatch =
     proc?.isVirtualDigitBox === true &&
+    !isSingleSlotVirtualMismatch &&
     correct === false
   if (
     isTwoDigitMismatch &&
@@ -1017,6 +1139,10 @@ function highRiskTwoDigitMismatchReview(proc, result, expectedDigit) {
     return rawConfidence < 0.97 || gap < 0.75
   }
   if (isRightSlot) return false
+  // Grade 1/2 students often write a roofed or slanted leading 1 that the
+  // model reads as 7/9/8 with high confidence. Use the answer key only as a
+  // review signal here; do not silently convert the digit to 1.
+  if (expected === 1) return true
   return expected === 3 && digit === 2
 }
 
@@ -1028,7 +1154,12 @@ function highRiskSingleDigitMismatchReviewForDigit(proc, result, expectedDigit) 
   if (digit === expected) return false
 
   const rawConfidence = chosenDigitProbability(result)
-  return expected === 6 && digit === 5 && rawConfidence < 0.9
+  if (expected === 6 && digit === 5 && rawConfidence < 0.9) return true
+
+  // Current classroom evidence has two confident wrong single-slot reads, both
+  // high-confidence 6s where the expected answer was a visually adjacent 5/8.
+  // Use the answer key only to require review; never to rewrite the digit.
+  return digit === 6 && (expected === 5 || expected === 8)
 }
 
 const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done', 'processing-change'])
@@ -1067,11 +1198,16 @@ const activeCorrectionQuestion = ref(null)
 const manualCorrectionText = ref('')
 const manualCorrectionClearedForSession = ref(false)
 const correctionError = ref('')
+const localFirstStrongStatusByQuestion = ref({})
+const localFirstStrongContext = ref(null)
 let digitModelWarmupStarted = false
+let activeScanSessionId = null
+let captureGateTelemetry = newCaptureGateTelemetry()
 let autoCaptureIntervalId = null
 let stableSince = null
 let previousFrameGray = null
 let consecutiveFailures = 0
+let pendingHybridBurstFrames = []
 const studentAutoStatus = ref('Put worksheet in frame')
 
 defineExpose({
@@ -1106,7 +1242,7 @@ const studentAnswerGroups = computed(() => {
   const groups = result?.answerGroups
   if (layoutGroups.length > 0) {
     const rebuiltGroups = predictions.length
-      ? buildAnswerGroups(layoutGroups, predictions, result?.questionCorrect)
+      ? buildAnswerGroups(layoutGroups, predictions, result?.questionCorrect, result?.layoutSnapshot?.id)
       : null
     if (Array.isArray(rebuiltGroups) && rebuiltGroups.length > 0) return rebuiltGroups
     const normalizedGroups = normalizeAnswerGroupsForDisplay(groups, layoutGroups)
@@ -1362,12 +1498,40 @@ const activeCorrectionChoices = computed(() => {
       .map((candidate, index) => ({
         key: `${activeCorrectionQuestion.value?.questionNum ?? 'q'}-${activeCorrectionSlotIndex.value}-${index}-${candidate.digit}`,
         text: String(candidate.digit),
-        cells: [candidate.digit]
+        cells: [candidate.digit],
+        source: index === 0 ? 'current-browser-ocr' : 'digit-model-alternative'
       }))
   }
   const group = activeCorrectionGroup.value
   if (!group) return []
-  return topAnswerChoicesForGroup(group, ocrResult.value?.predictions || [], 2)
+  const maxChoices = v3LocalFirstReviewEnabled() && activeLocalFirstStrongStatus.value === 'complete' ? 7 : 6
+  return topAnswerChoicesForGroup(group, ocrResult.value?.predictions || [], maxChoices)
+})
+
+const activeCorrectionQuestionNum = computed(() => Number(activeCorrectionGroup.value?.question_num))
+const activeLocalFirstStrongStatus = computed(() =>
+  localFirstStrongStatusByQuestion.value[activeCorrectionQuestionNum.value] || 'deferred'
+)
+const localFirstStrongLoading = computed(() => activeLocalFirstStrongStatus.value === 'loading')
+const showLocalFirstStrongFallback = computed(() =>
+  v3LocalFirstReviewEnabled()
+  && activeCorrectionSlotIndex.value == null
+  && Number.isFinite(activeCorrectionQuestionNum.value)
+  && ['deferred', 'context-ready', 'loading', 'unavailable'].includes(activeLocalFirstStrongStatus.value)
+)
+const localFirstStrongButtonLabel = computed(() =>
+  localFirstStrongLoading.value
+    ? 'Checking another reader…'
+    : activeLocalFirstStrongStatus.value === 'context-ready'
+      ? 'Still none of these'
+      : 'None of these'
+)
+const localFirstStrongMessage = computed(() => {
+  if (!v3LocalFirstReviewEnabled() || activeCorrectionSlotIndex.value != null) return ''
+  if (activeLocalFirstStrongStatus.value === 'unavailable') {
+    return 'Another reading is unavailable. Enter the answer above.'
+  }
+  return ''
 })
 
 const activeCorrectionMaxLength = computed(() => {
@@ -1517,9 +1681,26 @@ function reviewSlotIndexesForGroup(group) {
 function shouldUseWholeAnswerCorrection(group) {
   if (!isAnswerGroupEditable(group)) return false
   const ids = Array.isArray(group?.digitBoxIds) ? group.digitBoxIds : []
-  if (ids.length <= 1) return false
   const reviewSlots = reviewSlotIndexesForGroup(group)
-  return reviewSlots.length === ids.length
+  const byId = new Map((ocrResult.value?.predictions || []).map((prediction) => [prediction.id, prediction]))
+  const hasWholeAnswerSuggestion = ids.some((id) => {
+    const prediction = byId.get(id)
+    return Array.isArray(prediction?.wholeAnswerReviewSuggestions)
+      ? prediction.wholeAnswerReviewSuggestions.length > 0
+      : !!prediction?.wholeAnswerReviewSuggestion
+  })
+  if (v3LocalFirstReviewEnabled() && hasWholeAnswerSuggestion) return true
+  const questionNum = Number(group?.questionNum ?? group?.question_num)
+  const hasPreparedStrongFallback = v3LocalFirstReviewEnabled()
+    && Number.isFinite(questionNum)
+    && (localFirstStrongContext.value?.sequenceItems || [])
+      .some((item) => Number(item?.questionNum) === questionNum)
+  if (hasPreparedStrongFallback) return true
+  return wholeAnswerReviewModeEligible({
+    slotCount: ids.length,
+    reviewSlotCount: reviewSlots.length,
+    hasWholeAnswerSuggestion,
+  })
 }
 
 function groupForQuestionNum(questionNum) {
@@ -1547,13 +1728,15 @@ function preferredCorrectionSlotIndex(group, region = null) {
 function openCorrection(region) {
   if (!isCorrectionRegionEditable(region)) return
   const group = groupForQuestionNum(region.questionNum)
-  const useWholeAnswer = region.slotIndex == null && (region.wholeAnswer || shouldUseWholeAnswerCorrection({
+  const reviewGroup = {
     ...group,
     digitBoxIds: Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : region.digitBoxIds,
     questionNum: region.questionNum
-  }))
+  }
+  const useWholeAnswer = (region.slotIndex == null && region.wholeAnswer) || shouldUseWholeAnswerCorrection(reviewGroup)
   activeCorrectionQuestion.value = {
     ...region,
+    openedAtMs: performance.now(),
     slotIndex: useWholeAnswer
       ? null
       : Number.isInteger(region.slotIndex)
@@ -1586,7 +1769,7 @@ function openCorrectionByGroupSlot(group, slotIndex = null) {
     manualCorrected: group.manualCorrected,
     correct: group.correct
   }
-  activeCorrectionQuestion.value = { ...region, slotIndex: selectedSlotIndex }
+  activeCorrectionQuestion.value = { ...region, slotIndex: selectedSlotIndex, openedAtMs: performance.now() }
   const currentText = activeCorrectionCurrentText.value
   manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
   manualCorrectionClearedForSession.value = false
@@ -1605,7 +1788,11 @@ function cancelCorrection() {
 }
 
 async function applyCorrectionChoice(choice) {
-  await applyManualCorrectionCells(choice.cells, { slotIndex: activeCorrectionSlotIndex.value })
+  await applyManualCorrectionCells(choice.cells, {
+    slotIndex: activeCorrectionSlotIndex.value,
+    correctionSource: choice.source || 'review-choice',
+    oneTap: true,
+  })
 }
 
 async function applyManualCorrectionText() {
@@ -1621,7 +1808,11 @@ async function applyManualCorrectionText() {
       : 'Enter one digit.'
     return
   }
-  await applyManualCorrectionCells(cells, { slotIndex: activeCorrectionSlotIndex.value })
+  await applyManualCorrectionCells(cells, {
+    slotIndex: activeCorrectionSlotIndex.value,
+    correctionSource: 'manual-keypad',
+    oneTap: false,
+  })
 }
 
 function normalizeManualCorrectionInput(event) {
@@ -1643,7 +1834,7 @@ function clearManualCorrectionInput() {
   if (correctionError.value) correctionError.value = ''
 }
 
-async function applyManualCorrectionCells(cells, { slotIndex = null } = {}) {
+async function applyManualCorrectionCells(cells, { slotIndex = null, correctionSource = 'manual', oneTap = false } = {}) {
   const result = ocrResult.value
   const group = activeCorrectionGroup.value
   const layoutSnapshot = result?.layoutSnapshot
@@ -1716,7 +1907,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null } = {}) {
 
   const questionCorrect = buildQuestionCorrect(questionGroups, nextPredictions)
   const questionReview = buildQuestionReviewFlags(questionGroups, nextPredictions)
-  const answerGroups = buildAnswerGroups(questionGroups, nextPredictions, questionCorrect)
+  const answerGroups = buildAnswerGroups(questionGroups, nextPredictions, questionCorrect, layoutSnapshot?.id)
   const correctionKey = String(group.question_num ?? activeCorrectionQuestion.value?.questionNum ?? 'question')
   const previousCorrection = result.manualCorrections?.[correctionKey] || {}
   const correctedSlots = new Set(
@@ -1734,7 +1925,13 @@ async function applyManualCorrectionCells(cells, { slotIndex = null } = {}) {
       label: activeCorrectionQuestion.value?.label || '',
       cells: normalizedCells,
       text: answerText,
-      correctedSlots: Array.from(correctedSlots).sort((a, b) => a - b)
+      correctedSlots: Array.from(correctedSlots).sort((a, b) => a - b),
+      correctionSource,
+      oneTap: Boolean(oneTap),
+      reviewDurationMs: Number.isFinite(activeCorrectionQuestion.value?.openedAtMs)
+        ? Math.max(0, Math.round(performance.now() - activeCorrectionQuestion.value.openedAtMs))
+        : null,
+      correctedAt: new Date().toISOString()
     }
   }
 
@@ -1795,6 +1992,13 @@ async function applyManualCorrectionCells(cells, { slotIndex = null } = {}) {
     annotationRegions,
     manualCorrections
   }
+  if (v3LocalFirstReviewEnabled() && localFirstStrongContext.value) {
+    localFirstStrongContext.value = {
+      ...localFirstStrongContext.value,
+      predictions: nextPredictions,
+      payload: nextResult,
+    }
+  }
   if (Array.isArray(result.correct) && result.correct.length === nextPredictions.length) {
     nextResult.correct = nextPredictions.map((prediction) => prediction.correct)
   }
@@ -1816,8 +2020,28 @@ async function applyManualCorrectionCells(cells, { slotIndex = null } = {}) {
     if (typeof window !== 'undefined') {
       window.__SCANGRADE_LIVE_OCR_DEBUG = lastLiveOcrDebug.value
     }
+    const correctionTelemetry = {
+      ...lastLiveOcrDebug.value,
+      capturedImageDataUrl: null,
+      markedSheetDataUrl: null,
+      warpedDataUrl: null,
+      rawCropDataUrls: [],
+      modelInputDataUrls: [],
+      hybridBurstFrameDataUrls: [],
+      tensors: [],
+    }
+    uploadLiveOcrDebug(correctionTelemetry, 'manual-correction')
   }
+  const currentQuestionNum = Number(group.question_num ?? activeCorrectionQuestion.value?.questionNum)
+  const nextReviewGroup = nextYellowReviewGroup(
+    nextResult.answerGroups,
+    nextResult.questionReview,
+    currentQuestionNum
+  )
   cancelCorrection()
+  if (hybridBurstEnabled() && nextReviewGroup) {
+    nextTick(() => openCorrectionByGroupSlot(nextReviewGroup))
+  }
   emit('ocr-complete', nextResult)
 }
 
@@ -1999,6 +2223,24 @@ function analyzeStudentSheetInPortraitCrop(canvas) {
       bottomTilt <= 0.22 &&
       leftLean <= 0.22 &&
       rightLean <= 0.22
+    const preferredPerspective =
+      widthBalance >= 0.86 &&
+      heightBalance >= 0.80 &&
+      topTilt <= 0.16 &&
+      bottomTilt <= 0.16 &&
+      leftLean <= 0.16 &&
+      rightLean <= 0.16
+    const geometry = {
+      widthBalance,
+      heightBalance,
+      topTilt,
+      bottomTilt,
+      leftLean,
+      rightLean,
+      perspectiveOkay,
+      softPerspectiveOkay,
+      preferredPerspective
+    }
     const appearance = validateStudentSheetAppearance(canvas, markers)
     const ok = centered && spansEnough && cornersLookPlaced && (perspectiveOkay || softPerspectiveOkay) && appearance.ok
     let status = 'Hold steady'
@@ -2007,10 +2249,102 @@ function analyzeStudentSheetInPortraitCrop(canvas) {
     else if (!cornersLookPlaced) status = 'Keep all corners inside'
     else if (!(perspectiveOkay || softPerspectiveOkay)) status = 'Flatten the sheet a bit'
     else if (!appearance.ok) status = appearance.status
-    return { ok, status, markers, appearance }
+    return { ok, status, markers, appearance, geometry }
   } finally {
     if (src) src.delete()
   }
+}
+
+function strictPerspectiveCaptureEnabled() {
+  if (typeof window === 'undefined') return false
+  return new URLSearchParams(window.location.search).get('strictPerspectiveCapture') === '1'
+}
+
+function hybridV2Enabled() {
+  return hasDebugQueryFlag('hybridV2', 'hybridRecognition')
+}
+
+function hybridV3Enabled() {
+  return consensusFeatureEnabled('hybridV3')
+}
+
+function v3LocalFirstReviewEnabled() {
+  return consensusFeatureEnabled('v3LocalFirstReview')
+}
+
+function v3ConfidenceSafetyEnabled() {
+  return consensusFeatureEnabled('v3ConfidenceSafety')
+}
+
+function v3ConsensusPromotionEnabled() {
+  return hybridV3Enabled() && consensusFeatureEnabled('v3ConsensusPromotion')
+}
+
+function v3ContextCropReviewEnabled() {
+  if (!v3LocalFirstReviewEnabled()) return false
+  if (typeof window === 'undefined') return true
+  return new URLSearchParams(window.location.search).get('v3ContextCropReview') !== '0'
+}
+
+function v3LayoutAnchoredZonesEnabled() {
+  return hasDebugQueryFlag('v3LayoutAnchoredZones')
+}
+
+function v3PristineWarpEnabled() {
+  return consensusFeatureEnabled('v3PristineWarp')
+}
+
+function v3SequenceFromZonesEnabled() {
+  return consensusFeatureEnabled('v3SequenceFromZones')
+}
+
+function v3EightFrameColumnOrderEnabled() {
+  return consensusFeatureEnabled('v3EightFrameColumnOrder')
+}
+
+function v3DualCropReviewEnabled() {
+  return hasDebugQueryFlag('v3DualCropReview')
+}
+
+function worksheetProcessingOptions(qrLocation = null) {
+  return {
+    qrLocation,
+    experimentalEightFrameColumnOrder: v3EightFrameColumnOrderEnabled(),
+  }
+}
+
+function v3CleanPrintedFramesEnabled() {
+  return hasDebugQueryFlag('v3CleanPrintedFrames')
+}
+
+function v3AnswerZoneOptions(rawCrops) {
+  return {
+    cv,
+    rawCrops,
+    geometrySource: v3LayoutAnchoredZonesEnabled() ? 'layout' : 'refined',
+    cleanPrintedFrame: v3CleanPrintedFramesEnabled(),
+  }
+}
+
+function replaceWithFreshV3Warp(worksheet, cleanSource, layout) {
+  if (!v3PristineWarpEnabled() || !worksheet?.sourceAnchors || !cleanSource || !layout) return worksheet
+  const freshWarp = warpToTemplate(cleanSource, worksheet.sourceAnchors, layout)
+  worksheet.warpedImage?.delete?.()
+  worksheet.warpedImage = freshWarp
+  return worksheet
+}
+
+function wholeAnswerSequenceItemsFromZones(zones, frameIndex = null) {
+  return (zones || []).map((zone) => ({
+    id: `question-${zone.questionNum}-frame-${frameIndex ?? 'selected'}`,
+    questionNum: zone.questionNum,
+    frameIndex,
+    imageDataUrl: zone.imageDataUrl || matToDataURL(zone.image),
+  }))
+}
+
+function hybridBurstEnabled() {
+  return hybridV2Enabled() || hybridV3Enabled()
 }
 
 /** Single source of truth for Student Mode: portrait (8.5:11) center crop of the video frame.
@@ -2265,10 +2599,25 @@ async function captureBestStudentFrame(video, source) {
   const frameCount = source === 'auto' ? AUTO_CAPTURE_BURST_FRAMES : 1
   let best = null
   const burstScores = []
+  let burstCandidates = []
   for (let index = 0; index < frameCount; index += 1) {
     if (index > 0) await waitMs(AUTO_CAPTURE_BURST_DELAY_MS)
     const candidate = await captureStudentFrameCandidate(video, index)
     if (!candidate) continue
+    if (hybridBurstEnabled()) {
+      const bounded = retainTopCaptureCandidates(
+        burstCandidates,
+        candidate,
+        HYBRID_BURST_EVIDENCE_FRAMES
+      )
+      burstCandidates = bounded.retained
+      for (const discarded of bounded.discarded) {
+        if (discarded?.canvas) {
+          discarded.canvas.width = 1
+          discarded.canvas.height = 1
+        }
+      }
+    }
     burstScores.push({
       index,
       score: Math.round(candidate.score),
@@ -2286,6 +2635,36 @@ async function captureBestStudentFrame(video, source) {
   if (best) {
     best.burstScores = burstScores
     best.burstFrameCount = frameCount
+    if (hybridBurstEnabled()) {
+      const evidenceEncodingStarted = performance.now()
+      best.hybridBurstFrames = burstCandidates
+        .filter((candidate) => !candidate.blank)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, HYBRID_BURST_EVIDENCE_FRAMES)
+        .map((candidate) => {
+          const evidence = {
+            index: candidate.index,
+            score: Math.round(candidate.score),
+            focusScore: Math.round(candidate.focusScore),
+            lumaMean: Number(candidate.stats.mean.toFixed(1)),
+            lumaVariance: Number(candidate.stats.variance.toFixed(1)),
+            sheetOk: candidate.sampleSheetCheck?.ok === true,
+            sheetStatus: candidate.sampleSheetCheck?.status || null,
+            selected: candidate.index === best.index,
+            imageDataUrl: candidate.canvas.toDataURL('image/jpeg', HYBRID_BURST_JPEG_QUALITY)
+          }
+          if (candidate !== best) {
+            candidate.canvas.width = 1
+            candidate.canvas.height = 1
+          }
+          return evidence
+        })
+      best.hybridBurstEncodingMs = Number((performance.now() - evidenceEncodingStarted).toFixed(1))
+      best.hybridBurstEncodedBytes = best.hybridBurstFrames.reduce(
+        (sum, frame) => sum + Math.ceil((frame.imageDataUrl?.length || 0) * 0.75),
+        0
+      )
+    }
   }
   return best
 }
@@ -2375,11 +2754,13 @@ function startAutoCaptureLoop() {
 
 async function doCapture({ source = 'manual' } = {}) {
   clearAutoCaptureInterval()
+  pendingHybridBurstFrames = []
   if (!videoRef.value) return
   const video = videoRef.value
   if (props.studentMode) {
     const drawable = await waitForDrawableVideoFrame(video, 4500)
     if (!drawable) {
+      recordCaptureGate('camera-not-drawable', source)
       studentAutoStatus.value = 'Camera warming up'
       error.value = 'Camera is still warming up. Try again.'
       if (streamActive.value) startAutoCaptureLoop()
@@ -2390,12 +2771,28 @@ async function doCapture({ source = 'manual' } = {}) {
     }
     const capture = await captureBestStudentFrame(video, source)
     if (!capture) {
+      recordCaptureGate('no-frame-candidate', source)
       error.value = 'Camera not ready. Try again.'
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
-    const { canvas, cropW, cropH, cropX, cropY, vw, vh, stats, focusScore, burstScores, burstFrameCount } = capture
+    const {
+      canvas,
+      cropW,
+      cropH,
+      cropX,
+      cropY,
+      vw,
+      vh,
+      stats,
+      focusScore,
+      burstScores,
+      burstFrameCount,
+      hybridBurstEncodingMs,
+      hybridBurstEncodedBytes,
+    } = capture
     if (stats.mean < 4 && stats.variance < 6) {
+      recordCaptureGate('blank-frame', source)
       studentAutoStatus.value = 'Camera warming up'
       error.value = 'Camera captured a blank frame. Try again.'
       if (streamActive.value) startAutoCaptureLoop()
@@ -2403,10 +2800,22 @@ async function doCapture({ source = 'manual' } = {}) {
     }
     const sheetCheck = analyzeStudentSheetInPortraitCrop(canvas)
     if (!sheetCheck.ok) {
+      recordCaptureGate('sheet-gate', source, { status: sheetCheck.status || null })
       studentAutoStatus.value = sheetCheck.status || 'Put worksheet in frame'
       error.value = source === 'manual'
         ? `${studentAutoStatus.value}. Hold the worksheet inside the frame and try again.`
         : null
+      if (streamActive.value) startAutoCaptureLoop()
+      return
+    }
+    if (
+      source === 'auto' &&
+      strictPerspectiveCaptureEnabled() &&
+      sheetCheck.geometry?.preferredPerspective !== true
+    ) {
+      recordCaptureGate('perspective-gate', source)
+      studentAutoStatus.value = 'Hold the camera more directly above the sheet'
+      error.value = null
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
@@ -2429,14 +2838,27 @@ async function doCapture({ source = 'manual' } = {}) {
       autoFinalFocusThreshold: AUTO_CAPTURE_FINAL_FOCUS_SCORE_MIN_PORTRAIT,
       sheetOk: sheetCheck.ok === true,
       sheetStatus: sheetCheck.status || null,
+      sheetGeometry: sheetCheck.geometry || null,
       burstFrameCount,
       burstSelectedIndex: capture.index,
       burstBestScore: Math.round(capture.score),
       burstScores,
+      hybridV2: hybridV2Enabled(),
+      hybridV3: hybridV3Enabled(),
+      v3EightFrameColumnOrder: v3EightFrameColumnOrderEnabled(),
+      hybridBurstEvidenceCount: capture.hybridBurstFrames?.length || 0,
+      hybridBurstEncodingMs: hybridBurstEncodingMs ?? null,
+      hybridBurstEncodedBytes: hybridBurstEncodedBytes ?? null,
+      hybridBurstEvidence: (capture.hybridBurstFrames || []).map(({ imageDataUrl: _imageDataUrl, ...metadata }) => metadata),
       source,
       capturedAt: new Date().toISOString()
     }
     if (focusScore < focusThreshold) {
+      recordCaptureGate('focus-gate', source, {
+        focusScore: Math.round(focusScore),
+        focusThreshold: Math.round(focusThreshold),
+      })
+      captureQuality.captureGateTelemetry = captureGateSnapshot()
       lastCaptureQuality.value = captureQuality
       studentAutoStatus.value = 'Hold still while camera focuses'
       error.value = source === 'manual'
@@ -2445,7 +2867,10 @@ async function doCapture({ source = 'manual' } = {}) {
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
+    recordCaptureGate('accepted', source)
+    captureQuality.captureGateTelemetry = captureGateSnapshot()
     lastCaptureQuality.value = captureQuality
+    pendingHybridBurstFrames = capture.hybridBurstFrames || []
     capturedImage.value = canvas.toDataURL('image/png')
     if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_CAPTURE) {
       window.__SCANGRADE_DEBUG_CAPTURE_URL = capturedImage.value
@@ -2550,6 +2975,45 @@ const capturePhoto = () => {
 onMounted(() => {
   if (props.studentMode) {
     window.setTimeout(warmStudentDigitModel, 0)
+  }
+  if (hybridV3Enabled() && hasDebugQueryFlag('v3BurstReplay')) {
+    window.__SCANGRADE_SET_V3_BURST_FRAMES = (frames) => {
+      const accepted = (Array.isArray(frames) ? frames : [])
+        .slice(0, HYBRID_BURST_EVIDENCE_FRAMES)
+        .filter((frame) => /^data:image\/(?:png|jpeg);base64,/.test(String(frame?.imageDataUrl || '')))
+        .filter((frame) => String(frame.imageDataUrl).length <= 8_000_000)
+        .map((frame, index) => ({
+          index: Number.isFinite(Number(frame.index)) ? Number(frame.index) : index,
+          score: Number(frame.score || 0),
+          focusScore: Number(frame.focusScore || 0),
+          lumaMean: Number(frame.lumaMean || 0),
+          lumaVariance: Number(frame.lumaVariance || 0),
+          sheetOk: frame.sheetOk !== false,
+          sheetStatus: frame.sheetStatus || 'debug-replay',
+          selected: index === 0,
+          imageDataUrl: String(frame.imageDataUrl),
+          debugReplay: true,
+        }))
+      pendingHybridBurstFrames = accepted
+      return accepted.length
+    }
+    window.__SCANGRADE_OPEN_REVIEW_QUESTION = (questionNum) => {
+      const target = Number(questionNum)
+      const group = studentAnswerGroups.value.find((item) => Number(item?.questionNum) === target)
+      if (!group || group.reviewNeeded !== true) return false
+      openCorrectionByGroupSlot(group)
+      return true
+    }
+    window.__SCANGRADE_LOCAL_FIRST_CONTEXT_SUMMARY = () => ({
+      items: (localFirstStrongContext.value?.sequenceItems || []).map((item) => ({
+        id: item?.id || null,
+        questionNum: Number(item?.questionNum),
+        frameIndex: item?.frameIndex ?? null,
+        cropVariant: item?.cropVariant || 'continuous-zone',
+      })),
+      statuses: { ...localFirstStrongStatusByQuestion.value },
+      activeQuestionNum: activeCorrectionQuestionNum.value,
+    })
   }
 })
 
@@ -3755,6 +4219,149 @@ function oneDigitResponseSlotCanAutoGrade(prediction, quality) {
   )
 }
 
+function leadingOneStrokeVariantLooksStrong(quality) {
+  if (!quality) return false
+  const inkPixels = numberOrZero(quality.inkPixels)
+  const inkW = numberOrZero(quality.inkW)
+  const inkH = numberOrZero(quality.inkH)
+  const density = numberOrZero(quality.density)
+  const maxRowCount = numberOrZero(quality.maxRowCount)
+  const maxColCount = numberOrZero(quality.maxColCount)
+  const edgeInkRatio = numberOrZero(quality.edgeInkRatio)
+  return (
+    quality.ok === true &&
+    quality.lineArtifactLikely !== true &&
+    quality.horizontalArtifactLikely !== true &&
+    quality.edgeArtifactLikely !== true &&
+    inkPixels >= 12 &&
+    inkPixels <= 42 &&
+    inkW >= 2 &&
+    inkW <= 6 &&
+    inkH >= 12 &&
+    inkH <= 22 &&
+    density <= 0.62 &&
+    maxRowCount <= 3 &&
+    maxColCount >= 8 &&
+    edgeInkRatio <= 0.25
+  )
+}
+
+function contextAssistedLeadingOneEvidence(prediction, quality) {
+  if (!prediction || !quality) return null
+  if (Number(prediction.digit) !== 9) return null
+  if (numberOrZero(prediction.confidence) < 0.38) return null
+  if (numberOrZero(quality.weakVariantRatio) >= 0.65) return null
+  if (numberOrZero(quality.artifactVariantRatio) >= 0.35) return null
+
+  const trustedNames = new Set([
+    'raw-border-slot',
+    'wide-slot',
+    'no-side-erase',
+    'center-safe-slot',
+    'expected-slot',
+    'edge-band-slot',
+    'gentle'
+  ])
+  const anchorNames = new Set([
+    'raw-border-slot',
+    'wide-slot',
+    'no-side-erase',
+    'expected-slot'
+  ])
+  const hits = (Array.isArray(quality.variantQualities) ? quality.variantQualities : [])
+    .filter((variant) => trustedNames.has(variant?.variantName) && leadingOneStrokeVariantLooksStrong(variant))
+  const anchors = hits.filter((variant) => anchorNames.has(variant?.variantName))
+  if (hits.length < 3 || anchors.length < 1) return null
+
+  return {
+    reason: 'context-assisted-leading-one',
+    variantNames: hits.map((variant) => variant.variantName),
+    anchorVariantNames: anchors.map((variant) => variant.variantName),
+    originalDigit: prediction.digit,
+    originalConfidence: prediction.confidence ?? null,
+    originalTopGap: prediction.topGap ?? null
+  }
+}
+
+function rightSlotStableForContextAssist(prediction, expectedDigit) {
+  if (!prediction) return false
+  return (
+    normalizeGradingDigit(prediction.digit) === expectedDigit &&
+    prediction.reviewNeeded !== true &&
+    numberOrZero(prediction.confidence) >= 0.70 &&
+    numberOrZero(prediction.topGap) >= 0.16
+  )
+}
+
+function applyContextAssistedLeadingOneRescues(questionGroups, predictions, cropQuality) {
+  if (!Array.isArray(questionGroups) || !Array.isArray(predictions)) return []
+  const predictionById = new Map(predictions.map((prediction) => [prediction.id, prediction]))
+  const qualityById = new Map((cropQuality || []).map((quality) => [quality.id, quality]))
+  const rescues = []
+
+  for (const group of questionGroups) {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    const answer = group?.answer == null ? '' : String(group.answer).trim()
+    if (ids.length !== 2 || !/^1\d$/.test(answer)) continue
+
+    const expectedRightDigit = Number(answer[1])
+    const leftPrediction = predictionById.get(ids[0])
+    const rightPrediction = predictionById.get(ids[1])
+    if (!leftPrediction || !rightPrediction) continue
+    if (!rightSlotStableForContextAssist(rightPrediction, expectedRightDigit)) continue
+
+    const evidence = contextAssistedLeadingOneEvidence(leftPrediction, qualityById.get(ids[0]))
+    if (!evidence) continue
+
+    const originalDigit = leftPrediction.digit
+    const originalConfidence = numberOrZero(leftPrediction.confidence)
+    const confidence = Math.min(0.93, Math.max(0.88, originalConfidence || 0.88))
+    const runnerConfidence = Math.max(0.02, Math.min(0.07, 1 - confidence))
+    const thirdConfidence = Math.max(0.005, Math.min(0.03, runnerConfidence / 2))
+    const probs = Array.isArray(leftPrediction.probs) || ArrayBuffer.isView(leftPrediction.probs)
+      ? Array.from(leftPrediction.probs)
+      : new Array(10).fill(0.001)
+    for (let i = 0; i < probs.length; i += 1) probs[i] = Math.min(probs[i] || 0.001, 0.03)
+    probs[1] = confidence
+    if (Number.isInteger(Number(originalDigit))) probs[Number(originalDigit)] = runnerConfidence
+
+    leftPrediction.originalDigitBeforeContextAssist = originalDigit
+    leftPrediction.originalConfidenceBeforeContextAssist = leftPrediction.confidence ?? null
+    leftPrediction.originalTopGapBeforeContextAssist = leftPrediction.topGap ?? null
+    leftPrediction.digit = 1
+    leftPrediction.confidence = confidence
+    leftPrediction.topGap = Math.max(0.58, confidence - runnerConfidence)
+    leftPrediction.topK = [
+      { digit: 1, confidence },
+      { digit: Number(originalDigit), confidence: runnerConfidence },
+      { digit: 7, confidence: thirdConfidence }
+    ]
+    leftPrediction.probs = probs
+    leftPrediction.reviewNeeded = false
+    leftPrediction.correct = true
+    leftPrediction.robust = true
+    leftPrediction.robustOverride = 'context-assisted-leading-one'
+    leftPrediction.preprocessReviewReason = null
+    leftPrediction.confidencePolicyCleared = true
+    leftPrediction.confidencePolicyClearanceReason = 'context-assisted-leading-one'
+    leftPrediction.highRiskMismatchReview = false
+    leftPrediction.contextAssistEvidence = evidence
+
+    rescues.push({
+      questionNum: group?.question_num ?? null,
+      leftDigitBoxId: ids[0],
+      rightDigitBoxId: ids[1],
+      expectedAnswer: answer,
+      originalDigit,
+      rescuedDigit: 1,
+      rightDigit: rightPrediction.digit,
+      evidence
+    })
+  }
+
+  return rescues
+}
+
 function optionalBlankSlotLooksLikeArtifact(prediction, quality) {
   if (!prediction) return false
   const confidence = numberOrZero(prediction.confidence)
@@ -3821,7 +4428,6 @@ function applyOptionalSingleDigitBlankOverrides(questionGroups, predictions, cro
 
     const blankSlot = slots.find((slot) => slot.slotIndex !== matchingSlots[0].slotIndex)
     if (!blankSlot) continue
-    if (expectedMatchingSlots.length === 1 && blankSlot.prediction.digit === expectedDigit) continue
     if (!optionalBlankSlotLooksLikeArtifact(blankSlot.prediction, blankSlot.quality)) continue
 
     const matchedPrediction = matchingSlots[0].prediction
@@ -3835,11 +4441,15 @@ function applyOptionalSingleDigitBlankOverrides(questionGroups, predictions, cro
       matchedPrediction.confidencePolicyCleared = true
       matchedPrediction.confidencePolicyClearanceReason = 'flexible-one-digit-answer'
     }
+    if (normalizeGradingDigit(matchedPrediction.digit) === expectedDigit) {
+      matchedPrediction.correct = true
+    }
     blankPrediction.originalDigitBeforeBlankOverride = blankPrediction.digit
     blankPrediction.originalConfidenceBeforeBlankOverride = blankPrediction.confidence
     blankPrediction.digit = null
     blankPrediction.blank = true
     blankPrediction.empty = true
+    blankPrediction.correct = true
     blankPrediction.reviewNeeded = false
     blankPrediction.preprocessReviewReason = 'flexible-one-digit-optional-blank'
     blankPrediction.confidencePolicyCleared = true
@@ -3895,7 +4505,7 @@ function buildQuestionReviewFlags(questionGroups, predictions) {
   })
 }
 
-function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) {
+function buildAnswerGroups(questionGroups, predictions, questionCorrect = null, layoutId = '') {
   if (!Array.isArray(questionGroups) || questionGroups.length === 0) return null
   const byId = new Map(predictions.map((prediction) => [prediction.id, prediction]))
   return questionGroups.map((group, index) => {
@@ -3915,6 +4525,8 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) 
     const hasReview =
       groupPredictions.some((prediction) => prediction?.reviewNeeded) ||
       groupHasRequiredSlotReview(group, ids, byId)
+    const consensusAuthorized = groupPredictions.length > 0 && groupPredictions.every((prediction) =>
+      prediction?.consensusPromotion?.questionNum === Number(group?.question_num ?? index + 1))
     const manualCorrected = groupPredictions.some((prediction) => prediction?.manualCorrected)
     const status =
       hasReview ? 'review' :
@@ -3930,6 +4542,10 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) 
       if (prediction?.correct === false) return 'incorrect'
       return status
     }), slotCount)
+    const reviewGroup = layoutId ? { ...group, layoutId } : group
+    const reviewSuggestion = hasReview
+      ? likelyReadSuggestionForGroup(reviewGroup, predictions, { requireReview: true })
+      : null
 
     return {
       key: `question-${group?.question_num ?? index + 1}`,
@@ -3942,9 +4558,10 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null) 
       slotStatuses,
       answerText: predictedAnswerText,
       correct,
-      reviewNeeded: hasReview || correct !== true,
+      reviewNeeded: hasReview || (correct !== true && !consensusAuthorized),
       manualCorrected,
-      status
+      status,
+      ...(reviewSuggestion ? { reviewSuggestion } : {})
     }
   })
 }
@@ -4632,7 +5249,9 @@ function tensorQualityScore(quality) {
 function bestTensorInkQuality(proc) {
   const candidates = [
     { name: 'base', tensor: proc?.tensor },
-    ...(Array.isArray(proc?.tensorVariants) ? proc.tensorVariants : [])
+    ...(Array.isArray(proc?.tensorVariants)
+      ? proc.tensorVariants.filter((variant) => variant?.suggestionOnly !== true)
+      : [])
   ].filter((candidate) => candidate?.tensor)
 
   let best = null
@@ -5115,6 +5734,387 @@ function predictionDigitCandidates(prediction) {
   return candidates.length ? candidates : [{ digit: null, confidence: 0.01 }]
 }
 
+function suggestionEvidenceForDigit(prediction, digit, group = null, slotIndex = 0) {
+  const target = normalizeGradingDigit(digit)
+  if (target === undefined || target === null || !prediction) return null
+  const currentDigit = normalizeGradingDigit(
+    prediction.blank === true || prediction.empty === true ? null : prediction.digit
+  )
+  const evidence = []
+  let confidence = 0
+  const addEvidence = (reason, value) => {
+    const score = Math.max(0, Math.min(1, Number(value) || 0))
+    if (score <= 0) return
+    confidence = Math.max(confidence, score)
+    evidence.push({ reason, confidence: Number(score.toFixed(4)) })
+  }
+
+  if (currentDigit === target) {
+    addEvidence('current-read', prediction.confidence || 0.2)
+  }
+  for (const item of prediction.topK || []) {
+    if (normalizeGradingDigit(item?.digit) === target) {
+      addEvidence('model-topk', item.confidence || 0.01)
+    }
+  }
+  const reviewVariants = [
+    ...(prediction.preprocessVariants || []),
+    ...(prediction.reviewSuggestionVariants || [])
+  ]
+  for (const variant of reviewVariants) {
+    const variantReasonPrefix = variant?.suggestionOnly === true
+      ? 'suggestion-variant'
+      : 'variant'
+    if (normalizeGradingDigit(variant?.digit) === target) {
+      addEvidence(`${variantReasonPrefix}:${variant.name || 'unnamed'}`, variant.confidence || variant.topGap || 0.01)
+    }
+    for (const item of variant?.topK || []) {
+      if (normalizeGradingDigit(item?.digit) === target) {
+        addEvidence(`${variantReasonPrefix}-topk:${variant.name || 'unnamed'}`, item.confidence || 0.01)
+        break
+      }
+    }
+  }
+
+  const answerText = group?.answer == null ? '' : String(group.answer).trim()
+  const isLeadingOneContext =
+    target === 1 &&
+    slotIndex === 0 &&
+    /^1\d$/.test(answerText) &&
+    [7, 8, 9].includes(currentDigit) &&
+    (
+      prediction.reviewNeeded === true ||
+      prediction.highRiskMismatchReview === true ||
+      prediction.preprocessReviewReason === 'two-digit-mismatch-low-trust-review'
+    )
+  if (isLeadingOneContext) {
+    const hasIndependentOneEvidence = evidence.some((item) =>
+      !String(item.reason || '').startsWith('answer-key-') && Number(item.confidence) >= 0.22
+    )
+    if (currentDigit !== 7 || hasIndependentOneEvidence) {
+      addEvidence('answer-key-leading-one-context', 0.68)
+    }
+  }
+
+  const isNineTwoContext =
+    target === 9 &&
+    currentDigit === 2 &&
+    prediction.reviewNeeded === true
+  if (isNineTwoContext) {
+    addEvidence('answer-key-nine-two-context', 0.48)
+  }
+
+  if (target === 6 && currentDigit === 5) {
+    const strongIndependentEvidence = evidence.some((item) =>
+      !String(item.reason || '').startsWith('answer-key-') && Number(item.confidence) >= 0.25
+    )
+    if (!strongIndependentEvidence) return null
+  }
+
+  if (!evidence.length) return null
+  return {
+    digit: target,
+    confidence: Number(confidence.toFixed(4)),
+    evidence
+  }
+}
+
+function responseSuggestionScore(response, group, predictionsById, ids) {
+  const evidenceBySlot = []
+  let score = 1
+  let supportedSlots = 0
+  for (let slotIndex = 0; slotIndex < ids.length; slotIndex += 1) {
+    const cell = response[slotIndex]
+    const prediction = predictionsById.get(ids[slotIndex])
+    if (cell === null || cell === undefined) {
+      const currentDigit = normalizeGradingDigit(
+        prediction?.blank === true || prediction?.empty === true ? null : prediction?.digit
+      )
+      const blankConfidence = currentDigit === null || currentDigit === undefined
+        ? 0.72
+        : prediction?.reviewNeeded === true
+          ? 0.28
+          : 0
+      if (!blankConfidence) return null
+      score *= blankConfidence
+      supportedSlots += 1
+      evidenceBySlot.push({
+        slotIndex,
+        digit: null,
+        confidence: Number(blankConfidence.toFixed(4)),
+        evidence: [{ reason: 'blank-or-optional-slot', confidence: Number(blankConfidence.toFixed(4)) }]
+      })
+      continue
+    }
+    const evidence = suggestionEvidenceForDigit(prediction, cell, group, slotIndex)
+    if (!evidence || evidence.confidence < 0.18) return null
+    score *= Math.max(0.05, evidence.confidence)
+    supportedSlots += 1
+    evidenceBySlot.push({ slotIndex, ...evidence })
+  }
+  if (!supportedSlots) return null
+  return {
+    cells: response,
+    text: cellsToAnswerText(response),
+    confidence: Number(Math.pow(score, 1 / Math.max(1, supportedSlots)).toFixed(4)),
+    evidenceBySlot
+  }
+}
+
+function answerKeyContextSensitiveGroup(group) {
+  const problem = String(group?.problem || '').trim().toLowerCase()
+  const layoutId = String(group?.layoutId || group?.layout_id || '')
+  return problem === 'how many?' || layoutId === 'sg-g1-lw-06-ten-frames'
+}
+
+function hasStrongIndependentSuggestionEvidence(candidate) {
+  return (candidate?.evidenceBySlot || []).every((slot) => {
+    if (slot.digit === null || slot.digit === undefined) return true
+    return (slot.evidence || []).some((item) => {
+      const reason = String(item.reason || '')
+      return !reason.startsWith('answer-key-') && Number(item.confidence) >= 0.75
+    })
+  })
+}
+
+function hasStrongChangedSlotEvidence(candidate, currentCells, minConfidence = 0.79) {
+  return (candidate?.evidenceBySlot || []).every((slot) => {
+    const currentDigit = currentCells[slot.slotIndex]
+    if (slot.digit === null || slot.digit === undefined || currentDigit === slot.digit) return true
+    return (slot.evidence || []).some((item) => {
+      const reason = String(item.reason || '')
+      return !reason.startsWith('answer-key-') && Number(item.confidence) >= minConfidence
+    })
+  })
+}
+
+function isGradeOneLastWeekNonRowLayout(layoutId) {
+  return /sg-g1-lw-(0[6-9]|10)-/.test(String(layoutId || ''))
+}
+
+function noKeyNonRowLeftSevenOneSuggestion(group, groupPredictions, currentCells) {
+  const layoutId = String(group?.layoutId || group?.layout_id || '')
+  if (!isGradeOneLastWeekNonRowLayout(layoutId)) return null
+  if (!Array.isArray(currentCells) || currentCells.length < 2 || currentCells[0] !== 7) return null
+  const prediction = groupPredictions[0]
+  if (!prediction || prediction.reviewNeeded !== true) return null
+  if (groupPredictions.slice(1).some((item) => item?.reviewNeeded === true)) return null
+  let best = null
+  const reviewVariants = [
+    ...(prediction.preprocessVariants || []),
+    ...(prediction.reviewSuggestionVariants || [])
+  ]
+  for (const variant of reviewVariants) {
+    if (normalizeGradingDigit(variant?.digit) !== 1) continue
+    const confidence = Math.max(0, Math.min(1, Number(variant?.confidence) || 0))
+    if (confidence < 0.25) continue
+    const evidence = {
+      reason: `no-key-non-row-left-seven-one:${variant.name || 'unnamed'}`,
+      confidence: Number(confidence.toFixed(4))
+    }
+    if (!best || confidence > best.confidence) best = evidence
+  }
+  if (!best) return null
+  const cells = currentCells.slice()
+  cells[0] = 1
+  return {
+    cells,
+    text: cellsToAnswerText(cells),
+    confidence: best.confidence,
+    evidenceBySlot: [{
+      slotIndex: 0,
+      digit: 1,
+      confidence: best.confidence,
+      evidence: [best]
+    }]
+  }
+}
+
+function hasNoKeyNonRowLeftSevenOneEvidence(candidate, currentCells) {
+  return (candidate?.evidenceBySlot || []).some((slot) => (
+    currentCells[slot.slotIndex] === 7 &&
+    slot.digit === 1 &&
+    (slot.evidence || []).some((item) => String(item.reason || '').startsWith('no-key-non-row-left-seven-one:'))
+  ))
+}
+
+function likelyReadSuggestionForGroup(group, predictions, { requireReview = true } = {}) {
+  const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+  if (!ids.length) return null
+  const byId = new Map((predictions || []).map((prediction) => [prediction.id, prediction]))
+  const groupPredictions = ids.map((id) => byId.get(id)).filter(Boolean)
+  const hasReview = groupPredictions.some((prediction) => prediction?.reviewNeeded)
+  if (requireReview && !hasReview) return null
+  const responses = acceptedResponsesForGroup(group, ids.length)
+    .filter((response) => Array.isArray(response) && response.length === ids.length)
+  if (!responses.length) return null
+
+  const currentCells = predictionCellsForIds(ids, byId) || []
+  const currentText = cellsToAnswerText(currentCells)
+  const noKeyLeadingOne = noKeyNonRowLeftSevenOneSuggestion(group, groupPredictions, currentCells)
+  const candidates = responses
+    .map((response) => responseSuggestionScore(response, group, byId, ids))
+    .filter(Boolean)
+    .filter((candidate) => candidate.text !== 'blank')
+    .concat(noKeyLeadingOne ? [noKeyLeadingOne] : [])
+    .sort((a, b) => b.confidence - a.confidence)
+  const safeCandidates = candidates.filter((candidate) => {
+    const candidateHasContextEvidence = candidate.evidenceBySlot.some((slot) =>
+      (slot.evidence || []).some((item) => String(item.reason || '').startsWith('answer-key-'))
+    )
+    const candidateHasAlternativeEvidence = candidate.evidenceBySlot.some((slot) =>
+      (slot.evidence || []).some((item) => {
+        const reason = String(item.reason || '')
+        return reason.startsWith('variant:') || reason.startsWith('suggestion-variant:') || reason === 'model-topk'
+      })
+    )
+    const candidateHasNoKeyLeftSevenOneEvidence = hasNoKeyNonRowLeftSevenOneEvidence(candidate, currentCells)
+    if (
+      candidateHasContextEvidence &&
+      answerKeyContextSensitiveGroup(group) &&
+      !hasStrongIndependentSuggestionEvidence(candidate)
+    ) {
+      return false
+    }
+    if (
+      !candidateHasContextEvidence &&
+      !candidateHasNoKeyLeftSevenOneEvidence &&
+      !hasStrongChangedSlotEvidence(candidate, currentCells)
+    ) {
+      return false
+    }
+    const threshold = candidateHasContextEvidence ? 0.42 : 0.55
+    if (candidate.confidence < threshold && !candidateHasAlternativeEvidence && !candidateHasNoKeyLeftSevenOneEvidence) return false
+    return true
+  })
+  const best = safeCandidates[0]
+  if (!best) return null
+  const hasContextEvidence = best.evidenceBySlot.some((slot) =>
+    (slot.evidence || []).some((item) => String(item.reason || '').startsWith('answer-key-'))
+  )
+  const hasNoKeyLeftSevenOneEvidence = hasNoKeyNonRowLeftSevenOneEvidence(best, currentCells)
+  return {
+    text: best.text,
+    cells: best.cells,
+    confidence: best.confidence,
+    currentText,
+    source: hasContextEvidence
+      ? 'answer-key-context-review'
+      : hasNoKeyLeftSevenOneEvidence
+        ? 'no-key-non-row-leading-one-review'
+        : 'ocr-alternative-review',
+    reviewOnly: true,
+    evidenceBySlot: best.evidenceBySlot
+  }
+}
+
+function trustedOcrSuggestionPromotionEvidence(suggestion, currentCells) {
+  if (!suggestion || suggestion.source !== 'ocr-alternative-review') return null
+  if (numberOrZero(suggestion.confidence) < 0.75) return null
+
+  const slotEvidence = []
+  for (const slot of suggestion.evidenceBySlot || []) {
+    const slotIndex = Number(slot.slotIndex)
+    const target = normalizeGradingDigit(slot.digit)
+    const current = currentCells[slotIndex]
+    if (!Number.isInteger(slotIndex)) return null
+    if (target === undefined) return null
+
+    if (target === null) {
+      const blankEvidence = (slot.evidence || []).find((item) =>
+        item.reason === 'blank-or-optional-slot' && numberOrZero(item.confidence) >= 0.72
+      )
+      if (!blankEvidence) return null
+      slotEvidence.push({ slotIndex, digit: null, evidence: blankEvidence })
+      continue
+    }
+
+    const strongest = (slot.evidence || [])
+      .filter((item) => {
+        const reason = String(item.reason || '')
+        return !reason.startsWith('answer-key-') &&
+          (reason === 'current-read' || reason === 'model-topk' || reason.startsWith('variant:') || reason.startsWith('variant-topk:'))
+      })
+      .sort((a, b) => numberOrZero(b.confidence) - numberOrZero(a.confidence))[0]
+    if (!strongest || numberOrZero(strongest.confidence) < (current === target ? 0.65 : 0.79)) return null
+    slotEvidence.push({ slotIndex, digit: target, evidence: strongest })
+  }
+  return slotEvidence.length ? slotEvidence : null
+}
+
+function applyTrustedOcrSuggestionPromotions(questionGroups, predictions) {
+  if (!Array.isArray(questionGroups) || !Array.isArray(predictions)) return []
+  const predictionById = new Map(predictions.map((prediction) => [prediction.id, prediction]))
+  const promotions = []
+
+  for (const group of questionGroups) {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    if (!ids.length) continue
+    const groupPredictions = ids.map((id) => predictionById.get(id))
+    if (groupPredictions.some((prediction) => !prediction)) continue
+    if (!groupPredictions.some((prediction) => prediction.reviewNeeded === true)) continue
+
+    const currentCells = predictionCellsForIds(ids, predictionById)
+    if (!currentCells) continue
+    const suggestion = likelyReadSuggestionForGroup(group, predictions, { requireReview: true })
+    const evidence = trustedOcrSuggestionPromotionEvidence(suggestion, currentCells)
+    if (!evidence) continue
+    const promotedMatchesAcceptedResponse = acceptedResponsesForGroup(group, ids.length)
+      .some((response) => gradingCellsMatch(suggestion.cells, response))
+
+    for (const slot of evidence) {
+      const prediction = predictionById.get(ids[slot.slotIndex])
+      if (!prediction) continue
+      const originalDigit = prediction.digit
+      const originalConfidence = prediction.confidence
+      if (slot.digit === null) {
+        prediction.digit = null
+        prediction.blank = true
+        prediction.empty = true
+      } else {
+        prediction.digit = slot.digit
+        prediction.blank = false
+        prediction.empty = false
+      }
+      prediction.confidence = Math.max(numberOrZero(prediction.confidence), numberOrZero(slot.evidence.confidence), 0.88)
+      prediction.topGap = Math.max(numberOrZero(prediction.topGap), 0.42)
+      prediction.reviewNeeded = false
+      if (promotedMatchesAcceptedResponse) prediction.correct = true
+      prediction.robust = true
+      prediction.robustOverride = prediction.robustOverride || 'trusted-ocr-suggestion'
+      prediction.preprocessReviewReason = null
+      prediction.confidencePolicyCleared = true
+      prediction.confidencePolicyClearanceReason = 'trusted-ocr-suggestion'
+      prediction.trustedSuggestionPromotion = {
+        source: suggestion.source,
+        suggestionText: suggestion.text,
+        originalDigit,
+        originalConfidence,
+        evidence: slot.evidence
+      }
+      prediction.topK = slot.digit === null
+        ? []
+        : [
+            { digit: slot.digit, confidence: prediction.confidence },
+            ...(prediction.topK || [])
+              .filter((item) => normalizeGradingDigit(item.digit) !== slot.digit)
+              .slice(0, 2)
+          ]
+    }
+
+    promotions.push({
+      questionNum: group?.question_num ?? null,
+      suggestionText: suggestion.text,
+      currentText: suggestion.currentText,
+      source: suggestion.source,
+      confidence: suggestion.confidence,
+      evidence
+    })
+  }
+
+  return promotions
+}
+
 function topAnswerChoicesForGroup(group, predictions, maxChoices = 2) {
   const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
   if (!ids.length) return []
@@ -5134,23 +6134,620 @@ function topAnswerChoicesForGroup(group, predictions, maxChoices = 2) {
     combos = next
   }
   const seen = new Set()
-  return combos
+  const wholeAnswerSuggestions = ids.flatMap((id) => {
+    const prediction = byId.get(id)
+    if (Array.isArray(prediction?.wholeAnswerReviewSuggestions)) return prediction.wholeAnswerReviewSuggestions
+    return prediction?.wholeAnswerReviewSuggestion ? [prediction.wholeAnswerReviewSuggestion] : []
+  }).filter((item) => item?.text)
+  const wholeAnswerSuggestion = wholeAnswerSuggestions[0] || null
+  const currentCells = ids.map((id) => {
+    const prediction = byId.get(id)
+    return prediction?.blank === true || prediction?.empty === true ? null : (prediction?.digit ?? null)
+  })
+  const currentText = cellsToAnswerText(currentCells)
+  const wholeAnswerChoices = [...wholeAnswerSuggestions]
+    .sort((a, b) => {
+      const priority = (item) => item?.source?.includes('whole-answer-model') ? 0 : 1
+      return priority(a) - priority(b)
+    })
+    .filter((item, index, list) => list.findIndex((candidate) => candidate.text === item.text) === index)
+    .map((item) => ({
+      key: `${group?.question_num ?? 'q'}-whole-answer-${item.source || 'model'}-${item.text}`,
+      text: item.text,
+      cells: item.cells,
+      wholeAnswerReviewSuggestion: item,
+      source: item.source || 'key-blind-whole-answer-model'
+    }))
+  for (const choice of wholeAnswerChoices) seen.add(choice.text)
+  const currentChoices = wholeAnswerSuggestions.length && currentText !== 'blank' && !seen.has(currentText)
+    ? [{
+        key: `${group?.question_num ?? 'q'}-current-${currentText}`,
+        text: currentText,
+        cells: currentCells,
+        currentOcrRead: true,
+        source: 'current-browser-ocr'
+      }]
+    : []
+  for (const choice of currentChoices) seen.add(choice.text)
+  const suggestion = likelyReadSuggestionForGroup(group, predictions, { requireReview: true })
+  const suggestionChoices = suggestion
+    && !seen.has(suggestion.text)
+    ? [{
+        key: `${group?.question_num ?? 'q'}-suggestion-${suggestion.text}`,
+        text: suggestion.text,
+        cells: suggestion.cells,
+        reviewSuggestion: suggestion,
+        source: suggestion.source || 'current-ocr-alternative'
+      }]
+    : []
+  for (const choice of suggestionChoices) {
+    seen.add(choice.text)
+  }
+  const comboSeen = new Set()
+  const allComboChoices = combos
     .sort((a, b) => b.confidence - a.confidence)
     .map((combo) => ({
       ...combo,
       text: cellsToAnswerText(combo.cells)
     }))
     .filter((combo) => {
-      if (combo.text === 'blank' || seen.has(combo.text)) return false
-      seen.add(combo.text)
+      if (combo.text === 'blank' || comboSeen.has(combo.text)) return false
+      comboSeen.add(combo.text)
       return true
     })
-    .slice(0, maxChoices)
     .map((combo, index) => ({
       key: `${group?.question_num ?? 'q'}-${index}-${combo.text}`,
       text: combo.text,
-      cells: combo.cells
+      cells: combo.cells,
+      source: 'digit-model-combination'
     }))
+  if (v3LocalFirstReviewEnabled()) {
+    // Preserve the complete pre-existing three-choice browser set, then append
+    // compact and explicitly requested strong choices. Local assistance may
+    // make the list longer, but it must never crowd out a correct old choice.
+    const baselineSeen = new Set()
+    const baseline = [...suggestionChoices, ...allComboChoices]
+      .filter((choice) => {
+        if (!choice?.text || baselineSeen.has(choice.text)) return false
+        baselineSeen.add(choice.text)
+        return true
+      })
+      .slice(0, 3)
+    const additions = wholeAnswerChoices.filter((choice) => !baselineSeen.has(choice.text))
+    return baseline.concat(additions).slice(0, maxChoices)
+  }
+  // Preserve the app's direct transcription as the first choice. The larger
+  // model is a key-blind second opinion, not an authority that replaces what
+  // the student may actually have written.
+  const preferredChoices = currentChoices.concat(wholeAnswerChoices, suggestionChoices).slice(0, maxChoices)
+  const preferredTexts = new Set(preferredChoices.map((choice) => choice.text))
+  const comboChoices = allComboChoices.filter((choice) => !preferredTexts.has(choice.text))
+  return preferredChoices.concat(comboChoices.slice(0, Math.max(0, maxChoices - preferredChoices.length)))
+}
+
+function optionalWholeAnswerReviewUrl() {
+  if (typeof window === 'undefined') return ''
+  return consensusModelEndpoint('reviewModelUrl', '/review-model')
+}
+
+function optionalV3CompactModelUrl() {
+  if (typeof window === 'undefined') return ''
+  return consensusModelEndpoint('v3CompactModelUrl', '/v3-compact')
+}
+
+function wholeAnswerCropDataUrl(group, rawCrops) {
+  const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+  const byId = new Map((rawCrops || []).map((crop) => [crop.id, crop]))
+  const crops = ids.map((id) => byId.get(id)).filter((crop) => crop?.image)
+  if (!crops.length || crops.length !== ids.length) return null
+  const gap = 10
+  const pad = 8
+  const width = crops.reduce((sum, crop) => sum + crop.image.cols, 0) + gap * Math.max(0, crops.length - 1) + pad * 2
+  const height = Math.max(...crops.map((crop) => crop.image.rows)) + pad * 2
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, width)
+  canvas.height = Math.max(1, height)
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.strokeStyle = '#d4dae3'
+  ctx.strokeRect(0.5, 0.5, canvas.width - 1, canvas.height - 1)
+  ctx.imageSmoothingEnabled = false
+  let x = pad
+  for (const crop of crops) {
+    const slot = document.createElement('canvas')
+    slot.width = crop.image.cols
+    slot.height = crop.image.rows
+    cv.imshow(slot, crop.image)
+    ctx.drawImage(slot, x, pad + Math.floor((height - pad * 2 - slot.height) / 2))
+    x += slot.width + gap
+  }
+  return canvas.toDataURL('image/png')
+}
+
+function wholeAnswerReviewItemsForFrame(questionGroups, questionReview, rawCrops, frameIndex = null) {
+  return questionGroups
+    .map((group, index) => ({ group, index }))
+    .filter(({ index }) => questionReview[index] === true)
+    .map(({ group, index }) => ({
+      id: `question-${group?.question_num ?? index + 1}${frameIndex == null ? '' : `-frame-${frameIndex}`}`,
+      questionNum: group?.question_num ?? index + 1,
+      frameIndex,
+      imageDataUrl: wholeAnswerCropDataUrl(group, rawCrops)
+    }))
+    .filter((item) => !!item.imageDataUrl)
+}
+
+async function canvasFromDataUrl(dataUrl) {
+  const image = new Image()
+  image.src = dataUrl
+  await new Promise((resolve, reject) => {
+    image.onload = resolve
+    image.onerror = reject
+  })
+  const canvas = document.createElement('canvas')
+  canvas.width = image.naturalWidth
+  canvas.height = image.naturalHeight
+  canvas.getContext('2d').drawImage(image, 0, 0)
+  return canvas
+}
+
+async function buildHybridBurstReviewItems(questionGroups, questionReview, selectedRawCrops, layout, qrLocation) {
+  if (!hybridV2Enabled() || !optionalWholeAnswerReviewUrl() || pendingHybridBurstFrames.length < 2) {
+    return {
+      items: wholeAnswerReviewItemsForFrame(questionGroups, questionReview, selectedRawCrops),
+      frames: [],
+    }
+  }
+
+  const selectedFrame = pendingHybridBurstFrames.find((frame) => frame.selected) || pendingHybridBurstFrames[0]
+  const items = wholeAnswerReviewItemsForFrame(
+    questionGroups,
+    questionReview,
+    selectedRawCrops,
+    selectedFrame?.index ?? null
+  )
+  const frames = [{
+    frameIndex: selectedFrame?.index ?? null,
+    selected: true,
+    processed: true,
+    itemCount: items.length,
+  }]
+
+  for (const frame of pendingHybridBurstFrames) {
+    if (frame === selectedFrame || frame.selected) continue
+    let src = null
+    let worksheet = null
+    try {
+      const canvas = await canvasFromDataUrl(frame.imageDataUrl)
+      src = cv.imread(canvas)
+      worksheet = processWorksheet(src, layout, worksheetProcessingOptions(qrLocation || null))
+      if (!worksheet) {
+        frames.push({ frameIndex: frame.index, selected: false, processed: false, reason: 'page-registration-failed' })
+        continue
+      }
+      const frameItems = wholeAnswerReviewItemsForFrame(
+        questionGroups,
+        questionReview,
+        worksheet.rawCrops,
+        frame.index
+      )
+      items.push(...frameItems)
+      frames.push({ frameIndex: frame.index, selected: false, processed: true, itemCount: frameItems.length })
+    } catch (error) {
+      frames.push({
+        frameIndex: frame.index,
+        selected: false,
+        processed: false,
+        reason: String(error?.message || error),
+      })
+    } finally {
+      for (const crop of worksheet?.rawCrops || []) {
+        try { crop.image?.delete?.() } catch (_) {}
+      }
+      try { worksheet?.warpedImage?.delete?.() } catch (_) {}
+      try { src?.delete?.() } catch (_) {}
+    }
+  }
+
+  return { items, frames }
+}
+
+async function buildV3BurstShadowItems({
+  questionGroups,
+  layout,
+  qrLocation,
+  selectedSequenceItems,
+  selectedCompactItems,
+  selectedZones,
+  burstFrames,
+  reviewQuestionNums,
+  includeCompactItems = true,
+}) {
+  const framesSnapshot = Array.isArray(burstFrames) ? burstFrames : []
+  const selectedFrame = framesSnapshot.find((frame) => frame.selected) || framesSnapshot[0] || null
+  const selectedFrameIndex = selectedFrame?.index ?? null
+  const sequenceItems = filterItemsToYellowQuestions(selectedSequenceItems, reviewQuestionNums).map((item) => ({
+    ...item,
+    id: `${item.id}-frame-${selectedFrameIndex ?? 'selected'}`,
+    frameIndex: selectedFrameIndex,
+  }))
+  const compactItems = filterItemsToYellowQuestions(selectedCompactItems, reviewQuestionNums).map((item) => ({
+    ...item,
+    id: `${item.id}-frame-${selectedFrameIndex ?? 'selected'}`,
+    frameIndex: selectedFrameIndex,
+  }))
+  const zoneEvidence = (selectedZones || []).map((zone) => ({
+    questionNum: zone.questionNum,
+    frameIndex: selectedFrameIndex,
+    selected: true,
+    quality: zone.quality,
+    blankArtifact: zone.blankArtifact,
+  }))
+  const frames = [{
+    frameIndex: selectedFrameIndex,
+    selected: true,
+    processed: true,
+    itemCount: sequenceItems.length,
+  }]
+
+  for (const frame of framesSnapshot) {
+    if (frame === selectedFrame || frame.selected) continue
+    let src = null
+    let worksheet = null
+    let zones = []
+    try {
+      const canvas = await canvasFromDataUrl(frame.imageDataUrl)
+      src = cv.imread(canvas)
+      worksheet = processWorksheet(src, layout, worksheetProcessingOptions(qrLocation || null))
+      replaceWithFreshV3Warp(worksheet, src, layout)
+      if (!worksheet) {
+        frames.push({ frameIndex: frame.index, selected: false, processed: false, reason: 'page-registration-failed' })
+        continue
+      }
+      zones = extractContinuousAnswerZones(
+        worksheet.warpedImage,
+        layout,
+        v3AnswerZoneOptions(worksheet.rawCrops)
+      )
+      let allFrameSequenceItems = v3SequenceFromZonesEnabled()
+        ? wholeAnswerSequenceItemsFromZones(zones, frame.index)
+        : wholeAnswerReviewItemsForFrame(
+            questionGroups,
+            questionGroups.map(() => true),
+            worksheet.rawCrops,
+            frame.index
+          )
+      const frameSequenceItems = filterItemsToYellowQuestions(allFrameSequenceItems, reviewQuestionNums)
+      const frameCompactItems = includeCompactItems
+        ? filterItemsToYellowQuestions(zones.map((zone) => ({
+            id: `question-${zone.questionNum}-frame-${frame.index}`,
+            questionNum: zone.questionNum,
+            frameIndex: frame.index,
+            continuousImageDataUrl: matToDataURL(zone.image),
+          })), reviewQuestionNums)
+        : []
+      sequenceItems.push(...frameSequenceItems)
+      compactItems.push(...frameCompactItems)
+      zoneEvidence.push(...zones.map((zone) => ({
+        questionNum: zone.questionNum,
+        frameIndex: frame.index,
+        selected: false,
+        quality: zone.quality,
+        blankArtifact: zone.blankArtifact,
+      })))
+      frames.push({ frameIndex: frame.index, selected: false, processed: true, itemCount: frameSequenceItems.length })
+    } catch (error) {
+      frames.push({ frameIndex: frame.index, selected: false, processed: false, reason: String(error?.message || error) })
+    } finally {
+      for (const zone of zones) {
+        try { zone.image?.delete?.() } catch (_) {}
+      }
+      for (const crop of worksheet?.rawCrops || []) {
+        try { crop.image?.delete?.() } catch (_) {}
+      }
+      try { worksheet?.warpedImage?.delete?.() } catch (_) {}
+      try { src?.delete?.() } catch (_) {}
+    }
+  }
+  return { sequenceItems, compactItems, zoneEvidence, frames }
+}
+
+async function buildV3AlternateCropReviewItems({ questionGroups, questionReview, layout, qrLocation, burstFrames }) {
+  if (!v3DualCropReviewEnabled() || v3EightFrameColumnOrderEnabled() || questionGroups?.length !== 8) {
+    return { sequenceItems: [], frames: [] }
+  }
+  const reviewQuestions = new Set((questionGroups || [])
+    .filter((_group, index) => questionReview?.[index] === true)
+    .map((group) => Number(group?.question_num)))
+  if (!reviewQuestions.size) return { sequenceItems: [], frames: [] }
+
+  const sequenceItems = []
+  const frames = []
+  for (const frame of Array.isArray(burstFrames) ? burstFrames : []) {
+    let src = null
+    let worksheet = null
+    let zones = []
+    try {
+      const canvas = await canvasFromDataUrl(frame.imageDataUrl)
+      src = cv.imread(canvas)
+      worksheet = processWorksheet(src, layout, {
+        qrLocation: qrLocation || null,
+        experimentalEightFrameColumnOrder: true,
+      })
+      replaceWithFreshV3Warp(worksheet, src, layout)
+      if (!worksheet) {
+        frames.push({ frameIndex: frame.index, processed: false, reason: 'page-registration-failed' })
+        continue
+      }
+      zones = extractContinuousAnswerZones(worksheet.warpedImage, layout, v3AnswerZoneOptions(worksheet.rawCrops))
+      const items = wholeAnswerSequenceItemsFromZones(zones, frame.index)
+        .filter((item) => reviewQuestions.has(Number(item.questionNum)))
+        .map((item) => ({
+          ...item,
+          id: `${item.id}-alternate-crop`,
+          cropVariant: 'eight-frame-column-order-alternate',
+        }))
+      sequenceItems.push(...items)
+      frames.push({ frameIndex: frame.index, selected: frame.selected === true, processed: true, itemCount: items.length })
+    } catch (error) {
+      frames.push({ frameIndex: frame.index, selected: frame.selected === true, processed: false, reason: String(error?.message || error) })
+    } finally {
+      for (const zone of zones) {
+        try { zone.image?.delete?.() } catch (_) {}
+      }
+      for (const crop of worksheet?.rawCrops || []) {
+        try { crop.image?.delete?.() } catch (_) {}
+      }
+      try { worksheet?.warpedImage?.delete?.() } catch (_) {}
+      try { src?.delete?.() } catch (_) {}
+    }
+  }
+  return { sequenceItems, frames }
+}
+
+async function requestWholeAnswerReviewSuggestions(questionGroups, questionReview, rawCrops, preparedItems = null) {
+  const baseUrl = optionalWholeAnswerReviewUrl()
+  if (!baseUrl || !Array.isArray(questionGroups) || !Array.isArray(questionReview)) return []
+  const items = Array.isArray(preparedItems)
+    ? preparedItems
+    : wholeAnswerReviewItemsForFrame(questionGroups, questionReview, rawCrops)
+  if (!items.length) return []
+  const results = await requestKeyBlindWholeAnswers({
+    baseUrl,
+    items,
+    accessToken: optionalReviewAccessToken(),
+    timeoutMs: hybridBurstEnabled() ? 8000 : 2500,
+    onError: (error) => console.warn('[ScanGrade] Optional whole-answer review model unavailable:', error),
+  })
+  const sourceById = new Map(items.map((item) => [String(item.id), item]))
+  return results
+    .map((item) => ({
+      ...item,
+      frameIndex: sourceById.get(String(item?.id))?.frameIndex ?? item?.frameIndex ?? null,
+      cropVariant: sourceById.get(String(item?.id))?.cropVariant ?? item?.cropVariant ?? null,
+      text: String(item?.read || '').replace(/\D/g, ''),
+      source: sourceById.get(String(item?.id))?.cropVariant
+        ? 'key-blind-whole-answer-model-alternate-crop'
+        : 'key-blind-whole-answer-model',
+      reviewOnly: true
+    }))
+    .filter((item) => item.text && item.text.length <= 4)
+}
+
+function applyWholeAnswerReviewSuggestions(questionGroups, predictions, suggestions, { allowRelaxedMultiFrame = false } = {}) {
+  if (!Array.isArray(suggestions) || !suggestions.length) return []
+  const byQuestion = new Map()
+  for (const item of suggestions) {
+    const questionNum = Number(item.questionNum)
+    if (!byQuestion.has(questionNum)) byQuestion.set(questionNum, [])
+    byQuestion.get(questionNum).push(item)
+  }
+  const byId = new Map(predictions.map((prediction) => [prediction.id, prediction]))
+  const applied = []
+  for (const group of questionGroups || []) {
+    const questionNum = Number(group?.question_num)
+    const frameSuggestions = byQuestion.get(questionNum) || []
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    if (!frameSuggestions.length || !ids.length) continue
+    const frameConsensus = crossFrameConsensus(frameSuggestions.map((item) => ({
+      frameIndex: item.frameIndex,
+      text: item.text,
+      minTokenProbability: item.minTokenProbability,
+    })))
+    const suggestion = [...frameSuggestions].sort((a, b) => {
+      const aConsensus = frameConsensus?.strong && a.text === frameConsensus.text ? 1 : 0
+      const bConsensus = frameConsensus?.strong && b.text === frameConsensus.text ? 1 : 0
+      return bConsensus - aConsensus || Number(b.minTokenProbability || 0) - Number(a.minTokenProbability || 0)
+    })[0]
+    if (suggestion.text.length > ids.length) continue
+    const cells = Array(Math.max(0, ids.length - suggestion.text.length)).fill(null)
+      .concat([...suggestion.text].map((digit) => Number(digit)))
+    const currentText = cellsToAnswerText(ids.map((id) => {
+      const prediction = byId.get(id)
+      return prediction?.blank === true || prediction?.empty === true ? null : (prediction?.digit ?? null)
+    }))
+    const firstPrediction = byId.get(ids[0])
+    if (!firstPrediction) continue
+    const hybridDecision = buildHybridAnswerDecision({
+      currentText,
+      currentNeedsReview: ids.some((id) => byId.get(id)?.reviewNeeded === true),
+      currentConfidence: Math.min(...ids.map((id) => Number(byId.get(id)?.confidence || 0))),
+      wholeAnswer: suggestion,
+      frameReads: frameSuggestions,
+    })
+    firstPrediction.hybridDecision = hybridDecision
+    if (!reviewSuggestionDisplayEligible({ suggestion, frameConsensus, currentText, allowRelaxedMultiFrame })) continue
+    const record = {
+      ...suggestion,
+      cells,
+      frameReads: frameSuggestions.map((item) => ({
+        frameIndex: item.frameIndex,
+        text: item.text,
+        minTokenProbability: item.minTokenProbability,
+        meanTokenProbability: item.meanTokenProbability,
+      })),
+      frameConsensus,
+      hybridDecision,
+    }
+    const existing = Array.isArray(firstPrediction.wholeAnswerReviewSuggestions)
+      ? firstPrediction.wholeAnswerReviewSuggestions
+      : (firstPrediction.wholeAnswerReviewSuggestion ? [firstPrediction.wholeAnswerReviewSuggestion] : [])
+    if (!existing.some((item) => item?.text === record.text && item?.source === record.source)) {
+      existing.push(record)
+    }
+    firstPrediction.wholeAnswerReviewSuggestions = existing
+    firstPrediction.wholeAnswerReviewSuggestion = existing[0] || record
+    applied.push(record)
+  }
+  return applied
+}
+
+function applyCompactReviewChoices(questionGroups, predictions, compactReads, { source = 'key-blind-compact-model' } = {}) {
+  const choicesByQuestion = compactSuggestionsByQuestion(compactReads, { limit: 3 })
+  const byId = new Map((predictions || []).map((prediction) => [prediction.id, prediction]))
+  const applied = []
+  for (const group of questionGroups || []) {
+    const questionNum = Number(group?.question_num)
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    const firstPrediction = byId.get(ids[0])
+    if (!firstPrediction || !ids.length) continue
+    const records = (choicesByQuestion.get(questionNum) || [])
+      .map((choice) => ({
+        ...choice,
+        cells: cellsForReviewText(choice.text, ids.length),
+        source,
+        reviewOnly: true,
+      }))
+      .filter((choice) => Array.isArray(choice.cells))
+    if (!records.length) continue
+    const existing = Array.isArray(firstPrediction.wholeAnswerReviewSuggestions)
+      ? firstPrediction.wholeAnswerReviewSuggestions
+      : (firstPrediction.wholeAnswerReviewSuggestion ? [firstPrediction.wholeAnswerReviewSuggestion] : [])
+    for (const record of records) {
+      if (!existing.some((item) => item?.text === record.text && item?.source === record.source)) {
+        existing.push(record)
+        applied.push({ questionNum, ...record })
+      }
+    }
+    firstPrediction.wholeAnswerReviewSuggestions = existing
+    firstPrediction.wholeAnswerReviewSuggestion = existing[0] || null
+    firstPrediction.localFirstReview = localFirstReviewState({
+      localChoices: existing.filter((item) => item?.source?.startsWith('key-blind-') && item?.source?.endsWith('-model')),
+      strongStatus: localFirstStrongStatusByQuestion.value[questionNum] || 'deferred',
+      strongChoices: existing.filter((item) => item?.source?.includes('whole-answer-model')),
+    })
+  }
+  return applied
+}
+
+async function requestStrongChoicesForActiveQuestion() {
+  const questionNum = activeCorrectionQuestionNum.value
+  const context = localFirstStrongContext.value
+  if (!Number.isFinite(questionNum) || !context || localFirstStrongLoading.value) return
+  const group = (context.questionGroups || []).find((item) => Number(item?.question_num) === questionNum)
+  const beforeContextChoices = group
+    ? topAnswerChoicesForGroup(group, context.predictions || [], 6).map((choice) => choice.text)
+    : []
+  const contextAttempted = context.contextAttemptedByQuestion?.[questionNum] === true
+  const contextItems = (context.contextCompactItems || []).filter((item) => Number(item?.questionNum) === questionNum)
+  if (!contextAttempted && contextItems.length && optionalV3CompactModelUrl()) {
+    localFirstStrongStatusByQuestion.value = {
+      ...localFirstStrongStatusByQuestion.value,
+      [questionNum]: 'loading',
+    }
+    const contextReads = await requestCompactWholeAnswers({
+      baseUrl: optionalV3CompactModelUrl(),
+      items: contextItems,
+      accessToken: optionalReviewAccessToken(),
+      timeoutMs: 8000,
+      onError: (error) => console.warn('[ScanGrade] Optional on-demand context crop unavailable:', error),
+    })
+    const contextApplied = applyCompactReviewChoices(
+      context.questionGroups,
+      context.predictions,
+      contextReads,
+      { source: 'key-blind-context-crop-model' },
+    )
+    context.contextAttemptedByQuestion = {
+      ...(context.contextAttemptedByQuestion || {}),
+      [questionNum]: true,
+    }
+    const afterContextChoices = group
+      ? topAnswerChoicesForGroup(group, context.predictions || [], 6).map((choice) => choice.text)
+      : []
+    const addedVisibleChoice = afterContextChoices.some((choice) => !beforeContextChoices.includes(choice))
+    if (context.payload) {
+      context.payload.localFirstContextRequests = [
+        ...(context.payload.localFirstContextRequests || []),
+        { questionNum, resultCount: contextReads.length, appliedCount: contextApplied.length, addedVisibleChoice },
+      ]
+      if (lastLiveOcrDebug.value) {
+        lastLiveOcrDebug.value.localFirstContextRequests = context.payload.localFirstContextRequests
+        lastLiveOcrDebug.value.predictions = context.predictions
+      }
+      ocrResult.value = { ...context.payload }
+    }
+    if (addedVisibleChoice) {
+      localFirstStrongStatusByQuestion.value = {
+        ...localFirstStrongStatusByQuestion.value,
+        [questionNum]: 'context-ready',
+      }
+      return
+    }
+  }
+  const preparedItems = (context.sequenceItems || []).filter((item) => Number(item?.questionNum) === questionNum)
+  if (!preparedItems.length || !optionalWholeAnswerReviewUrl()) {
+    localFirstStrongStatusByQuestion.value = {
+      ...localFirstStrongStatusByQuestion.value,
+      [questionNum]: 'unavailable',
+    }
+    return
+  }
+  localFirstStrongStatusByQuestion.value = {
+    ...localFirstStrongStatusByQuestion.value,
+    [questionNum]: 'loading',
+  }
+  const reviewFlags = (context.questionGroups || []).map((group) => Number(group?.question_num) === questionNum)
+  const reads = await requestWholeAnswerReviewSuggestions(
+    context.questionGroups,
+    reviewFlags,
+    [],
+    preparedItems,
+  )
+  const applied = applyWholeAnswerReviewSuggestions(
+    context.questionGroups,
+    context.predictions,
+    reads,
+    { allowRelaxedMultiFrame: context.questionGroups?.length === 8 },
+  )
+  const status = applied.some((item) => Number(item?.questionNum) === questionNum) ? 'complete' : 'unavailable'
+  localFirstStrongStatusByQuestion.value = {
+    ...localFirstStrongStatusByQuestion.value,
+    [questionNum]: status,
+  }
+  const firstId = group?.digit_box_ids?.[0]
+  const firstPrediction = (context.predictions || []).find((item) => item.id === firstId)
+  if (firstPrediction) {
+    const allChoices = firstPrediction.wholeAnswerReviewSuggestions || []
+    firstPrediction.localFirstReview = localFirstReviewState({
+      localChoices: allChoices.filter((item) => item?.source === 'key-blind-compact-model'),
+      strongStatus: status,
+      strongChoices: allChoices.filter((item) => item?.source?.includes('whole-answer-model')),
+    })
+  }
+  if (context.payload) {
+    context.payload.localFirstStrongRequests = [
+      ...(context.payload.localFirstStrongRequests || []),
+      { questionNum, status, resultCount: reads.length, appliedCount: applied.length },
+    ]
+    if (lastLiveOcrDebug.value) {
+      lastLiveOcrDebug.value.localFirstStrongRequests = context.payload.localFirstStrongRequests
+      lastLiveOcrDebug.value.predictions = context.predictions
+      void uploadLiveOcrDebug(lastLiveOcrDebug.value, 'local-first-strong-complete')
+    }
+    ocrResult.value = { ...context.payload }
+  }
 }
 
 function parseManualAnswerText(text, slotCount) {
@@ -5170,12 +6767,16 @@ function buildLiveOcrErrorDebugPackage(err, partialDebug) {
   const message = String(err?.message || err || 'Unknown OCR error')
   const debug = {
     capturedImageDataUrl: capturedImage.value,
+    scanSessionId: partialDebug?.scanSessionId || null,
     error: {
       message,
       name: err?.name || null,
       stack: err?.stack || null
     },
     stage: partialDebug?.stage || 'unknown',
+    packetId: partialDebug?.packetId || null,
+    captureRole: partialDebug?.captureRole || null,
+    capturePlanSeed: partialDebug?.capturePlanSeed || null,
     layoutUrl: partialDebug?.layoutUrl || null,
     layoutId: partialDebug?.layoutId || null,
     qrPayload: partialDebug?.qrPayload || null,
@@ -5186,6 +6787,9 @@ function buildLiveOcrErrorDebugPackage(err, partialDebug) {
     ignoreQrHomography: !!partialDebug?.ignoreQrHomography,
     imageSize: partialDebug?.imageSize || null,
     captureQuality: partialDebug?.captureQuality || lastCaptureQuality.value || null,
+    hybridBurstFrameDataUrls: partialDebug?.hybridBurstFrameDataUrls || [],
+    hybridBurstFrameMetadata: partialDebug?.hybridBurstFrameMetadata || [],
+    hybridBurstProcessing: partialDebug?.hybridBurstProcessing || [],
     warpedDataUrl: partialDebug?.warpedDataUrl || null,
     rawCropDataUrls: partialDebug?.rawCropDataUrls || [],
     modelInputDataUrls: partialDebug?.modelInputDataUrls || [],
@@ -5337,6 +6941,8 @@ const runRealOCR = async () => {
   manualCorrectionText.value = ''
   manualCorrectionClearedForSession.value = false
   correctionError.value = ''
+  localFirstStrongStatusByQuestion.value = {}
+  localFirstStrongContext.value = null
   markerDebugSnapshot.value = null
   modelInfoSnapshot.value = null
   modelSanityResults.value = null
@@ -5347,8 +6953,12 @@ const runRealOCR = async () => {
     window.__SCANGRADE_LIVE_OCR_DEBUG = null
   }
   const start = performance.now()
+  activeScanSessionId = newScanSessionId()
+  const evaluationMetadata = prospectiveEvaluationMetadata()
   const partialDebug = {
     stage: 'starting',
+    scanSessionId: activeScanSessionId,
+    ...evaluationMetadata,
     layoutUrl: null,
     layoutId: null,
     qrPayload: null,
@@ -5358,6 +6968,10 @@ const runRealOCR = async () => {
     warpedDataUrl: null,
     rawCropDataUrls: [],
     modelInputDataUrls: [],
+    v3AnswerZones: [],
+    v3ContextAnswerZones: [],
+    v3GeometryRescue: null,
+    v3Shadow: null,
     tensors: [],
     preprocessStats: [],
     predictions: [],
@@ -5367,7 +6981,9 @@ const runRealOCR = async () => {
     printedTitleFallback: null,
     reviewOnlyFallback: false,
     forcedFallbackReviewReason: null,
-    captureQuality: lastCaptureQuality.value || null
+    captureQuality: lastCaptureQuality.value || null,
+    hybridBurstFrameDataUrls: pendingHybridBurstFrames.map((frame) => frame.imageDataUrl),
+    hybridBurstFrameMetadata: pendingHybridBurstFrames.map(({ imageDataUrl: _imageDataUrl, ...metadata }) => metadata)
   }
 
   try {
@@ -5450,9 +7066,8 @@ const runRealOCR = async () => {
 
     // Run homography + crops with normalized layout
     partialDebug.stage = 'finding worksheet markers'
-    const result = processWorksheet(src, layout, {
-      qrLocation: qrPayload?.qr_location || null
-    })
+    const result = processWorksheet(src, layout, worksheetProcessingOptions(qrPayload?.qr_location || null))
+    if (hybridV3Enabled()) replaceWithFreshV3Warp(result, src, layout)
 
     if (!result) {
       if (ocrDebugEnabled.value || liveOcrDebugExportEnabled.value) {
@@ -5486,7 +7101,10 @@ const runRealOCR = async () => {
         if (matchedLayout) {
           const matchedResult = titleMatch.layoutId === layout.layout_id
             ? worksheetResult
-            : processWorksheet(src, matchedLayout, { qrLocation: null })
+            : processWorksheet(src, matchedLayout, worksheetProcessingOptions(null))
+          if (hybridV3Enabled() && matchedResult !== worksheetResult) {
+            replaceWithFreshV3Warp(matchedResult, src, matchedLayout)
+          }
           if (matchedResult) {
             if (matchedResult !== worksheetResult) {
               disposeWorksheetImages(worksheetResult)
@@ -5585,6 +7203,7 @@ const runRealOCR = async () => {
           box: `box-${i + 1}`,
           variants: (p.tensorVariants || []).map((variant) => ({
             name: variant.name || 'variant',
+            suggestionOnly: variant.suggestionOnly === true,
             dataUrl: tensorToDataURL(variant.tensor, `${p.id}-${variant.name || 'variant'}`)
           }))
         }))
@@ -5625,11 +7244,57 @@ const runRealOCR = async () => {
           tensor: Array.from(p.tensor),
           tensorVariants: (p.tensorVariants || []).map((variant) => ({
             name: variant.name || 'variant',
+            suggestionOnly: variant.suggestionOnly === true,
             tensor: Array.from(variant.tensor)
           }))
         }))
       } catch (e) {
         console.warn('[ScanGrade] tensor debug export failed:', e)
+      }
+    }
+    if (hybridV3Enabled()) {
+      let zones = []
+      try {
+        zones = extractContinuousAnswerZones(warpedImage, layout, v3AnswerZoneOptions(rawCrops))
+        partialDebug.v3AnswerZones = zones.map((zone) => ({
+          schemaVersion: zone.schemaVersion,
+          questionNum: zone.questionNum,
+          digitBoxIds: zone.digitBoxIds,
+          source: zone.source,
+          rect: zone.rect,
+          quality: zone.quality,
+          blankArtifact: zone.blankArtifact,
+          imageDataUrl: matToDataURL(zone.image, `v3-answer-${zone.questionNum}`)
+        }))
+        if (v3LocalFirstReviewEnabled()) {
+          const rescue = geometryRescuePlan({
+            layout,
+            zones: partialDebug.v3AnswerZones,
+            width: warpedImage.cols,
+            height: warpedImage.rows,
+          })
+          if (rescue) {
+            let rescuedImage = null
+            try {
+              rescuedImage = warpedImage.roi(new cv.Rect(rescue.rect.x, rescue.rect.y, rescue.rect.w, rescue.rect.h))
+              partialDebug.v3GeometryRescue = {
+                ...rescue,
+                source: 'same-page-geometry-outlier-rescue',
+                reviewOnly: true,
+                imageDataUrl: matToDataURL(rescuedImage, `v3-geometry-rescue-${rescue.questionNum}`),
+              }
+            } finally {
+              try { rescuedImage?.delete?.() } catch (_) {}
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[ScanGrade] V3 continuous answer extraction failed:', e)
+        partialDebug.v3AnswerZoneError = String(e?.message || e)
+      } finally {
+        for (const zone of zones) {
+          try { zone.image?.delete?.() } catch (_) {}
+        }
       }
     }
 
@@ -5774,6 +7439,8 @@ const runRealOCR = async () => {
           id: proc.id,
           questionNum: proc.questionNum,
           digitIndex: proc.digitIndex,
+          slotCount: proc.slotCount,
+          isVirtualDigitBox: proc.isVirtualDigitBox === true,
           digit,
           confidence: digitResult[0].confidence,
           topK,
@@ -5795,7 +7462,7 @@ const runRealOCR = async () => {
             : reviewNeeded && highRiskMismatchReview
             ? 'two-digit-mismatch-low-trust-review'
             : reviewNeeded && highRiskSingleDigitMismatchReview
-            ? 'single-digit-six-five-mismatch-review'
+            ? 'single-digit-six-shape-mismatch-review'
             : reviewNeeded && highRiskPreprocessReview
             ? 'right-slot-preprocess-disagreement'
             : (digitResult[0].preprocessReviewReason || null),
@@ -5810,6 +7477,7 @@ const runRealOCR = async () => {
           highRiskMismatchReview,
           highRiskSingleDigitMismatchReview,
           preprocessVariants: digitResult[0].preprocessVariants || null,
+          reviewSuggestionVariants: digitResult[0].reviewSuggestionVariants || null,
           preprocessVoteSummary: digitResult[0].preprocessVoteSummary || null,
           ...(correct !== undefined && { correct })
         })
@@ -5834,6 +7502,19 @@ const runRealOCR = async () => {
       ? []
       : applyOptionalSingleDigitBlankOverrides(layout.question_groups, predictions, cropQuality)
     partialDebug.optionalSingleDigitBlankOverrides = optionalSingleDigitBlankOverrides
+    const contextAssistedLeadingOneRescues = forcedFallbackReviewReason
+      ? []
+      : applyContextAssistedLeadingOneRescues(layout.question_groups, predictions, cropQuality)
+    partialDebug.contextAssistedLeadingOneRescues = contextAssistedLeadingOneRescues
+    const trustedOcrSuggestionPromotions = forcedFallbackReviewReason
+      ? []
+      : applyTrustedOcrSuggestionPromotions(layout.question_groups, predictions)
+    partialDebug.trustedOcrSuggestionPromotions = trustedOcrSuggestionPromotions
+    const confidenceClearanceVetoRecords = v3ConfidenceSafetyEnabled()
+      ? confidenceClearanceVetoes(layout.question_groups, predictions)
+      : []
+    applyConfidenceSafetyVetoes(predictions, confidenceClearanceVetoRecords)
+    partialDebug.confidenceClearanceVetoes = confidenceClearanceVetoRecords
     partialDebug.predictions = predictions
     partialDebug.stage = 'checking OCR recognition quality'
     const twoDigitRecognitionFailure = detectTwoDigitRecognitionFailure(
@@ -5867,7 +7548,51 @@ const runRealOCR = async () => {
       ? null
       : buildQuestionCorrect(layout.question_groups, predictions)
     const questionReview = buildQuestionReviewFlags(layout.question_groups, predictions)
-    const answerGroups = buildAnswerGroups(layout.question_groups, predictions, questionCorrect)
+    partialDebug.stage = 'checking optional whole-answer review model'
+    let v3SequenceItems = []
+    let wholeAnswerReviewSuggestions = []
+    if (hybridV3Enabled()) {
+      v3SequenceItems = v3SequenceFromZonesEnabled()
+        ? wholeAnswerSequenceItemsFromZones(partialDebug.v3AnswerZones)
+        : wholeAnswerReviewItemsForFrame(
+            layout.question_groups,
+            layout.question_groups.map(() => true),
+            rawCrops
+          )
+      if (partialDebug.v3GeometryRescue?.imageDataUrl) {
+        v3SequenceItems.push({
+          id: `question-${partialDebug.v3GeometryRescue.questionNum}-geometry-rescue`,
+          questionNum: partialDebug.v3GeometryRescue.questionNum,
+          frameIndex: null,
+          cropVariant: 'same-page-geometry-outlier-rescue',
+          imageDataUrl: partialDebug.v3GeometryRescue.imageDataUrl,
+        })
+      }
+      partialDebug.hybridBurstProcessing = []
+    } else {
+      const hybridBurstReview = await buildHybridBurstReviewItems(
+        layout.question_groups,
+        questionReview,
+        rawCrops,
+        layout,
+        qrPayload?.qr_location || null
+      )
+      partialDebug.hybridBurstProcessing = hybridBurstReview.frames
+      const wholeAnswerReviewResults = await requestWholeAnswerReviewSuggestions(
+        layout.question_groups,
+        questionReview,
+        rawCrops,
+        hybridBurstReview.items
+      )
+      wholeAnswerReviewSuggestions = applyWholeAnswerReviewSuggestions(
+        layout.question_groups,
+        predictions,
+        wholeAnswerReviewResults,
+        { allowRelaxedMultiFrame: layout.question_groups.length === 8 }
+      )
+    }
+    partialDebug.wholeAnswerReviewSuggestions = wholeAnswerReviewSuggestions
+    const answerGroups = buildAnswerGroups(layout.question_groups, predictions, questionCorrect, layout.id)
     const annotationRegions = buildAnnotationRegions(
       layout.question_groups,
       annotationGeometry,
@@ -5966,6 +7691,37 @@ const runRealOCR = async () => {
     } catch (e) {
       console.warn('[ScanGrade] student annotation render failed:', e)
     }
+    if (v3ContextCropReviewEnabled()) {
+      let contextZones = []
+      try {
+        // Generate review-only context after every automatic digit decision is
+        // frozen, so extra image work cannot perturb browser OCR scheduling.
+        contextZones = extractContinuousAnswerZones(warpedImage, layout, {
+          cv,
+          geometrySource: 'layout',
+          context: true,
+        })
+        partialDebug.v3ContextAnswerZones = contextZones.map((zone) => ({
+          schemaVersion: zone.schemaVersion,
+          questionNum: zone.questionNum,
+          digitBoxIds: zone.digitBoxIds,
+          source: zone.source,
+          rect: zone.rect,
+          quality: zone.quality,
+          blankArtifact: zone.blankArtifact,
+          reviewOnly: true,
+          cropVariant: 'expanded-context',
+          imageDataUrl: matToDataURL(zone.image, `v3-answer-context-${zone.questionNum}`),
+        }))
+      } catch (e) {
+        console.warn('[ScanGrade] V3 expanded review context extraction failed:', e)
+        partialDebug.v3ContextAnswerZoneError = String(e?.message || e)
+      } finally {
+        for (const zone of contextZones) {
+          try { zone.image?.delete?.() } catch (_) {}
+        }
+      }
+    }
     const overlayDebug = buildOverlayDebugSnapshot({
       questionGroups: annotationLayout?.question_groups,
       layoutId: annotationLayout?.layout_id || layout?.layout_id || null,
@@ -5982,6 +7738,10 @@ const runRealOCR = async () => {
     if (liveOcrDebugExportEnabled.value) {
       lastLiveOcrDebug.value = {
         capturedImageDataUrl: capturedImage.value,
+        scanSessionId: partialDebug.scanSessionId || null,
+        packetId: partialDebug.packetId || null,
+        captureRole: partialDebug.captureRole || null,
+        capturePlanSeed: partialDebug.capturePlanSeed || null,
         markedSheetDataUrl: payload.annotatedImageUrl || null,
         overlayDebug,
         warpedDataUrl: partialDebug.warpedDataUrl,
@@ -5989,6 +7749,16 @@ const runRealOCR = async () => {
         modelInputDataUrls: partialDebug.modelInputDataUrls,
         tensors: partialDebug.tensors,
         captureQuality: partialDebug.captureQuality,
+        hybridBurstFrameDataUrls: partialDebug.hybridBurstFrameDataUrls || [],
+        hybridBurstFrameMetadata: partialDebug.hybridBurstFrameMetadata || [],
+        hybridBurstProcessing: partialDebug.hybridBurstProcessing || [],
+        wholeAnswerReviewSuggestions: partialDebug.wholeAnswerReviewSuggestions || [],
+        v3AnswerZones: partialDebug.v3AnswerZones || [],
+        v3ContextAnswerZones: partialDebug.v3ContextAnswerZones || [],
+        v3GeometryRescue: partialDebug.v3GeometryRescue || null,
+        v3Shadow: partialDebug.v3Shadow || null,
+        confidenceSafetyVetoes: partialDebug.confidenceSafetyVetoes || [],
+        confidenceClearanceVetoes: partialDebug.confidenceClearanceVetoes || [],
         preprocessStats: partialDebug.preprocessStats,
         cropQuality: partialDebug.cropQuality,
         optionalSingleDigitBlankOverrides: partialDebug.optionalSingleDigitBlankOverrides,
@@ -6031,6 +7801,408 @@ const runRealOCR = async () => {
     }
 
     ocrResult.value = payload
+
+    const v3LargeModelUrl = optionalWholeAnswerReviewUrl()
+    const v3CompactModelUrl = optionalV3CompactModelUrl()
+    if (hybridV3Enabled() && (v3LargeModelUrl || v3CompactModelUrl) && v3SequenceItems.length) {
+      const localFirstMode = v3LocalFirstReviewEnabled()
+      payload.v3Shadow = { status: 'pending', policyVersion: V3_POLICY_VERSION, affectsGrade: false }
+      const selectedCompactItems = partialDebug.v3AnswerZones.map((zone) => ({
+        id: `question-${zone.questionNum}`,
+        questionNum: zone.questionNum,
+        cropVariant: 'primary-continuous-zone',
+        continuousImageDataUrl: zone.imageDataUrl
+      }))
+      const selectedContextCompactItems = (partialDebug.v3ContextAnswerZones || []).map((zone) => ({
+        id: `question-${zone.questionNum}-expanded-context`,
+        questionNum: zone.questionNum,
+        cropVariant: 'expanded-context',
+        continuousImageDataUrl: zone.imageDataUrl,
+      }))
+      if (partialDebug.v3GeometryRescue?.imageDataUrl) {
+        selectedCompactItems.push({
+          id: `question-${partialDebug.v3GeometryRescue.questionNum}-geometry-rescue`,
+          questionNum: partialDebug.v3GeometryRescue.questionNum,
+          cropVariant: 'same-page-geometry-outlier-rescue',
+          continuousImageDataUrl: partialDebug.v3GeometryRescue.imageDataUrl,
+        })
+      }
+      const burstFramesSnapshot = pendingHybridBurstFrames.map((frame) => ({ ...frame }))
+      const v3Run = startAsyncV3Shadow({
+        localResult: payload,
+        work: async () => {
+          const reviewQuestionNums = displayedYellowQuestionNumbers(
+            layout.question_groups,
+            questionReview,
+            payload.answerGroups
+          )
+          const confidenceSafetyQuestionNums = v3ConfidenceSafetyEnabled()
+            ? confidenceSafetyCandidateQuestionNumbers(layout.question_groups, predictions)
+            : []
+          const compactQuestionNums = [...new Set([...reviewQuestionNums, ...confidenceSafetyQuestionNums])]
+          let immediateCompactReads = []
+          let immediateCompactChoices = []
+          let confidenceSafetyVetoRecords = []
+          if (localFirstMode) {
+            const preparing = {}
+            for (const questionNum of reviewQuestionNums) preparing[questionNum] = 'preparing'
+            localFirstStrongStatusByQuestion.value = preparing
+            const immediatePrimaryItems = filterItemsToYellowQuestions(selectedCompactItems, compactQuestionNums)
+            immediateCompactReads = v3CompactModelUrl && immediatePrimaryItems.length
+              ? await requestCompactWholeAnswers({
+                  baseUrl: v3CompactModelUrl,
+                  items: immediatePrimaryItems,
+                  accessToken: optionalReviewAccessToken(),
+                  timeoutMs: 8000,
+                  onError: (error) => console.warn('[ScanGrade] Optional immediate V3 compact model unavailable:', error),
+                })
+              : []
+            immediateCompactChoices = applyCompactReviewChoices(layout.question_groups, predictions, immediateCompactReads)
+            confidenceSafetyVetoRecords = v3ConfidenceSafetyEnabled()
+              ? confidenceSafetyVetoes({
+                  questionGroups: layout.question_groups,
+                  answerGroups: payload.answerGroups,
+                  predictions,
+                  compactReads: immediateCompactReads,
+                })
+              : []
+            if (confidenceSafetyVetoRecords.length && !confidenceClearanceVetoRecords.length) {
+              applyConfidenceSafetyVetoes(predictions, confidenceSafetyVetoRecords)
+              for (const veto of confidenceSafetyVetoRecords) {
+                if (!reviewQuestionNums.includes(veto.questionNum)) reviewQuestionNums.push(veto.questionNum)
+              }
+              reviewQuestionNums.sort((a, b) => a - b)
+              const updatedQuestionReview = buildQuestionReviewFlags(layout.question_groups, predictions)
+              const updatedAnswerGroups = buildAnswerGroups(layout.question_groups, predictions, questionCorrect, layout.id)
+              const updatedAnnotationRegions = buildAnnotationRegions(
+                layout.question_groups,
+                annotationGeometry,
+                predictions,
+                questionCorrect
+              )
+              payload.digits = predictions.map((prediction) => prediction.digit)
+              payload.confidences = predictions.map((prediction) => prediction.confidence)
+              payload.predictions = predictions
+              payload.needsReview = true
+              payload.questionReview = updatedQuestionReview
+              payload.questionReviewCount = updatedQuestionReview.filter(Boolean).length
+              payload.answerGroups = updatedAnswerGroups
+              payload.annotationRegions = updatedAnnotationRegions
+              payload.confidenceSafetyVetoes = confidenceSafetyVetoRecords
+              partialDebug.questionReview = updatedQuestionReview
+              partialDebug.answerGroups = updatedAnswerGroups
+              partialDebug.annotationRegions = updatedAnnotationRegions
+              partialDebug.confidenceSafetyVetoes = confidenceSafetyVetoRecords
+              try {
+                if (payload.annotationBaseUrl) {
+                  payload.annotatedImageUrl = await composeStudentAnnotatedImage(
+                    payload.annotationBaseUrl,
+                    annotationWidth,
+                    annotationHeight,
+                    predictions,
+                    annotationCrops,
+                    annotationLayout,
+                    questionCorrect,
+                    payload.manualCorrections,
+                    payload.annotationSeed
+                  )
+                }
+              } catch (error) {
+                console.warn('[ScanGrade] confidence safety annotation refresh failed:', error)
+              }
+              if (lastLiveOcrDebug.value) {
+                lastLiveOcrDebug.value.predictions = predictions
+                lastLiveOcrDebug.value.questionReview = updatedQuestionReview
+                lastLiveOcrDebug.value.questionReviewCount = updatedQuestionReview.filter(Boolean).length
+                lastLiveOcrDebug.value.answerGroups = updatedAnswerGroups
+                lastLiveOcrDebug.value.annotationRegions = updatedAnnotationRegions
+                lastLiveOcrDebug.value.confidenceSafetyVetoes = confidenceSafetyVetoRecords
+                lastLiveOcrDebug.value.markedSheetDataUrl = payload.annotatedImageUrl || null
+                lastLiveOcrDebug.value.overlayDebug = buildOverlayDebugSnapshot({
+                  questionGroups: annotationLayout?.question_groups,
+                  layoutId: annotationLayout?.layout_id || layout?.layout_id || null,
+                  annotationGeometry,
+                  annotationRegions: updatedAnnotationRegions,
+                  predictions,
+                  questionCorrect,
+                  questionReview: updatedQuestionReview,
+                  annotationBaseMode,
+                  annotationSeed: payload.annotationSeed,
+                  markedSheetAvailable: !!payload.annotatedImageUrl,
+                })
+              }
+            }
+            payload.v3Shadow = {
+              status: 'compact-ready',
+              policyVersion: V3_POLICY_VERSION,
+              affectsGrade: false,
+              reviewArchitecture: 'local-first-on-demand-strong',
+              compactChoiceCount: immediateCompactChoices.length,
+              contextCropChoiceCount: 0,
+              contextCropReviewOnly: true,
+              contextCropInferenceDeferred: true,
+              strongInferenceDeferred: true,
+              confidenceSafetyEnabled: v3ConfidenceSafetyEnabled(),
+              confidenceSafetyCandidateCount: confidenceSafetyQuestionNums.length,
+              confidenceSafetyVetoCount: confidenceSafetyVetoRecords.length,
+            }
+            partialDebug.v3Shadow = payload.v3Shadow
+            if (lastLiveOcrDebug.value) {
+              lastLiveOcrDebug.value.v3Shadow = payload.v3Shadow
+              lastLiveOcrDebug.value.predictions = predictions
+            }
+            ocrResult.value = { ...payload }
+          }
+          const burst = await buildV3BurstShadowItems({
+            questionGroups: layout.question_groups,
+            layout,
+            qrLocation: qrPayload?.qr_location || null,
+            selectedSequenceItems: v3SequenceItems,
+            selectedCompactItems,
+            selectedZones: partialDebug.v3AnswerZones,
+            burstFrames: burstFramesSnapshot,
+            reviewQuestionNums,
+            includeCompactItems: !localFirstMode,
+          })
+          const alternateCrop = localFirstMode
+            ? { sequenceItems: [], frames: [] }
+            : await buildV3AlternateCropReviewItems({
+                questionGroups: layout.question_groups,
+                questionReview,
+                layout,
+                qrLocation: qrPayload?.qr_location || null,
+                burstFrames: burstFramesSnapshot,
+              })
+          partialDebug.hybridBurstProcessing = burst.frames
+          const [sequenceReads, compactReads, alternateSequenceReads] = await Promise.all([
+            v3LargeModelUrl && (!localFirstMode || v3ConsensusPromotionEnabled())
+              ? requestWholeAnswerReviewSuggestions(
+                  layout.question_groups,
+                  layout.question_groups.map(() => true),
+                  rawCrops,
+                  burst.sequenceItems
+                )
+              : Promise.resolve([]),
+            v3CompactModelUrl && !localFirstMode
+              ? requestCompactWholeAnswers({
+                  baseUrl: v3CompactModelUrl,
+                  items: burst.compactItems,
+                  accessToken: optionalReviewAccessToken(),
+                  timeoutMs: 8000,
+                  onError: (error) => console.warn('[ScanGrade] Optional V3 compact model unavailable:', error)
+                })
+              : Promise.resolve(immediateCompactReads),
+            v3LargeModelUrl && !localFirstMode && alternateCrop.sequenceItems.length
+              ? requestWholeAnswerReviewSuggestions(
+                  layout.question_groups,
+                  questionReview,
+                  rawCrops,
+                  alternateCrop.sequenceItems
+                )
+              : Promise.resolve([]),
+          ])
+          const decisions = buildV3ShadowDecisions({
+            questionGroups: layout.question_groups,
+            predictions,
+            sequenceReads,
+            compactReads: localFirstMode
+              ? compactReads.filter((read) => read?.cropVariant !== 'expanded-context')
+              : compactReads,
+            zones: partialDebug.v3AnswerZones,
+            requireCompact: !!v3CompactModelUrl,
+          })
+          const consensusPromotionDecisions = []
+          let consensusApplication = null
+          if (v3ConsensusPromotionEnabled()) {
+            const answerByQuestion = new Map((payload.answerGroups || []).map((group) => [
+              Number(group?.questionNum),
+              group,
+            ]))
+            const shadowByQuestion = new Map(decisions.map((decision) => [Number(decision.questionNum), decision]))
+            const predictionsById = new Map(predictions.map((prediction) => [Number(prediction.id), prediction]))
+            const compactByQuestion = new Map()
+            for (const read of compactReads || []) {
+              const questionNum = Number(read?.questionNum)
+              if (!Number.isFinite(questionNum)) continue
+              if (!compactByQuestion.has(questionNum)) compactByQuestion.set(questionNum, [])
+              compactByQuestion.get(questionNum).push(read)
+            }
+            const safetyVetoQuestions = new Set([
+              ...(confidenceClearanceVetoRecords || []),
+              ...(confidenceSafetyVetoRecords || []),
+            ].map((veto) => Number(veto.questionNum)))
+            for (const group of layout.question_groups || []) {
+              const questionNum = Number(group?.question_num)
+              const answerGroup = answerByQuestion.get(questionNum)
+              const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+              const groupPredictions = ids.map((id) => predictionsById.get(Number(id))).filter(Boolean)
+              const ambiguity = detectAnswerAmbiguity({ predictions: groupPredictions })
+              const decision = consensusPromotionDecision({
+                currentRead: answerGroup?.answerText || '',
+                currentAutomatic: answerGroup?.reviewNeeded !== true,
+                currentPredictions: groupPredictions,
+                confidenceSafetyVetoed: safetyVetoQuestions.has(questionNum),
+                sequenceFrameConsensus: shadowByQuestion.get(questionNum)?.sequenceFrameConsensus || null,
+                compactReads: compactByQuestion.get(questionNum) || [],
+                slotCount: ids.length,
+                ambiguity,
+              })
+              consensusPromotionDecisions.push({ questionNum, ...decision, ambiguity })
+            }
+            const manualCorrectionActive = predictions.some((prediction) => prediction?.manualCorrected === true) ||
+              Object.keys(payload.manualCorrections || {}).length > 0
+            if (!manualCorrectionActive) {
+              consensusApplication = applyConsensusPromotionsToPredictions({
+                questionGroups: layout.question_groups,
+                predictions,
+                decisions: consensusPromotionDecisions,
+              })
+              if (consensusApplication.applied.length) {
+                predictions = consensusApplication.predictions
+                const promotedQuestionCorrect = buildQuestionCorrect(layout.question_groups, predictions)
+                const promotedQuestionReview = buildQuestionReviewFlags(layout.question_groups, predictions)
+                const promotedAnswerGroups = buildAnswerGroups(layout.question_groups, predictions, promotedQuestionCorrect, layout.id)
+                const promotedAnnotationRegions = buildAnnotationRegions(
+                  layout.question_groups,
+                  annotationGeometry,
+                  predictions,
+                  promotedQuestionCorrect,
+                )
+                payload.digits = predictions.map((prediction) => prediction.digit)
+                payload.confidences = predictions.map((prediction) => prediction.confidence)
+                payload.predictions = predictions
+                delete payload.correct
+                payload.questionCorrect = promotedQuestionCorrect
+                payload.questionCount = promotedQuestionCorrect?.length || 0
+                payload.questionScore = promotedQuestionCorrect?.filter(Boolean).length || 0
+                payload.questionReview = promotedQuestionReview
+                payload.questionReviewCount = promotedQuestionReview?.filter(Boolean).length || 0
+                payload.answerGroups = promotedAnswerGroups
+                payload.annotationRegions = promotedAnnotationRegions
+                payload.needsReview = !!forcedFallbackReviewReason || baseNeedsReview ||
+                  predictions.some((prediction) => prediction.reviewNeeded) ||
+                  promotedQuestionReview?.some(Boolean)
+                partialDebug.predictions = predictions
+                partialDebug.questionCorrect = promotedQuestionCorrect
+                partialDebug.questionReview = promotedQuestionReview
+                partialDebug.answerGroups = promotedAnswerGroups
+                partialDebug.annotationRegions = promotedAnnotationRegions
+                try {
+                  if (payload.annotationBaseUrl) {
+                    payload.annotatedImageUrl = await composeStudentAnnotatedImage(
+                      payload.annotationBaseUrl,
+                      annotationWidth,
+                      annotationHeight,
+                      predictions,
+                      annotationCrops,
+                      annotationLayout,
+                      promotedQuestionCorrect,
+                      payload.manualCorrections,
+                      payload.annotationSeed,
+                    )
+                  }
+                } catch (error) {
+                  console.warn('[ScanGrade] experimental consensus annotation refresh failed:', error)
+                }
+              }
+            }
+          }
+          const compactChoices = localFirstMode
+            ? immediateCompactChoices
+            : applyCompactReviewChoices(layout.question_groups, predictions, compactReads)
+          const strongSuggestions = localFirstMode ? [] : [
+            ...applyWholeAnswerReviewSuggestions(layout.question_groups, predictions, sequenceReads, { allowRelaxedMultiFrame: layout.question_groups.length === 8 }),
+            ...applyWholeAnswerReviewSuggestions(layout.question_groups, predictions, alternateSequenceReads, { allowRelaxedMultiFrame: layout.question_groups.length === 8 }),
+          ]
+          const suggestions = [...compactChoices, ...strongSuggestions]
+          if (localFirstMode) {
+            const deferred = {}
+            for (const questionNum of reviewQuestionNums) deferred[questionNum] = 'deferred'
+            localFirstStrongStatusByQuestion.value = deferred
+            localFirstStrongContext.value = {
+              questionGroups: layout.question_groups,
+              predictions,
+              sequenceItems: burst.sequenceItems,
+              contextCompactItems: filterItemsToYellowQuestions(selectedContextCompactItems, reviewQuestionNums),
+              contextAttemptedByQuestion: {},
+              payload,
+            }
+          }
+          return {
+            shadow: {
+              status: 'complete', policyVersion: V3_POLICY_VERSION,
+              affectsGrade: v3ConsensusPromotionEnabled() && (consensusApplication?.applied?.length || 0) > 0,
+              decisions, suggestions: suggestions.length,
+              reviewArchitecture: v3ConsensusPromotionEnabled()
+                ? 'yellow-only-three-frame-consensus-experimental'
+                : localFirstMode ? 'local-first-on-demand-strong' : 'eager-strong-shadow',
+              compactChoiceCount: compactChoices.length,
+              confidenceSafetyEnabled: v3ConfidenceSafetyEnabled(),
+              confidenceSafetyCandidateCount: confidenceSafetyQuestionNums.length,
+              confidenceSafetyVetoCount: confidenceSafetyVetoRecords.length,
+              confidenceSafetyVetoes: confidenceSafetyVetoRecords,
+              consensusPromotionEnabled: v3ConsensusPromotionEnabled(),
+              consensusPromotionDecisions,
+              consensusApplication,
+              consensusPromotionCount: consensusApplication?.applied?.length || 0,
+              strongInferenceDeferred: localFirstMode && !v3ConsensusPromotionEnabled(),
+              frameProcessing: burst.frames,
+              frameCount: burst.frames.filter((frame) => frame.processed).length,
+              alternateCropReview: {
+                enabled: v3DualCropReviewEnabled(),
+                itemCount: alternateCrop.sequenceItems.length,
+                frames: alternateCrop.frames,
+                suggestionCount: alternateSequenceReads.length,
+                affectsGrade: false,
+              },
+              largeModelAvailable: sequenceReads.length > 0,
+              compactModelAvailable: compactReads.length > 0
+            },
+            suggestions,
+          }
+        },
+        onComplete: ({ shadow, suggestions }) => {
+          payload.v3Shadow = shadow
+          partialDebug.v3Shadow = shadow
+          partialDebug.wholeAnswerReviewSuggestions = suggestions
+          if (lastLiveOcrDebug.value) {
+            lastLiveOcrDebug.value.v3Shadow = shadow
+            lastLiveOcrDebug.value.wholeAnswerReviewSuggestions = suggestions
+            if (shadow?.consensusPromotionCount > 0) {
+              lastLiveOcrDebug.value.predictions = payload.predictions
+              lastLiveOcrDebug.value.questionCorrect = payload.questionCorrect
+              lastLiveOcrDebug.value.questionReview = payload.questionReview
+              lastLiveOcrDebug.value.questionReviewCount = payload.questionReviewCount
+              lastLiveOcrDebug.value.answerGroups = payload.answerGroups
+              lastLiveOcrDebug.value.annotationRegions = payload.annotationRegions
+              lastLiveOcrDebug.value.markedSheetDataUrl = payload.annotatedImageUrl || null
+              lastLiveOcrDebug.value.overlayDebug = buildOverlayDebugSnapshot({
+                questionGroups: annotationLayout?.question_groups,
+                layoutId: annotationLayout?.layout_id || layout?.layout_id || null,
+                annotationGeometry,
+                annotationRegions: payload.annotationRegions,
+                predictions: payload.predictions,
+                questionCorrect: payload.questionCorrect,
+                questionReview: payload.questionReview,
+                annotationBaseMode,
+                annotationSeed: payload.annotationSeed,
+                markedSheetAvailable: !!payload.annotatedImageUrl,
+              })
+            }
+            void uploadLiveOcrDebug(lastLiveOcrDebug.value, 'v3-shadow-complete')
+          }
+          if (localFirstMode || v3ConsensusPromotionEnabled()) ocrResult.value = { ...payload }
+        },
+        onError: (e) => {
+          payload.v3Shadow = {
+            status: 'unavailable', policyVersion: V3_POLICY_VERSION, affectsGrade: false,
+            error: String(e?.message || e)
+          }
+          partialDebug.v3Shadow = payload.v3Shadow
+        },
+      })
+      void v3Run.shadow
+    }
 
     if (!props.studentMode && ocrDebugEnabled.value) {
       const thumb = matToThumbnailDataURL(warpedImage, 520)
@@ -6246,12 +8418,16 @@ function exportLiveOcrDebugJson() {
 }
 
 const retake = () => {
+  pendingHybridBurstFrames = []
+  captureGateTelemetry = newCaptureGateTelemetry()
   capturedImage.value = null
   ocrResult.value = null
   activeCorrectionQuestion.value = null
   manualCorrectionText.value = ''
   manualCorrectionClearedForSession.value = false
   correctionError.value = ''
+  localFirstStrongStatusByQuestion.value = {}
+  localFirstStrongContext.value = null
   lastProcessedTensors.value = null
   lastLiveOcrDebug.value = null
   ocrDebugSnapshot.value = null
@@ -6270,7 +8446,14 @@ const stopStream = () => {
   }
 }
 
-onUnmounted(stopStream)
+onUnmounted(() => {
+  stopStream()
+  if (typeof window !== 'undefined') {
+    delete window.__SCANGRADE_SET_V3_BURST_FRAMES
+    delete window.__SCANGRADE_OPEN_REVIEW_QUESTION
+    delete window.__SCANGRADE_LOCAL_FIRST_CONTEXT_SUMMARY
+  }
+})
 </script>
 
 <style scoped>
@@ -7025,6 +9208,18 @@ onUnmounted(stopStream)
 .student-correction-panel--image .student-correction-choices {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.local-first-none-btn {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.local-first-strong-message {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.25;
+  color: #694f20;
 }
 
 .student-correction-panel--image .correction-choice-btn {

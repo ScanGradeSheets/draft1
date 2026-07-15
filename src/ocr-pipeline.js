@@ -837,6 +837,7 @@ function digitTopGap(result) {
 function compactVariantDetails(variantResults) {
   return variantResults.map((variant) => ({
     name: variant.name,
+    suggestionOnly: variant.suggestionOnly === true,
     digit: variant.result.digit,
     confidence: variant.result.confidence,
     topGap: digitTopGap(variant.result),
@@ -1662,19 +1663,28 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
     return recognizeDigitsRobust(tensor, baseResult, { force: options.force === true });
   }
 
-  const variantResults = [];
+  const allVariantResults = [];
   for (const variant of variants) {
-    const name = variant.name || `variant-${variantResults.length + 1}`;
+    const name = variant.name || `variant-${allVariantResults.length + 1}`;
     const data = copyDigitTensorData(variant.tensor || variant.data || variant);
     const probs = await runDigitDataAsProbs(data, options);
-    variantResults.push({
+    allVariantResults.push({
       name,
       data,
+      suggestionOnly: variant.suggestionOnly === true,
       result: digitResultFromProbs(probs, { preprocessVariantName: name })
     });
   }
 
+  const variantResults = allVariantResults.filter((variant) => variant.suggestionOnly !== true);
+  // Keep review-only evidence out of the primary result object. Several later
+  // safety and confidence policies inspect preprocessVariants; mixing the
+  // experimental crops into that field can change automatic grading even if
+  // they were excluded from the model vote above.
   const variantDetails = compactVariantDetails(variantResults);
+  const reviewSuggestionVariants = compactVariantDetails(
+    allVariantResults.filter((variant) => variant.suggestionOnly === true)
+  );
   const enableLegacyConsensus = options.enableLegacyConsensus === true;
   const consensus = enableLegacyConsensus ? choosePreprocessConsensus(variantResults, options) : null;
   const dominant = enableLegacyConsensus && options.enableDominantPreprocessVariant === true
@@ -1710,21 +1720,21 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
   if (consensus) {
     result = digitResultFromVotedDigit(consensus.probs, consensus.digit, {
       robust: true,
-      variantCount: variants.length,
+      variantCount: variantResults.length,
       robustOverride: consensus.reason
     });
     selectionReason = consensus.reason;
   } else if (dominant) {
     result = digitResultFromVotedDigit(dominant.probs, dominant.digit, {
       robust: true,
-      variantCount: variants.length,
+      variantCount: variantResults.length,
       robustOverride: dominant.reason
     });
     selectionReason = dominant.reason;
   } else if (strongLeftSlotOneVote) {
     result = digitResultFromVotedDigit(averagedProbs, 1, {
       robust: true,
-      variantCount: variants.length,
+      variantCount: variantResults.length,
       robustOverride: 'left-slot-one-weighted-vote'
     });
     selectionReason = 'left-slot-one-weighted-vote';
@@ -1734,28 +1744,28 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
   ) {
     result = digitResultFromProbs(rightSlotExpectedEdgeProbs, {
       robust: true,
-      variantCount: variants.length,
+      variantCount: variantResults.length,
       robustOverride: 'right-slot-expected-edge-default'
     });
     selectionReason = 'right-slot-expected-edge-default';
   } else if (boxSafeResult && options.preferBoxSafeDigits !== false) {
     result = digitResultFromProbs(boxSafeProbs, {
       robust: true,
-      variantCount: variants.length,
+      variantCount: variantResults.length,
       robustOverride: 'box-safe-default'
     });
     selectionReason = 'box-safe-default';
   } else if (votes.top && votes.top.share >= 0.62 && votes.margin >= 0.18) {
     result = digitResultFromVotedDigit(averagedProbs, votes.top.digit, {
       robust: true,
-      variantCount: variants.length,
+      variantCount: variantResults.length,
       robustOverride: 'preprocess-weighted-vote'
     });
     selectionReason = 'preprocess-weighted-vote';
   } else {
     result = digitResultFromProbs(averagedProbs, {
       robust: true,
-      variantCount: variants.length,
+      variantCount: variantResults.length,
       robustOverride: null
     });
   }
@@ -1763,7 +1773,7 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
   const applyRescue = (probs, digit, reason) => {
     result = digitResultFromVotedDigit(probs, digit, {
       robust: true,
-      variantCount: variants.length,
+      variantCount: variantResults.length,
       robustOverride: reason
     });
     selectionReason = reason;
@@ -2149,6 +2159,7 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
     preprocessDisagreement: shouldForceReview,
     preprocessReviewReason: shouldForceReview ? selectionReason : null,
     preprocessVariants: variantDetails,
+    reviewSuggestionVariants,
     preprocessVoteSummary: {
       top: votes.top || null,
       runnerUp: votes.runnerUp || null,

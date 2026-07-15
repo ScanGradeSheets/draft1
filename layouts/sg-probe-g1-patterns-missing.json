@@ -1,0 +1,723 @@
+{
+  "layout_id": "sg-probe-g1-patterns-missing",
+  "version": 1,
+  "answer_key": [
+    1,
+    0,
+    null,
+    5,
+    null,
+    7,
+    1,
+    0,
+    2,
+    0,
+    null,
+    6,
+    3,
+    0,
+    null,
+    7,
+    4,
+    5,
+    1,
+    3
+  ],
+  "page": {
+    "aspect_ratio": 0.7727,
+    "units": "normalized"
+  },
+  "boxes": [
+    {
+      "id": 0,
+      "question_num": 1,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3631,
+      "y": 0.3038,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 1
+    },
+    {
+      "id": 1,
+      "question_num": 1,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4298,
+      "y": 0.3038,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 0
+    },
+    {
+      "id": 2,
+      "question_num": 2,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3631,
+      "y": 0.4147,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "optional_blank_or_digit",
+      "expected_digit": null
+    },
+    {
+      "id": 3,
+      "question_num": 2,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4298,
+      "y": 0.4147,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 5
+    },
+    {
+      "id": 4,
+      "question_num": 3,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3631,
+      "y": 0.5257,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "optional_blank_or_digit",
+      "expected_digit": null
+    },
+    {
+      "id": 5,
+      "question_num": 3,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4298,
+      "y": 0.5257,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 7
+    },
+    {
+      "id": 6,
+      "question_num": 4,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3631,
+      "y": 0.6366,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 1
+    },
+    {
+      "id": 7,
+      "question_num": 4,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4298,
+      "y": 0.6366,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 0
+    },
+    {
+      "id": 8,
+      "question_num": 5,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.3631,
+      "y": 0.7476,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 2
+    },
+    {
+      "id": 9,
+      "question_num": 5,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.4298,
+      "y": 0.7476,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 0
+    },
+    {
+      "id": 10,
+      "question_num": 6,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8078,
+      "y": 0.3038,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "optional_blank_or_digit",
+      "expected_digit": null
+    },
+    {
+      "id": 11,
+      "question_num": 6,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8745,
+      "y": 0.3038,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 6
+    },
+    {
+      "id": 12,
+      "question_num": 7,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8078,
+      "y": 0.4147,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 3
+    },
+    {
+      "id": 13,
+      "question_num": 7,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8745,
+      "y": 0.4147,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 0
+    },
+    {
+      "id": 14,
+      "question_num": 8,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8078,
+      "y": 0.5257,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "optional_blank_or_digit",
+      "expected_digit": null
+    },
+    {
+      "id": 15,
+      "question_num": 8,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8745,
+      "y": 0.5257,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 7
+    },
+    {
+      "id": 16,
+      "question_num": 9,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8078,
+      "y": 0.6366,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 4
+    },
+    {
+      "id": 17,
+      "question_num": 9,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8745,
+      "y": 0.6366,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 5
+    },
+    {
+      "id": 18,
+      "question_num": 10,
+      "digit_index": 0,
+      "digit_place": "tens",
+      "x": 0.8078,
+      "y": 0.7476,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 1
+    },
+    {
+      "id": 19,
+      "question_num": 10,
+      "digit_index": 1,
+      "digit_place": "ones",
+      "x": 0.8745,
+      "y": 0.7476,
+      "width": 0.0621,
+      "height": 0.0592,
+      "expected_type": "digit",
+      "expected_digit": 3
+    }
+  ],
+  "question_groups": [
+    {
+      "question_num": 1,
+      "problem": "4,6,8,__",
+      "answer": 10,
+      "digit_box_ids": [
+        0,
+        1
+      ],
+      "canonical_digits": [
+        1,
+        0
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3654
+        ],
+        "y1": 0.2445,
+        "y2": 0.3038
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "10",
+          "digits": [
+            1,
+            0
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 2,
+      "problem": "10+__=15",
+      "answer": 5,
+      "digit_box_ids": [
+        2,
+        3
+      ],
+      "canonical_digits": [
+        null,
+        5
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3654
+        ],
+        "y1": 0.3555,
+        "y2": 0.4147
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "_5",
+          "digits": [
+            null,
+            5
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "05",
+          "digits": [
+            0,
+            5
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "5_",
+          "digits": [
+            5,
+            null
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 3,
+      "problem": "__+3=10",
+      "answer": 7,
+      "digit_box_ids": [
+        4,
+        5
+      ],
+      "canonical_digits": [
+        null,
+        7
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3654
+        ],
+        "y1": 0.4664,
+        "y2": 0.5257
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "_7",
+          "digits": [
+            null,
+            7
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "07",
+          "digits": [
+            0,
+            7
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "7_",
+          "digits": [
+            7,
+            null
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 4,
+      "problem": "2,4,6,8,__",
+      "answer": 10,
+      "digit_box_ids": [
+        6,
+        7
+      ],
+      "canonical_digits": [
+        1,
+        0
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3654
+        ],
+        "y1": 0.5774,
+        "y2": 0.6366
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "10",
+          "digits": [
+            1,
+            0
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 5,
+      "problem": "5,10,15,__",
+      "answer": 20,
+      "digit_box_ids": [
+        8,
+        9
+      ],
+      "canonical_digits": [
+        2,
+        0
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.3654
+        ],
+        "y1": 0.6884,
+        "y2": 0.7476
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "20",
+          "digits": [
+            2,
+            0
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 6,
+      "problem": "12-__=6",
+      "answer": 6,
+      "digit_box_ids": [
+        10,
+        11
+      ],
+      "canonical_digits": [
+        null,
+        6
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.8101
+        ],
+        "y1": 0.2445,
+        "y2": 0.3038
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "_6",
+          "digits": [
+            null,
+            6
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "06",
+          "digits": [
+            0,
+            6
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "6_",
+          "digits": [
+            6,
+            null
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 7,
+      "problem": "20,25,__",
+      "answer": 30,
+      "digit_box_ids": [
+        12,
+        13
+      ],
+      "canonical_digits": [
+        3,
+        0
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.8101
+        ],
+        "y1": 0.3555,
+        "y2": 0.4147
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "30",
+          "digits": [
+            3,
+            0
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 8,
+      "problem": "7+__=14",
+      "answer": 7,
+      "digit_box_ids": [
+        14,
+        15
+      ],
+      "canonical_digits": [
+        null,
+        7
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.8101
+        ],
+        "y1": 0.4664,
+        "y2": 0.5257
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "_7",
+          "digits": [
+            null,
+            7
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "07",
+          "digits": [
+            0,
+            7
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        },
+        {
+          "label": "7_",
+          "digits": [
+            7,
+            null
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 9,
+      "problem": "30,35,40,__",
+      "answer": 45,
+      "digit_box_ids": [
+        16,
+        17
+      ],
+      "canonical_digits": [
+        4,
+        5
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.8101
+        ],
+        "y1": 0.5774,
+        "y2": 0.6366
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "45",
+          "digits": [
+            4,
+            5
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    },
+    {
+      "question_num": 10,
+      "problem": "__-4=9",
+      "answer": 13,
+      "digit_box_ids": [
+        18,
+        19
+      ],
+      "canonical_digits": [
+        1,
+        3
+      ],
+      "guide_line": {
+        "type": "open_divider",
+        "slot_count": 2,
+        "printed": true,
+        "x_values": [
+          0.8101
+        ],
+        "y1": 0.6884,
+        "y2": 0.7476
+      },
+      "accepted_digit_responses": [
+        {
+          "label": "13",
+          "digits": [
+            1,
+            3
+          ],
+          "meaning": "accepted numeric placement for young-student handwriting"
+        }
+      ]
+    }
+  ],
+  "homography": {
+    "anchors": [
+      {
+        "id": "tl",
+        "x": 0.0829,
+        "y": 0.0641
+      },
+      {
+        "id": "tr",
+        "x": 0.9171,
+        "y": 0.0641
+      },
+      {
+        "id": "br",
+        "x": 0.9171,
+        "y": 0.9359
+      },
+      {
+        "id": "bl",
+        "x": 0.0829,
+        "y": 0.9359
+      }
+    ],
+    "marker_size": 0.0528
+  },
+  "metadata": {
+    "title": "Patterns and Missing Numbers",
+    "human_code": "SG-CP-03",
+    "grade_level": 1,
+    "total_questions": 10,
+    "answer_box_count": 20,
+    "printed_text_font_family": "Lexend",
+    "required_font_files": [
+      "public/fonts/Lexend-wght.ttf"
+    ],
+    "digit_box_width_mm": 13.4,
+    "digit_box_height_mm": 16.55,
+    "answer_slots_per_question": 2,
+    "marker_size_mm": 11.4,
+    "curriculum_probe": true,
+    "curriculum_tier": "supported",
+    "curriculum_note": "Grade 1 Algebra: patterns, equality, and missing numbers using whole numbers to 50",
+    "grading_policy": {
+      "answer_slots_per_question": 2,
+      "printed_digit_split_guide": "open center divider notches",
+      "blank_digit_value": null,
+      "shorter_answers_accept_left_or_right_placement": true
+    },
+    "qr_position": {
+      "x": 0.4403,
+      "y": 0.8715,
+      "width": 0.1195,
+      "height": 0.0923
+    }
+  }
+}

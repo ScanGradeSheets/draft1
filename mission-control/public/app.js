@@ -14,6 +14,8 @@ let currentStatus = null;
 let missionDraftBeforeEdit = '';
 
 const $ = (id) => document.getElementById(id);
+const appBase = window.location.pathname.replace(/\/[^/]*$/, '/');
+const appUrl = (path) => new URL(String(path).replace(/^\//, ''), `${window.location.origin}${appBase}`).toString();
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -55,6 +57,46 @@ function renderToday(data) {
   $('worksheetCount').textContent = String((data.worksheetLibrary?.current_test_set?.templates || data.worksheets?.templates || []).length);
   $('openDecisionCount').textContent = String((data.decisions?.decisions || []).filter((d) => d.status !== 'answered').length);
   $('activeCardCount').textContent = String(activeCards.length || allCards.length);
+}
+
+function renderLaunchPlan(data) {
+  const plan = data.state?.launch_plan || {};
+  const weeks = Array.isArray(plan.weeks) ? plan.weeks : [];
+  const summaryNode = $('launchPlanSummary');
+  const listNode = $('launchPlanList');
+  if (!summaryNode || !listNode) return;
+
+  const badges = [
+    plan.target_launch ? ['Target', plan.target_launch] : null,
+    plan.minimum_weekly_time ? ['Minimum', plan.minimum_weekly_time] : null,
+    plan.ideal_weekly_time ? ['Ideal', plan.ideal_weekly_time] : null,
+    plan.wedding_buffer ? ['Buffer', plan.wedding_buffer] : null,
+  ].filter(Boolean);
+
+  summaryNode.innerHTML = `
+    <article class="panel launch-plan-intro">
+      <div class="badge-row">
+        ${badges.map(([label, value]) => `<span class="badge">${escapeHtml(label)}: ${escapeHtml(value)}</span>`).join('')}
+      </div>
+      <p>${escapeHtml(plan.summary || 'No launch plan has been recorded yet.')}</p>
+    </article>
+  `;
+
+  listNode.innerHTML = weeks.length ? weeks.map((week) => `
+    <article class="launch-week ${escapeHtml(typeClass(week.type || 'general'))}">
+      <div class="launch-week-date">${escapeHtml(week.window || '')}</div>
+      <div>
+        <div class="badge-row">
+          ${week.hours ? `<span class="badge">${escapeHtml(week.hours)}</span>` : ''}
+          <span class="badge">${escapeHtml(typeLabels[week.type] || week.type || 'Work')}</span>
+        </div>
+        <h3>${escapeHtml(week.focus || '')}</h3>
+        <ul>
+          ${(week.todos || []).map((todo) => `<li>${escapeHtml(todo)}</li>`).join('')}
+        </ul>
+      </div>
+    </article>
+  `).join('') : '<article class="panel empty-state"><h3>No calendar items yet.</h3><p>Add launch_plan.weeks to mission-state.json.</p></article>';
 }
 
 function renderStrategic(data) {
@@ -116,8 +158,8 @@ function renderBoard(data) {
   const columns = data.state?.focus_board || data.board?.columns || [];
   renderLegend();
   $('boardColumns').innerHTML = columns.map((column) => `
-    <div class="column">
-      <h3>${escapeHtml(column.column || column.name)} <span>${(column.cards || []).length}</span></h3>
+    <details class="column" ${String(column.column || column.name).toLowerCase() === 'done' ? '' : 'open'}>
+      <summary class="column-title">${escapeHtml(column.column || column.name)} <span>${(column.cards || []).length}</span></summary>
       ${(column.cards || []).map((card) => `
         <details class="mini-card ${escapeHtml(typeClass(cardType(card)))}">
           <summary>
@@ -134,7 +176,7 @@ function renderBoard(data) {
           ${card.filepath ? `<p class="file-hint">${escapeHtml(card.filepath)}</p>` : ''}
         </details>
       `).join('') || '<p class="muted">No cards.</p>'}
-    </div>
+    </details>
   `).join('');
 }
 
@@ -200,7 +242,7 @@ function renderWorksheets(data) {
   const currentSet = data.worksheetLibrary?.current_test_set || {};
   const templates = currentSet.templates || data.worksheets?.templates || [];
   const olderTemplates = data.worksheets?.templates || [];
-  const packetHref = currentSet.packet_pdf ? `/repo/public/${currentSet.packet_pdf}` : '#';
+  const packetHref = currentSet.packet_pdf ? appUrl(`repo/public/${currentSet.packet_pdf}`) : '#';
 
   $('worksheetSetLabel').textContent = currentSet.label || 'Current test set';
   $('worksheetSetStatus').textContent = currentSet.status || 'Awaiting samples';
@@ -211,8 +253,8 @@ function renderWorksheets(data) {
 
   $('worksheetList').innerHTML = templates.map((template) => `
     <article class="worksheet-card">
-      <a class="worksheet-preview" href="/repo/public/${escapeHtml(template.worksheet_url)}" target="_blank" rel="noreferrer">
-        <img src="/repo/public/${escapeHtml(template.worksheet_url)}" alt="${escapeHtml(template.title)} preview" />
+      <a class="worksheet-preview" href="${escapeHtml(appUrl(`repo/public/${template.worksheet_url}`))}" target="_blank" rel="noreferrer">
+        <img src="${escapeHtml(appUrl(`repo/public/${template.worksheet_url}`))}" alt="${escapeHtml(template.title)} preview" />
       </a>
       <div class="badge-row">
         <span class="badge">${escapeHtml(template.human_code || template.template_id)}</span>
@@ -221,9 +263,9 @@ function renderWorksheets(data) {
       <h3>${escapeHtml(template.title)}</h3>
       <p>${escapeHtml(template.template_id)}</p>
       <div class="worksheet-actions">
-        <a href="/repo/public/${escapeHtml(template.worksheet_url)}" target="_blank" rel="noreferrer">Open sheet</a>
-        ${template.pdf_url ? `<a href="/repo/public/${escapeHtml(template.pdf_url)}" target="_blank" rel="noreferrer">PDF</a>` : ''}
-        <a href="/repo/public/${escapeHtml(template.layout_url)}" target="_blank" rel="noreferrer">Layout</a>
+        <a href="${escapeHtml(appUrl(`repo/public/${template.worksheet_url}`))}" target="_blank" rel="noreferrer">Open sheet</a>
+        ${template.pdf_url ? `<a href="${escapeHtml(appUrl(`repo/public/${template.pdf_url}`))}" target="_blank" rel="noreferrer">PDF</a>` : ''}
+        <a href="${escapeHtml(appUrl(`repo/public/${template.layout_url}`))}" target="_blank" rel="noreferrer">Layout</a>
       </div>
       <details>
         <summary>Technical details</summary>
@@ -234,8 +276,8 @@ function renderWorksheets(data) {
 
   $('olderWorksheetList').innerHTML = olderTemplates.map((template) => `
     <article class="worksheet-card older">
-      <a class="worksheet-preview" href="/repo/public/${escapeHtml(template.worksheet_url)}" target="_blank" rel="noreferrer">
-        <img src="/repo/public/${escapeHtml(template.worksheet_url)}" alt="${escapeHtml(template.title)} old preview" />
+      <a class="worksheet-preview" href="${escapeHtml(appUrl(`repo/public/${template.worksheet_url}`))}" target="_blank" rel="noreferrer">
+        <img src="${escapeHtml(appUrl(`repo/public/${template.worksheet_url}`))}" alt="${escapeHtml(template.title)} old preview" />
       </a>
       <div class="badge-row">
         <span class="badge">${escapeHtml(template.human_code || template.template_id)}</span>
@@ -244,7 +286,7 @@ function renderWorksheets(data) {
       <h3>${escapeHtml(template.title)}</h3>
       <p>${escapeHtml(template.template_id)}</p>
       <div class="worksheet-actions">
-        <a href="/repo/public/${escapeHtml(template.worksheet_url)}" target="_blank" rel="noreferrer">Open old sheet</a>
+        <a href="${escapeHtml(appUrl(`repo/public/${template.worksheet_url}`))}" target="_blank" rel="noreferrer">Open old sheet</a>
       </div>
     </article>
   `).join('');
@@ -272,7 +314,7 @@ function renderValidation(data) {
 function renderDocs(data) {
   const docs = data.docs || [];
   $('docList').innerHTML = docs.map((doc) => `
-    <a class="doc-item" href="/repo/${escapeHtml(doc.file)}" target="_blank" rel="noreferrer">
+    <a class="doc-item" href="${escapeHtml(appUrl(`repo/${doc.file}`))}" target="_blank" rel="noreferrer">
       <div>
         <strong>${escapeHtml(doc.title)}</strong>
         <p>${escapeHtml(doc.file)}</p>
@@ -299,6 +341,7 @@ function renderGit(data) {
 function render(data) {
   currentStatus = data;
   renderToday(data);
+  renderLaunchPlan(data);
   renderStrategic(data);
   renderBoard(data);
   renderDecisions(data);
@@ -309,7 +352,7 @@ function render(data) {
 }
 
 async function loadStatus() {
-  render(await fetchJson('/api/status'));
+  render(await fetchJson(appUrl('api/status')));
 }
 
 async function saveMission() {
@@ -317,7 +360,7 @@ async function saveMission() {
     ...(currentStatus?.state || {}),
     current_mission: $('missionInput').value.trim(),
   };
-  await fetchJson('/api/mission', {
+  await fetchJson(appUrl('api/mission'), {
     method: 'POST',
     body: JSON.stringify(state),
   });
@@ -332,7 +375,7 @@ async function saveDecision(article) {
   const answer = article.querySelector('[data-role="answer"]').value.trim() || option;
   decisions.decisions[index].answer = answer;
   decisions.decisions[index].status = answer ? 'answered' : 'open';
-  await fetchJson('/api/decisions', {
+  await fetchJson(appUrl('api/decisions'), {
     method: 'POST',
     body: JSON.stringify(decisions),
   });
@@ -344,7 +387,7 @@ async function reopenDecision(article) {
   const decisions = structuredClone(currentStatus.decisions);
   decisions.decisions[index].answer = '';
   decisions.decisions[index].status = 'open';
-  await fetchJson('/api/decisions', {
+  await fetchJson(appUrl('api/decisions'), {
     method: 'POST',
     body: JSON.stringify(decisions),
   });

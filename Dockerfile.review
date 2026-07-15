@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TRANSFORMERS_CACHE=/models/cache \
+    HF_HOME=/models/cache \
+    SCANGRADE_REVIEW_ADAPTER=/models/adapter
+
+WORKDIR /app
+
+COPY requirements-trocr-review.txt ./requirements-trocr-review.txt
+RUN pip install --no-cache-dir -r requirements-trocr-review.txt
+
+COPY scripts/serve_trocr_review.py ./scripts/serve_trocr_review.py
+
+EXPOSE 8766
+
+# The private ScanGrade adapter must be mounted at /models/adapter or supplied
+# through SCANGRADE_REVIEW_ADAPTER. It is deliberately not copied into images.
+CMD ["python", "scripts/serve_trocr_review.py", "--host", "0.0.0.0", "--device", "cpu"]

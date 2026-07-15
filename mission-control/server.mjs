@@ -273,6 +273,10 @@ function summarizeDebugScan(debug, body, req, receivedAt) {
     userAgent: body.userAgent || req.headers['user-agent'] || null,
     origin: req.headers.origin || null,
     generatedAt: debug.generatedAt || null,
+    scanSessionId: debug.scanSessionId || debug.scan_session_id || null,
+    packetId: debug.packetId || debug.packet_id || null,
+    captureRole: debug.captureRole || debug.capture_role || null,
+    capturePlanSeed: debug.capturePlanSeed || debug.capture_plan_seed || null,
     layoutId: debug.layoutId || debug.layout_id || debug.qrPayload?.template_id || null,
     sheetInstanceId: debug.qrPayload?.sheet_instance_id || null,
     qrPayload: debug.qrPayload || null,
@@ -297,6 +301,7 @@ function summarizeDebugScan(debug, body, req, receivedAt) {
       hasCropsImage: !!firstDebugString(debug, body, CROPS_IMAGE_KEYS),
       rawCropCount: firstDebugArray(debug, body, 'rawCropDataUrls').length,
       modelInputCount: firstDebugArray(debug, body, 'modelInputDataUrls').length,
+      hybridBurstFrameCount: firstDebugArray(debug, body, 'hybridBurstFrameDataUrls').length,
       tensorCount: firstDebugArray(debug, body, 'tensors').length,
     },
   };
@@ -362,6 +367,13 @@ async function saveDebugScanUpload(body, req) {
   for (let i = 0; i < modelInputUrls.length; i += 1) {
     const filename = `model-inputs/model-${String(i + 1).padStart(2, '0')}.png`;
     const written = await writeDataUrl(resolve(dir, filename), modelInputUrls[i]);
+    if (written) assetFiles.push(filename);
+  }
+
+  const hybridBurstFrameUrls = firstDebugArray(debug, body, 'hybridBurstFrameDataUrls');
+  for (let i = 0; i < hybridBurstFrameUrls.length; i += 1) {
+    const filename = `burst-frames/frame-${String(i + 1).padStart(2, '0')}.jpg`;
+    const written = await writeDataUrl(resolve(dir, filename), hybridBurstFrameUrls[i]);
     if (written) assetFiles.push(filename);
   }
 

@@ -1,0 +1,9 @@
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements-v3-compact.txt ./
+RUN pip install --no-cache-dir -r requirements-v3-compact.txt
+COPY scripts/serve_v3_compact.py scripts/serve_v3_compact.py
+COPY model.onnx model.onnx
+ENV SCANGRADE_V3_HOST=0.0.0.0 SCANGRADE_V3_PORT=8080 SCANGRADE_V3_COMPACT_MODEL=/app/model.onnx
+EXPOSE 8080
+CMD ["python", "scripts/serve_v3_compact.py"]

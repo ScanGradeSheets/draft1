@@ -44,3 +44,5 @@ models/*.pt
 # local backups and raw photo imports
 scan-grade BACKUP FEB @%/
 worksheet photos/
+private-evidence/
+/model.onnx

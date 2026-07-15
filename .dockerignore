@@ -1,0 +1,10 @@
+*
+!Dockerfile.review
+!Dockerfile.v3-compact
+!requirements-trocr-review.txt
+!requirements-v3-compact.txt
+!scripts/
+scripts/*
+!scripts/serve_trocr_review.py
+!scripts/serve_v3_compact.py
+!model.onnx

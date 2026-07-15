@@ -210,6 +210,10 @@
               <strong>{{ reviewSummary.total }}</strong>
               <span>All</span>
             </button>
+            <div class="review-stat review-stat--passive">
+              <strong>{{ reviewSummary.assisted }}</strong>
+              <span>Likely reads</span>
+            </div>
           </div>
           <p v-if="!savedSubmissions.length" class="teacher-empty-state">
             No saved scans yet. Student Mode will add them here automatically after a successful read.
@@ -274,6 +278,19 @@
                     </span>
                   </template>
                   <span v-else>None saved</span>
+                </p>
+                <p
+                  v-if="submissionReviewSuggestions(submission).length"
+                  class="review-card-suggestions"
+                >
+                  <span>Likely reads</span>
+                  <span
+                    v-for="suggestion in submissionReviewSuggestions(submission)"
+                    :key="`${submission.id}-${suggestion.label}-${suggestion.text}`"
+                    class="review-suggestion-chip"
+                  >
+                    {{ suggestion.label }} {{ suggestion.text }}<span v-if="suggestionMetaText(suggestion)"> · {{ suggestionMetaText(suggestion) }}</span>
+                  </span>
                 </p>
                 <p v-if="submission.template_id || submission.sheet_instance_id" class="review-card-meta">
                   <span v-if="submission.template_id">Template {{ submission.template_id }}</span>
@@ -340,7 +357,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.02-1212-EDT-sg3-leftslot-rescue-guard'
+const APP_BUILD_LABEL = '2026.07.14-consensus-private-beta-1'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -427,7 +444,10 @@ const reviewSummary = computed(() => {
   const needsReview = savedSubmissions.value.filter((submission) => submission.status === 'review').length
   const ready = savedSubmissions.value.filter((submission) => submission.status === 'ready').length
   const reviewed = savedSubmissions.value.filter((submission) => submission.status === 'done').length
-  return { total, open: needsReview + ready, needsReview, ready, reviewed }
+  const assisted = savedSubmissions.value.reduce((sum, submission) => (
+    sum + submissionReviewSuggestions(submission).length
+  ), 0)
+  return { total, open: needsReview + ready, needsReview, ready, reviewed, assisted }
 })
 
 const filteredSubmissions = computed(() => {
@@ -623,6 +643,31 @@ const submissionScoreText = (submission) => {
   if (!Array.isArray(submission.correct) || submission.correct.length === 0) return ''
   const score = submission.correct.filter(Boolean).length
   return `${score}/${submission.correct.length} correct`
+}
+
+const submissionReviewSuggestions = (submission) => {
+  const groups = Array.isArray(submission?.answerGroups) ? submission.answerGroups : []
+  return groups
+    .filter((group) => group?.reviewSuggestion?.text)
+    .map((group) => ({
+      label: String(group.label || group.questionNum || '').replace(/[).:]/g, '').trim() || '?',
+      text: group.reviewSuggestion.text,
+      confidence: group.reviewSuggestion.confidence ?? null,
+      source: group.reviewSuggestion.source ?? null
+    }))
+}
+
+const suggestionMetaText = (suggestion) => {
+  const parts = []
+  if (suggestion?.confidence != null) {
+    parts.push(`${Math.round(Number(suggestion.confidence) * 100)}%`)
+  }
+  if (suggestion?.source === 'answer-key-context-review') {
+    parts.push('context')
+  } else if (suggestion?.source === 'ocr-alternative-review') {
+    parts.push('OCR')
+  }
+  return parts.join(' · ')
 }
 
 const handleOCRComplete = async (res) => {
@@ -1455,7 +1500,7 @@ onMounted(() => {
 
 .review-stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
   margin: 14px 0;
 }
@@ -1488,6 +1533,12 @@ onMounted(() => {
 .review-stat.active {
   border-color: #007aff;
   background: #eef6ff;
+}
+
+.review-stat--passive {
+  cursor: default;
+  background: #fff9e6;
+  border-color: #f4c542;
 }
 
 .review-queue {
@@ -1611,6 +1662,32 @@ onMounted(() => {
 .review-digit--incorrect {
   border-color: #ff453a;
   background: #ffebee;
+}
+
+.review-card-suggestions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.review-card-suggestions > span:first-child {
+  font-weight: 700;
+  color: #3a3a3c;
+}
+
+.review-suggestion-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid #f4c542;
+  background: #fff9e6;
+  color: #5f4300;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .review-score {

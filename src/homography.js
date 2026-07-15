@@ -1170,15 +1170,17 @@ function frameFromExpectedDigitRects(expectedFrame, digitRects) {
   }));
 }
 
-function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
+function buildVirtualDigitBoxRects(warped, layout, expectedRects, options = {}) {
+  const frameRegistrationMode = String(options.experimentalFrameRegistrationMode || 'current');
   const frameRects = [];
   const expectedById = new Map(expectedRects.map((rect) => [rect.id, rect]));
   const groups = Array.isArray(layout.question_groups) ? layout.question_groups : [];
 
   for (const group of groups) {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : [];
-    if (ids.length < 2) continue;
+    if (ids.length < 1) continue;
     const digitRects = ids.map((id) => expectedById.get(id)).filter(Boolean);
+    if (digitRects.length !== ids.length) continue;
     const expectedFrame = unionRects(digitRects);
     if (!expectedFrame) continue;
     frameRects.push({
@@ -1191,7 +1193,19 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
     });
   }
 
-  const assignedFrames = detectAnswerBoxRects(warped, frameRects);
+  const assignedFrames = new Map();
+  const framesBySlotCount = new Map();
+  for (const frameRect of frameRects) {
+    const slotCount = Array.isArray(frameRect.digitIds) ? frameRect.digitIds.length : 1;
+    if (!framesBySlotCount.has(slotCount)) framesBySlotCount.set(slotCount, []);
+    framesBySlotCount.get(slotCount).push(frameRect);
+  }
+  for (const bucket of framesBySlotCount.values()) {
+    const bucketAssignments = detectAnswerBoxRects(warped, bucket, options);
+    for (const [id, rect] of bucketAssignments.entries()) {
+      assignedFrames.set(id, rect);
+    }
+  }
   const assignments = new Map();
   const virtualFrameDebug = [];
 
@@ -1241,14 +1255,29 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
         rectSizeRatio(refinedFrameCandidate, expectedFrame) >= 0.66 &&
         rectSizeRatio(refinedFrameCandidate, expectedFrame) <= 1.46
       );
-    const refinedFrame = frameCandidateLooksSafe
-      ? blendRectsByAxis(expectedFrame, refinedFrameCandidate, {
-        x: trustedPhysicalFrame ? 0.98 : (hasDetectedFrame ? 0.92 : 0.38),
-        w: trustedPhysicalFrame ? 0.96 : (hasDetectedFrame ? 0.90 : 0.40),
-        y: trustedPhysicalFrame ? 0.98 : (hasDetectedFrame ? 0.94 : (usedLineFrame ? 0.42 : 0.36)),
-        h: trustedPhysicalFrame ? 0.94 : (hasDetectedFrame ? 0.86 : (usedLineFrame ? 0.38 : 0.34))
-      })
-      : expectedFrame;
+    const currentWeights = {
+      x: trustedPhysicalFrame ? 0.98 : (hasDetectedFrame ? 0.92 : 0.38),
+      w: trustedPhysicalFrame ? 0.96 : (hasDetectedFrame ? 0.90 : 0.40),
+      y: trustedPhysicalFrame ? 0.98 : (hasDetectedFrame ? 0.94 : (usedLineFrame ? 0.42 : 0.36)),
+      h: trustedPhysicalFrame ? 0.94 : (hasDetectedFrame ? 0.86 : (usedLineFrame ? 0.38 : 0.34))
+    };
+    const experimentalWeights = frameRegistrationMode === 'full-local'
+      ? { x: 1, y: 1, w: 1, h: 1 }
+      : frameRegistrationMode === 'local-position'
+        ? { x: 1, y: 1, w: 0, h: 0 }
+        : frameRegistrationMode === 'strong-local'
+          ? {
+            x: trustedPhysicalFrame || hasDetectedFrame ? 1 : 0.68,
+            y: trustedPhysicalFrame || hasDetectedFrame ? 1 : 0.72,
+            w: trustedPhysicalFrame || hasDetectedFrame ? 0.98 : 0.52,
+            h: trustedPhysicalFrame || hasDetectedFrame ? 0.96 : 0.52
+          }
+          : currentWeights;
+    const refinedFrame = frameRegistrationMode === 'template-only'
+      ? expectedFrame
+      : frameCandidateLooksSafe
+        ? blendRectsByAxis(expectedFrame, refinedFrameCandidate, experimentalWeights)
+        : expectedFrame;
 
     const guidedSplit = splitFrameByPrintedDigitGuide(refinedFrame, expectedFrame, expectedFrame.digitRects, expectedFrame);
     if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
@@ -1262,6 +1291,7 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
         usedLineFrame,
         refinedFrameCandidate: refinedFrameCandidate ? { ...refinedFrameCandidate } : null,
         frameCandidateLooksSafe,
+        frameRegistrationMode,
         refinedFrame: refinedFrame ? { ...refinedFrame } : null,
         guidedSplit: guidedSplit
           ? Array.from(guidedSplit.entries()).map(([id, rect]) => ({ id, rect: { ...rect } }))
@@ -1276,7 +1306,10 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
               ...guidedRect,
               trustedPhysicalDigitBox: hasDetectedFrame && frameCandidateLooksSafe,
               parentAnswerFrameId: expectedFrame.id,
-              answerFrameAssignmentMethod: detectedFrame?.answerFrameAssignmentMethod || null
+              answerFrameAssignmentMethod:
+                refinedFrameCandidate?.answerFrameAssignmentMethod ||
+                detectedFrame?.answerFrameAssignmentMethod ||
+                null
             }
           : guidedRect;
         assignments.set(
@@ -1296,12 +1329,26 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects) {
         assignments.set(digitRect.id, digitRect);
         continue;
       }
-      assignments.set(digitRect.id, {
+      const mappedRect = {
         x: refinedFrame.x + rel.relX * refinedFrame.w,
         y: refinedFrame.y + rel.relY * refinedFrame.h,
         w: rel.relW * refinedFrame.w,
         h: rel.relH * refinedFrame.h
-      });
+      };
+      assignments.set(
+        digitRect.id,
+        hasDetectedFrame && frameCandidateLooksSafe && expectedFrame.digitRects.length > 1
+          ? {
+            ...mappedRect,
+            trustedPhysicalDigitBox: true,
+            parentAnswerFrameId: expectedFrame.id,
+            answerFrameAssignmentMethod:
+              refinedFrameCandidate?.answerFrameAssignmentMethod ||
+              detectedFrame?.answerFrameAssignmentMethod ||
+              null
+          }
+          : mappedRect
+      );
     }
   }
 
@@ -1445,12 +1492,12 @@ function countAxisClusters(values, threshold) {
   return clusters;
 }
 
-function looksLikeTwoColumnWorksheetLayout(expectedRects, expW, expH) {
-  if (expectedRects.length !== 10) return false;
+function looksLikeTwoColumnWorksheetLayout(expectedRects, expW, expH, minimumFrameCount = 10) {
+  if (expectedRects.length < minimumFrameCount || expectedRects.length % 2 !== 0) return false;
   const centers = expectedRects.map(rectCenter);
   const xClusters = countAxisClusters(centers.map((center) => center.x), expW * 1.35);
   const yClusters = countAxisClusters(centers.map((center) => center.y), expH * 1.28);
-  return xClusters === 2 && yClusters >= 4;
+  return xClusters === 2 && yClusters >= Math.max(3, expectedRects.length / 2 - 1);
 }
 
 function chooseBestOrderedSubsetByY(candidates, expectedColumn, expW, expH) {
@@ -1562,13 +1609,15 @@ function assignmentsFromColumnSubsets(columnSubsets, expectedColumns, method = '
   return assignments;
 }
 
-function assignAnswerBoxesByColumnOrder(candidates, expectedRects, expW, expH) {
-  if (!looksLikeTwoColumnWorksheetLayout(expectedRects, expW, expH) || candidates.length < 10) return null;
+function assignAnswerBoxesByColumnOrder(candidates, expectedRects, expW, expH, options = {}) {
+  const minimumFrameCount = options.experimentalEightFrameColumnOrder === true ? 8 : 10;
+  if (!looksLikeTwoColumnWorksheetLayout(expectedRects, expW, expH, minimumFrameCount) || candidates.length < expectedRects.length) return null;
 
   const expectedSortedByX = expectedRects.slice().sort((a, b) => rectCenter(a).x - rectCenter(b).x);
+  const perColumn = expectedRects.length / 2;
   const expectedColumns = [
-    expectedSortedByX.slice(0, 5).sort((a, b) => rectCenter(a).y - rectCenter(b).y),
-    expectedSortedByX.slice(5, 10).sort((a, b) => rectCenter(a).y - rectCenter(b).y)
+    expectedSortedByX.slice(0, perColumn).sort((a, b) => rectCenter(a).y - rectCenter(b).y),
+    expectedSortedByX.slice(perColumn).sort((a, b) => rectCenter(a).y - rectCenter(b).y)
   ];
   const expectedColumnCenters = expectedColumns.map((column) => (
     medianNumber(column.map((rect) => rectCenter(rect).x))
@@ -1578,7 +1627,7 @@ function assignAnswerBoxesByColumnOrder(candidates, expectedRects, expW, expH) {
     candidates.filter((candidate) => candidate.cx < boundary),
     candidates.filter((candidate) => candidate.cx >= boundary)
   ];
-  if (candidateColumns[0].length < 5 || candidateColumns[1].length < 5) return null;
+  if (candidateColumns[0].length < perColumn || candidateColumns[1].length < perColumn) return null;
 
   const directColumns = candidateColumns.map((column) => column.slice().sort((a, b) => a.cy - b.cy));
   if (
@@ -1666,7 +1715,7 @@ function assignAnswerBoxesByGridOrder(candidates, expectedRects, expW, expH) {
   return assignments;
 }
 
-function detectAnswerBoxRects(warped, expectedRects) {
+function detectAnswerBoxRects(warped, expectedRects, options = {}) {
   if (!Array.isArray(expectedRects) || expectedRects.length === 0) return new Map();
 
   const expW = medianNumber(expectedRects.map((r) => r.w));
@@ -1784,7 +1833,7 @@ function detectAnswerBoxRects(warped, expectedRects) {
       }));
     }
 
-    const columnAssignments = assignAnswerBoxesByColumnOrder(deduped, expectedRects, expW, expH);
+    const columnAssignments = assignAnswerBoxesByColumnOrder(deduped, expectedRects, expW, expH, options);
     if (columnAssignments) {
       if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
         window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(columnAssignments.entries()).map(([id, rect]) => ({
@@ -1911,7 +1960,8 @@ function cloneVirtualDigitCropVariant(warped, sourceRect, eraseDigitRect, digitI
     name,
     image,
     cropRect,
-    preprocessOptions: options.preprocessOptions || null
+    preprocessOptions: options.preprocessOptions || null,
+    suggestionOnly: options.suggestionOnly === true
   };
 }
 
@@ -1931,7 +1981,7 @@ function roundDebugRect(rect) {
  * @param {Object} layout - Layout JSON with boxes array
  * @returns {Array} - [{id, image, centerX, centerY}, ...]
  */
-export function cropBoxes(warped, layout) {
+export function cropBoxes(warped, layout, options = {}) {
   const crops = [];
   const normalized = layout.page?.units === 'normalized';
   const scaleX = normalized ? WARP_WIDTH : WARP_WIDTH / layout.page.width_mm;
@@ -1970,8 +2020,15 @@ export function cropBoxes(warped, layout) {
     ...getRect(box),
     id: box.id
   }));
+  const slotCountByBoxId = new Map();
+  for (const group of Array.isArray(layout.question_groups) ? layout.question_groups : []) {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : [];
+    for (const id of ids) {
+      slotCountByBoxId.set(id, ids.length);
+    }
+  }
   const detectedRects = usesVirtualDigitBoxes
-    ? buildVirtualDigitBoxRects(warped, layout, expectedRects)
+    ? buildVirtualDigitBoxRects(warped, layout, expectedRects, options)
     : detectAnswerBoxRects(warped, expectedRects);
 
   for (let i = 0; i < layoutBoxes.length; i++) {
@@ -1994,6 +2051,7 @@ export function cropBoxes(warped, layout) {
         : expectedRect);
     const ocrRect = refinedRect;
     const digitIndex = Number.isFinite(box?.digit_index) ? Number(box.digit_index) : null;
+    const slotCount = slotCountByBoxId.get(box.id) || 1;
     // Two-digit worksheet frames use one wide printed answer box with a faint
     // center guide. The split rect is already one digit slot, so keep the OCR
     // crop inside that slot; pulling across borders feeds the model frame
@@ -2218,8 +2276,10 @@ export function cropBoxes(warped, layout) {
       /** Actual OCR ROI in warped pixel space (interior-only), for debug overlays */
       cropRect: { x: xPx, y: yPx, w: widthPx, h: heightPx },
       digitIndex,
+      slotCount,
       expectedRect: roundDebugRect(expectedRect),
       refinedRect: roundDebugRect(refinedRect),
+      ocrRect,
       isVirtualDigitBox: usesVirtualDigitBoxes,
       variantImages
     });
@@ -3461,7 +3521,7 @@ export function processWorksheet(input, layout, options = {}) {
   const sourceAnchors = warpResult.anchors || anchors;
 
   // Step 3: Crop boxes
-  const crops = cropBoxes(warped, layout);
+  const crops = cropBoxes(warped, layout, options);
 
   // Step 4: Preprocess each crop. Two-digit worksheet cells are intentionally
   // run through a small family of line-cleanup settings because old iPad
@@ -3477,9 +3537,20 @@ export function processWorksheet(input, layout, options = {}) {
       centerX: crop.centerX,
       centerY: crop.centerY,
       digitIndex: crop.digitIndex,
+      slotCount: crop.slotCount,
       isVirtualDigitBox: crop.isVirtualDigitBox === true
     };
   });
+
+  // Build exploratory review evidence only after every production tensor is
+  // finalized. Keeping this as a second pass prevents extra OpenCV allocations
+  // or cleanup work from perturbing the primary preprocessing batch.
+  if (options.experimentalFidelityCrops === true) {
+    for (let index = 0; index < crops.length; index += 1) {
+      const reviewVariants = buildReviewSuggestionCropTensors(warped, crops[index]);
+      if (reviewVariants.length) processed[index].tensorVariants.push(...reviewVariants);
+    }
+  }
 
   // Clean up source (warped kept for preview, caller must delete)
   src.delete();
@@ -3493,6 +3564,7 @@ export function processWorksheet(input, layout, options = {}) {
       boxRect: c.boxRect,
       cropRect: c.cropRect,
       digitIndex: c.digitIndex,
+      slotCount: c.slotCount,
       expectedRect: c.expectedRect,
       refinedRect: c.refinedRect,
       isVirtualDigitBox: c.isVirtualDigitBox === true
@@ -3522,6 +3594,7 @@ function buildProcessedCropTensors(crop) {
     try {
       variantTensors.push({
         name: variant.name,
+        suggestionOnly: variant.suggestionOnly === true,
         tensor: preprocessToMNISTCore(variant.image, false, variant.preprocessOptions || baseOptions)
       });
     } finally {
@@ -3566,6 +3639,74 @@ function buildProcessedCropTensors(crop) {
       ...variantTensors
     ]
   };
+}
+
+function buildReviewSuggestionCropTensors(warped, crop) {
+  if (!crop?.isVirtualDigitBox || !crop?.ocrRect || !Number.isFinite(crop?.digitIndex)) return [];
+  const { ocrRect, digitIndex } = crop;
+  const variants = [
+    cloneVirtualDigitCropVariant(
+      warped,
+      virtualDigitInnerRect(ocrRect, digitIndex, {
+        outerInsetFrac: -0.045,
+        centerInsetFrac: -0.020,
+        topInsetFrac: -0.040,
+        bottomInsetFrac: -0.040
+      }),
+      ocrRect,
+      digitIndex,
+      'context-safe-slot',
+      {
+        suggestionOnly: true,
+        eraseOptions: {
+          edgeBandFrac: 0.020,
+          thicknessMultiplier: 0.68,
+          centerGuideThicknessMultiplier: 0.78,
+          horizontalThicknessMultiplier: 0.72
+        },
+        preprocessOptions: {
+          protectInteriorStrokes: true,
+          strictLineRemoval: false,
+          skipRuleArtifactCleanup: true,
+          skipPrintedLineCleanup: true
+        }
+      }
+    ),
+    cloneVirtualDigitCropVariant(
+      warped,
+      virtualDigitInnerRect(ocrRect, digitIndex, {
+        outerInsetFrac: -0.025,
+        centerInsetFrac: -0.010,
+        topInsetFrac: -0.025,
+        bottomInsetFrac: -0.025
+      }),
+      ocrRect,
+      digitIndex,
+      'context-raw-slot',
+      {
+        suggestionOnly: true,
+        skipKnownLineErase: true,
+        preprocessOptions: {
+          protectInteriorStrokes: true,
+          strictLineRemoval: false,
+          skipRuleArtifactCleanup: true,
+          skipPrintedLineCleanup: true
+        }
+      }
+    )
+  ].filter(Boolean);
+
+  return variants.map((variant) => {
+    try {
+      return {
+        name: variant.name,
+        suggestionOnly: true,
+        tensor: preprocessToMNISTCore(variant.image, false, variant.preprocessOptions || {})
+      };
+    } finally {
+      variant.image.delete();
+    }
+  });
 }
 
 /**

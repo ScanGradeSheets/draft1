@@ -1,6 +1,6 @@
 # ScanGrade Active Handoff
 
-Last updated: 2026-06-20
+Last updated: 2026-07-13
 Current thread: SG 3
 Previous thread: SG 2 (`019e760b-4e8f-7751-be8b-40baddcb8e58`)
 
@@ -17,6 +17,46 @@ This is the first file to read when Codex loses chat history, a Codex update hid
 6. Do not scan all of `~/.codex` or the 24 GB backup.
 
 ## Current Mission
+
+### 2026-07-13 V3 build status (current)
+
+Tony authorized a from-scratch V3 alongside the preserved V2/control. V3 is implemented as an opt-in shadow system; it is not authorized to alter production grades yet.
+
+Implemented:
+
+- exact continuous grayscale answer zones cropped once from the live refined canonical page;
+- deterministic fidelity and independent blank/artifact evidence;
+- a 1.31M-parameter, 5.8 MB ScanGrade-specific one/two-digit whole-answer ONNX model;
+- existing adapted TrOCR retained on its stronger cleaned/stitched representation;
+- key-blind, independent-architecture fusion with abstention;
+- up to three real auto-capture frames, each independently registered and read;
+- local V2 grading first, optional V3 suggestions asynchronously, and identical local output during a service outage;
+- local/container compact-model service, prospective V2/V3 evaluator, and V3 policy freezer.
+
+Verified evidence:
+
+- V2 broad control: 582 answers, 323 automatic (55.5%), 323/323 correct; row 70.5%, non-row 43.1%.
+- Compact model: validation 99/136 (72.8%), historical holdout 66/114 (57.9%). It is useful independent evidence, not a replacement OCR.
+- Adapted TrOCR cleaned/stitched: validation 105/136 (77.2%), historical holdout 92/114 (80.7%). Direct raw continuous TrOCR was worse (47.8%/45.6%).
+- Conservative three-reader fusion with uncalibrated artifact evidence kept advisory: validation 88/136 automatic with 0 wrong and 5 promotions; historical holdout 86/114 automatic with 0 wrong and 0 promotions.
+- At least one reader was correct on 109/114 historical holdout answers, proving candidate signal exists; safe selection remains the bottleneck. The learned readers agreed wrongly five times, so thresholds must not be loosened blindly.
+- Compact service: 72 ms for 1 answer, 420 ms for 10, 1.26 seconds for 30 on the Mac; answer-key fields rejected.
+- Native container service supersedes those Node/WASM performance numbers: 43.8 ms for 1 answer, 41.8 ms for 10, and 92.9 ms for 30 warm answers. It exactly reproduced 114/114 frozen holdout reads; Node/WASM differed on five borderline cases. Use Python/native ONNX Runtime as the canonical cloud evaluator.
+- End-to-end browser smoke passed with service available and unavailable. Predictions were identical during the simulated outage.
+- WebKit/iPad emulation exposed and then verified the HTTPS requirement: HTTP model calls were blocked as mixed content; the same compact service over HTTPS completed successfully. Actual old-iPad camera/memory behavior is still untested.
+- A debug-only browser replay exercised all three retained-frame branches using three saved real captures. Both independent readers processed 24 answer images each. V3 accepted 6/8 answers and all 6 matched handwritten truth; the two browser-OCR disagreements remained review while both learned readers supplied the correct alternative. This proves plumbing/conservative behavior, not live-burst generalization, because these were separated saved captures.
+- The blank/artifact lane remains advisory. It found 3/4 known blanks with zero false blank proposals, but 90/582 artifact flags and the real-capture replay show the artifact probability is not calibrated well enough to veto model agreement.
+
+Canonical docs:
+
+- `docs/SCANGRADE_V3_ARCHITECTURE.md`
+- `docs/SCANGRADE_V3_EXPERIMENT_LEDGER_20260713.md`
+- `docs/SCANGRADE_V3_HEAD_TO_HEAD_20260713.md`
+- `docs/SCANGRADE_FOUR_PACKET_CAPTURE_PROTOCOL.md`
+
+Prospective gate remains physically blocked on Tony scanning the pre-registered intact packets: P08, P03, P09 development; P02 locked; eight packets remain unscanned. Do not mix students or open P02 truth before `npm run freeze:v3-policy`. V3 uses `?hybridV3=1`, plus optional `v3CompactModelUrl` and `reviewModelUrl`. Do not expose either experimental service anonymously to student traffic.
+
+Next action: deploy/run the private V3 shadow build, scan one P08 page and confirm continuous zones + burst frames + `v3-shadow-complete`, then scan P08/P03/P09. Tune only on those development packets, freeze, and open P02 once.
 
 Collect Tony's final Grade 1 classroom evidence before summer break, keep the public app and private Mission Control reachable, and convert the results into a narrow September Teachers Pay Teachers launch path.
 
@@ -1720,3 +1760,2672 @@ Open risks:
 
 - Old queued Runs 95 and 97 on the abandoned `gh-pages` branch may still appear in the Actions list, but the live Pages source is now `gh-pages-v2` and Run 98 is the successful deploy that matters.
 - Continue preserving `private-evidence/` locally only; do not commit student evidence.
+
+## 2026-07-03 Saved Classroom Scan Analysis / Leading-One Review Guard
+
+Date / thread: 2026-07-03, SG 3.
+
+What changed:
+
+- Used the saved Mission Control debug uploads instead of asking Tony to scan more manually.
+- Added analysis helpers for the saved debug-scan corpus and contact-sheet review of digit failure families.
+- Improved `scripts/replay_live_ocr_captured.mjs` so it can replay Mission Control scan folders directly, unwrap saved `debug.json` payloads, process slices with `--offset` / `--limit`, and continue past individual replay errors.
+- Added a conservative production trust guard: when the left slot of a two-digit answer is expected to be `1` and OCR reads another digit, route that digit/group to teacher review instead of allowing a confident automatic X. This uses answer-key context only as a review signal; it does not silently convert the digit to `1`.
+- Updated visible build label to `2026.07.03-1212-EDT-sg3-leading-one-review`.
+
+Evidence used:
+
+- Local saved classroom evidence under `private-evidence/debug-scans/`.
+- Current replay outputs written under:
+  - `private-evidence/reports/current-replay-20260703/`
+  - `private-evidence/reports/current-replay-20260703-b/`
+  - `private-evidence/reports/current-replay-20260703-c/`
+  - `private-evidence/reports/current-replay-20260703-leading-one-review-smoke/`
+- Contact sheets written under `private-evidence/reports/`, especially:
+  - `left-one-to-seven-contact.png`
+  - `left-one-to-nine-contact.png`
+  - `left-one-not-one-contact.png`
+  - `optional-leading-digit-contact.png`
+
+Commands run:
+
+```text
+node scripts/analyze_debug_scan_corpus.mjs
+node scripts/make_debug_failure_contact_sheet.mjs --family left-one-to-seven --out private-evidence/reports/left-one-to-seven-contact.png --max 40
+node scripts/make_debug_failure_contact_sheet.mjs --family left-one-to-nine --out private-evidence/reports/left-one-to-nine-contact.png --max 40
+node scripts/make_debug_failure_contact_sheet.mjs --family left-one-not-one --out private-evidence/reports/left-one-not-one-contact.png --max 48
+npm run dev -- --host 127.0.0.1
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260703 private-evidence/debug-scans
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260703-b --offset 67 --limit 40 private-evidence/debug-scans
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260703-c --offset 107 private-evidence/debug-scans
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260703-leading-one-review-smoke <targeted scan folders>
+node --check scripts/replay_live_ocr_captured.mjs
+node --check scripts/analyze_debug_scan_corpus.mjs
+node --check scripts/make_debug_failure_contact_sheet.mjs
+npm run build
+npm run build:github
+```
+
+Results:
+
+- Saved-output corpus summary before the new guard:
+  - 115 classroom-layout scans analyzed.
+  - 824 question groups with app output.
+  - Answer-key correctness: `330/824` (`40.0%`).
+  - Review routing: `536/824` (`65.0%`).
+  - Auto-graded: `288/824` (`35.0%`).
+  - Auto-graded but answer-key-wrong in saved output: `0/824`. This is not the same as handwritten-truth accuracy, but it shows the public saved-output policy was conservative.
+- Current-code replay across 116 processed classroom scans:
+  - 814 question groups.
+  - Answer-key correctness: `376/814` (`46.2%`).
+  - Review routing: `505/814` (`62.0%`).
+  - Auto-graded: `309/814` (`38.0%`).
+  - Expected leading-`1` left slot wrong: `175/425` (`41.2%`), with `84` as `7`, `49` as `9`, and `42` other digits.
+  - 17 leading-`1` mistakes were auto-graded wrong against the answer key before the guard. Some may be students' actual wrong answers, but the repeated leading-slot pattern is too risky to auto-X.
+- Targeted replay after the guard:
+  - Previously silent cases like `77/11`, `70/10`, and `71/11` now route to review.
+  - A clean page already reading `11,12,15,15,14,16,18,17` remained `8/8` with no review.
+- Visual contact sheets show many raw leading-slot crops genuinely look like roofed/slanted `1`s or `7`s. This supports a context-assisted review guard now, but not broad automatic correction yet.
+
+Files changed:
+
+- `src/App.vue`
+- `src/components/CameraCapture.vue`
+- `scripts/replay_live_ocr_captured.mjs`
+- `scripts/analyze_debug_scan_corpus.mjs`
+- `scripts/make_debug_failure_contact_sheet.mjs`
+- `SCANGRADE_ACTIVE_HANDOFF.md`
+
+Rollback point:
+
+- Previous public deploy: `gh-pages-v2` at `21913d9`.
+- Previous source handoff commit: `30f6337`.
+- New source commit/deploy pending at the time this entry was written.
+
+Next action:
+
+- Commit this trust-guard patch and deploy it only if Tony wants the public scanner to prioritize fewer silent wrong Xs over fewer yellow reviews.
+- Next high-leverage OCR work is a labeled handwritten-truth pass on leading `1` crops. Do not use answer-key agreement alone to claim recognition accuracy.
+- After handwritten labels, consider a second-stage context-assisted rescue for truly ambiguous leading `1` vs `7/9` cases, with audit reason `context-assisted-leading-one`, but only if it preserves zero confident wrong reads on a held-out packet set.
+
+Open risks:
+
+- Current replay still scores against the worksheet answer key, not handwritten truth. Student math mistakes are useful app evidence and should not be counted as OCR errors when the OCR matches the handwriting.
+- The new guard may increase yellow review count on some two-digit sheets. That is acceptable as a trust fix, but it does not solve the market-readiness coverage target by itself.
+- Some visual-format pages remain weak due to crop/layout/format issues, not just digit classification.
+
+## 2026-07-03 Context-Assisted Leading-One Rescue
+
+Date / thread: 2026-07-03, SG 3.
+
+Tony asked whether ScanGrade can cautiously use answer-key context for ambiguous leading `1` cases such as `11-19`, where the model often reads the left slot as `7` or `9`. The objective answer is yes, but only as a narrow second-stage evidence check. The app must never broadly substitute the answer key for what the student wrote.
+
+What changed:
+
+- Added a very narrow context-assisted rescue in `src/components/CameraCapture.vue`.
+- Updated the replay harness in `scripts/replay_live_ocr_captured.mjs` with the same post-recognition policy so saved scans can be tested reproducibly.
+- Updated visible build label to `2026.07.03-1534-EDT-sg3-context-leading-one`.
+
+Policy details:
+
+- Only applies to two-slot answer groups whose expected answer is `10-19`.
+- Only changes left-slot `9 -> 1`; it does not broadly rescue `7 -> 1`.
+- Requires the right slot to be stable, not reviewed, and already matching the expected right digit.
+- Requires strong shape evidence that the left crop is a narrow one-stroke digit across trusted preprocessing variants, including an anchor variant such as `raw-border-slot`, `wide-slot`, `no-side-erase`, or `expected-slot`.
+- Adds explicit audit fields such as `originalDigitBeforeContextAssist`, `originalConfidenceBeforeContextAssist`, `robustOverride: context-assisted-leading-one`, and `contextAssistEvidence`.
+- Skips the rescue if a forced fallback review reason is already present.
+
+Evidence and tests:
+
+```text
+node --check scripts/replay_live_ocr_captured.mjs
+npm run build
+npm run build:github
+npm run dev -- --host 127.0.0.1
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260703-context-leading-one-smoke <targeted scan folders>
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260703-context-leading-one-a --limit 50 private-evidence/debug-scans
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260703-context-leading-one-b --offset 50 --limit 50 private-evidence/debug-scans
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260703-context-leading-one-c --offset 100 private-evidence/debug-scans
+```
+
+Replay results on the current classroom debug slice:
+
+- Processed replay result files: 106 captures.
+- Guard-rejected captures: 20.
+- All captures: `703/1284` digit cells matched the answer key (`54.75%`), `356/744` question groups matched the answer key (`47.85%`), review routing was `460/744` groups (`61.83%`), and auto-graded groups were `284/744` (`38.17%`).
+- Accepted captures only: `564/960` digit cells matched the answer key (`58.75%`), `310/582` question groups matched the answer key (`53.26%`), review routing was `298/582` groups (`51.20%`), and auto-graded groups were `284/582` (`48.80%`).
+- Context-assisted leading-one rescue fired only 5 times across all 106 captures, and only 3 times on accepted captures.
+- Auto-graded answer-key-wrong groups remained 29 in this replay slice. This metric is still answer-key based, not handwritten-truth based.
+
+Interpretation:
+
+- This is a safe trust-preserving improvement, not the big jump to market-ready reliability.
+- The policy proves that answer-key context can be used responsibly when it acts as a tiebreaker supported by crop/shape evidence.
+- It should not be expanded until there is handwritten-truth labeling and a held-out packet set, because broad context correction would risk grading what the answer should have been instead of what the student wrote.
+
+Next action:
+
+- If Tony wants this behavior live, commit and deploy the source changes only; do not commit `private-evidence/`.
+- The next major reliability move is still labeled handwritten-truth evaluation plus crop/layout work on left-slot and visual-format failures. Context rescue can help at the margin, but it cannot replace improving recognition and crop quality.
+
+## 2026-07-03 Flexible Duplicate One-Digit Slot Cleanup
+
+Date / thread: 2026-07-03, SG 3.
+
+What changed:
+
+- Found that the previous quick replay aggregation overcounted "silent wrong" groups because it compared displayed slot text like `5_` vs `_5` instead of the saved question-level `correct` flag.
+- Re-audited accepted captures using the actual rule: `correct === false` and `review === false`.
+- Found 11 true accepted silent-wrong groups before this patch.
+- Patched the optional one-digit blank cleanup so a two-slot one-digit answer such as `7` can collapse a duplicate weak/artifact slot from `77` to `7_` when one slot is strong and the other slot is artifact-like. Previously, the cleanup skipped this case when the weak slot had the same expected digit.
+- Marked the surviving flexible one-digit slot and the blanked optional slot as slot-correct after the cleanup, so the detailed result grid does not show a correct one-digit answer with a red slot just because the student used the left answer box.
+- Updated replay JSON writing so `optionalSingleDigitBlankOverrides` and `contextAssistedLeadingOneRescues` are persisted in `*-replay-result.json`.
+- Updated visible build label to `2026.07.03-1617-EDT-sg3-flex-duplicate-one-digit`.
+
+Evidence and tests:
+
+```text
+node --check scripts/replay_live_ocr_captured.mjs
+npm run dev -- --host 127.0.0.1
+targeted replay on 2026-06-20_00-50-07-020-sg-g1-lw-05-mixed-20-0d61fd7c
+replay chunks:
+  private-evidence/reports/current-replay-20260703-flex-duplicate-a
+  private-evidence/reports/current-replay-20260703-flex-duplicate-b
+  private-evidence/reports/current-replay-20260703-flex-duplicate-c
+npm run build
+npm run build:github
+```
+
+Replay result:
+
+- Targeted case improved from group B `77/_7` silent wrong to `7_/_7` correct.
+- Accepted capture slice before patch: 86 captures, 582 groups, 310 question-correct (`53.26%`), 298 review groups (`51.20%`), 284 auto groups, 11 silent-wrong groups (`3.87%` of auto groups).
+- Accepted capture slice after patch: 86 captures, 582 groups, 313 question-correct (`53.78%`), 296 review groups (`50.86%`), 286 auto groups, 10 silent-wrong groups (`3.50%` of auto groups).
+- Several remaining silent-wrong examples were visually inspected and appear to be real student mistakes, not OCR errors:
+  - `sg-g1-lw-10` question B: student wrote `41` for "after 39"; app correctly auto-Xs.
+  - `sg-g1-lw-04` question B: student wrote `17` for `19 - 4`; app correctly auto-Xs.
+  - `sg-g1-lw-06` question A: student wrote `5` for a ten-frame count of `6`; app correctly auto-Xs.
+
+Interpretation:
+
+- This is a small but clean reliability improvement. It improves one recurring flexible-slot failure without loosening global confidence.
+- The remaining auto-wrong set should not be blindly suppressed; many are exactly the kind of real wrong student answers ScanGrade must confidently mark.
+
+Next action:
+
+- Continue separating true OCR errors from authentic student mistakes before making additional trust-policy changes.
+- Next likely high-leverage work is a handwritten-truth labeling pass for the accepted silent-wrong list and the high-review visual pages, then crop/layout improvements for ten-frame, dot-collection, number-pattern, and number-bond formats.
+
+## 2026-07-03 Handwritten Truth Pass
+
+Date / thread: 2026-07-03, SG 3.
+
+Tony asked for handwritten truth by page/question so app reliability can be measured against what students actually wrote, not only the answer key.
+
+What changed:
+
+- Added `scripts/create_handwritten_truth_label_pack.mjs`.
+  - Builds per-answer truth-label records from saved debug/replay evidence.
+  - Supports accepted-only exports, needs-label-only contact sheets, page offsets, and stable `uid` values such as `41.3`.
+  - Uses stitched raw digit crops for contact sheets because warped-page crops were unreliable on some non-row layouts.
+- Added `scripts/summarize_handwritten_truth.mjs`.
+  - Merges seeded labels and manual visual overrides.
+  - Writes `handwritten-truth-labelled.json`.
+  - Reports OCR correctness against handwriting truth, yellow leaning correctness, student math correctness, and layout-level breakdowns.
+- Created private manual labels at `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/manual-truth-overrides.json`.
+- Generated merged private truth data at `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/handwritten-truth-labelled.json`.
+- Generated per-page private truth rollups at `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/handwritten-truth-labelled-pages.json` and `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/handwritten-truth-labelled-pages.csv`.
+- Do not commit `private-evidence/`.
+
+Verification:
+
+```text
+node --check scripts/create_handwritten_truth_label_pack.mjs
+node --check scripts/summarize_handwritten_truth.mjs
+node scripts/create_handwritten_truth_label_pack.mjs --accepted-only --needs-label-only --out-dir private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label
+node scripts/summarize_handwritten_truth.mjs
+```
+
+Truth-labelled accepted scan summary:
+
+- Accepted captures: 86.
+- Accepted answer groups: 582.
+- Handwritten truth coverage: 582/582, with 276 seeded labels, 302 manual value labels, 4 blanks, 0 unclear, 0 missing.
+- Auto/confident reads against handwriting truth: 284/286 correct = 99.3%.
+- Confidently wrong OCR reads against handwriting truth: 2/286.
+- Yellow/manual-review groups: 296/582 = 50.9%.
+- Yellow groups where the app's leaning value matched handwriting truth: 55/296 = 18.6%.
+- Overall displayed app read, counting yellow leaning values: 339/582 = 58.2%.
+- Student math correctness against answer key: 505/582 = 86.8%.
+
+Layout breakdown from the truth pass:
+
+```text
+sg-g1-lw-01-add-1digit: total 80, auto 62/62 correct, yellow 18, yellow leaning correct 3
+sg-g1-lw-02-add-2digit: total 32, auto 18/18 correct, yellow 14, yellow leaning correct 2
+sg-g1-lw-03-sub-1digit: total 80, auto 54/56 correct, yellow 24, yellow leaning correct 9
+sg-g1-lw-04-sub-2digit: total 40, auto 26/26 correct, yellow 14, yellow leaning correct 6
+sg-g1-lw-05-mixed-20: total 32, auto 16/16 correct, yellow 16, yellow leaning correct 4
+sg-g1-lw-06-ten-frames: total 72, auto 23/23 correct, yellow 49, yellow leaning correct 6
+sg-g1-lw-07-dot-collections: total 72, auto 21/21 correct, yellow 51, yellow leaning correct 9
+sg-g1-lw-08-number-bonds: total 66, auto 19/19 correct, yellow 47, yellow leaning correct 4
+sg-g1-lw-09-number-patterns: total 54, auto 15/15 correct, yellow 39, yellow leaning correct 11
+sg-g1-lw-10-place-value-50: total 54, auto 30/30 correct, yellow 24, yellow leaning correct 1
+```
+
+Only two confident OCR errors remained in accepted scans:
+
+```text
+44.7 sg-g1-lw-03-sub-1digit: expected 5, handwritten truth 10, app read 6
+52.6 sg-g1-lw-03-sub-1digit: expected 8, handwritten truth 8, app read 6
+```
+
+Interpretation:
+
+- The trust policy is much better than answer-key-only scoring implied. Many previous "auto wrong" examples were real student math mistakes, not OCR mistakes.
+- The app is still not market-ready because only 286/582 accepted answer groups are auto/confident. The rest require review.
+- The yellow bucket is not merely under-confident correct reads: only 18.6% of yellow leaning values matched handwriting truth.
+- The next high-leverage move is crop/layout geometry for non-row formats, especially number bonds and other visual layouts, before loosening confidence. Several number-bond crops visually grab nearby labels/borders/adjacent regions even though the full warped sheet clearly shows the handwritten answer.
+
+Next action:
+
+1. Fix and replay non-row layout crop geometry, starting with `sg-g1-lw-08-number-bonds`, then ten frames, dot collections, and number patterns.
+2. Re-run `scripts/summarize_handwritten_truth.mjs` after each crop/layout change.
+3. Only consider confidence loosening after yellow leaning correctness improves substantially on the truth-labelled set.
+
+## 2026-07-04 Future Layout Contract + Non-Row Reliability Pass
+
+Date / thread: 2026-07-04, SG 3.
+
+Tony clarified that the goal is not to overfit ScanGrade to the current Grade 1 packet. The app needs a structure where future worksheet variations can perform just as well.
+
+What changed:
+
+- Added `docs/SCANGRADE_LAYOUT_CONTRACT.md`.
+  - Core rule: worksheet concepts can vary widely, but graded answer regions must be boring, explicit, and declared in layout JSON.
+  - Future layouts must define `digit_box_ids`, slot count, guide/divider metadata, canonical digits, and accepted digit placements.
+  - Visual worksheet variety belongs in prompts, diagrams, and work space; the answer box is the machine-readable handshake.
+  - Three-, four-, and five-digit answer layouts are possible in principle but are not market-ready until they have their own replay evidence.
+- Added `scripts/audit_layout_answer_regions.mjs` and `npm run audit:layouts`.
+  - Audits layout metadata, question groups, slot counts, box geometry, accepted responses, mixed slot counts, and unvalidated 3+ slot layouts.
+  - This is the first guardrail against future worksheet designs drifting into scanner-hostile answer regions.
+- Added `scripts/analyze_leading_one_context_policy.mjs` and `npm run analyze:leading-one-context`.
+  - Tests whether answer-key context can safely rescue ambiguous leading `1` reads.
+  - Result: broad expected-leading-`1` correction is unsafe because it would override real student-written wrong answers.
+- Made one tiny evidence-backed OCR policy adjustment:
+  - In `src/components/CameraCapture.vue` and `scripts/replay_live_ocr_captured.mjs`, the strict context-assisted leading-one stroke-width guard now accepts `inkW <= 6` instead of `inkW <= 5`.
+  - This only fires inside the existing narrow `9 -> 1` rescue where the expected answer starts with `1`, the right slot is stable and matching, and the crop shape looks like a one-stroke digit across trusted variants.
+
+Evidence used:
+
+- Handwritten-truth set:
+  - `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/handwritten-truth-labelled.json`
+- Replay chunks:
+  - `private-evidence/reports/current-replay-20260704-general-policy-inkw6-a`
+  - `private-evidence/reports/current-replay-20260704-general-policy-inkw6-b`
+  - `private-evidence/reports/current-replay-20260704-general-policy-inkw6-c`
+- Score report:
+  - `private-evidence/reports/truth-score-20260704-general-policy-inkw6-abc.json`
+- Leading-one policy report:
+  - `private-evidence/reports/leading-one-context-policy-20260704-inkw6-current.json`
+
+Commands run:
+
+```text
+node --check scripts/audit_layout_answer_regions.mjs
+npm run audit:layouts
+node --check scripts/analyze_leading_one_context_policy.mjs
+node scripts/analyze_leading_one_context_policy.mjs --out private-evidence/reports/leading-one-context-policy-20260704-inkw6-current.json
+node --check scripts/replay_live_ocr_captured.mjs
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260704-general-policy-inkw6-a --offset 0 --limit 45 private-evidence/debug-scans
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260704-general-policy-inkw6-b --offset 45 --limit 45 private-evidence/debug-scans
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/current-replay-20260704-general-policy-inkw6-c --offset 90 --limit 45 private-evidence/debug-scans
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/truth-score-20260704-general-policy-inkw6-abc.json private-evidence/reports/current-replay-20260704-general-policy-inkw6-a private-evidence/reports/current-replay-20260704-general-policy-inkw6-b private-evidence/reports/current-replay-20260704-general-policy-inkw6-c
+npm run build
+```
+
+Results:
+
+- Layout audit: 33 layouts audited, 0 errors, 63 warnings.
+  - Warnings are useful future-work signals, especially mixed slot counts and unvalidated 3-slot layouts.
+- Broad answer-key/context correction for leading `1` is not safe:
+  - 34 candidate cases where the answer key expected a leading `1`.
+  - 30 would match handwritten truth, but 4 were real student-written wrong answers and would become confident wrongs if auto-corrected.
+  - Therefore ScanGrade should keep answer-key context as a narrow, shape-supported tiebreaker only.
+- Current replay against handwritten truth after the tiny `inkW <= 6` adjustment:
+  - Accepted answer groups: 582.
+  - Confident auto reads: 289/582 (`49.7%`).
+  - Confident correct OCR reads: 287.
+  - Confident wrong OCR reads: 2.
+  - Confident OCR accuracy: 287/289 (`99.3%`).
+  - Yellow/manual-review groups: 293/582 (`50.3%`).
+- By broad format:
+  - Row sheets: 178/264 confident, 176 correct, 2 wrong.
+  - Non-row sheets: 111/318 confident, 111 correct, 0 wrong.
+- Compared with the prior general policy replay, this gained 1 safe non-row confident read and introduced no new confident wrong reads.
+
+Interpretation:
+
+- The app remains trust-oriented but too conservative for broad market readiness.
+- Non-row formats are now safe but under-confident: 0 confident wrong reads, but only 34.9% confident coverage.
+- The next big improvement should come from answer-region/layout/crop consistency and model training/holdout discipline, not broad answer-key correction.
+- For future worksheets, the design principle is now formal: keep the math format flexible, but make answer regions standardized, declared, auditable, and replay-proven before shipping.
+
+Files changed:
+
+- `docs/SCANGRADE_LAYOUT_CONTRACT.md`
+- `scripts/audit_layout_answer_regions.mjs`
+- `scripts/analyze_leading_one_context_policy.mjs`
+- `package.json`
+- `src/components/CameraCapture.vue`
+- `scripts/replay_live_ocr_captured.mjs`
+- `SCANGRADE_ACTIVE_HANDOFF.md`
+- `mission-control/state/mission-state.json`
+
+Rollback point:
+
+- No commit created yet in this entry.
+- The code change is intentionally tiny: revert the `inkW <= 6` threshold back to `inkW <= 5` in both production and replay if needed.
+
+Next action:
+
+1. Treat `docs/SCANGRADE_LAYOUT_CONTRACT.md` plus `npm run audit:layouts` as the required gate for new worksheet packets.
+2. Fix the two remaining confident OCR errors only if a reproducible, truth-scored guard improves reliability without suppressing real student mistakes.
+3. Improve non-row confidence by making generated worksheet answer regions more uniform and by replaying against handwritten truth after each layout/crop/model change.
+4. Do not expand context-assisted correction beyond the current narrow policy until a held-out handwritten-truth set proves it does not create confident wrong reads.
+
+Open risks:
+
+- Current broader classroom packet performance is still about 50% confident coverage overall, far below the 90-95% product goal.
+- Visual/non-row formats are especially low-confidence even when safe.
+- The layout audit can prevent many future design mistakes, but it does not prove OCR quality by itself; replay against real handwriting remains required.
+- The repo has many pre-existing dirty/untracked files from earlier SG work. Do not revert them casually.
+
+## 2026-07-04 Answer Box Candidate #1 Bakeoff Harness
+
+Date / thread: 2026-07-04, SG 3.
+
+Tony chose answer-box candidate #1: separate digit cells. The question is whether we should push hard on the current joined/open-divider format for summer work or shift the future ScanGrade standard toward separate cells before September testing.
+
+What changed:
+
+- Added `scripts/run_answer_box_bakeoff_synthetic.mjs`.
+  - It builds a synthetic-authentic comparison using real labelled student handwriting crops from `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/handwritten-truth-labelled.json`.
+  - It places the same extracted handwriting masks into two candidate box designs:
+    - `joined-open-divider` = current-ish joined answer box with an open divider.
+    - `separate-cells` = Tony's preferred candidate #1.
+  - It writes a layout JSON per generated page and, when browser scoring is allowed, runs those pages through the real local ScanGrade homography/OCR pipeline.
+  - It measures filled-slot digit accuracy, review/disagreement signals, and blank-slot cleanliness.
+- Added `npm run bakeoff:answer-boxes`.
+- Added `--generate-only` to the bakeoff script so fixture generation and visual QA can run without Playwright.
+- Added static fixture audit and a no-browser fixture contact sheet:
+  - `static-audit.json`
+  - `fixture-contact-sheet.png`
+- Tightened the bakeoff fixture generator after visual QA:
+  - Adaptive thresholding and small-component cleanup reduce gray worksheet-background contamination in extracted handwriting masks.
+  - Synthetic prompt text was removed from near answer boxes so the bakeoff measures answer-region geometry rather than prompt overlap.
+  - A right-column prompt-bubble bug was fixed after it visibly landed inside left-column answer boxes.
+- Added `docs/SCANGRADE_SEPARATE_CELL_MIGRATION_PLAN.md`.
+  - This is a draft implementation/validation path for adopting separate cells if the bakeoff supports it.
+  - It explicitly requires backward compatibility for existing joined/open-divider QR worksheets.
+
+Generated evidence:
+
+- Smoke fixtures:
+  - `private-evidence/reports/answer-box-bakeoff-synthetic-20260704-smoke`
+  - 4 generated pages: 2 joined/open-divider and 2 separate-cells.
+- Full fixture set:
+  - `private-evidence/reports/answer-box-bakeoff-synthetic-20260704`
+  - 24 generated pages total.
+  - 12 `joined-open-divider` pages.
+  - 12 `separate-cells` pages.
+  - 120 unique real student handwriting samples, reused across both designs.
+  - Static audit: passed with 0 errors and 0 warnings.
+  - Fixture contact sheet: `private-evidence/reports/answer-box-bakeoff-synthetic-20260704/fixture-contact-sheet.png`
+
+Commands run:
+
+```text
+node --check scripts/run_answer_box_bakeoff_synthetic.mjs
+npm run bakeoff:answer-boxes -- --limit 20 --out-dir private-evidence/reports/answer-box-bakeoff-synthetic-20260704-smoke --generate-only
+npm run bakeoff:answer-boxes -- --out-dir private-evidence/reports/answer-box-bakeoff-synthetic-20260704 --generate-only
+node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package.json ok')"
+node -e "JSON.parse(require('fs').readFileSync('mission-control/state/mission-state.json','utf8')); console.log('mission-state ok')"
+node --check scripts/run_answer_box_bakeoff_synthetic.mjs
+node -e "JSON.parse(require('fs').readFileSync('private-evidence/reports/answer-box-bakeoff-synthetic-20260704/static-audit.json','utf8')); console.log('static audit json ok')"
+```
+
+Browser scoring command:
+
+```text
+npm run bakeoff:answer-boxes -- --limit 20 --out-dir private-evidence/reports/answer-box-bakeoff-synthetic-20260704-smoke --url https://127.0.0.1:5174
+```
+
+Result:
+
+- The first browser smoke attempt failed because sandboxed Playwright could not launch Chromium.
+- The required unsandboxed rerun was auto-rejected by Codex because the workspace had hit a temporary usage limit until 12:18 PM EDT.
+- Later, after the gate cleared, a fresh Vite server was started and the full bakeoff was scored successfully.
+
+Scored command:
+
+```text
+npm run bakeoff:answer-boxes -- --out-dir private-evidence/reports/answer-box-bakeoff-synthetic-20260704 --url https://127.0.0.1:5174
+```
+
+Scored results:
+
+- Report: `private-evidence/reports/answer-box-bakeoff-synthetic-20260704/summary.json`
+- Model/scoring contact sheet: `private-evidence/reports/answer-box-bakeoff-synthetic-20260704/contact-sheet.png`
+- Joined/open-divider:
+  - Filled digit accuracy: 129/186 (`69.4%`)
+  - Exact question accuracy: 68/120 (`56.7%`)
+  - Blank-slot cleanliness: 54/54 (`100%`)
+  - Preprocess review flags on filled slots: 32
+- Separate cells:
+  - Filled digit accuracy: 131/186 (`70.4%`)
+  - Exact question accuracy: 70/120 (`58.3%`)
+  - Blank-slot cleanliness: 54/54 (`100%`)
+  - Preprocess review flags on filled slots: 28
+- Paired filled-slot comparison:
+  - Both correct: 121
+  - Separate-cell only correct: 10
+  - Joined/open-divider only correct: 8
+  - Neither correct: 47
+
+Next action:
+
+1. Treat separate cells as a modestly supported future direction, not a breakthrough.
+2. Do not change the public QR worksheet format yet.
+3. If Tony approves, update `docs/SCANGRADE_LAYOUT_CONTRACT.md` to include separate cells as the preferred future answer-region style.
+4. The next major reliability work should focus on digit-model robustness and teacher-review ergonomics, not just answer-box geometry.
+5. Preserve fresh September classroom work as the real validation gate.
+
+Important interpretation guard:
+
+- This bakeoff cannot prove real printed-sheet performance because it uses real handwriting masks placed synthetically into boxes.
+- It is still useful because it isolates answer-box geometry from student handwriting variation.
+- The September classroom test remains the real validation gate.
+- The result says separate cells help slightly; it does not say separate cells alone get ScanGrade to 90-95% confident coverage.
+
+## 2026-07-05 Accuracy Roadmap After Answer-Box Bakeoff
+
+Date / thread:
+
+- 2026-07-05, SG 3.
+
+What changed:
+
+- Tony decided to keep the current sheet and answer-box design for now because the synthetic answer-box bakeoff was practically identical between joined/open-divider and separate-cell designs.
+- The next reliability track is digit recognition and confidence policy, not more visible worksheet redesign.
+- Added roadmap: `docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md`.
+
+Evidence used:
+
+- Handwritten-truth score report: `private-evidence/reports/truth-score-20260704-general-policy-inkw6-abc.json`
+- Digit failure report: `private-evidence/reports/digit-failure-dataset-20260705-current/summary.json`
+- Existing model comparison report: `private-evidence/reports/digit-failure-dataset-20260705-current/model-eval-summary.json`
+- Digit dataset: `datasets/handwritten_truth_digits_current/`
+
+Commands run:
+
+```text
+npm run dataset:handwritten-truth-digits
+.venv/bin/python3.13 scripts/eval_handwritten_truth_digit_models.py
+```
+
+Results:
+
+- Answer-level current baseline against handwritten truth:
+  - 582 labelled answers.
+  - 289 auto/confident.
+  - 287 auto-correct.
+  - 2 auto-wrong.
+  - 293 yellow/manual-review.
+  - 49.7% auto coverage.
+  - 99.3% auto accuracy.
+- Digit-slot current baseline:
+  - 960 slot rows.
+  - 865 filled slots.
+  - 74.1% current filled-digit accuracy.
+  - 83.5% row-sheet filled-digit accuracy.
+  - 67.6% non-row filled-digit accuracy.
+  - 67.9% blank-slot policy accuracy.
+- Weakest layouts:
+  - Number bonds: 47.7%.
+  - Dot collections: 67.9%.
+  - Number patterns: 69.5%.
+  - Ten frames: 71.7%, with weak blank-slot handling.
+- Biggest digit confusions:
+  - `1 -> 7`: 48 cases.
+  - `1 -> 9`: 18 cases.
+  - `6 -> 5`: 11 cases.
+  - `9 -> 2`: 10 cases.
+- Existing old ONNX swaps are not enough:
+  - Best standalone tested policy reached 72.8% on the clean subset.
+  - The current integrated selector was about 73.6% on the same subset.
+  - Conclusion: do not just swap to an older model. Build a ScanGrade-specific fine-tune and/or selector.
+- Variant opportunity:
+  - 104 currently-wrong filled digit slots already had the handwritten-truth digit in one of the app's preprocessing variants.
+  - This makes a learned preprocessing/model selector the highest-leverage track.
+- Scratch training warning:
+  - A scratch CNN attempt overfit the small classroom set. Training accuracy climbed while validation stayed weak.
+  - Use a compatible checkpoint plus external data and validation/holdout gates instead.
+- Context warning:
+  - Broad answer-key-based leading-`1` overrides are unsafe because students genuinely wrote wrong answers.
+  - Context should start as a teacher-review suggestion, then only become auto-clear if validation/holdout prove it keeps confident wrong at zero.
+
+Files changed:
+
+```text
+scripts/build_handwritten_truth_digit_dataset.mjs
+scripts/eval_handwritten_truth_digit_models.py
+package.json
+docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md
+SCANGRADE_ACTIVE_HANDOFF.md
+```
+
+Rollback point:
+
+- No rollback commit yet in this entry.
+- The repo was already dirty with many SG 3 files before this work. Do not revert unrelated changes.
+
+Next action:
+
+1. Freeze the current evidence baseline.
+2. Run compatible `ScanGradeDigitCNN` fine-tunes from `models/worksheet-digit-tony-generalist-aug-strong-20260601.pt` using `datasets/handwritten_truth_digits_current/train` as extra labelled raw data.
+3. Evaluate candidate models against validation and holdout digit slots before app integration.
+4. Build an offline variant-selector search using model confidences, top gaps, quality metrics, layout family, slot side, and review reason.
+5. Replay the best candidate at answer level and require no increase in confident wrong answers before any public deploy.
+
+Open risks:
+
+- The current classroom corpus is valuable but limited. Preserve validation/holdout discipline so summer improvements do not overfit Tony's current students.
+- Non-row layouts may need invisible crop/preprocessing improvements even if the printed sheet design stays fixed.
+- The September classroom test remains the real product proof.
+
+2026-07-05 follow-up smoke tests:
+
+- Ran a private compatible fine-tune smoke test from `models/worksheet-digit-tony-generalist-aug-strong-20260601.pt`.
+- Output stayed private under `private-evidence/model-candidates/sg3-20260705-finetune-smoke/`.
+- Training command:
+
+```text
+.venv/bin/python3.13 scripts/train_generalized_digit_model.py --epochs 8 --batch-size 256 --external-per-digit 500 --worksheet-repeat 10 --extra-labeled-raw datasets/handwritten_truth_digits_current/train --extra-labeled-raw-repeat 8 --init-checkpoint models/worksheet-digit-tony-generalist-aug-strong-20260601.pt --onnx-out private-evidence/model-candidates/sg3-20260705-finetune-smoke/worksheet-digit-sg3-finetune-smoke.onnx --checkpoint-out private-evidence/model-candidates/sg3-20260705-finetune-smoke/worksheet-digit-sg3-finetune-smoke.pt --metadata-out private-evidence/model-candidates/sg3-20260705-finetune-smoke/metadata.json
+```
+
+- Smoke model result:
+  - Exported successfully.
+  - Same handwritten-truth digit evaluator: best-confidence `594/848` (`70.0%`).
+  - This is worse than the best existing standalone model/policy (`617/848`, `72.8%`) and worse than the current integrated selector (`624/848`, about `73.6%`).
+  - Do not deploy this smoke model.
+- Fixed variant selector smoke test:
+  - Trained simple per-layout/per-slot variant choices on calibration using existing `correctVariantNames`.
+  - Calibration improved slightly: current `435/595` (`73.1%`) -> selector `446/595` (`75.0%`).
+  - Validation got worse: current `114/150` (`76.0%`) -> selector `110/150` (`73.3%`).
+  - Holdout got worse: current `75/103` (`72.8%`) -> selector `72/103` (`69.9%`).
+  - Conclusion: hard-coded fixed variant preferences overfit. If using variants, build a per-item selector from confidence/quality features rather than layout-only rules.
+- Leading-`1` context smoke:
+  - Among labelled slot cases where the expected digit slot was `1` and the app read `7` or `9`, `64/66` were truly `1`, but `2/66` were real student-written wrong digits.
+  - Conclusion: leading-`1` context is promising for teacher-review suggestions and possibly narrow auto-clear later, but broad auto-correction would create confident wrong reads.
+
+Updated next action:
+
+1. Keep the current public model/policy in place.
+2. Build a proper per-item selector evaluation, not fixed per-layout variant rules.
+3. Add context-assisted "likely 1" teacher-review suggestions before any auto-correction.
+4. If model fine-tuning continues, use longer controlled runs plus validation/holdout evaluation; do not treat this smoke run as a deploy candidate.
+
+2026-07-05 continuation: per-item selector and blank-policy experiments:
+
+What changed:
+
+- Added `scripts/eval_digit_variant_selector.py`.
+  - Trains a logistic per-candidate selector on calibration rows.
+  - Uses confidence, top-gap, vote share, tensor-quality features, family, slot side, variant name, candidate digit, and review reason.
+  - Supports no-key, answer-key-context, layout-feature, and answer-key-plus-layout modes.
+  - Tunes gated switching on validation and reports holdout separately.
+- Added `scripts/eval_flexible_blank_policy.mjs`.
+  - Mirrors the app's tensor quality checks.
+  - Evaluates whether a generalized "one real digit plus artifact slot" cleanup can safely blank companion slots in two-slot boxes.
+- Added package scripts:
+  - `npm run eval:digit-selector`
+  - `npm run eval:flexible-blank-policy`
+
+Evidence used:
+
+- `private-evidence/reports/digit-failure-dataset-20260705-current/digit-rows.json`
+- Saved replay files and debug tensors referenced by those rows.
+
+Commands run:
+
+```text
+npm run eval:digit-selector -- --out private-evidence/reports/digit-variant-selector-20260705/no-key/summary.json
+npm run eval:digit-selector -- --use-answer-key-context --out private-evidence/reports/digit-variant-selector-20260705/answer-key-context/summary.json
+npm run eval:digit-selector -- --layout-features --out private-evidence/reports/digit-variant-selector-20260705/layout-features/summary.json
+npm run eval:digit-selector -- --use-answer-key-context --layout-features --out private-evidence/reports/digit-variant-selector-20260705/answer-key-layout/summary.json
+npm run eval:flexible-blank-policy -- --out private-evidence/reports/flexible-blank-policy-20260705/summary.json
+node --check scripts/eval_flexible_blank_policy.mjs
+PYTHONPYCACHEPREFIX=/tmp/sg-pycache python3 -m py_compile scripts/eval_digit_variant_selector.py
+```
+
+Results:
+
+- No-answer-key per-item selector:
+  - Validation baseline stayed unchanged: current `95/126` (`75.4%`), selector `95/126` (`75.4%`).
+  - Holdout improved only one digit slot in pure model mode: current `62/88` (`70.5%`) -> selector `63/88` (`71.6%`).
+  - Gated mode chose effectively not to switch.
+  - Conclusion: no-key selector is not a deployment candidate yet.
+- Answer-key-context selector:
+  - Validation improved: `95/126` (`75.4%`) -> `106/126` (`84.1%`).
+  - Holdout improved: `62/88` (`70.5%`) -> `82/88` (`93.2%`).
+  - But holdout has only two digit slots where handwritten truth differs from expected answer, so this can be inflated by "pick expected" behavior.
+  - Conclusion: use this direction for teacher-review suggestions first, not automatic correction.
+- Generalized flexible blank cleanup:
+  - Current-style broad candidate logic would blank many real filled slots if generalized.
+  - Strict generalized rule fixed 4 true blank slots but still false-blanked 2 real filled slots.
+  - Conclusion: do not deploy broad blank cleanup. Keep the existing narrow optional-blank policy and treat broader cleanup as a review suggestion unless a safer rule is proven.
+
+Files changed:
+
+```text
+scripts/eval_digit_variant_selector.py
+scripts/eval_flexible_blank_policy.mjs
+package.json
+docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md
+SCANGRADE_ACTIVE_HANDOFF.md
+```
+
+Next action:
+
+1. Implement answer-key-aware OCR suggestions in teacher review/debug output only, not auto-grading.
+2. Start a multi-model/no-key ensemble experiment, because single-model no-key variant selection is too weak.
+3. Separately diagnose crop/preprocessing for ten frames and number bonds, where current model/selector changes are least reliable.
+
+Open risk:
+
+- The current validation/holdout splits are small. A result that improves holdout by a few slots is not enough for public deployment unless it also preserves confident-wrong safety at answer level.
+
+2026-07-05 continuation: multi-model ensemble experiment:
+
+What changed:
+
+- Added `scripts/eval_digit_model_ensemble.py`.
+  - Evaluates current app digit candidates plus candidates from 10 existing ONNX worksheet digit models.
+  - Uses the same frozen handwritten-truth digit rows and calibration/validation/holdout splits.
+  - Supports no-key, layout-feature, answer-key-context, and answer-key-plus-layout modes.
+  - Reports current baseline, best-confidence, majority vote, model selector, gated selector, and safety-gated selector.
+- Added package script:
+  - `npm run eval:digit-ensemble`
+- Updated `docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md` with the ensemble results and next-step plan.
+
+Evidence used:
+
+- `private-evidence/reports/digit-failure-dataset-20260705-current/digit-rows.json`
+- Debug tensors and replay files referenced by those rows.
+
+Commands run:
+
+```text
+PYTHONPYCACHEPREFIX=/tmp/sg-pycache python3 -m py_compile scripts/eval_digit_model_ensemble.py
+.venv/bin/python3.13 -m json.tool package.json
+npm run eval:digit-ensemble -- --out private-evidence/reports/digit-model-ensemble-20260705/no-key/summary.json
+npm run eval:digit-ensemble -- --use-answer-key-context --out private-evidence/reports/digit-model-ensemble-20260705/answer-key-context/summary.json
+npm run eval:digit-ensemble -- --layout-features --out private-evidence/reports/digit-model-ensemble-20260705/layout-features/summary.json
+npm run eval:digit-ensemble -- --use-answer-key-context --layout-features --out private-evidence/reports/digit-model-ensemble-20260705/answer-key-layout/summary.json
+```
+
+Results:
+
+- No-answer-key ensemble:
+  - Evaluated 848 filled labelled digit slots through 10 existing ONNX worksheet digit models.
+  - Holdout current baseline: `75/103` (`72.8%`).
+  - Holdout oracle across model/variant candidates: `98/103` (`95.1%`).
+  - Holdout pure model selector: `81/103` (`78.6%`).
+  - Holdout gated selector: `78/103` (`75.7%`), with 3 rescues and 0 harms.
+  - Validation gated selector: `114/150` (`76.0%`) -> `118/150` (`78.7%`), with 4 rescues and 0 harms.
+  - Layout features did not materially improve or degrade this, which suggests the no-key result is not just layout memorization.
+- Answer-key-context ensemble:
+  - Holdout pure selector reached the oracle: `98/103` (`95.1%`), but this is not safe auto-deploy evidence because answer-key context can mask real student-written wrong answers.
+  - Safety-gated answer-key-plus-layout reached `93/103` (`90.3%`) on holdout with 18 rescues and 0 harms; validation reached `122/150` (`81.3%`) with 8 rescues and 0 harms.
+  - Conclusion: this is a strong teacher-review suggestion candidate, not a silent auto-correction policy.
+
+Files changed:
+
+```text
+scripts/eval_digit_model_ensemble.py
+package.json
+docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md
+SCANGRADE_ACTIVE_HANDOFF.md
+```
+
+Next action:
+
+1. Build an answer-level replay evaluator for ensemble candidates so digit-slot improvements are converted into the product metrics Tony cares about: confident answer coverage, confident wrong count, and yellow review count.
+2. Do not deploy the answer-key-context selector as auto-grading. Promote it first as teacher-review "likely read" suggestions.
+3. If the no-key gated ensemble improves answer-level replay without adding confident wrong reads, integrate it behind an internal/debug flag before any public build.
+
+Open risk:
+
+- The no-key ensemble gain is real but modest. The answer-key-context gain is large but could over-trust the expected answer. The next proof must be answer-level and must keep handwritten-truth scoring separate from math-answer-key correctness.
+
+2026-07-05 continuation: answer-level ensemble proof:
+
+What changed:
+
+- Added `scripts/eval_digit_ensemble_answer_level.py`.
+  - Converts digit-level ensemble choices into whole-answer product metrics.
+  - Scores against handwritten truth, not answer-key correctness.
+  - Keeps current review/yellow status unchanged for candidate strategies so suggestions can be evaluated separately from auto-grading.
+- Added package script:
+  - `npm run eval:digit-ensemble-answers`
+- Updated `docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md`.
+
+Commands run:
+
+```text
+PYTHONPYCACHEPREFIX=/tmp/sg-pycache python3 -m py_compile scripts/eval_digit_ensemble_answer_level.py scripts/eval_digit_model_ensemble.py scripts/eval_digit_variant_selector.py scripts/eval_handwritten_truth_digit_models.py
+.venv/bin/python3.13 -m json.tool package.json
+npm run eval:digit-ensemble-answers
+.venv/bin/python3.13 scripts/eval_digit_ensemble_answer_level.py --layout-features --out private-evidence/reports/digit-ensemble-answer-level-20260705/no-key-layout/summary.json
+.venv/bin/python3.13 scripts/eval_digit_ensemble_answer_level.py --use-answer-key-context --out private-evidence/reports/digit-ensemble-answer-level-20260705/answer-key/summary.json
+.venv/bin/python3.13 scripts/eval_digit_ensemble_answer_level.py --use-answer-key-context --layout-features --out private-evidence/reports/digit-ensemble-answer-level-20260705/answer-key-layout/summary.json
+```
+
+Private reports:
+
+```text
+private-evidence/reports/digit-ensemble-answer-level-20260705/no-key/summary.json
+private-evidence/reports/digit-ensemble-answer-level-20260705/no-key-layout/summary.json
+private-evidence/reports/digit-ensemble-answer-level-20260705/answer-key/summary.json
+private-evidence/reports/digit-ensemble-answer-level-20260705/answer-key-layout/summary.json
+```
+
+Results:
+
+- Current answer-level baseline:
+  - Whole-answer read matches handwritten truth: `342/582` (`58.8%`).
+  - Auto/confident answers: `289/582` (`49.7%`).
+  - Auto-correct against handwritten truth: `287/289` (`99.3%`).
+  - Auto-wrong against handwritten truth: `2/289`.
+  - Yellow/manual-review answers: `293/582`.
+  - Yellow current read already matches handwritten truth: `55/293` (`18.8%`).
+- No-answer-key safety-gated ensemble:
+  - Whole-answer read: `354/582` (`60.8%`).
+  - Yellow suggestions rescued: 13.
+  - It harmed 1 currently-correct auto answer, so it is not production-safe as an automatic recognizer.
+- Answer-key-context gated keep-review ensemble:
+  - Whole-answer read/suggestion: `472/582` (`81.1%`).
+  - Auto lane stayed `287/289` (`99.3%`) because review status stayed unchanged.
+  - Yellow suggestion matches handwritten truth: `185/293` (`63.1%`), up from `55/293` (`18.8%`).
+  - It rescued 139 yellow suggestions and harmed 9 yellow suggestions.
+- Answer-key-context safety-gated keep-review ensemble:
+  - Whole-answer read/suggestion: `400/582` (`68.7%`).
+  - Yellow suggestion matches handwritten truth: `113/293` (`38.6%`).
+  - It rescued 61 yellow suggestions, harmed 3 yellow suggestions, and did not harm the auto lane.
+- Non-row bottleneck:
+  - Current non-row whole-answer read: `142/318` (`44.7%`).
+  - Answer-key gated suggestions raise non-row read/suggestion quality to `243/318` (`76.4%`) while keeping review status.
+
+Decision:
+
+- Keep the current worksheet/answer-box design.
+- Do not deploy the current no-key ensemble to automatic grading; it adds one confident wrong answer.
+- Do build answer-key/context-aware "likely read" suggestions for yellow teacher-review items, clearly separated from score and auto-grading.
+- Continue no-key recognizer/model training separately, with the existing validation/holdout discipline.
+
+Next action:
+
+1. Add a review-only likely-read suggestion path to teacher review/debug output. It must not change saved scores, checks, Xs, or auto/yellow status.
+2. Start the next no-key model/selector training track, aimed at reducing left-slot/leading-digit confusions without answer-key context.
+3. Re-run answer-level benchmark before any scanner/OCR/capture deployment.
+
+2026-07-05 continuation: review-only likely-read suggestions implemented:
+
+What changed:
+
+- Added a live-app review suggestion path for yellow/manual-review answers.
+- `src/components/CameraCapture.vue` now attaches `reviewSuggestion` to `answerGroups` when a cautious likely read is available.
+- `src/services/studentReviewStore.js` now stores `questionReview` and `answerGroups` in submission records.
+- `src/App.vue` shows compact `Likely reads` chips in teacher review cards.
+- `scripts/replay_live_ocr_captured.mjs` mirrors the same suggestion policy for saved debug replay.
+- `scripts/score_replay_against_handwritten_truth.mjs` can score suggestion correctness when replay result files contain suggestion payloads.
+- Added `scripts/eval_review_suggestion_policy.mjs` and package command `npm run eval:review-suggestions`.
+
+Evidence used:
+
+- Frozen handwritten-truth corpus from `private-evidence/reports/digit-failure-dataset-20260705-current/digit-rows.json`.
+- Existing replay outputs under:
+  - `private-evidence/reports/current-replay-20260704-general-policy-inkw6-a/`
+  - `private-evidence/reports/current-replay-20260704-general-policy-inkw6-b/`
+  - `private-evidence/reports/current-replay-20260704-general-policy-inkw6-c/`
+
+Commands run:
+
+```text
+node --check scripts/eval_review_suggestion_policy.mjs
+node --check scripts/replay_live_ocr_captured.mjs
+npm run eval:review-suggestions
+npm run build
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/review-suggestion-scorer-regression-20260705.json private-evidence/reports/current-replay-20260704-general-policy-inkw6-a private-evidence/reports/current-replay-20260704-general-policy-inkw6-b private-evidence/reports/current-replay-20260704-general-policy-inkw6-c
+```
+
+Results:
+
+- Build passed.
+- Static script checks passed.
+- Old replay scoring baseline stayed unchanged:
+  - `582` matched answers.
+  - `289/582` confident/auto.
+  - `287/289` auto-correct against handwritten truth.
+  - `2/289` auto-wrong.
+  - `293/582` yellow/manual-review.
+- Lightweight review-suggestion evaluator:
+  - Report: `private-evidence/reports/review-suggestion-policy-20260705/summary.json`
+  - Suggestions on `130/293` yellow answers (`44.4%`).
+  - Suggestions correct against handwritten truth: `126/130` (`96.9%`).
+  - Suggestions rescued `97` yellow answers where the current leaning read was wrong.
+  - Non-row suggestions: `98/100` correct (`98.0%`).
+  - Row suggestions: `28/30` correct (`93.3%`).
+- Safety tightening:
+  - Removed weak answer-key-only `5 -> 6` suggestions unless supported by strong independent OCR evidence.
+  - Kept ten-frame answer-key context guarded by independent evidence.
+  - Did not suppress dot-collection leading-`1` context broadly because it removed many correct suggestions for little precision gain.
+
+Files changed:
+
+```text
+src/components/CameraCapture.vue
+src/services/studentReviewStore.js
+src/App.vue
+scripts/replay_live_ocr_captured.mjs
+scripts/score_replay_against_handwritten_truth.mjs
+scripts/eval_review_suggestion_policy.mjs
+package.json
+docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md
+SCANGRADE_ACTIVE_HANDOFF.md
+```
+
+Rollback point:
+
+- No commit was created in this continuation. Use git diff against the current worktree if rollback is needed.
+
+Next action:
+
+1. When Playwright/usage limits allow, run a browser replay against the built app so replay result JSONs include `reviewSuggestion`, then score those replay outputs.
+2. Continue the no-answer-key recognizer track. The product goal cannot be met by answer-key context alone because real students write wrong answers.
+3. Prioritize reducing left-slot/leading-`1` failures and non-row crop/preprocessing failures without changing the worksheet design.
+4. Keep review suggestions review-only until validation/holdout proves zero added confident wrong answers.
+
+Open risks:
+
+- Browser replay with Playwright was blocked by the temporary usage-limit/approval guard during this work session, so the live browser replay has not yet been rerun.
+- The review suggestion layer improves teacher workflow but does not increase automatic confident coverage. The automatic lane remains about `49.7%` coverage on this labelled corpus.
+
+## 2026-07-07 Review Suggestion Safety Tightening
+
+Continued SG 3 accuracy work from the frozen handwritten-truth corpus. The live app review-suggestion layer was tightened to prioritize teacher-facing precision over suggestion volume.
+
+What changed:
+
+- `scripts/eval_digit_ensemble_answer_level.py` now scores yellow-only ensemble strategies. This lets no-key recognizer experiments become review suggestions without touching the protected auto lane.
+- `scripts/eval_review_suggestion_policy.mjs`, `scripts/replay_live_ocr_captured.mjs`, and `src/components/CameraCapture.vue` now share a stricter review-suggestion guard:
+  - A leading `7 -> 1` answer-key-context hint now requires independent OCR evidence for `1`.
+  - Pure OCR-alternative review hints now require each changed nonblank slot to have independent evidence at least `0.79`.
+  - Suggestions remain review-only; auto scoring and confident/yellow status are unchanged.
+
+Offline evidence:
+
+- Baseline lightweight suggestion policy report: `private-evidence/reports/review-suggestion-policy-20260705/summary.json`
+  - `130/293` yellow answers had suggestions.
+  - `126/130` suggestions matched handwritten truth (`96.9%`).
+  - `4` suggestions were wrong.
+- Stricter final policy report: `private-evidence/reports/review-suggestion-policy-20260707/final-strong-review-suggestions/summary.json`
+  - Auto lane unchanged: `289/582` auto, `287/289` correct, `2/289` wrong.
+  - `79/293` yellow answers had suggestions.
+  - `79/79` suggestions matched handwritten truth (`100%`) on the labelled corpus.
+  - `50` yellow wrong-leaning answers were rescued.
+  - Row suggestions: `17/17` correct.
+  - Non-row suggestions: `62/62` correct.
+
+No-key yellow-only ensemble evidence:
+
+- Reports:
+  - `private-evidence/reports/digit-ensemble-answer-level-20260707/no-key-yellow-only/summary.json`
+  - `private-evidence/reports/digit-ensemble-answer-level-20260707/no-key-layout-yellow-only/summary.json`
+- Conservative gated yellow-only selector:
+  - `13` yellow suggestions rescued, `0` harmed, `0` auto harm.
+  - Layout features reduced this slightly to `11` rescues, `0` harms.
+- Aggressive model selector:
+  - `31` yellow suggestions rescued, but `2` yellow suggestions harmed.
+  - Treat this as research signal, not product behavior.
+
+Browser/live-app verification:
+
+- Browser replay report directory: `private-evidence/reports/review-suggestions-browser-smoke-20260707-final/`
+- Truth score: `private-evidence/reports/review-suggestions-browser-smoke-20260707-final/truth-score.json`
+- On the 12-capture smoke subset:
+  - `58` matched answer groups.
+  - Auto lane: `23/23` correct, `0` wrong.
+  - Yellow suggestions: `9/9` correct, `0` wrong.
+  - This confirms the Vue app emits the stricter suggestion payloads.
+
+Verification commands completed:
+
+```text
+PYTHONPYCACHEPREFIX=/tmp/sg-pycache .venv/bin/python3.13 -m py_compile scripts/eval_digit_ensemble_answer_level.py
+.venv/bin/python3.13 scripts/eval_digit_ensemble_answer_level.py --out private-evidence/reports/digit-ensemble-answer-level-20260707/no-key-yellow-only/summary.json
+.venv/bin/python3.13 scripts/eval_digit_ensemble_answer_level.py --layout-features --out private-evidence/reports/digit-ensemble-answer-level-20260707/no-key-layout-yellow-only/summary.json
+node --check scripts/eval_review_suggestion_policy.mjs
+node --check scripts/replay_live_ocr_captured.mjs
+node scripts/eval_review_suggestion_policy.mjs --out private-evidence/reports/review-suggestion-policy-20260707/final-strong-review-suggestions/summary.json
+npm run build
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://localhost:5174 --out-dir private-evidence/reports/review-suggestions-browser-smoke-20260707-final --limit 12 private-evidence/debug-scans/2026-07-02
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/review-suggestions-browser-smoke-20260707-final/truth-score.json private-evidence/reports/review-suggestions-browser-smoke-20260707-final
+```
+
+Current judgement:
+
+- This is a safer teacher-review improvement, not a solution to the automatic `90-95%` confident-read goal.
+- The stronger review-suggestion policy is a good candidate to keep because it removed known bad hints while preserving clean assists.
+- The no-key ensemble shows useful zero-harm review-only rescues but is not strong enough to become the recognizer.
+
+Next action:
+
+1. If deploying, use a new build label that clearly indicates review-suggestion safety tightening.
+2. Continue no-key recognizer work with answer-level zero-harm gates.
+3. Focus the next technical push on non-row and leading/left-slot recognition, not worksheet redesign.
+
+## 2026-07-07 No-Key Ensemble Overlap Check
+
+Follow-up analysis added per-answer detail rows to the review-suggestion and answer-level ensemble evaluators, then compared the strict live review suggestions against no-key yellow-only ensemble suggestions.
+
+New/updated tooling:
+
+- `scripts/eval_review_suggestion_policy.mjs` now writes an `items` array for each answer group.
+- `scripts/eval_digit_ensemble_answer_level.py` now writes per-strategy `items` arrays.
+- `scripts/analyze_review_suggestion_overlap.mjs` compares strict live suggestions with no-key ensemble suggestions and searches simple gates for additive no-key hints.
+
+Reports:
+
+- `private-evidence/reports/review-suggestion-policy-20260707/final-strong-review-suggestions-with-items/summary.json`
+- `private-evidence/reports/digit-ensemble-answer-level-20260707/no-key-yellow-only-with-items/summary.json`
+- `private-evidence/reports/review-suggestion-overlap-20260707/summary.json`
+
+Key result:
+
+- Strict live suggestions remain `79/79` correct against handwritten truth.
+- The no-key ensemble is not safe as a general teacher-facing hint layer:
+  - Aggressive changed suggestions: `31/66` correct, `35/66` wrong.
+  - Conservative gated changed suggestions: `13/27` correct, `14/27` wrong.
+- The previous "0 harm" yellow-only metric was too weak because it only counted cases where a currently-correct yellow read was damaged. For teacher-facing suggestions, changing one wrong yellow read into a different wrong suggestion is still a trust problem and must count as wrong.
+- The only zero-wrong additive pocket found by the simple gate search was tiny: `3/3` row-sheet rescues, with no non-row additive gate that was both useful and wrong-free.
+
+Decision:
+
+- Do not add no-key ensemble suggestions to the public app yet.
+- Keep the strict live review-suggestion policy as the product-facing candidate.
+- Use the no-key ensemble rescues as training/crop/preprocessing signal for the next recognizer, not as a deployable policy.
+
+## 2026-07-07 Single-Digit 6 Shape Risk Demotion
+
+The next trust-focused pass inspected the only two confident wrong reads in the frozen `582`-answer labelled corpus. Both were single-slot row-sheet reads where the app confidently predicted `6` even though the expected answer was a visually adjacent `5` or `8`.
+
+Cases:
+
+- `2026-07-02_14-33-38-334-sg-g1-lw-03-sub-1digit-5b8e24a7::7`: expected `5`, handwritten truth `10`, app read `6`.
+- `2026-07-02_14-37-51-441-sg-g1-lw-03-sub-1digit-1d2b16d2::6`: expected/truth `8`, app read `6`.
+
+Change:
+
+- Added `single-digit-six-shape-mismatch-review` in `src/components/CameraCapture.vue`.
+- Mirrored the same rule in `scripts/replay_live_ocr_captured.mjs`.
+- The rule does not rewrite the digit and does not mark anything correct. It only uses the answer key as a review-only risk signal when a non-virtual single-slot answer is read as `6` but the expected digit is `5` or `8`.
+
+Full-corpus policy simulation:
+
+- Report: `private-evidence/reports/single-digit-six-risk-review-20260707/full-corpus-policy-simulation.json`
+- Before: `289/582` auto, `287/289` auto-correct, `2` auto-wrong, `293` yellow.
+- After simulation: `287/582` auto, `287/287` auto-correct, `0` auto-wrong, `295` yellow.
+- Demoted exactly `2` answers: `2` auto-wrong, `0` auto-correct.
+
+Browser replay verification:
+
+- Replay directory: `private-evidence/reports/single-digit-six-risk-review-20260707/`
+- Truth score: `private-evidence/reports/single-digit-six-risk-review-20260707/truth-score.json`
+- On `374` matched replay groups from `67` saved captures:
+  - Auto: `205/374`.
+  - Auto-correct: `205/205`.
+  - Auto-wrong: `0`.
+  - Yellow: `169`.
+  - Yellow suggestions: `53/53` correct.
+  - Row auto: `126/176` with `126/126` correct.
+  - Non-row auto: `79/198` with `79/79` correct.
+
+Verification commands:
+
+```text
+node --check scripts/replay_live_ocr_captured.mjs
+npm run build
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://localhost:5174 --out-dir private-evidence/reports/single-digit-six-risk-review-20260707 private-evidence/debug-scans/2026-07-02
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/single-digit-six-risk-review-20260707/truth-score.json private-evidence/reports/single-digit-six-risk-review-20260707
+```
+
+Decision:
+
+- Keep this patch as a trust-preserving review demotion.
+- It slightly reduces auto coverage but removes the known confident wrong category in the labelled corpus.
+- This still does not solve the larger market-readiness problem: non-row coverage remains low (`39.9%` auto in this replay), so the next technical push should return to no-key recognizer/crop/preprocessing improvements for non-row and leading/left-slot digits.
+
+## 2026-07-07 Variant Top-K Review Suggestion Tightening
+
+Continued the non-row/leading-slot analysis after the single-digit `6` trust patch.
+
+What changed:
+
+- Added `scripts/analyze_nonrow_context_suggestion_delta.mjs` to compare a candidate review-suggestion policy against the strict baseline and list exactly which extra suggestions it adds.
+- Tested the tempting broad policy "allow non-row leading `7 -> 1` answer-key context." Rejected it:
+  - Report: `private-evidence/reports/review-suggestion-policy-20260707/non-row-leading-seven-context-with-items/summary.json`
+  - Delta added only `7` suggestions: `5` correct, `2` wrong.
+  - The two wrong suggestions were real student wrong answers (`72`/`73`) on dot-collection work where the answer key expected `12`/`13`.
+- Added a narrower live/replay review-only rule:
+  - Variant `topK` alternatives now count as independent evidence for review suggestions.
+  - Leading `7 -> 1` answer-key-context suggestions require independent `1` evidence at `>= 0.22`.
+  - This remains review-only. It does not change auto/yellow status, saved score, or OCR output.
+
+Evidence:
+
+- Strict previous baseline: `79/79` review suggestions correct.
+- New evaluator report: `private-evidence/reports/review-suggestion-policy-20260707/live-variant-topk-leading-one-022-with-items/summary.json`
+  - Same `582` labelled answers.
+  - Auto lane unchanged: `289/582` auto, `287/289` auto-correct, `2` auto-wrong in the offline rows baseline.
+  - Review suggestions: `82/293` yellow answers.
+  - Suggestion correctness: `82/82` against handwritten truth.
+  - Rescued yellow wrong-leaning answers: `53`.
+  - Non-row suggestions: `64/64` correct.
+  - Row suggestions: `18/18` correct.
+- Threshold sweep:
+  - `0.21` introduced `1` wrong suggestion.
+  - `0.22` kept `0` wrong suggestions while adding `3` correct suggestions.
+  - `0.23` kept `0` wrong suggestions but added only `1` correct suggestion.
+- Browser smoke replay:
+  - Replay directory: `private-evidence/reports/variant-topk-leading-one-review-20260707-browser/`
+  - Truth score: `private-evidence/reports/variant-topk-leading-one-review-20260707-browser/truth-score.json`
+  - On `100` matched answer groups from `20` saved captures:
+    - Auto: `47/100`.
+    - Auto-correct: `47/47`.
+    - Auto-wrong: `0`.
+    - Yellow suggestions: `15/15` correct.
+- Full browser replay:
+  - Replay directory: `private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/`
+  - Truth score: `private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/truth-score.json`
+  - On `374` matched answer groups from `67` saved captures:
+    - Auto: `205/374`.
+    - Auto-correct: `205/205`.
+    - Auto-wrong: `0`.
+    - Yellow suggestions: `56/56` correct.
+    - Row auto: `126/176` (`71.6%`) with `0` auto-wrong.
+    - Non-row auto: `79/198` (`39.9%`) with `0` auto-wrong.
+
+Commands run:
+
+```text
+node --check scripts/eval_review_suggestion_policy.mjs
+node --check scripts/replay_live_ocr_captured.mjs
+node scripts/eval_review_suggestion_policy.mjs --out private-evidence/reports/review-suggestion-policy-20260707/live-variant-topk-leading-one-022-with-items/summary.json
+npm run build
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/variant-topk-leading-one-review-20260707-browser --limit 20 private-evidence/debug-scans/2026-07-02
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/variant-topk-leading-one-review-20260707-browser/truth-score.json private-evidence/reports/variant-topk-leading-one-review-20260707-browser
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser private-evidence/debug-scans/2026-07-02
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/truth-score.json private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser
+```
+
+Files changed:
+
+```text
+src/components/CameraCapture.vue
+scripts/replay_live_ocr_captured.mjs
+scripts/eval_review_suggestion_policy.mjs
+scripts/analyze_nonrow_context_suggestion_delta.mjs
+SCANGRADE_ACTIVE_HANDOFF.md
+docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md
+```
+
+Decision:
+
+- Keep the narrow variant-topK review-suggestion patch as a tiny teacher-review improvement.
+- Do not deploy the broad non-row answer-key-context policy.
+- Continue treating answer-key context as review assistance only, never as hidden auto-correction.
+
+Next action:
+
+1. Full replay the current browser app when useful, beyond the `20`-capture smoke subset.
+2. Continue no-key recognizer/crop/preprocessing work for non-row layouts. The product still needs a real coverage breakthrough; review suggestions are only workflow help.
+3. Mine ten-frame, number-pattern, number-bond, and place-value yellow failures for portable crop/preprocessing fixes that do not depend on the answer key.
+
+## 2026-07-08 Review Opportunity / Selector Diagnosis
+
+Continued the market-readiness OCR analysis from the variant-topK full browser replay.
+
+What changed:
+
+- Added `scripts/analyze_replay_failure_modes.mjs` to summarize latest replay misses against handwritten truth by layout, family, confusion, review reason, and examples.
+- Added `scripts/analyze_replay_review_opportunities.mjs` to measure whether yellow wrong-leaning cases contain any independent evidence for the handwritten-truth answer in current read, model topK, preprocessing variants, or variant topK.
+- Reran the current review-suggestion evaluator to confirm the strict variant-topK policy remains `82/82` correct on the labelled corpus.
+
+Evidence:
+
+- Failure report: `private-evidence/reports/failure-modes-20260707/variant-topk-full-browser.json`
+- Review opportunity report: `private-evidence/reports/review-opportunities-20260707/variant-topk-full-browser.json`
+- Current policy rerun: `private-evidence/reports/review-suggestion-policy-20260707/current-default-rerun/summary.json`
+
+Results from the latest full browser replay:
+
+- Matched answer groups: `374`.
+- Auto/confident lane: `205/374`, `205/205` correct, `0` confidently wrong.
+- Yellow/manual review: `169`.
+- Yellow current lean already matched handwriting on `35`.
+- Yellow wrong-leaning cases: `134`.
+- Of those `134`, `101` had at least a trace of the handwritten-truth answer somewhere in current/topK/variant evidence.
+- `73/134` had weak-or-better support across all needed slots.
+- `36/134` had medium-or-better support across all needed slots.
+- `16/134` had strong support across all needed slots.
+- Non-row layouts were the dominant remaining drag: `101/134` yellow wrong-leaning cases.
+- Worst layouts by yellow wrong-leaning count:
+  - `sg-g1-lw-06-ten-frames`: `25`.
+  - `sg-g1-lw-08-number-bonds`: `25`.
+  - `sg-g1-lw-07-dot-collections`: `22`.
+  - `sg-g1-lw-09-number-patterns`: `16`.
+  - `sg-g1-lw-10-place-value-50`: `13`.
+
+Important negative result:
+
+- A quick no-key "switch to high-confidence variant evidence" probe was unsafe.
+- Even at very high variant-evidence thresholds, suggestions were often wrong because false variant candidates can be extremely confident.
+- At threshold `0.95`, naive no-key switching produced only `8/17` correct suggestions.
+- At threshold `0.75`, it produced only `12/49` correct suggestions.
+- Conclusion: the opportunity is real, but the hard problem is selector/calibration, not simply trusting stronger variant confidence.
+
+Commands run:
+
+```text
+node --check scripts/analyze_replay_failure_modes.mjs
+node scripts/analyze_replay_failure_modes.mjs --out private-evidence/reports/failure-modes-20260707/variant-topk-full-browser.json private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser
+node --check scripts/analyze_replay_review_opportunities.mjs
+node scripts/analyze_replay_review_opportunities.mjs --out private-evidence/reports/review-opportunities-20260707/variant-topk-full-browser.json private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser
+node --check scripts/eval_review_suggestion_policy.mjs
+node scripts/eval_review_suggestion_policy.mjs --out private-evidence/reports/review-suggestion-policy-20260707/current-default-rerun/summary.json
+```
+
+Decision:
+
+- Do not auto-promote yellow cases using answer-key context or raw variant confidence.
+- Do not add answer-key-only `5 -> 6` hints; the missed cases lacked enough independent evidence, and real student wrong answers make that unsafe.
+- Keep the current auto lane conservative.
+- The next technical work should be a proper selector/model track: learn when variant evidence is trustworthy using quality signals, layout risk, slot side, and validation/holdout gates. The selector must be judged at answer level, not only digit-slot level.
+
+Next action:
+
+1. Build a formal no-key selector experiment around the opportunity report, especially for non-row layouts.
+2. Use validation/holdout splits and answer-level scoring; do not deploy unless confident wrong stays zero.
+3. If no selector candidate clears the safety gate, focus on training a ScanGrade-specific recognizer and better blank/artifact classifiers rather than threshold loosening.
+
+## 2026-07-08 Split-Aware No-Key Gate Search
+
+Continued from the selector diagnosis by building a split-aware no-answer-key gate search over the latest full browser replay.
+
+What changed:
+
+- Added `scripts/search_no_key_variant_review_gates.mjs`.
+- The script joins the latest replay to handwritten truth and to the existing digit-row split labels (`calibration`, `validation`, `holdout`).
+- It generates no-key candidate review suggestions from current read, model topK, preprocessing variants, and variant topK.
+- It searches simple gates over minimum evidence confidence, changed-slot count, variant top-1 count, topK count, and row/non-row family.
+- It tunes only on calibration, then reports validation and holdout behavior.
+
+Evidence:
+
+- Report: `private-evidence/reports/no-key-variant-review-gates-20260708/full-browser.json`
+- Input replay: `private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/`
+- Split coverage in replay: `374` labelled groups, with `208` calibration, `100` validation, and `66` holdout.
+
+Result:
+
+- The best calibration-zero-wrong gate was:
+  - `conf>=0.95 changed<=1 vtop>=0 topk>=0 row`
+  - Calibration: `1/1` suggestion correct, `1` rescue, `0` wrong.
+  - Validation: `1/1` suggestion correct, `1` rescue, `0` wrong.
+  - Holdout: `0` suggestions.
+- No useful non-row zero-wrong gate survived.
+- Broader gates were badly unsafe. For example:
+  - `conf>=0.9 changed<=1 ... all` gave validation `2` correct / `8` wrong and holdout `2` correct / `9` wrong.
+  - `conf>=0.9 changed<=1 ... non-row` gave validation `1` correct / `8` wrong and holdout `2` correct / `9` wrong.
+
+Interpretation:
+
+- Simple no-key threshold gates are not enough.
+- The existing variant evidence contains signal, but high-confidence false variants are common.
+- The next viable selector must use richer features: tensor/ink quality, artifact flags, layout risk, slot side, current-vs-alternative conflict, variant disagreement pattern, and answer-level safety scoring.
+- Do not integrate this simple gate into the app; its useful safe coverage is too tiny.
+
+Commands run:
+
+```text
+node --check scripts/search_no_key_variant_review_gates.mjs
+node scripts/search_no_key_variant_review_gates.mjs --out private-evidence/reports/no-key-variant-review-gates-20260708/full-browser.json private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser
+```
+
+Decision:
+
+- Reject simple no-key variant gates as a production or teacher-facing suggestion path.
+- Keep current strict review suggestions and conservative auto lane.
+- Move next to either:
+  1. a learned selector using tensor/quality features, trained on calibration and judged on validation/holdout at answer level; or
+  2. a model/blank-artifact classifier training track if selector gains remain too small.
+
+Next action:
+
+1. Extend the existing Python selector/ensemble tools to consume latest replay evidence or produce a candidate learned selector report with answer-level validation/holdout metrics.
+2. Require zero added confident wrong and meaningful non-row gain before any app integration.
+3. If learned selector still fails, prioritize model training and blank/artifact classifier work over more handwritten rules.
+
+## 2026-07-08 Learned No-Key Replay Selector
+
+Continued the market-readiness OCR push by testing whether a learned selector could safely rescue yellow/manual-review answers without using the answer key.
+
+What changed:
+
+- Added `scripts/eval_no_key_replay_selector.mjs`.
+- The script joins the latest full browser replay to handwritten-truth labels and the existing calibration/validation/holdout split labels.
+- It generates alternative answer candidates from current model topK, preprocessing variants, and variant topK.
+- It trains a small logistic selector on calibration candidates using only no-key features: confidence, top-gap, changed-slot count, variant/topK support, row/non-row family, slot count, digit-change patterns, and optional layout ID.
+- It reports calibration, validation, and holdout answer-level behavior separately.
+
+Evidence:
+
+- No-layout report: `private-evidence/reports/no-key-replay-selector-20260708/no-layout.json`
+- Layout-feature report: `private-evidence/reports/no-key-replay-selector-20260708/layout.json`
+- Input replay: `private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/`
+
+Result:
+
+- Replay-matched groups: `374`.
+- Candidate records: `3713`.
+- Split coverage: `208` calibration, `100` validation, `66` holdout.
+- Best calibration-zero-wrong no-layout selector:
+  - Calibration: `1/1` suggestion correct, `0` wrong.
+  - Validation: `0` suggestions.
+  - Holdout: `0` suggestions.
+- Best calibration-zero-wrong layout-feature selector was effectively the same tiny pocket:
+  - Calibration: `1/1` suggestion correct, `0` wrong.
+  - Validation: `0` suggestions.
+  - Holdout: `0` suggestions.
+- Lowering thresholds to get real validation/holdout coverage was unsafe. Representative runs produced validation/holdout suggestions that were wrong before they produced useful rescues.
+
+Interpretation:
+
+- The learned replay-metadata selector did not safely generalize.
+- This confirms the previous simple-gate finding: current variant/topK metadata contains real signal, but also high-confidence false alternatives.
+- Do not integrate this selector into the app.
+- The next useful work is richer visual evidence, not more confidence-threshold tuning: tensor/ink quality features, blank/artifact classifiers, crop-quality signals, and/or a stronger ScanGrade-specific recognizer.
+
+Commands run:
+
+```text
+node --check scripts/eval_no_key_replay_selector.mjs
+node scripts/eval_no_key_replay_selector.mjs --out private-evidence/reports/no-key-replay-selector-20260708/no-layout.json private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser
+node scripts/eval_no_key_replay_selector.mjs --layout-features --out private-evidence/reports/no-key-replay-selector-20260708/layout.json private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser
+```
+
+Decision:
+
+- Reject learned no-key replay selector v1 as production logic.
+- Keep the current conservative auto lane: `205/205` auto-correct and `0` confidently wrong on the latest full replay remains the trust anchor.
+- Keep strict review suggestions only where evidence is proven high precision.
+- Pivot the next experiment toward image/tensor-level quality and artifact signals, especially for non-row sheets.
+
+Next action:
+
+1. Add a tensor/image quality audit for yellow cases and false alternatives.
+2. Build a blank/artifact classifier or stricter quality gate for optional/empty slots.
+3. Revisit selector training only after adding visual quality features that can separate true handwriting from divider/box-line artifacts.
+
+## 2026-07-08 Visual Quality / Artifact Audit
+
+Continued from the failed no-key selector by testing whether tensor-level visual quality can explain why some yellow alternatives are safe while others are false high-confidence traps.
+
+What changed:
+
+- Added `scripts/analyze_replay_visual_quality.mjs`.
+- Extended `scripts/eval_no_key_replay_selector.mjs` with optional `--quality-features` and `--debug-root` support.
+- The visual audit joins latest replay results, handwritten-truth labels, and saved Mission Control `debug.json` tensors by capture ID.
+- It measures the same 28x28 tensor evidence the digit model sees, including ink size, connected components, usable variant ratio, weak variant ratio, artifact-like variant ratio, fragmentation, and rough line-artifact flags.
+
+Evidence:
+
+- Visual audit report: `private-evidence/reports/visual-quality-audit-20260708/full-browser.json`
+- Quality selector report: `private-evidence/reports/no-key-replay-selector-20260708/quality.json`
+- Quality + layout selector report: `private-evidence/reports/no-key-replay-selector-20260708/quality-layout.json`
+- Input replay: `private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/`
+
+Visual audit result:
+
+- Matched answer groups: `374/374` with debug tensors found.
+- Aligned slot groups: `333`.
+- Overall tensor slots audited: `616`.
+- Yellow-wrong groups are more visually suspicious than yellow-correct groups:
+  - Yellow leaning correct: usable variant ratio `0.4413`, artifact variant ratio `0.4426`, weak variant ratio `0.4795`.
+  - Yellow leaning wrong: usable variant ratio `0.3244`, artifact variant ratio `0.6009`, weak variant ratio `0.5216`.
+- Non-row is the main product bottleneck:
+  - Non-row auto-correct: usable variant ratio `0.4518`, artifact variant ratio `0.4654`, weak variant ratio `0.4371`.
+  - Non-row yellow-wrong: usable variant ratio `0.3392`, artifact variant ratio `0.5811`, weak variant ratio `0.5121`.
+- Row one-digit pages have high apparent artifact/weak rates despite many correct reads. This means the current visual rules are not safe as a blunt gate.
+- Layout-level weak/artifact signal:
+  - `sg-g1-lw-01-add-1digit`: weak slot pct `72.9`, artifact slot pct `89.6`.
+  - `sg-g1-lw-03-sub-1digit`: weak slot pct `71.4`, artifact slot pct `91.1`.
+  - Non-row layouts generally had better raw `ok` rates but still much lower auto coverage, implying the model/selector is confused by shape patterns, not only blank crops.
+- Top aligned slot confusions in this replay:
+  - `7->1`: `21`.
+  - `2->9`: `7`.
+  - `5->6`: `7`.
+  - `9->1`: `7`.
+  - `1->9`: `5`.
+
+Quality-feature selector result:
+
+- `--quality-features` added numeric visual-quality features to the learned replay selector.
+- Candidate records stayed at `3713`.
+- Feature counts:
+  - Quality only: `41` numeric, `370` categorical.
+  - Quality + layout: `41` numeric, `378` categorical.
+- Both quality-feature selectors failed the safety gate:
+  - Calibration-zero-wrong count: `0`.
+  - Validation-zero-wrong top runs: none.
+- Representative high-score run was unsafe:
+  - Calibration `1` correct / `2` wrong.
+  - Validation `0` correct / `1` wrong.
+  - Holdout `2` correct / `3` wrong.
+
+Interpretation:
+
+- Tensor quality is diagnostically useful but not yet a deployable selector feature.
+- The current quality metrics are too generic: they can identify suspicious evidence, but they do not reliably separate real child handwriting from artifacts across layouts.
+- A generic logistic selector with quality columns is the wrong next production path.
+- The next useful direction is a dedicated blank/artifact/real-handwriting classifier or manually audited artifact label set, not more threshold tuning.
+
+Commands run:
+
+```text
+node --check scripts/analyze_replay_visual_quality.mjs
+node scripts/analyze_replay_visual_quality.mjs --out private-evidence/reports/visual-quality-audit-20260708/full-browser.json private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser
+node --check scripts/eval_no_key_replay_selector.mjs
+node scripts/eval_no_key_replay_selector.mjs --quality-features --out private-evidence/reports/no-key-replay-selector-20260708/quality.json private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser
+node scripts/eval_no_key_replay_selector.mjs --quality-features --layout-features --out private-evidence/reports/no-key-replay-selector-20260708/quality-layout.json private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser
+node --check scripts/create_artifact_label_pack.mjs
+node scripts/create_artifact_label_pack.mjs --out-dir private-evidence/artifact-label-packs/20260708-visual-quality --per-class 80
+```
+
+Decision:
+
+- Do not integrate visual-quality selector features into app logic yet.
+- Keep `scripts/analyze_replay_visual_quality.mjs` as a diagnostic tool.
+- Next best move: build a small labelled artifact-vs-real-writing dataset from existing tensors/crops, then train/evaluate a binary classifier or stricter rule set against calibration/validation/holdout.
+
+Artifact label pack:
+
+- Added `scripts/create_artifact_label_pack.mjs`.
+- Generated private label pack: `private-evidence/artifact-label-packs/20260708-visual-quality/`
+- Files:
+  - `contact-sheet.png`
+  - `records.json`
+  - `README.md`
+- Pack contents: `93` tensor examples, with `47` suspicious-artifact candidates and `46` comparison auto/yellow-correct candidates.
+- Visual spot-check showed an important caveat: some comparison auto-correct examples still visibly include dividers/box artifacts. Therefore labels must be assigned from the tensor image itself, not from whether the app happened to grade the answer correctly.
+
+Next action:
+
+1. Generate contact sheets for suspected artifact slots, clean handwriting slots, and false high-confidence variant alternatives.
+2. Label a small calibration set as `real-writing`, `blank`, `box-line/divider`, `fragment/noise`, or `unclear`.
+3. Train/evaluate a binary real-writing/artifact classifier.
+4. Use it only as a review demotion or selector-blocking feature until validation/holdout proves it does not increase confident wrong reads.
+
+## 2026-07-08 Blank / Artifact Classifier Smoke
+
+Continued the artifact path by testing whether the existing slot-level handwritten-truth digit rows can train a filled-vs-blank detector from saved tensors.
+
+What changed:
+
+- Added `scripts/eval_blank_artifact_classifier.mjs`.
+- The evaluator reads `private-evidence/reports/digit-failure-dataset-20260705-current/digit-rows.json`.
+- It joins each slot row to its saved `debug.json` tensor by `debugPath` and `detailId`.
+- It trains a logistic filled-vs-blank classifier on calibration rows only.
+- It reports validation and holdout separately.
+- It supports `--visual-only` to remove policy/review leakage fields such as `preprocessReviewReason`, `robustOverride`, `groupReview`, and `confidencePolicyCleared`.
+
+Evidence:
+
+- Full-feature report: `private-evidence/reports/blank-artifact-classifier-20260708/summary.json`
+- Visual-only report: `private-evidence/reports/blank-artifact-classifier-20260708/visual-only.json`
+- Input slot rows: `960` rows total, `918` usable for filled-vs-blank after requiring a tensor-backed filled or blank label.
+
+Visual-only result:
+
+- Feature counts: `43` numeric, `15` categorical.
+- Split counts:
+  - Calibration: `639` slots (`605` filled, `34` blank).
+  - Validation: `170` slots (`157` filled, `13` blank).
+  - Holdout: `109` slots (`103` filled, `6` blank).
+- AUC:
+  - Calibration: `0.9996`.
+  - Validation: `0.998`.
+  - Holdout: `1.0`.
+- Best calibration-zero-false-blank gate:
+  - `l2=0.01`, threshold `0.1`.
+  - Calibration: caught `26/34` blanks (`76.5%`) with `0` filled slots misclassified as blank.
+  - Validation: caught `9/13` blanks (`69.2%`) with `0` filled slots misclassified as blank.
+  - Holdout: caught `5/6` blanks (`83.3%`) with `0` filled slots misclassified as blank.
+- Validation-zero-false-blank top gates similarly held `0` false blanks on holdout in the top candidates.
+
+Interpretation:
+
+- This is the first artifact/blank path that looks genuinely promising.
+- Unlike the generic no-key answer selector, the blank detector has a clear and narrow job: block or demote likely blank/artifact slots, not choose the final handwritten digit.
+- The visual-only result is especially important because it removes current-policy leakage fields.
+- Caveat: some slot blank labels were inferred from app slot underscores (`truthSlotSource: inferred-from-app-slot-underscores`), so this is not deployment proof yet. It is strong evidence for building a proper blank/artifact classifier with manually audited labels.
+
+Commands run:
+
+```text
+node --check scripts/eval_blank_artifact_classifier.mjs
+node scripts/eval_blank_artifact_classifier.mjs --out private-evidence/reports/blank-artifact-classifier-20260708/summary.json
+node scripts/eval_blank_artifact_classifier.mjs --visual-only --out private-evidence/reports/blank-artifact-classifier-20260708/visual-only.json
+```
+
+Decision:
+
+- Keep `scripts/eval_blank_artifact_classifier.mjs` as the next technical basis for a real blank/artifact module.
+- Do not integrate it into app logic yet because labels need manual artifact validation and the classifier needs to be exported/replayed as an app-equivalent path.
+- The next safe implementation step is not an auto-grade change; it is a reproducible app-side blank/artifact scoring function plus replay-only demotion simulation.
+
+Next action:
+
+1. Manually label the artifact label pack or create a smaller high-confidence hand-label set from it.
+2. Re-run the classifier using manually labelled artifact classes, not only inferred blank slots.
+3. If validation/holdout remain zero-false-blank, integrate as a review-only demotion/blocking feature in replay first.
+4. Only after replay proves zero added confident wrong, consider app integration.
+
+## 2026-07-08 Blank / Artifact Replay Simulation
+
+Continued the blank/artifact path by extending the classifier evaluator into a replay-level policy simulator.
+
+What changed:
+
+- Extended `scripts/eval_blank_artifact_classifier.mjs` with:
+  - `--simulate-replay <replay-dir>`
+  - replay/debug/truth joining
+  - answer-level baseline scoring
+  - conservative demotion simulation
+  - review-only blanking suggestion simulation
+  - risky auto-blank comparison for lab visibility only
+- This remains analysis-only. No production app OCR/capture behavior changed.
+
+Evidence:
+
+- Report: `private-evidence/reports/blank-artifact-classifier-20260708/visual-only-replay-sim.json`
+- Input replay: `private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/`
+- Trained from calibration slots in `private-evidence/reports/digit-failure-dataset-20260705-current/digit-rows.json`.
+- Classifier mode: `--visual-only`, using the previous best calibration-zero-false-blank gate (`l2=0.01`, threshold `0.1`).
+
+Replay simulation result:
+
+- Matched answer groups: `374`.
+- Baseline:
+  - Auto/confident: `205/374`.
+  - Auto-correct: `205/205`.
+  - Auto-wrong: `0`.
+  - Yellow: `169`.
+  - Yellow current lean correct: `35`.
+- Classifier detected `14` blank slots.
+- Conservative demotion simulation:
+  - Auto/confident remained `205/374`.
+  - Auto-correct remained `205/205`.
+  - Auto-wrong remained `0`.
+  - No additional auto groups needed demotion at this threshold.
+- Risky auto-blank comparison, not recommended for production:
+  - Auto lane unchanged.
+  - Yellow current-lean correct would improve from `35` to `38`.
+  - Yellow wrong-leaning would drop from `134` to `131`.
+- Review-only blanking suggestions:
+  - `3` suggestions.
+  - `3/3` correct.
+  - `0` wrong.
+  - `3` rescues.
+  - `0` harmed current-correct yellow reads.
+- All three rescues were validation-set ten-frame cases where a one-digit student answer had picked up a false right-slot companion:
+  - `71 -> 7`
+  - `81 -> 8`
+  - `91 -> 9`
+
+Interpretation:
+
+- The classifier is not a big coverage breakthrough yet, but it is a safe and targeted review-assist signal in replay.
+- It directly addresses the false companion digit problem without touching the auto lane.
+- It should not be auto-applied yet because the labels still need manual artifact validation and the replay benefit is currently small.
+- The product-shaped next step is a teacher-review suggestion such as "blank this slot" or a behind-the-scenes review suggestion source, not automatic score changes.
+
+Commands run:
+
+```text
+node --check scripts/eval_blank_artifact_classifier.mjs
+node scripts/eval_blank_artifact_classifier.mjs --visual-only --simulate-replay private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser --out private-evidence/reports/blank-artifact-classifier-20260708/visual-only-replay-sim.json
+```
+
+Decision:
+
+- Keep the replay simulation path.
+- Do not integrate app behavior yet.
+- Treat the blank/artifact classifier as a candidate teacher-review suggestion source after manual label validation.
+
+Next action:
+
+1. Label or pseudo-label a stronger artifact dataset.
+2. Add a replay evaluator that combines current strict review suggestions with blank/artifact review suggestions and reports total teacher-review assist coverage.
+3. If combined review suggestions stay zero-wrong on validation/holdout, integrate them as review-only UI hints.
+
+## 2026-07-08 Combined Review-Assist Evaluation
+
+Continued the review-assist track by combining two safe teacher-review suggestion sources:
+
+1. The existing strict built-in `reviewSuggestion` attached to replayed yellow answers.
+2. The new blank/artifact replay-simulation suggestions for false companion slots.
+
+What changed:
+
+- Added `scripts/eval_combined_review_assist.mjs`.
+- The script joins:
+  - handwritten truth labels,
+  - latest full-browser replay results,
+  - split labels from digit rows,
+  - blank/artifact replay-simulation examples.
+- It reports built-in suggestions, blank/artifact suggestions, and the combined union separately by overall, row/non-row family, split, and source.
+- This is analysis-only. No app grading, OCR, capture, homography, or public UI behavior changed.
+
+Evidence:
+
+- Report: `private-evidence/reports/combined-review-assist-20260708/summary.json`
+- Replay input: `private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/`
+- Blank/artifact input: `private-evidence/reports/blank-artifact-classifier-20260708/visual-only-replay-sim.json`
+- Truth input: `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/handwritten-truth-labelled.json`
+
+Results:
+
+- Baseline latest replay:
+  - Matched groups: `374`.
+  - Auto/confident: `205/374`.
+  - Auto-correct: `205/205`.
+  - Auto-wrong: `0`.
+  - Yellow/manual review: `169`.
+  - Yellow current lean correct: `35/169`.
+- Built-in strict review suggestions:
+  - `56` suggestions.
+  - `56/56` correct.
+  - `0` wrong.
+  - `35` rescues.
+- Blank/artifact suggestions:
+  - `3` suggestions.
+  - `3/3` correct.
+  - `0` wrong.
+  - `3` rescues.
+- Combined review assist:
+  - `59` suggestions across `169` yellow answers.
+  - `59/59` correct.
+  - `0` wrong.
+  - `38` rescues.
+  - `0` harmed current-correct yellow reads.
+  - No conflicts between built-in and blank/artifact suggestion sources.
+
+Breakdown:
+
+- Row: `15/50` yellow answers suggested, `15/15` correct, `7` rescues.
+- Non-row: `44/119` yellow answers suggested, `44/44` correct, `31` rescues.
+- Calibration: `30/85` suggested, `30/30` correct.
+- Validation: `20/51` suggested, `20/20` correct.
+- Holdout: `9/33` suggested, `9/9` correct.
+
+Commands run:
+
+```text
+node --check scripts/eval_combined_review_assist.mjs
+node scripts/eval_combined_review_assist.mjs
+```
+
+Decision:
+
+- This is a real product/workflow improvement candidate, but it should remain review-only.
+- It does not increase automatic confident coverage yet; the auto lane remains `205/374`.
+- It can make teacher review much faster by pre-filling a likely value for about `35%` of yellow answers while preserving `0` wrong suggestions on the current replay.
+- Do not convert these suggestions into automatic grading until a larger validation/holdout path proves no added confident wrong reads.
+
+Next action:
+
+1. Design the teacher-review UI behavior for safe suggestions: prefill/highlight "likely read" while still requiring teacher confirmation for yellow answers.
+2. Decide whether to include blank/artifact suggestions in public review UI only after manual artifact-label validation.
+3. Continue the deeper recognizer path separately: reduce non-row yellow volume through better crop/preprocessing/model work, not by making the auto lane less conservative.
+
+## 2026-07-08 Review-Assist UI Metric + Benchmark Command
+
+Continued from the combined review-assist evaluation by making the proven review-assist metric easier to rerun and easier to see in the Teacher Review UI.
+
+What changed:
+
+- Added package script `npm run eval:combined-review-assist`.
+- Updated `src/App.vue` Teacher Review summary to include a passive `Likely reads` count.
+- Updated likely-read chips to include confidence and source when available, e.g. OCR alternative vs context review.
+- This is UI/reporting only. It does not change OCR, capture, homography, auto-grading confidence, review routing, or scoring.
+
+Evidence:
+
+- Script: `scripts/eval_combined_review_assist.mjs`
+- Report: `private-evidence/reports/combined-review-assist-20260708/summary.json`
+
+Commands run:
+
+```text
+npm run eval:combined-review-assist
+npm run build
+```
+
+Results:
+
+- Combined review-assist benchmark still matches the previous report:
+  - Baseline: `374` groups, `205/374` auto, `205/205` auto-correct, `0` auto-wrong, `169` yellow.
+  - Built-in suggestions: `56/56` correct, `0` wrong.
+  - Blank/artifact suggestions: `3/3` correct, `0` wrong.
+  - Combined: `59/59` correct, `0` wrong, `38` rescues, `0` harmed current-correct yellow reads.
+- `npm run build` passed.
+
+Files changed:
+
+- `package.json`
+- `src/App.vue`
+- `scripts/eval_combined_review_assist.mjs`
+- `SCANGRADE_ACTIVE_HANDOFF.md`
+- `docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md`
+
+Decision:
+
+- Keep this change. It makes the review-assist path more measurable and more visible without risking the auto lane.
+- Do not claim this improves automatic OCR coverage. The auto benchmark remains `205/374`; this improves the teacher-review workflow around yellow cases.
+
+Next action:
+
+1. Build a replay-equivalent blank/artifact suggestion source that can be produced by app-side code, not only offline simulation.
+2. Validate it against handwritten truth and split labels before exposing it in the public UI.
+3. Continue attacking non-row recognition coverage separately with crop/preprocessing/model improvements.
+
+## 2026-07-08 Targeted Six-From-Five Review Suggestion Gate
+
+Continued the non-row/yellow-volume push by investigating the largest remaining uncovered single-digit confusion in the latest replay: yellow answers where the current leaning read is `5` but handwritten truth is `6`.
+
+What changed:
+
+- Added `scripts/search_six_from_five_review_gate.mjs`.
+- Added package script `npm run search:six-five-review-gate`.
+- Lowered the review-only `6`-from-`5` independent evidence gate from `0.75` to `0.25` in:
+  - `src/components/CameraCapture.vue`
+  - `scripts/replay_live_ocr_captured.mjs`
+  - `scripts/eval_review_suggestion_policy.mjs`
+- This only affects likely-read suggestions for already-yellow review answers. It does not auto-correct, auto-grade, clear review, or change the score.
+
+Evidence:
+
+- Report: `private-evidence/reports/nonrow-next-push-20260708/six-from-five-review-gates.json`
+- Input replay: `private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/`
+- Truth input: `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/handwritten-truth-labelled.json`
+
+Result:
+
+- Candidate `5 -> 6` review-only cases without existing suggestions: `9`.
+- Old `0.75` gate: `0` suggestions.
+- New `0.25` gate with at most one changed slot:
+  - `2` suggestions.
+  - `2/2` correct.
+  - `0` wrong.
+  - `2` rescues.
+  - Split coverage: `1` validation correct, `1` holdout correct.
+  - Family coverage: `1` row correct, `1` non-row correct.
+
+Commands run:
+
+```text
+node --check scripts/search_six_from_five_review_gate.mjs
+node --check scripts/replay_live_ocr_captured.mjs
+node --check scripts/eval_review_suggestion_policy.mjs
+node scripts/search_six_from_five_review_gate.mjs
+npm run build
+```
+
+Decision:
+
+- Keep this as a small review-assist ratchet.
+- Do not overstate it: this is not a market-ready OCR breakthrough, and it does not improve automatic coverage.
+- It slightly expands the safe review-suggestion set while preserving the auto-lane trust anchor.
+
+Next action:
+
+1. Continue looking for narrow repeated patterns that add correct review suggestions without wrong suggestions.
+2. For larger gains, move beyond threshold gates toward non-row crop/preprocessing/model work, especially ten frames, dot collections, number bonds, number patterns, and place value.
+
+## 2026-07-08 Non-Row Variant-Lane Push
+
+Date / thread:
+2026-07-08 / SG 3.
+
+What changed:
+
+- Added `scripts/analyze_nonrow_variant_lanes.mjs` and package command `npm run analyze:nonrow-variant-lanes`.
+- Added a tiny review-only no-key non-row leading-one suggestion path.
+- The new suggestion source is `no-key-non-row-leading-one-review`.
+- It only fires on Grade 1 last-week non-row layouts when:
+  - the answer is already yellow/review,
+  - the left slot currently reads `7`,
+  - a preprocessing variant reads that left slot as `1` with confidence at least `0.25`,
+  - and all companion slots are stable, not review-needed.
+- It does not change score, does not clear review, and does not affect auto-grading.
+- Candidate selection now filters unsafe candidates before choosing the best safe suggestion, so a rejected answer-key-context candidate does not prevent a safe no-key candidate from being considered.
+
+Evidence used:
+
+- Latest full browser replay: `private-evidence/reports/variant-topk-leading-one-review-20260707-full-browser/`
+- Truth labels: `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/handwritten-truth-labelled.json`
+- Digit rows: `private-evidence/reports/digit-failure-dataset-20260705-current/digit-rows.json`
+
+Results:
+
+- Non-row variant-lane report: `private-evidence/reports/nonrow-variant-lanes-20260708/summary.json`
+  - Non-row filled slots: `231/340` current-correct (`67.9%`).
+  - Wrong non-row filled slots with correct digit somewhere in variants: `92/109` (`84.4%`).
+- Broader replay report: `private-evidence/reports/nonrow-variant-lanes-20260708/current-abc-summary.json`
+  - Non-row filled slots: `354/545` current-correct (`65.0%`).
+  - Wrong non-row filled slots with correct digit somewhere in variants: `154/191` (`80.6%`).
+- Labelled policy evaluator: `private-evidence/reports/review-suggestion-policy-20260708/nonrow-left-seven-one-no-key-stable-companion/summary.json`
+  - `83/83` yellow suggestions correct.
+  - `0` wrong suggestions.
+  - Non-row: `65/65` correct.
+- Full browser replay: `private-evidence/reports/nonrow-left-seven-one-stable-companion-20260708-full-browser/truth-score.json`
+  - Auto/confident: `205/374`.
+  - Auto-correct: `205/205`.
+  - Auto-wrong: `0`.
+  - Yellow suggestions: `57/57` correct, `0` wrong.
+  - Non-row suggestions: `42/42` correct, `0` wrong.
+- Combined review-assist: `private-evidence/reports/combined-review-assist-20260708/nonrow-left-seven-one-stable-companion-summary.json`
+  - `62/169` yellow answers get a suggestion.
+  - `62/62` suggestions correct.
+  - `0` wrong.
+  - `41` rescues.
+
+Important lesson:
+
+- A slot-level rule can be perfectly safe and still produce a wrong whole-answer suggestion if a companion slot is unstable.
+- The no-key `7 -> 1` lane was only kept after adding the stable-companion requirement.
+- Larger non-row gains should be trained/evaluated at whole-answer level, not just digit-slot level.
+
+Commands run:
+
+```text
+node --check scripts/analyze_nonrow_variant_lanes.mjs
+node scripts/analyze_nonrow_variant_lanes.mjs
+node scripts/analyze_nonrow_variant_lanes.mjs --replay private-evidence/reports/current-replay-20260704-general-policy-inkw6-a --replay private-evidence/reports/current-replay-20260704-general-policy-inkw6-b --replay private-evidence/reports/current-replay-20260704-general-policy-inkw6-c --out private-evidence/reports/nonrow-variant-lanes-20260708/current-abc-summary.json
+node --check scripts/eval_review_suggestion_policy.mjs
+node --check scripts/replay_live_ocr_captured.mjs
+node scripts/eval_review_suggestion_policy.mjs --out private-evidence/reports/review-suggestion-policy-20260708/nonrow-left-seven-one-no-key-stable-companion/summary.json
+npm run build
+node scripts/replay_live_ocr_captured.mjs --url https://localhost:5174 --out-dir private-evidence/reports/nonrow-left-seven-one-stable-companion-20260708-full-browser private-evidence/debug-scans/2026-07-02
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/nonrow-left-seven-one-stable-companion-20260708-full-browser/truth-score.json private-evidence/reports/nonrow-left-seven-one-stable-companion-20260708-full-browser
+node scripts/eval_combined_review_assist.mjs --replay private-evidence/reports/nonrow-left-seven-one-stable-companion-20260708-full-browser --out private-evidence/reports/combined-review-assist-20260708/nonrow-left-seven-one-stable-companion-summary.json
+```
+
+Files changed:
+
+- `src/components/CameraCapture.vue`
+- `scripts/replay_live_ocr_captured.mjs`
+- `scripts/eval_review_suggestion_policy.mjs`
+- `scripts/analyze_nonrow_variant_lanes.mjs`
+- `package.json`
+- `docs/SCANGRADE_ACCURACY_ROADMAP_20260705.md`
+- `SCANGRADE_ACTIVE_HANDOFF.md`
+
+Next action:
+
+1. Continue non-row selector work at whole-answer level.
+2. Mine the `84%` variant-opportunity cases for a learned selector, but require zero wrong on validation/holdout and whole-answer scoring.
+3. Do not broaden no-key slot corrections unless companion-slot stability and whole-answer truth checks hold.
+
+## 2026-07-08 Combined Review-Assist Benchmark Includes Six-Five Stream
+
+After the `5 -> 6` review-only gate was validated and implemented, the combined review-assist evaluator was updated so the headline review-assist metric includes all current safe suggestion streams.
+
+What changed:
+
+- Extended `scripts/eval_combined_review_assist.mjs` to consume:
+  - built-in replay `reviewSuggestion`s,
+  - blank/artifact replay-simulation suggestions,
+  - `six-from-five` gate suggestions from `private-evidence/reports/nonrow-next-push-20260708/six-from-five-review-gates.json`.
+- Suggestion priority is built-in first, blank/artifact second, six-five third.
+- The evaluator reports source-specific and combined coverage and detects conflicts between sources.
+- No app OCR/capture/homography/scoring behavior changed in this step.
+
+Commands run:
+
+```text
+node --check scripts/eval_combined_review_assist.mjs
+npm run eval:combined-review-assist
+npm run build
+node --check scripts/eval_blank_artifact_classifier.mjs
+node --check scripts/search_six_from_five_review_gate.mjs
+```
+
+Updated combined-review result:
+
+- Baseline:
+  - Matched groups: `374`.
+  - Auto/confident: `205/374`.
+  - Auto-correct: `205/205`.
+  - Auto-wrong: `0`.
+  - Yellow/manual review: `169`.
+- Built-in suggestions: `56/56` correct, `0` wrong, `35` rescues.
+- Blank/artifact suggestions: `3/3` correct, `0` wrong, `3` rescues.
+- Six-five suggestions: `2/2` correct, `0` wrong, `2` rescues.
+- Combined:
+  - `61/169` yellow answers get a suggestion.
+  - `61/61` suggestions correct.
+  - `0` wrong suggestions.
+  - `40` rescues.
+  - `0` harmed current-correct yellow reads.
+  - `0` conflicts between sources.
+
+Decision:
+
+- This is the current review-assisted benchmark: auto-safe coverage remains `205/374`, while review-assisted yellow coverage is now `61/169`.
+- Treat this as teacher-review workflow improvement, not automatic OCR coverage improvement.
+
+Next action:
+
+1. Continue searching for narrow, evidence-backed review suggestion gates only if they preserve `0` wrong suggestions on validation/holdout.
+2. Start a deeper non-row crop/preprocessing/model track for larger gains; suggestion gates alone will not reach market-ready coverage.
+
+## 2026-07-08 Whole-Answer Non-Row Selector Diagnostic
+
+The next deeper non-row push added an answer-level diagnostic so future work does not overfit slot-level wins that break when the companion slot is wrong.
+
+New analyzer:
+
+- Script: `scripts/analyze_nonrow_whole_answer_variants.mjs`
+- Command: `npm run analyze:nonrow-whole-answer-variants`
+- Main report: `private-evidence/reports/nonrow-whole-answer-variants-20260708/summary.json`
+- Blank-candidate/pattern report: `private-evidence/reports/nonrow-whole-answer-variants-20260708/with-pattern-scores-summary.json`
+
+Commands run:
+
+```text
+node --check scripts/analyze_nonrow_whole_answer_variants.mjs
+npm run analyze:nonrow-whole-answer-variants
+node scripts/analyze_nonrow_whole_answer_variants.mjs --out private-evidence/reports/nonrow-whole-answer-variants-20260708/with-review-blank-candidates-summary.json
+node scripts/analyze_nonrow_whole_answer_variants.mjs --out private-evidence/reports/nonrow-whole-answer-variants-20260708/with-pattern-scores-summary.json
+```
+
+Main findings:
+
+- Latest replay matched `374` labelled groups.
+- Non-row yellow/review groups: `119`.
+- Non-row yellow current lean correct: `18/119`.
+- Non-row yellow current lean wrong: `101/119`.
+- Whole-answer digit-swap oracle: `79/119` non-row yellow answers had the handwritten truth somewhere in candidate variants.
+- Whole-answer oracle with analysis-only review-slot blank candidates: `86/119`.
+- By layout with blank candidates:
+  - `sg-g1-lw-07-dot-collections`: `21/27` candidate-oracle coverage.
+  - `sg-g1-lw-06-ten-frames`: `19/29`.
+  - `sg-g1-lw-08-number-bonds`: `19/27`.
+  - `sg-g1-lw-09-number-patterns`: `15/23`.
+  - `sg-g1-lw-10-place-value-50`: `12/13`.
+
+Safety result:
+
+- The analyzer searched `1,454,400` whole-answer rule variants.
+- The only full-corpus zero-wrong rule family with coverage in calibration, validation, and holdout was still `left:7>1`, matching the already-implemented no-key review-only lane.
+- Analysis-only blanking improved oracle coverage, especially ten-frames, but did not yield a deployable hard-coded rule:
+  - Example: `right:1>null` on ten-frames was `4` correct and `2` wrong overall, with both wrongs in holdout.
+  - No zero-wrong pattern had support in both validation and holdout.
+
+Decision:
+
+- Do not implement a new non-row hard-coded gate from this pass.
+- The next meaningful non-row improvement should be a learned answer-level selector or stronger visual blank/artifact classifier, validated on held-out packets.
+- Keep auto lane unchanged: no score/auto-confidence changes from this diagnostic.
+
+## 2026-07-08 Learned Selector + Visual Blank Gate Push
+
+Goal:
+
+- Try the next deeper non-row step: a learned answer-level selector and/or a stronger visual blank/artifact classifier.
+- Keep this analysis-only unless it preserves held-out safety. Do not use answer key as OCR truth and do not loosen auto-grading.
+
+New/updated tools:
+
+- `scripts/analyze_nonrow_whole_answer_variants.mjs`
+  - Added `--candidates-out` and reusable answer-candidate export.
+  - Candidate rows written to `private-evidence/reports/nonrow-whole-answer-variants-20260708/candidate-rows.json`.
+- `scripts/eval_learned_answer_selector.mjs`
+  - npm: `npm run eval:learned-answer-selector`
+  - Analysis-only logistic answer selector over exported whole-answer candidates.
+- `scripts/analyze_visual_blank_candidate_gate.mjs`
+  - npm: `npm run analyze:visual-blank-candidate-gate`
+  - Analysis-only bridge between whole-answer blank candidates and visual blank/artifact slot scores.
+
+Commands run:
+
+```text
+node --check scripts/analyze_nonrow_whole_answer_variants.mjs
+node scripts/analyze_nonrow_whole_answer_variants.mjs --out private-evidence/reports/nonrow-whole-answer-variants-20260708/selector-export-summary.json --candidates-out private-evidence/reports/nonrow-whole-answer-variants-20260708/candidate-rows.json
+node --check scripts/eval_learned_answer_selector.mjs
+npm run eval:learned-answer-selector
+node scripts/eval_learned_answer_selector.mjs --out private-evidence/reports/learned-answer-selector-20260708/no-truth-leak-threshold-summary.json
+node scripts/eval_learned_answer_selector.mjs --train-splits calibration,validation --safety-splits calibration,validation --out private-evidence/reports/learned-answer-selector-20260708/train-calibration-validation-holdout-test-summary.json
+node scripts/eval_learned_answer_selector.mjs --train-splits calibration,validation --safety-splits calibration,validation --max-changed-slots 1 --out private-evidence/reports/learned-answer-selector-20260708/train-calibration-validation-max1-holdout-test-summary.json
+node --check scripts/analyze_visual_blank_candidate_gate.mjs
+npm run analyze:visual-blank-candidate-gate
+node scripts/analyze_visual_blank_candidate_gate.mjs --max-changed-slots 2 --out private-evidence/reports/visual-blank-candidate-gate-20260708/max2-summary.json
+```
+
+Learned answer-level selector findings:
+
+- First implementation accidentally included a truth-derived `currentCorrect` feature; this was removed before evaluating the usable result.
+- No-truth-leak selector trained on calibration only was too conservative to matter:
+  - selected `1` full-corpus answer, `1/1` correct, `0` wrong.
+- Training on calibration+validation looked attractive in-sample but failed holdout:
+  - `14/14` correct on calibration+validation at the selected zero-wrong safety threshold.
+  - Holdout: `1` selected, `0` correct, `1` wrong.
+  - Full: `15` selected, `14` correct, `1` wrong.
+- One-slot-only learned selector also failed holdout:
+  - Calibration+validation: `17/17` correct.
+  - Holdout: `2` selected, `0` correct, `2` wrong.
+  - Full: `19` selected, `17` correct, `2` wrong.
+- Failure pattern:
+  - The learned selector overfits plausible variant patterns like `left:9>1`.
+  - Those patterns are sometimes real rescues, but held-out student work includes cases where they create confident wrong answer suggestions.
+
+Visual blank/artifact gate findings:
+
+- Existing visual-only blank replay remains safe but tiny:
+  - Matched groups: `374`.
+  - Baseline auto/confident: `205/374`, `205/205` correct, `0` wrong.
+  - Visual blank suggestions: `3/3` correct, `0` wrong, `3` rescues.
+- New whole-answer visual blank candidate analyzer:
+  - One-slot blank-only candidates: `100`.
+  - Correct blank candidates available: `5`; wrong blank candidates: `95`.
+  - Best zero-wrong threshold: `2/2` correct, `0` wrong, `2` rescues.
+  - Both safe rescues are validation-only ten-frame cases; no holdout support.
+- Two-slot / blank-plus-rewrite candidates are unsafe:
+  - `715` blank-like candidates.
+  - Correct: `10`; wrong: `705`.
+  - No zero-wrong threshold exists.
+  - At low thresholds the analyzer immediately selects wrong candidates because the blank evidence can be strong while the companion digit rewrite is wrong.
+
+Decision:
+
+- Do not ship the learned answer-level selector.
+- Do not broaden visual blanking beyond the current very conservative review-assist behavior.
+- Keep these tools as diagnostics for the future OCR/model track.
+- The next meaningful product improvement is not another hand-coded gate; it is stronger digit recognition and/or crop normalization for non-row sheets, validated against the same calibration/validation/holdout split.
+
+## 2026-07-08 Trusted OCR Suggestion Promotion Patch
+
+Goal:
+
+- Improve non-row confidence without using answer-key-only context as OCR truth.
+- Preserve the current hard safety line: no confidently wrong reads in the accepted/truth-labeled replay set.
+
+Code changes:
+
+- `src/components/CameraCapture.vue`
+  - Added `trustedOcrSuggestionPromotionEvidence()` and `applyTrustedOcrSuggestionPromotions()`.
+  - Wired the promotion pass into the live grading pipeline after conservative blank/context review helpers.
+- `scripts/replay_live_ocr_captured.mjs`
+  - Added matching replay implementation and console/debug output for `trustedOcrSuggestionPromotions`.
+- `src/App.vue`
+  - Bumped visible build label to `2026.07.08-0935-EDT-sg3-trusted-ocr-suggestions`.
+
+Promotion rule:
+
+- Only promotes `ocr-alternative-review` suggestions.
+- Refuses `answer-key-context-review` and `no-key-non-row-leading-one-review`.
+- Requires suggestion confidence `>= 0.85`.
+- Requires each changed digit slot to have non-answer-key evidence at `>= 0.85` from the current read, model top-k, variant read, or variant top-k.
+- Requires unchanged digit slots to have non-answer-key evidence at `>= 0.75`.
+- Requires blank/optional slot evidence at `>= 0.72`.
+- Marks promoted predictions with `robustOverride: trusted-ocr-suggestion`, `confidencePolicyClearanceReason: trusted-ocr-suggestion`, and `trustedSuggestionPromotion` audit metadata.
+
+Verification:
+
+```text
+node --check scripts/replay_live_ocr_captured.mjs
+npm run build
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/trusted-ocr-suggestion-promotion-20260708-full-browser private-evidence/debug-scans/2026-07-02
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/trusted-ocr-suggestion-promotion-20260708-full-browser/truth-score.json private-evidence/reports/trusted-ocr-suggestion-promotion-20260708-full-browser
+```
+
+Replay/truth result:
+
+- Matched handwritten-truth groups: `374`.
+- Auto/confident before this patch: `205/374`, `205/205` correct, `0` wrong.
+- Auto/confident after this patch: `225/374`, `225/225` correct, `0` wrong.
+- Yellow/review groups dropped from `169` to `149`.
+- Row auto/confident after patch: `134/176` (`76.1%`), `0` wrong.
+- Non-row auto/confident after patch: `91/198` (`46.0%`), `0` wrong.
+- Non-row improved from `79/198` (`39.9%`) to `91/198` (`46.0%`).
+- Remaining weak non-row families: ten frames, dot collections, number bonds, number patterns.
+
+Decision:
+
+- This is safe to carry forward as a narrow reliability improvement.
+- It is not enough to make ScanGrade market-ready by itself.
+- Next best work: improve digit/crop/model normalization so answer-box position no longer changes recognition quality, with held-out packet validation before any broader confidence expansion.
+
+## 2026-07-08 OCR Selector Normalization Follow-Up
+
+Goal:
+
+- Continue the non-row reliability push for ten frames, dot collections, number bonds, and number patterns.
+- Prefer general OCR/model evidence over answer-key/context rescue.
+- Keep the hard launch-trust line: `0` confidently wrong OCR reads against handwritten truth.
+
+What changed:
+
+- Relaxed the trusted OCR-only promotion gate in both live and replay:
+  - `src/components/CameraCapture.vue`
+  - `scripts/replay_live_ocr_captured.mjs`
+- The gate still only promotes `ocr-alternative-review`.
+- It still refuses answer-key-context suggestions and no-key non-row leading-one suggestions.
+- New thresholds:
+  - suggestion confidence `>= 0.75` instead of `>= 0.85`
+  - changed-slot non-answer-key evidence `>= 0.79` instead of `>= 0.85`
+  - unchanged-slot evidence `>= 0.65` instead of `>= 0.75`
+  - blank/optional slot evidence remains `>= 0.72`
+- Updated visible build label to `2026.07.08-1048-EDT-sg3-ocr-selector-normalization`.
+
+Verification:
+
+```text
+node --check scripts/replay_live_ocr_captured.mjs
+npm run build
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/nonrow-normalization-20260708/ocr-promotion-relaxed-full-browser private-evidence/debug-scans/2026-07-02
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/nonrow-normalization-20260708/ocr-promotion-relaxed-full-browser/truth-score.json private-evidence/reports/nonrow-normalization-20260708/ocr-promotion-relaxed-full-browser
+```
+
+Result vs previous trusted-promotion build:
+
+- Matched handwritten-truth groups: `374`.
+- Auto/confident improved from `225/374` to `233/374`.
+- Confident OCR accuracy stayed `233/233`, `0` wrong.
+- Yellow/review groups dropped from `149` to `141`.
+- Row auto/confident improved from `134/176` to `136/176`.
+- Non-row auto/confident improved from `91/198` to `97/198`.
+- Non-row confident accuracy stayed `97/97`, `0` wrong.
+
+Rejected experiments:
+
+- Optional-blank gate relaxation:
+  - Tested `suggestion >= 0.45` and optional blank evidence `>= 0.28`.
+  - Result: `234/374` auto, `0` wrong, but the only gain was one row-sheet read; non-row stayed `97/198`.
+  - Reverted because it added looseness without solving the target problem.
+- Enabling the existing legacy preprocess consensus selector:
+  - Result: `232/374` auto, `230/232` correct, `2` confidently wrong.
+  - Non-row became `98/198` auto but with `2` confident wrong reads.
+  - Reverted. The consensus selector is too eager for current non-row crops.
+
+Interpretation:
+
+- The right digit is often present in OCR variant evidence, but broad consensus can still choose the wrong digit confidently on visual-layout pages.
+- The safest current improvement is answer-level OCR-only promotion with conservative thresholds.
+- The remaining non-row gap is not primarily a confidence-policy problem. It needs better crop/model normalization or a learned selector trained and validated on held-out handwritten truth before promotion can be broadened.
+
+## 2026-07-08 Learned Selector And Crop Normalization Trial
+
+Goal:
+
+- Try both next candidates Tony asked for:
+  1. better crop/tensor normalization for non-row digit crops;
+  2. a learned answer-level selector trained/evaluated against held-out handwritten truth.
+- Keep `0` confidently wrong OCR reads as the non-negotiable promotion gate.
+
+Evidence used:
+
+- Latest accepted replay baseline:
+  - `private-evidence/reports/nonrow-normalization-20260708/ocr-promotion-relaxed-full-browser`
+  - `private-evidence/reports/nonrow-normalization-20260708/ocr-promotion-relaxed-full-browser/truth-score.json`
+- Handwritten-truth labels under:
+  - `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/handwritten-truth-labelled.json`
+- Saved classroom debug scans under:
+  - `private-evidence/debug-scans/2026-07-02`
+
+Commands run:
+
+```text
+node scripts/analyze_nonrow_whole_answer_variants.mjs --replay private-evidence/reports/nonrow-normalization-20260708/ocr-promotion-relaxed-full-browser --out private-evidence/reports/nonrow-normalization-20260708/learned-selector-input/whole-answer-summary.json --candidates-out private-evidence/reports/nonrow-normalization-20260708/learned-selector-input/candidate-rows.json
+node scripts/eval_learned_answer_selector.mjs --candidates private-evidence/reports/nonrow-normalization-20260708/learned-selector-input/candidate-rows.json --out private-evidence/reports/nonrow-normalization-20260708/learned-selector-calibration/summary.json
+node scripts/eval_learned_answer_selector.mjs --candidates private-evidence/reports/nonrow-normalization-20260708/learned-selector-input/candidate-rows.json --out private-evidence/reports/nonrow-normalization-20260708/learned-selector-cal-val/summary.json --train-splits calibration,validation --safety-splits calibration,validation
+node scripts/eval_learned_answer_selector.mjs --candidates private-evidence/reports/nonrow-normalization-20260708/learned-selector-input/candidate-rows.json --out private-evidence/reports/nonrow-normalization-20260708/learned-selector-one-slot/summary.json --max-changed-slots 1
+node scripts/eval_learned_answer_selector.mjs --candidates private-evidence/reports/nonrow-normalization-20260708/learned-selector-input/candidate-rows.json --out private-evidence/reports/nonrow-normalization-20260708/learned-selector-no-blank/summary.json --exclude-blank-candidates
+npm run build
+node scripts/replay_live_ocr_captured.mjs --allow-imperfect --url https://127.0.0.1:5174 --out-dir private-evidence/reports/nonrow-normalization-20260708/ink-tight-slot-full-browser private-evidence/debug-scans/2026-07-02
+node scripts/score_replay_against_handwritten_truth.mjs --out private-evidence/reports/nonrow-normalization-20260708/ink-tight-slot-full-browser/truth-score.json private-evidence/reports/nonrow-normalization-20260708/ink-tight-slot-full-browser
+npm run build
+```
+
+Results:
+
+- Whole-answer candidate oracle on the latest baseline:
+  - Non-row yellow/review groups: `101`.
+  - Correct handwritten answer appears somewhere in candidate variants for `79/101` (`78.2%`).
+  - This confirms the signal is often present, but selection is the hard part.
+- Learned selector trials:
+  - Calibration-only training with safety threshold selected `2/101`, all calibration examples, `0` validation/holdout benefit.
+  - Calibration+validation training selected `9/101`, `8` correct and `1` holdout wrong. Rejected.
+  - One-slot-only selector selected `3/101`, `1` correct and `2` holdout wrong. Rejected.
+  - No-blank selector selected `4/101`, all calibration examples, `0` validation/holdout benefit.
+- Crop/tensor normalization trial:
+  - Temporarily added an `ink-tight-slot` tensor variant with stricter centering/scaling for virtual digit boxes.
+  - Browser replay result: `226/374` auto, `226/226` correct, `0` wrong.
+  - Non-row result: `95/198` auto, `95/95` correct, `0` wrong.
+  - This is worse than the accepted baseline (`233/374` overall, `97/198` non-row), so the patch was reverted.
+
+Files changed:
+
+- No lasting source changes from this trial.
+- Private analysis outputs were written under `private-evidence/reports/nonrow-normalization-20260708/`.
+
+Decision:
+
+- Do not ship the current learned selector. It overfits or helps only calibration examples.
+- Do not ship the `ink-tight-slot` normalization. It reduced coverage.
+- The next promising technical direction is a stronger visual quality/blank/artifact/digit-shape feature extractor trained at slot level, then consumed by an answer-level selector, with holdout packet validation. A global crop-threshold tweak is too blunt.
+
+Open risks:
+
+- `79/101` candidate-oracle opportunity means there is a large potential gain, but the current feature set does not distinguish truth from plausible wrong alternates reliably enough.
+- The strongest failed selector examples show why whole-answer holdout is essential: confident-looking slot changes can produce a wrong complete answer on ten-frame and place-value pages.
+
+## 2026-07-09 Fidelity Isolation And Whole-Answer Review Lane
+
+Full report:
+
+- `docs/SCANGRADE_ACCURACY_EXPERIMENTS_AND_IMPLEMENTATION_20260709.md`
+
+Key results:
+
+- Expanded context digit crops were isolated in a true second preprocessing pass.
+- With the experiment on versus off, primary OCR decisions were identical on all 86 pages.
+- Baseline remained `323/323` correct automatic answers on the 582-answer truth corpus.
+- Context crops were rejected as a product suggestion path: they added five correct answer-key-constrained suggestions but also suggested key `14` for handwritten `16`.
+- The adapted, key-blind whole-answer model remains the best complementary lane:
+  - validation `105/136` exact;
+  - page-block holdout `92/114` exact;
+  - at the final review threshold (`minTokenProbability >= 0.98`), `20/22` displayed model disagreements were correct.
+
+Implemented, opt-in only:
+
+- `scripts/serve_trocr_review.py`: optional local/server whole-answer recognizer; rejects answer-key fields.
+- `?reviewModelUrl=...`: sends only yellow crops, 2.5-second timeout, no impact on automatic grading, current OCR retained as first teacher choice.
+- `?strictPerspectiveCapture=1`: stricter overhead geometry for automatic capture only; manual fallback and default capture behavior unchanged.
+
+Verification:
+
+- production build passes;
+- Python service compiles and ran end to end;
+- warm batch of eight held-out yellow crops: 922 ms wall time, 7/8 correct;
+- answer-key request rejection confirmed;
+- built app loaded without browser errors.
+
+Retrospective review A/B simulation:
+
+- 20-packet validation block: correct choice availability improved `25/60 -> 34/60`, with `0` paired losses.
+- Untouched holdout block: `13/40 -> 22/40`, with `0` paired losses.
+- Combined: `38/100 -> 56/100`; 18 additional yellow answers had the correct transcription available as a tap choice.
+- The UI now preserves up to three distinct choices (current OCR first, key-blind whole-answer alternative, and existing suggestion), preventing the new lane from displacing a correct control choice.
+- Evidence: `private-evidence/reports/review-lane-ab-simulation-20260709.json`.
+
+Next gate:
+
+- Run a randomized review-time test on at least 20 unseen packets. Promote the review lane only if median review time falls at least 25% with no increase in wrong final transcriptions.
+- Do not make the Mac mini, a free cloud tier, or the whole-answer model necessary for core grading completion.
+
+## 2026-07-13 Pre-capture exhaustive fidelity tightening
+
+Full report:
+
+- `docs/SCANGRADE_PRECAPTURE_EXHAUSTIVE_TIGHTENING_20260713.md`
+
+Fresh 374-answer replay baseline:
+
+- `233/374` automatic (`62.3%`), `233/233` matched handwritten truth, zero known confident transcription errors.
+- Row coverage `136/176`; non-row `97/198`.
+
+New conclusions:
+
+- Four stronger/local answer-frame registration policies were all worse and introduced `1-4` confident errors. Keep the current conservative registration.
+- Blur alone is not the main loss. Perspective/sideways distortion and uneven lighting correlate more strongly with errors.
+- Aggressive autocontrast/sharpening reduced whole-answer exact accuracy from `78.8%` to `70.0%`.
+- Raw gray crops retain modestly more learnable information than final black 28x28 inputs, but a small raw-crop CNN is not strong enough to replace production OCR.
+- The key-blind whole-answer model remains the best complementary lane. It raised correct-choice availability from `38/100` to `56/100` yellow answers; holdout `13/40 -> 22/40`.
+- Even highly confident whole-answer disagreements can be wrong on authentic incorrect math. Keep the model suggestion/review-only pending new-packet shadow evidence.
+- A local CPU service was restored: 20 crops in about 3.1 seconds wall time. It is feasible as an optional development/fallback lane, not a core availability dependency.
+- Absolute capture-quality gates shifted too much across packet blocks. Do not ship a retake threshold yet; log geometry/light metrics on the new captures.
+
+Experiment harness additions (opt-in, default app unchanged):
+
+- `SG_FRAME_REGISTRATION_MODE` in `scripts/replay_live_ocr_captured.mjs`.
+- `scripts/analyze_whole_answer_promotion.mjs`.
+- `scripts/simulate_capture_retake_gate.mjs`.
+- `requirements-trocr-review.txt` now includes the required `torchvision` version.
+
+Before new packet capture:
+
+- Keep packets intact and retain student/packet grouping.
+- Reserve at least two complete packets as untouched holdout; do not select based on handwriting neatness.
+- Use even diffuse light and keep the device parallel to the page; do not apply camera/image enhancement.
+- Verify one non-holdout debug capture before bulk scanning.
+- Do not push/deploy any experiment from this review without a separate decision.
+
+## 2026-07-13 Hybrid V2 parallel build
+
+Hybrid V2 now exists as an opt-in path alongside the unchanged control. It is not deployed or enabled by default.
+
+Implemented:
+
+- Opt-in capture preservation of the best three frames from the existing eight-frame automatic burst.
+- Independent current digit OCR plus a key-blind whole-answer service on yellow answers.
+- Exact cross-frame consensus recorded in shadow mode; it cannot automatically promote a yellow answer.
+- Current browser OCR remains the first teacher choice; the service can only add a review choice.
+- One-tap review records the choice source and review duration and advances to the next yellow answer.
+- Mission Control privately stores burst evidence and includes its count in scan summaries.
+- Portable container boundary for the whole-answer service. The private adapter and student evidence are excluded.
+- Reproducible four-packet assignment tool and prospective capture protocol: three development packets, one locked test, eight unscanned reserves.
+
+Verification:
+
+- Control replay remains exactly `233/374` automatic and `233/233` correct, with `141` yellow answers.
+- Unit tests cover key normalization, consensus safety, no single-model promotion, control priority, and packet assignment.
+- Production build, Mission Control syntax check, and `git diff --check` pass.
+- Service smoke test returned frame-indexed results, rejected an answer-key request with HTTP 400, and emitted the configured allowed-origin header.
+- Privacy recheck after hardening: a disallowed origin receives HTTP 403 before image processing; an allowed-origin answer-key request receives HTTP 400; responses are `no-store`; a permitted local crop returned a frame-indexed key-blind result in 292 ms inference time.
+- Hybrid burst memory is bounded to the best three canvases rather than all eight. On 115 saved 1440x1864 captures, three JPEG/base64 frames are estimated at 1.84 MB median and three raw RGBA canvases at 32.2 MB before browser/GPU overhead. Old-device measurement remains prospective.
+- Saved single-frame review evidence improves correct one-tap choice availability `38/100 -> 56/100`; untouched block `13/40 -> 22/40`, with no paired losses.
+- Correlated pseudo-frame simulations produce 13-14 shadow-eligible correct reads in 100 yellow answers and zero observed errors, but are not evidence for promotion.
+
+Files:
+
+- `src/hybrid-recognition.js`
+- `tests/hybrid-recognition.test.mjs`
+- `scripts/compare_control_hybrid_v2.mjs`
+- `scripts/analyze_pseudo_frame_consensus.mjs`
+- `scripts/create_four_packet_capture_plan.mjs`
+- `docs/SCANGRADE_HYBRID_V2_ARCHITECTURE.md`
+- `docs/SCANGRADE_FOUR_PACKET_CAPTURE_PROTOCOL.md`
+- `Dockerfile.review`
+
+Private reports:
+
+- `private-evidence/reports/hybrid-v2-control-check-20260713/truth-score.json`
+- `private-evidence/reports/control-vs-hybrid-v2-20260713.json`
+- `private-evidence/reports/pseudo-frame-consensus-20260713.json`
+- `private-evidence/reports/hybrid-capture-payload-20260713.json`
+
+Prospective gate:
+
+- Label the physical packets `P01-P12` without inspecting handwriting, then run `npm run plan:four-packet-capture -- --out private-evidence/capture-plans/four-packet-plan.json`.
+- Scan only the assigned four intact packets. Freeze on the three development packets and open the locked packet once.
+- Do not enable automatic hybrid promotion from this corpus alone. First decide whether the review assistant improves correct-choice availability/review time without increasing final transcription errors.
+- The in-app browser test surface failed to attach during the final local UI check. This was a browser-tool attachment failure, not an observed ScanGrade runtime failure; rerun the interactive camera/review smoke test before handing the capture URL to Tony.
+
+Prospective assignment was frozen privately before handwriting inspection:
+
+- `P08`: development 1
+- `P03`: development 2
+- `P09`: development 3
+- `P02`: locked test
+- Keep `P01`, `P04-P07`, and `P10-P12` unscanned.
+- Source: `private-evidence/capture-plans/four-packet-plan.json`.
+
+Private runtime prepared on 2026-07-13:
+
+- Hybrid app is running on local port `5174`; the existing tailnet root proxy was repaired to use the Vite HTTPS endpoint and returned HTTP 200.
+- Offline key-blind recognizer is running on `127.0.0.1:8766`, exposed tailnet-only at `/review-model`; prefixed health returned HTTP 200 with the configured origin and `no-store`.
+- Mission Control debug receiver is running on `127.0.0.1:8787`, exposed at `/mission-control` with a dedicated capture token kept out of repository documentation.
+- The complete private capture URL returned HTTP 200. Processes are development sessions, not durable production services; verify all three health paths immediately before physical scanning.
+
+Prospective evaluation hardening completed after the runtime was prepared:
+
+- Capture URLs now record `packetId`, `captureRole`, capture-plan seed, and a stable scan-session ID.
+- Each one-tap/manual correction sends a lightweight cumulative telemetry update with choice source and duration; images are not re-uploaded.
+- Accepted scans now carry bounded camera-gate telemetry: attempts, rejection reasons, elapsed capture time, and no additional images. This separates capture friction from OCR/model failures without changing the gate.
+- Mission Control persists and summarizes the new identity fields.
+- `scripts/create_hybrid_truth_template.mjs` creates key-free development labels only after scans exist.
+- `scripts/evaluate_hybrid_v2_packets.mjs` keeps transcription/math/review separate, groups correction versions, reports capture failures, excludes locked data by default, rejects duplicate successful pages, and requires two distinct labelers.
+- `scripts/freeze_hybrid_v2_policy.mjs` hashes code, models, layouts, evaluator, and packet plan. Locked scoring refuses to run after drift.
+- Synthetic evaluator, duplicate-rejection, truth-integrity, correction-version joining, and live metadata-storage checks pass. Hybrid test suite now has 15 passing tests.
+
+## 2026-07-13 P08 prospective capture and confidence audit
+
+Tony captured all ten pages of intact development packet `P08`. The intake contains ten unique scan-session IDs and ten layouts; paired debug records are pipeline stages, not accidental rescans. All ten camera captures passed on the first attempt and retained three of eight burst frames. Nine pages completed live V3 shadow processing; page 10 retained complete source evidence and was reconstructed by saved-frame replay after the browser was left before its asynchronous upload finished.
+
+Primary handwritten-truth transcription was created from the warped page images for all 70 answers. It remains provisional until a second person checks every answer against the physical pages. The math answer key was not used as transcription truth; one visibly written incorrect math answer (`16` where the key says `15`) remains labelled `16`.
+
+Provisional P08 control result:
+
+- V2 automatic: `42/70` (`60.0%`), with `42/42` matching primary handwritten truth and zero observed confident errors.
+- V2 all-answer transcription: `44/70`.
+- A correct read appeared among the three V3 reader outputs for `65/70` (`92.9%`), indicating that selection/abstention is the main bottleneck on this packet.
+
+A TrOCR confidence defect was found and fixed: EOS/control-token probability had been included in answer confidence, sometimes reducing a correct stable digit to zero confidence. The service now measures only tokens contributing visible digits and separately reports generation confidence. Two Python regression tests and ten V3 policy/shadow tests pass. Production promotion behavior remains conservative and V3 remains opt-in shadow.
+
+The canonical post-fix three-frame replay completed `10/10` pages with both whole-answer models available. Because a full page rerun changed geometry enough to change 16 of 70 reader outputs, the overall live-versus-replay delta is not attributed solely to the confidence fix. All nine post-fix current-policy accepts occurred among the 54 answers whose three reader reads were unchanged, and all nine matched provisional truth.
+
+A research-only fallback rule—large and compact readers agree against slot OCR, with identical large-model output on all three frames—would add ten correct answers over the V2 automatic set on this replay. That produces `52/70` (`74.3%`) V2-plus-fallback coverage with zero observed confident errors on provisional P08 truth. This rule is **not promoted**: P08 needs independent truth verification, and the rule must survive intact P03 and P09 before the locked P02 run.
+
+Private evidence:
+
+- `private-evidence/hybrid-v2-prospective/handwritten-truth-development.json`
+- `private-evidence/reports/v3-prospective-p08-primary-provisional.json`
+- `private-evidence/reports/v3-p08-visible-token-confidence-replay-canonical/`
+- `private-evidence/reports/v3-p08-visible-token-confidence-comparison-primary-provisional.json`
+
+Next physical packet: scan intact `P03` as development packet 2. Then scan intact `P09`, freeze the policy, and only then open locked `P02`. The actual inventory is nine packets, so unscanned reserves are `P01`, `P04`, `P05`, `P06`, and `P07`.
+
+## 2026-07-13 P08 non-row parity candidate
+
+Tony requested a dedicated goal to bring non-row recognition to row parity before scanning P03/P09. P08 crop tracing found a material fidelity defect in the V3 path: the original camera capture contained clear handwriting, but the ordinary warped image used for continuous zones contained white slot-cleanup masks over portions of the handwriting. V2 remains unchanged; the repair re-warps a fresh copy of the untouched camera image using the page anchors already detected by V2, then sends the continuous grayscale zone to the key-blind adapted large reader.
+
+Rejected variants:
+
+- Layout-only zone anchoring corrected one diagonal-line miss but worsened other number-bond crops/reads.
+- Aggressive answer-frame and divider erasure removed useful strokes/context and worsened both learned readers.
+
+Frozen research rule:
+
+- Only consider answers already routed to V2 review.
+- Use the adapted key-blind large-model read from the fresh continuous zone.
+- Require the identical read on all three retained real frames, no tie, and minimum visible-token confidence `>= 0.70`.
+- Compact agreement is not required for this candidate; it remains recorded as advisory evidence.
+
+P08 primary-label-only result:
+
+- Row: V2 `27/40` automatic; frozen fallback `32/40` (`80.0%`), zero observed errors.
+- Non-row: V2 `15/30` automatic; frozen fallback `26/30` (`86.7%`), zero observed errors.
+- Overall: V2 `42/70` (`60.0%`); frozen fallback `58/70` (`82.9%`), zero observed errors.
+- Large fresh-zone reader alone matched primary truth on `59/70`: row `35/40`, non-row `24/30`.
+- The visibly incorrect student math answer remains transcribed as written and remains review; the key was not used as handwriting truth.
+
+This reaches the P08 non-row parity target but is not production evidence. P08 labels require a second human check, and three frames are correlated evidence from one student. The exact 59-file code/model/layout/config manifest is frozen and verifies cleanly at:
+
+- `private-evidence/v3-prospective/nonrow-parity-policy-freeze-p08.json`
+- Candidate definition: `private-evidence/v3-prospective/nonrow-parity-policy-candidate.json`
+- Score: `private-evidence/reports/v3-p08-fresh-zone-parity-primary-provisional.json`
+
+Do not tune further on P03/P09. Capture intact P03 next, score it once against the frozen rule, then capture/score intact P09. Do not open P02 unless the frozen candidate survives both prospective development packets without a confident transcription error or a major coverage collapse.
+
+## 2026-07-13 prospective evaluator freeze
+
+Before any P03 upload existed, the one-shot P03/P09 evaluator was implemented, tested, and separately frozen. It verifies the unchanged P08 main freeze before reading scans; requires the assigned packet identity/role/seed, exactly one successful session for each of the ten expected layouts, three retained frames, complete V3 evidence, and handwritten truth that is distinct from the math key. It applies exactly the frozen V2-review-only, large-reader 3-of-3, no-tie, minimum-confidence-0.70 rule. Teacher corrections are rejected as contamination and never used. Output is write-once (`wx`).
+
+Promotion gates are: independently verified truth, valid packet integrity, all 10 pages/70 answers, zero frozen automatic errors, zero fallback-promotion errors, non-row coverage at least 82.5%, and non-row coverage no more than five percentage points below row coverage. Primary-only labels can be scored only as provisional and cannot pass promotion.
+
+Artifacts:
+
+- Evaluator: `scripts/evaluate_v3_frozen_prospective.mjs`
+- Protocol: `private-evidence/v3-prospective/prospective-evaluator-protocol.json`
+- Protocol freeze: `private-evidence/v3-prospective/prospective-evaluator-freeze.json`
+- Protocol-freeze SHA-256: `4650963d4adf3565d62acff44637c8c886c222381b49b3d7ce6c526d428038eb`
+- Main-freeze SHA-256: `36e9f34bd3a20d81cb9eec9f8ad433810fafdc479144d5c601b500b3eccbdc89`
+- Tests: `tests/v3-frozen-prospective.test.mjs` (3 passing)
+
+Do not modify any file covered by either freeze before P03 and P09 are scored. As of the freeze, no P03 debug upload was present.
+
+## 2026-07-13 complete historical fresh-image stress test
+
+All 86 available historical original page captures were reprocessed through the new untouched-camera re-warp, fresh continuous-zone extraction, adapted large reader, and compact reader. The run completed with zero page failures and joined exactly 582/582 handwritten-truth entries. This is broad retrospective R&D evidence, not a prospective result: most pages have only one retained image, the corpus influenced development, and 276 labels are weaker `seeded-auto-correct` labels. Results on the 302 manually labelled answers are reported separately.
+
+Main findings:
+
+- Before the later visual truth audit, large-reader all-answer accuracy appeared to be `468/582` (`80.4%`); row `219/264` (`83.0%`), non-row `249/318` (`78.3%`). The corrected result below supersedes this figure.
+- A subsequent full-page 1/7 truth audit corrected four manual labels without overwriting the source dataset: `72→12`, `73→13`, `76→16`, and a separately noticed `47→42`. The first three were serif-style 1s confirmed from repeated same-writer forms; the fourth preserves a clearly written but mathematically incorrect 42.
+- Corrected large-reader all-answer accuracy is `472/582` (`81.1%`); row `219/264` (`83.0%`), non-row `253/318` (`79.6%`).
+- Any recorded reader candidate contained the corrected transcription on `559/582` (`96.0%`); on manual truth, `283/302` (`93.7%`). Selection and abstention remain the bottleneck, but 23 cases still lacked the correct candidate.
+- The large reader was materially better on one-digit answers (`232/268`, `86.6%`) than two-digit answers (`236/310`, `76.1%`). The remaining four labels were true blanks. Multi-digit sequence recognition is therefore still a distinct weakness.
+- Fresh V2 replay accepted row `189/264` (`71.6%`) and non-row `119/318` (`37.4%`). It exposed one manual-truth V2 error (`4` read as `9`), unlike the earlier exact stored-zone control. Fresh full-page geometry is therefore not interchangeable with the exact prior replay.
+- On V2-review answers, accepting a single high-confidence large read would add 225 decisions but make 29 errors after truth correction. Requiring both learned readers to agree and both confidences to be at least `0.70` would add 152 decisions and make one visually verified error (`45`→`15`). A separate number-bond miss was an empty/mislocated fresh crop.
+- The diagnostic two-model lane would produce selected coverage of row `237/264` (`89.8%`) and non-row `223/318` (`70.1%`), but it still has that one unsafe error and is not the frozen policy. The broad historical evidence therefore says non-row is still materially harder; P08's non-row-above-row result is encouraging but not established.
+
+Artifacts:
+
+- Replay: `private-evidence/reports/v3-historical-fresh-replay-20260713/`
+- Score: `private-evidence/reports/v3-historical-fresh-replay-20260713-score.json`
+- Visually audited score: `private-evidence/reports/v3-historical-fresh-replay-20260713-score-visual-audited.json`
+- Non-destructive truth corrections: `private-evidence/truth-labels/20260703-flex-duplicate-accepted-needs-label/visual-audit-corrections-20260713.json`
+- Research-only runners: `scripts/run_v3_historical_fresh_replay.mjs`, `scripts/score_v3_historical_fresh_replay.mjs`
+
+Do not use this replay to retune the already-frozen P08 rule. The next decisive evidence remains intact prospective P03 and P09, whose real three retained frames can test whether 3-of-3 stability rejects the selected-frame historical failures.
+
+## 2026-07-14 P02 truth verification and answer-zone crop audit
+
+Completed the requested sequence: independently verified P02 truth, diagnosed the five P02 mixed-sheet and four number-bond reviews from saved images, built a narrow crop candidate without changing recognition/confidence policy, replayed all four scanned packets, and decided whether to spend a reserve.
+
+Key findings:
+
+- Blind P02 verification corrected number-bond Q6 from `31` to `3`; number-bond Q4 and place-value Q3 are overwritten and excluded. P02 has 68 scorable values from 70 answers.
+- Mixed-sheet failures were a real geometry bug: two-column answer-frame assignment was hard-coded for 10 frames and misassigned several of the 8 detected frames. The candidate supports even two-column counts of at least 8; six-answer layouts keep the prior path.
+- P02 number-bond crops already contain the handwriting. Remaining failures are reader/frame inconsistency and a one-slot metadata/worksheet mismatch for a written `19`, not a broad crop-fidelity loss.
+- Full saved-frame replay completed 40/40 pages and 275 scorable values. V2 alone accepted 173 and all 173 matched truth. The frozen overlay accepted 246, but one was wrong: P09 number-pattern Q1, handwritten `34`, was read as `39` on all three large-model frames. The compact reader disagreed (`22`). The error persisted after the six-answer crop path was reverted, so it is not caused by the new eight-frame crop assignment.
+- Row overlay replay: 146/160 automatic, zero observed errors. Non-row: 100/115 automatic, one error. Overall 245/246 automatic reads correct at 89.5% coverage; this fails the zero-error gate.
+
+Decision:
+
+- Do not enable the whole-answer fallback for automatic grading. Keep it review-only.
+- Keep the narrowed eight-frame crop fix as an undeployed candidate for the conservative OCR/review path.
+- Do not scan another untouched packet yet. Preserve P01 and P04-P07 until a materially safer decision rule passes the existing replay; another packet cannot repair a known policy failure.
+
+Evidence and reproducibility:
+
+- Report: `docs/SCANGRADE_P02_LABEL_AND_CROP_AUDIT_20260714.md`
+- Verified truth: `private-evidence/hybrid-v2-prospective/handwritten-truth-p02-verified.json`
+- Final score: `private-evidence/reports/v3-crop-candidate-evaluation-20260714-final.json`
+- Runners: `private-evidence/hybrid-v2-prospective/verify-p02-truth.mjs`, `scripts/replay_v3_crop_candidate_packets.mjs`, `scripts/evaluate_v3_crop_candidate.mjs`
+- Verification: `npm run test:v3:zones` (8/8), `npm run test:hybrid` (15/15), and `npm run build` passed.
+- Nothing was deployed or pushed.
+
+## 2026-07-14 review timing and authenticated service tests
+
+Automated review and authenticated deployment-boundary tests are complete. Full report: `docs/SCANGRADE_REVIEW_AND_AUTH_CLOUD_TEST_20260714.md`.
+
+- Real UI automation completed all 14 row yellow answers across 10 pages: truth choice 14/14, telemetry 14/14, 24 total taps, 56 ms mean and 79 ms p95 click-to-settled latency.
+- Local result averaged 3.46 s after upload; strong suggestions averaged 12.63 s, an additional 9.18 s. Suggestion readiness—not correction rendering—is the current UX latency target.
+- Testing exposed and fixed two UX defects: auto-advance now skips confidently wrong red answers, and eligible whole-answer suggestions open whole-answer mode for partially uncertain two-digit answers.
+- Authenticated strong-service gates passed, with 8/8 parity, but resident memory was about 2.0 GB. It is not a 1 GB/free-container assumption.
+- The compact staged context passed 24/24 parity, auth/privacy gates, 82 ms/24 answers, and about 177 MB RSS. It contains four runtime files and zero student evidence.
+- Full browser-to-two-authenticated-services test passed using a temporary session-only token; the P03 `15` suggestion was selected and recorded. A paid beta still requires real teacher identity and short-lived token refresh/revocation.
+- Both optional endpoints were deliberately disabled; local predictions, grading, yellow flags, and answer groups remained identical. Fail-open passed.
+- A genuine teacher reading-time measurement still requires a human. The six-answer protocol is `docs/SCANGRADE_TEACHER_REVIEW_TIMING_PROTOCOL_20260714.md`.
+- Nothing was deployed or pushed.
+
+## 2026-07-14 no-new-packet improvement goal completed
+
+Exhaustive work using only saved artifacts is summarized in `docs/SCANGRADE_NO_NEW_PACKET_IMPROVEMENT_REVIEW_20260714.md`.
+
+Production-facing outcome:
+
+- Automatic grading remains the conservative browser policy; no whole-answer fallback was promoted.
+- For eight-question row layouts only, the review UI may show a key-blind whole-answer suggestion when at least two of three retained frames agree and consensus minimum confidence is at least 0.80. It never turns yellow green or changes grading.
+- Across all 20 saved row pages, truth was available among tap choices for 14/14 yellow answers; all 12 model-derived row choices were correct. Matched comparison found zero grading or review-flag differences across 160 answers.
+- Six-question/non-row layouts retain the strict 0.98 display threshold. Broader relaxation exposed the known unsafe P09 number-pattern `34→39`; a fresh replay verified that wrong suggestion is hidden under the final rule.
+- After a V3 correction, the UI opens the next yellow item automatically. Correction source, one-tap status, and review duration remain recorded.
+
+Rejected or shadow-only:
+
+- The eight-frame crop candidate gained on the four recent packets but lost one historical large-lane automatic read; production default is restored and the candidate remains opt-in only.
+- An alternate-crop review lane added 42 model items and produced zero useful new choices.
+- Packet-aware compact retraining, generic-base TrOCR adaptation, same-writer prototypes, and blank/artifact automation failed their gates.
+- Gentle continuation of the existing TrOCR adapter improved P09 by 2/70 and P02 original-crop audit by 10/68, but did not improve conservative acceptance and remains review/shadow research only.
+
+Runtime and verification:
+
+- Mac CPU TrOCR: 235 ms for one answer, 1.51 s for eight, 4.27 s for 24; answer-key input rejected. It is suitable for asynchronous review, not as a single point of failure.
+- JavaScript tests 41/41, Python confidence tests 2/2, and production build pass.
+- Keep the app fail-open: local result must remain available when optional inference is down.
+- Do not spend another untouched packet on any unchanged candidate. Next decisive evidence is teacher-timed review, authenticated cloud parity/outage testing, then unseen September classroom data.
+- Nothing was deployed or pushed.
+
+## 2026-07-14 yellow-only strong review and compression decision
+
+Full report: `docs/SCANGRADE_YELLOW_ONLY_AND_COMPRESSION_20260714.md`.
+
+- The optional adapted TrOCR service now receives only answers already marked yellow by the unchanged browser policy. It never receives green/red answers merely to re-read the whole page, and it remains review-only and key-blind.
+- Matched ten-page UI replay retained truth choices for 14/14 yellow answers, 24 required taps, and four automatic advances. Strong answer-frame requests fell from 240 to 42 (82.5%); added wait after the local result fell from 9.18 s to 6.05 s (34.0%).
+- Dynamic int8 compression failed 0/8 parity and regressed both latency and memory. Float16 and bfloat16 preserved 8/8 smoke-test parity and cut memory from about 2.03 GB to 1.24 GB, but were roughly 7.7× and 8.7× slower on the tested CPU.
+- Production recommendation: keep the existing float32 strong reader, reduce cost by yellow-only routing, and validate latency/memory again on the actual Linux cloud host. Experimental compression flags are off by default.
+- Local grading, recognition policy, confidence thresholds, answer-key separation, and fail-open behavior were not changed. Nothing was deployed or pushed.
+
+## 2026-07-14 storage and larger-grayscale continuation checkpoint
+
+Read `docs/SCANGRADE_STORAGE_AND_CONTINUATION_CHECKPOINT_20260714.md` before continuing.
+
+- Internal storage was critically low (about 562 MiB free). Only archival/reproducible outputs were selected for verified offload to `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-07-14-pre-large-grayscale/`.
+- Preserve current debug scans, truth, four-packet evidence, reports, models, code, layouts, tests, and untouched evaluation material locally.
+- The next objective is local larger-grayscale recognition: test whether the system can resolve more yellow answers itself by avoiding the degraded 28×28 representation. Keep this shadow/review-only until a matched zero-new-error replay passes.
+- Exact current behavior and evidence references are recorded in the checkpoint document.
+
+## 2026-07-14 local larger-grayscale result
+
+Full report: `docs/SCANGRADE_LOCAL_LARGE_GRAYSCALE_INVESTIGATION_20260714.md`.
+
+- The existing 5 MB 64×192 grayscale compact model remains the strongest local candidate generator: top-three truth availability is 232/275 on the four recent packets and 10/14 on current yellows.
+- Combined with the browser's existing independent alternatives, local evidence covers 11/14 current yellows. It is not safe for automatic promotion; historical wrong reads exist above 0.995 confidence.
+- A robust same-page geometry repair identified four outliers and raised selected candidate availability from 232 to 233. It found a clear missed `6`, but the compact reader still called that visible digit `5`, proving the remaining limit is partly recognition rather than crop quality.
+- A synthetic-pretrained replacement improved historical holdout but regressed recent packets; fixed layout crops, pencil/print band-pass digit recognition, and native Apple Vision also failed their gates.
+- Recommended architecture remains local-first review choices plus yellow-only optional strong fallback. No OCR/confidence/grading behavior was changed, deployed, or pushed.
+
+## 2026-07-14 overwritten `34` audit and local-first checkpoint
+
+- Tony inspected the actual P09 number-pattern Q1 crop and independently observed that the student appears to have first formed a 9-like mark, leaving the upper loop/indentation, then changed it to a 4. Classify this as genuinely ambiguous overwritten work, not a routine clean-handwriting recognition miss.
+- Preserve handwritten truth as `34`. The experimental automatic `39` still counts as unsafe because the final intended answer is 34; an understandable model reading is not permission to silently replace student work.
+- The three independent reads were browser `37`, strong three-frame `39`, and compact `22`. That disagreement is a useful overwrite/ambiguity signal and should keep the answer yellow.
+- A post-hoc number-pattern-only compact-top-two veto produced 243/275 automatic (88.4%) with zero observed errors on the four recent packets. It remains shadow-only because it was designed after seeing the failure and needs genuinely untouched validation.
+- Local-first review is implemented behind `?v3LocalFirstReview=1`: existing browser choices first, up to two immediate compact larger-grayscale choices, then explicit `None of these` for one-question strong review. The strong reader never changes grading.
+- Canonical integration timing: local result 4961.2 ms, compact choices 55.5 ms later, one explicit strong request 709.4 ms warm. No strong request occurred before the teacher action, and only the active question's three frames were sent.
+- Current conservative reconstruction on 14 recent row yellows: browser choices contained truth for 8, browser plus compact for 10, leaving 4 for on-demand strong. Projected strong frame requests fall from 42 yellow-only eager requests to 12, a 71.4% reduction.
+- Tests and build pass; nothing was deployed or pushed. Remaining work is an exact full ten-page local-first UI replay, local-first outage recovery, and current-code old-iPad/WebKit emulation before a recommendation.
+- Evidence: `private-evidence/reports/v3-overlay-salvage-20260714.json`, `private-evidence/reports/v3-local-first-app-integration-20260714.json`, and `private-evidence/reports/v3-local-first-architecture-evaluation-20260714.json`.
+
+## 2026-07-14 local-first completion checkpoint
+
+- The exact UI evaluator now opens every displayed yellow on all 40 retained four-packet pages: 107 yellows, 104 with scorable handwritten truth and three excluded ambiguous/overwritten answers.
+- A real preparation bug was fixed: background optional-AI work now uses the union of underlying review flags and every answer group actually displayed yellow. Some UI yellows previously had valid crops but were omitted from both optional readers.
+- The final experimental review candidate preserves up to three browser choices and appends up to three compact larger-grayscale choices. Truth is immediately tappable for 88/104 yellows (84.6%): row 44/50 and non-row 44/54. After an explicit per-answer strong request, truth is available for 90/104 (86.5%); 14 require manual typing.
+- Only 16 answers request strong inference (48 frames), an 84.6% reduction versus eagerly sending all 104 scorable yellows. No strong request occurs before `None of these`; no existing choice was removed; all 40 automatic OCR/grade results remained identical.
+- The studied ten-page/14-answer correction workflow now resolves 14/14 immediately locally, uses zero strong calls, and takes 24 button taps with four automatic advances. This subset is not the authoritative coverage statistic; use the complete 40-page result above.
+- Exact dual-service outage recovery passed. WebKit with an older-iPad viewport/iPadOS 15.7 user agent passed over HTTPS; compact choices arrived 132.9 ms after the local result in that smoke test. A physical old-iPad camera/memory/stability run remains required before beta.
+- Tony's inspection confirms P09 number-pattern Q1 contains a 9-like first trace overwritten into a final 4. Keep truth `34`; `39` remains an understandable but unsafe automatic transcription. The post-hoc 243/275 (88.4%) automatic overlay veto remains shadow-only until genuinely untouched evidence exists.
+- Nothing was deployed or pushed. The automatic browser policy remains frozen. Evidence: `private-evidence/reports/v3-local-first-all-yellows-ui-20260714.json`, `private-evidence/reports/v3-local-first-workflow-benchmark-20260714.json`, `private-evidence/reports/v3-local-first-failure-recovery-20260714.json`, `private-evidence/reports/v3-local-first-webkit-ipad-20260714.json`.
+
+## 2026-07-14 expanded-context crop checkpoint
+
+- Full report: `docs/SCANGRADE_CONTEXT_CROP_RESULT_20260714.md`.
+- A second, wider grayscale crop is now prepared from the untouched canonical page but is review-only and key-blind. It is not sent during the initial local review pass.
+- After a teacher taps `None of these`, the compact reader checks only that answer's wider crop. A new visible local choice defers strong inference; otherwise the same action continues to the existing one-question/three-frame strong fallback.
+- Exact 40-page replay: initial truth availability remains 88/104; after teacher-triggered fallback it improves from 90/104 to 91/104. Strong requests fall from 16 to 15. The known P03 number-bond `9` is recovered locally.
+- All 40 automatic OCR/grade signatures stayed invariant, no initial choice was removed, and manual entry remained available for every yellow answer.
+- Reject generic edge/containment gating: worksheet print made it far too noisy. Reject sending primary and context crops in the same immediate model batch: it changed one primary review list and displaced a correct choice.
+- Tests 18/18 and production build pass. Nothing was deployed or pushed.
+
+## 2026-07-14 conservative-consensus reliability goal
+
+Date / thread: 2026-07-14, active ScanGrade thread
+
+What changed:
+
+- Added a key-blind safety veto for the demonstrated weak box-safe confidence-clearance path.
+- Added a conservative automatic selector requiring exact three-frame large-grayscale agreement, independent compact-model support, slot-compatible answer length, no stable browser-preprocessing conflict, and no ambiguity/safety veto.
+- Added ambiguity handling for model-family disagreement, crop clipping, and a narrow weak-override/material-rival pattern.
+- Added an experimental application layer that can promote independently transcribed yellow answers, recompute ordinary mathematical grading, annotations, and review state, and preserve incorrect student math. It is available only with `hybridV3=1&v3ConfidenceSafety=1&v3ConsensusPromotion=1` and related V3 evidence flags; production defaults are unchanged.
+- Added exact control/candidate scoring and matched-diff scripts.
+
+Evidence used:
+
+- Four recent saved packets P08/P03/P09/P02: 40 pages, 280 answer groups, 275 scorable handwriting labels, five ambiguous labels excluded.
+- Historical saved corpus: 582 answers, 578 scorable, used only as a one-frame falsification stress test because authentic adjacent frames are unavailable.
+- Separate truth-label overlay corrected two visually verified source-label errors (`16→14` and answer-key-contaminated `6→2`) without modifying the source label files.
+
+Commands run:
+
+- `node scripts/evaluate_consensus_promotion_policy.mjs`
+- `node scripts/evaluate_consensus_historical_single_frame_stress.mjs`
+- `node scripts/replay_v3_crop_candidate_packets.mjs ...` for full candidate and matched feature-off control
+- `node scripts/score_consensus_integration_replay.mjs ...`
+- `node scripts/compare_consensus_matched_control.mjs`
+- `node scripts/test_consensus_webkit_saved_page.mjs`
+- `node scripts/test_local_first_failure_recovery.mjs`
+- focused Node tests and production build (see final verification below/report)
+
+Results:
+
+- Exact matched control: 172/275 automatic (62.5%), 172 correct, zero observed wrong.
+- Exact candidate: 222/275 automatic (80.7%), 222 correct, zero observed wrong.
+- Exact gain: 50/50 correct promotions; +25 row and +25 non-row; zero automatic demotions, zero changed pre-existing automatic outputs, and zero unrelated changes.
+- Candidate row: 137/160 (85.6%); non-row: 85/115 (73.9%); one digit: 87/100 (87.0%); two digits: 135/175 (77.1%).
+- All 40 pages completed; annotation/review state was consistent; marked sheets were regenerated.
+- Historical one-frame stress: 448/578 automatic (77.5%), zero observed wrong; known `4→9` and `45→15` failures stayed review. This is not a substitute for three-frame prospective validation.
+- WebKit mobile emulation passed over HTTPS; optional dual-service outage passed fail-open/manual-recovery gates.
+- Final focused JavaScript suite passed 37/37 and `npm run build` passed. The existing bundle-size warning remains (about 675 kB minified / 225 kB gzip).
+- Candidate freeze manifest created at `private-evidence/protocols/consensus-candidate-freeze-20260714.json`: 33 SHA-256 file identities, policy versions, required flags, model identities, reference metrics, and blinded protocol rules. Because the repository was already dirty, these hashes—not Git HEAD alone—define the candidate.
+
+Files changed:
+
+- `src/v3/confidence-safety.js`
+- `src/v3/consensus-promotion.js`
+- `src/v3/ambiguity-detector.js`
+- `src/v3/consensus-application.js`
+- experimental integration in `src/components/CameraCapture.vue`
+- focused tests/evaluators under `tests/` and `scripts/`
+- `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`
+- this ledger/handoff entry
+
+Rollback point:
+
+- Do not pass `v3ConsensusPromotion=1` or `v3ConfidenceSafety=1`. The ordinary production URL and defaults are unchanged. No deployment, push, or commit was made.
+
+Next action:
+
+- Freeze code/model/layout hashes and a blinded scoring protocol. If Tony approves spending one reserve packet, choose it before viewing handwriting quality, label without answer key or predictions, run the frozen candidate once, and do not tune on it. A clean result is a private-beta gate, not proof of zero true error.
+- If the blinded gate passes, stage the yellow-only services behind real authentication and test a physical old iPad, hosted latency/outage/privacy, and teacher review time.
+
+Open risks:
+
+- The 80.7% result is post-hoc development evidence from correlated pages/students/templates; it is not a public accuracy claim.
+- Two label errors were found, including one answer-key-contaminated label; locked truth needs independent QA.
+- Physical old-iPad sustained camera/memory performance and real live-burst behavior remain untested.
+- Strong-reader hosted reliability, cold start, privacy operations, and cost remain unproven.
+- Non-row coverage (73.9%) still trails row coverage (85.6%).
+
+Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
+
+## 2026-07-14 conservative-consensus private-beta deployment
+
+- Tony explicitly authorized changing, deploying, committing, and pushing the frozen candidate.
+- Production default is enabled only on `.ts.net` private deployments. GitHub Pages retains local OCR because no private/authenticated whole-answer service exists there.
+- Private URL: `https://hobbes-mac-mini.tail9a3379.ts.net/`.
+- Same-origin tailnet-only model routes: `/review-model` and `/v3-compact`.
+- Immediate runtime rollback: append `?consensusCandidate=0`.
+- Build label: `2026.07.14-consensus-private-beta-1`.
+- The Tailscale app had stopped serving even though its process remained present. Restarting the app restored status, DNS, and all configured routes. Both health paths and browser CORS preflights pass.
+- Release tests 40/40, standard build, GitHub Pages build, and `git diff --check` pass.
+- The in-app browser loaded the new build from the real private URL.
+- Live P09 number-pattern smoke after model warm-up: both readers available, consensus enabled, three promotions, overwritten `34` stayed yellow, written wrong-math `40` stayed `40` and became red, marked sheet regenerated.
+- First strong request after model cold compilation exceeded the client window and safely produced no promotions; a warmed 15-answer Tailscale batch completed in about 1.65 seconds. Availability remains fail-open.
+- Deployment report: `docs/SCANGRADE_CONSENSUS_PRIVATE_BETA_DEPLOYMENT_20260714.md`.

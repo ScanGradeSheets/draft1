@@ -2,7 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const DEFAULT_EXPECTED = [8, 4, 1, 9, 2, 7, 0, 5, 3, 6];
@@ -21,6 +21,37 @@ const EXPECTED_ANSWERS = (process.env.SG_EXPECTED_ANSWERS || '')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
+const EXTRA_QUERY = process.env.SG_EVAL_QUERY || '';
+const BROWSER_ENGINE = process.env.SG_EVAL_BROWSER === 'webkit' ? 'webkit' : 'chromium';
+const OLD_IPAD_EMULATION = process.env.SG_EVAL_OLD_IPAD === '1';
+const V3_BURST_FILES = String(process.env.SG_V3_BURST_FILES || '').split(';').map((value) => value.trim()).filter(Boolean);
+const V3_BURST_SIBLINGS = process.env.SG_V3_BURST_SIBLINGS === '1';
+
+async function burstFilesForInput(file) {
+  if (V3_BURST_FILES.length) return V3_BURST_FILES;
+  if (!V3_BURST_SIBLINGS) return [];
+  const directory = path.join(path.dirname(file), 'burst-frames');
+  try {
+    return (await fs.readdir(directory))
+      .filter((name) => /^frame-\d+\.(?:png|jpe?g)$/i.test(name))
+      .sort()
+      .slice(0, 3)
+      .map((name) => path.join(directory, name));
+  } catch {
+    return [];
+  }
+}
+
+function evaluationUrl(opts) {
+  const url = new URL(opts.url);
+  url.searchParams.set('mode', 'teacher');
+  url.searchParams.set('ocrdebug', '1');
+  url.searchParams.set('ignoreQrHomography', IGNORE_QR_HOMOGRAPHY ? '1' : '0');
+  url.searchParams.set('modelPath', opts.modelPath);
+  if (opts.rightSlotModelPath) url.searchParams.set('rightSlotModelPath', opts.rightSlotModelPath);
+  for (const [key, value] of new URLSearchParams(EXTRA_QUERY)) url.searchParams.set(key, value);
+  return url.toString();
+}
 
 function expectedAnswersForRow(row) {
   if (EXPECTED_ANSWERS.length > 0) return EXPECTED_ANSWERS;
@@ -105,7 +136,8 @@ function sanitizeName(value) {
 }
 
 function worksheetId(file) {
-  const parent = sanitizeName(path.basename(path.dirname(file))).slice(0, 8);
+  const parentSlug = sanitizeName(path.basename(path.dirname(file)));
+  const parent = parentSlug.slice(-8);
   const base = sanitizeName(path.basename(file));
   return parent ? `${parent}-${base}` : base;
 }
@@ -242,8 +274,18 @@ if (!files.length) {
 await fs.mkdir(opts.outDir, { recursive: true });
 await fs.mkdir(path.join(opts.outDir, 'debug'), { recursive: true });
 
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ ignoreHTTPSErrors: true });
+const browserType = BROWSER_ENGINE === 'webkit' ? webkit : chromium;
+const browser = await browserType.launch({ headless: true });
+const context = await browser.newContext({
+  ignoreHTTPSErrors: true,
+  ...(OLD_IPAD_EMULATION ? {
+    viewport: { width: 768, height: 1024 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPad; CPU OS 15_7 like Mac OS X) AppleWebKit/605.1.15 Version/15.0 Mobile/15E148 Safari/604.1',
+  } : {}),
+});
 const page = await context.newPage();
 page.setDefaultTimeout(60000);
 
@@ -252,10 +294,7 @@ for (const file of files) {
   const id = worksheetId(file);
   const debugDir = path.join(opts.outDir, 'debug', id);
   await fs.mkdir(debugDir, { recursive: true });
-  const rightSlotQuery = opts.rightSlotModelPath
-    ? `&rightSlotModelPath=${encodeURIComponent(opts.rightSlotModelPath)}`
-    : '';
-  const url = `${opts.url}/?mode=teacher&ocrdebug=1&ignoreQrHomography=${IGNORE_QR_HOMOGRAPHY ? '1' : '0'}&modelPath=${encodeURIComponent(opts.modelPath)}${rightSlotQuery}`;
+  const url = evaluationUrl(opts);
   try {
     await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
     await page.waitForFunction(
@@ -263,17 +302,37 @@ for (const file of files) {
       undefined,
       { timeout: 60000 }
     );
+    const burstFiles = await burstFilesForInput(file);
+    if (burstFiles.length) {
+      const frames = await Promise.all(burstFiles.map(async (burstFile, index) => ({
+        index,
+        score: 1000 - index,
+        focusScore: 1000 - index,
+        sheetOk: true,
+        imageDataUrl: `data:image/png;base64,${(await fs.readFile(path.resolve(burstFile))).toString('base64')}`,
+      })));
+      const accepted = await page.evaluate((items) => window.__SCANGRADE_SET_V3_BURST_FRAMES?.(items) || 0, frames);
+      if (accepted !== frames.length) throw new Error(`V3 burst replay hook accepted ${accepted}/${frames.length} frames`);
+    }
     await page.setInputFiles('input[type=file]', file);
     await page.waitForFunction(
       () => {
-        const resultDigits = document.querySelectorAll('.ocr-result .digit .num').length;
+        const debug = window.__SCANGRADE_LIVE_OCR_DEBUG;
         const errors = Array.from(document.querySelectorAll('.results-error,.error')).map((el) => (el.textContent || '').trim()).filter(Boolean);
-        return resultDigits >= 10 || errors.length > 0;
+        return (debug?.predictions?.length > 0 && debug?.answerGroups?.length > 0) || errors.length > 0;
       },
       undefined,
       { timeout: 60000 }
     );
-    await page.waitForTimeout(500);
+    if (new URLSearchParams(EXTRA_QUERY).get('hybridV3') === '1') {
+      await page.waitForFunction(
+        () => ['complete', 'unavailable'].includes(window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.status),
+        undefined,
+        { timeout: 30000 }
+      );
+    } else {
+      await page.waitForTimeout(500);
+    }
     const data = await page.evaluate(() => {
       const errors = Array.from(document.querySelectorAll('.results-error,.error'))
         .map((el) => (el.textContent || '').trim())
@@ -300,9 +359,11 @@ for (const file of files) {
         topGap: pred.topGap,
         topK: pred.topK
       })),
-      questionGroups: data.debug.questionGroups || null,
+      questionGroups: data.debug.answerGroups || data.debug.questionGroups || null,
       modelInfo: data.debug.modelInfo || null,
-      layoutId: data.debug.layoutId || null
+      layoutId: data.debug.layoutId || null,
+      v3AnswerZoneCount: data.debug.v3AnswerZones?.length || 0,
+      v3Shadow: data.debug.v3Shadow || null
     };
     rows.push(row);
     await fs.writeFile(path.join(debugDir, 'ocr-debug.json'), JSON.stringify(data.debug, null, 2));
@@ -310,7 +371,8 @@ for (const file of files) {
       ['captured', [data.debug.capturedImageDataUrl]],
       ['warped', [data.debug.warpedDataUrl]],
       ['raw-q', data.debug.rawCropDataUrls || []],
-      ['model-input-q', data.debug.modelInputDataUrls || []]
+      ['model-input-q', data.debug.modelInputDataUrls || []],
+      ['v3-zone-q', (data.debug.v3AnswerZones || []).map((zone) => zone.imageDataUrl)]
     ];
     for (const [prefix, dataUrls] of imageSets) {
       for (let i = 0; i < dataUrls.length; i++) {

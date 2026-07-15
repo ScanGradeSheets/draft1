@@ -4,12 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ScanGrade Mission Control</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <aside class="sidebar">
       <div class="brand">
-        <img class="brand-logo" src="/repo/public/scangrade-logo-transparent.png" alt="ScanGrade logo" />
+        <img class="brand-logo" src="./repo/public/scangrade-logo-transparent.png" alt="ScanGrade logo" />
         <div>
           <h1>ScanGrade</h1>
           <p>Private ScanGrade cockpit</p>
@@ -17,6 +17,7 @@
       </div>
       <nav>
         <a href="#today" class="active">Today</a>
+        <a href="#calendar">Calendar / To Do</a>
         <a href="#kanban">Kanban</a>
         <a href="#decisions">Tony Decisions</a>
         <a href="#worksheets">Worksheets</a>
@@ -84,15 +85,26 @@
         </div>
 
         <div class="grid two">
-          <details class="panel" open>
+          <details class="panel">
             <summary>Plain-English Status</summary>
             <p id="plainStatus"></p>
           </details>
-          <details class="panel" open>
+          <details class="panel">
             <summary>Needs Tony</summary>
             <ul id="needsTony"></ul>
           </details>
         </div>
+      </section>
+
+      <section id="calendar" class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Launch Calendar</p>
+            <h2>Weekly plan to September</h2>
+          </div>
+        </div>
+        <div id="launchPlanSummary" class="launch-summary"></div>
+        <div id="launchPlanList" class="launch-plan"></div>
       </section>
 
       <section id="kanban" class="section">
@@ -193,6 +205,6 @@
       </section>
     </main>
 
-    <script src="/app.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>

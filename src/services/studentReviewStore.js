@@ -78,6 +78,8 @@ function buildSubmissionRecord({ studentName, result }) {
     confidences,
     correct: Array.isArray(result.correct) ? result.correct : null,
     questionCorrect: Array.isArray(result.questionCorrect) ? result.questionCorrect : null,
+    questionReview: Array.isArray(result.questionReview) ? result.questionReview : null,
+    answerGroups: Array.isArray(result.answerGroups) ? result.answerGroups : [],
     questionCount: Number.isFinite(result.questionCount) ? result.questionCount : null,
     questionScore: Number.isFinite(result.questionScore) ? result.questionScore : null,
     avgConfidence,
