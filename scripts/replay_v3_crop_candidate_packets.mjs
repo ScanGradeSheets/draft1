@@ -26,6 +26,10 @@ function parseArgs(argv) {
     dualCropReview: false,
     consensusPromotion: false,
     confidenceSafetyControl: false,
+    cleanPrintedFrames: false,
+    numberBondShiftDown: false,
+    nonrowTrimEvidence: false,
+    frameRegistrationMode: null,
   }
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index]
@@ -41,6 +45,10 @@ function parseArgs(argv) {
     else if (value === '--dual-crop-review') options.dualCropReview = true
     else if (value === '--consensus-promotion') options.consensusPromotion = true
     else if (value === '--confidence-safety-control') options.confidenceSafetyControl = true
+    else if (value === '--clean-printed-frames') options.cleanPrintedFrames = true
+    else if (value === '--number-bond-shift-down') options.numberBondShiftDown = true
+    else if (value === '--nonrow-trim-evidence') options.nonrowTrimEvidence = true
+    else if (value === '--frame-registration-mode') options.frameRegistrationMode = argv[++index]
     else throw new Error(`unknown argument: ${value}`)
   }
   return options
@@ -141,6 +149,10 @@ function main() {
       v3LocalFirstReview: '1',
       v3ConfidenceSafety: '1',
     } : {}),
+    ...(options.cleanPrintedFrames ? { v3CleanPrintedFrames: '1' } : {}),
+    ...(options.numberBondShiftDown ? { v3NumberBondShiftDown: '1' } : {}),
+    ...(options.nonrowTrimEvidence ? { v3NonrowTrimEvidence: '1' } : {}),
+    ...(options.frameRegistrationMode ? { v3FrameRegistrationMode: options.frameRegistrationMode } : {}),
   }).toString()
   for (const packetId of options.packets) {
     const files = selected.filter((row) => row.packetId === packetId).map((row) => row.captured)

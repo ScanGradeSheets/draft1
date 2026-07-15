@@ -1,6 +1,11 @@
 import * as ort from 'onnxruntime-web/wasm';
 import { modelUrlFromQuery, publicUrl } from './public-paths.js';
 
+// Bump whenever code that turns retained tensors/probabilities into a selected
+// digit changes. Saved debug artifacts record this so two results are never
+// treated as the same candidate merely because their model inputs match.
+export const DIGIT_SELECTION_POLICY_VERSION = 'digit-selection-20260714-1';
+
 function isWasmSimdSupported() {
   if (typeof WebAssembly === 'undefined' || typeof WebAssembly.validate !== 'function') return false;
   try {

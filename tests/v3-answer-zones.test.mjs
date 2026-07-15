@@ -24,6 +24,16 @@ test('answer zone is one continuous rect spanning adjacent digit slots', () => {
   })
 })
 
+test('experimental offsets move a zone by a fraction of slot height without changing its size', () => {
+  assert.deepEqual(answerZoneRect(layout.question_groups[0], layout, {
+    width: 1000,
+    height: 1000,
+    marginX: 0,
+    marginY: 0,
+    offsetYFraction: 0.04,
+  }), { x: 300, y: 404, w: 200, h: 100 })
+})
+
 test('context zone retains bounded pixels around the primary answer crop', () => {
   assert.deepEqual(answerContextRect(layout.question_groups[0], layout, {
     width: 1000,
@@ -111,6 +121,21 @@ test('artifacts are key-blind and crop directly from the warped page once', () =
   assert.equal('answer' in artifact, false)
   assert.equal('answer_key' in artifact, false)
   assert.deepEqual(artifact.rect, { x: 300, y: 400, w: 200, h: 100 })
+})
+
+test('zone extraction forwards experimental offsets to the pure geometry resolver', () => {
+  class Rect { constructor(x, y, w, h) { Object.assign(this, { x, y, w, h }) } }
+  const source = {
+    cols: 1000,
+    rows: 1000,
+    roi(rect) {
+      return { clone: () => ({ cols: rect.w, rows: rect.h, data: new Uint8Array(rect.w * rect.h * 4).fill(255), channels: () => 4 }) }
+    },
+  }
+  const [artifact] = extractContinuousAnswerZones(source, layout, {
+    cv: { Rect }, marginX: 0, marginY: 0, offsetYFraction: 0.04,
+  })
+  assert.deepEqual(artifact.rect, { x: 300, y: 404, w: 200, h: 100 })
 })
 
 test('expanded context artifact is labeled review-only evidence and keeps surrounding pixels', () => {

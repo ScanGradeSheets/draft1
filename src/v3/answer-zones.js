@@ -68,9 +68,11 @@ export function answerZoneRect(group, layout, options = {}) {
   const reference = Math.max(1, Math.min(union.h, ...rects.filter(finiteRect).map((rect) => rect.h)))
   const marginX = Number.isFinite(options.marginX) ? options.marginX : reference * 0.08
   const marginY = Number.isFinite(options.marginY) ? options.marginY : reference * 0.08
+  const offsetX = Number.isFinite(options.offsetXFraction) ? reference * options.offsetXFraction : 0
+  const offsetY = Number.isFinite(options.offsetYFraction) ? reference * options.offsetYFraction : 0
   return clampAndRoundRect({
-    x: union.x - marginX,
-    y: union.y - marginY,
+    x: union.x - marginX + offsetX,
+    y: union.y - marginY + offsetY,
     w: union.w + marginX * 2,
     h: union.h + marginY * 2,
   }, width, height)
@@ -376,6 +378,8 @@ export function extractContinuousAnswerZones(warpedImage, layout, options = {}) 
       geometrySource: options.geometrySource,
       marginX: options.marginX,
       marginY: options.marginY,
+      offsetXFraction: options.offsetXFraction,
+      offsetYFraction: options.offsetYFraction,
       contextMarginX: options.contextMarginX,
       contextMarginY: options.contextMarginY,
     })

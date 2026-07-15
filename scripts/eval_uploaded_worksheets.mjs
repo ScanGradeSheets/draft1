@@ -137,7 +137,10 @@ function sanitizeName(value) {
 
 function worksheetId(file) {
   const parentSlug = sanitizeName(path.basename(path.dirname(file)));
-  const parent = parentSlug.slice(-8);
+  // Session directories often end in the same "-captured" suffix. Retaining
+  // the start keeps their unique scan id and prevents one replay from silently
+  // overwriting another page's debug evidence.
+  const parent = parentSlug.slice(0, 24);
   const base = sanitizeName(path.basename(file));
   return parent ? `${parent}-${base}` : base;
 }

@@ -31,6 +31,29 @@ test('right-aligns a one-digit answer in an optional two-slot zone', () => {
   assert.deepEqual(result.predictions.map((row) => row.blank), [true, false])
 })
 
+test('retains a two-digit incorrect transcription written inside one physical box', () => {
+  const result = applyConsensusPromotionsToPredictions({
+    questionGroups: [{ question_num: 2, answer: 5, digit_box_ids: [4], max_handwritten_digits: 2 }],
+    predictions: [{ id: 4, digit: 1, reviewNeeded: true, correct: false }],
+    decisions: [{ questionNum: 2, promote: true, automaticText: '19', policyVersion: 'p1', reason: 'consensus' }],
+  })
+  assert.equal(result.applied.length, 1)
+  assert.equal(result.predictions[0].answerTextOverride, '19')
+  assert.equal(result.predictions[0].reviewNeeded, false)
+  assert.equal(result.predictions[0].blank, false)
+  assert.equal('correct' in result.predictions[0], false)
+})
+
+test('one physical box without an explicit larger contract still rejects two digits', () => {
+  const result = applyConsensusPromotionsToPredictions({
+    questionGroups: [{ question_num: 2, answer: 5, digit_box_ids: [4] }],
+    predictions: [{ id: 4, digit: 1 }],
+    decisions: [{ questionNum: 2, promote: true, automaticText: '19' }],
+  })
+  assert.equal(result.applied.length, 0)
+  assert.equal(result.predictions[0].digit, 1)
+})
+
 test('ignores review decisions and overlong answers', () => {
   for (const decision of [
     { questionNum: 1, promote: false, automaticText: '12' },

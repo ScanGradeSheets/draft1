@@ -5,6 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { consensusPromotionDecision } from '../src/v3/consensus-promotion.js'
 import { detectAnswerAmbiguity } from '../src/v3/ambiguity-detector.js'
+import { maxHandwrittenDigitsForGroup } from '../src/v3/layout-contract.js'
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const read = (relative) => JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'))
@@ -63,6 +64,8 @@ for (const safetyPage of safetyPages) {
   const captureId = captureForSuffix(suffix, safetyPage.layoutId)
   const debugFile = path.join(ROOT, 'private-evidence/reports/current-historical-confidence-safety-20260714/debug', safetyPage.id, 'ocr-debug.json')
   const debug = JSON.parse(fs.readFileSync(debugFile, 'utf8'))
+  const layout = read(`layouts/${debug.layoutId}.json`)
+  const layoutGroupByQuestion = new Map((layout.question_groups || []).map((group) => [Number(group.question_num), group]))
   const predictions = new Map((debug.predictions || []).map((prediction) => [Number(prediction.id), prediction]))
   const vetoQuestions = new Set((debug.confidenceClearanceVetoes || []).map((veto) => Number(veto.questionNum)))
   for (const group of debug.answerGroups || []) {
@@ -100,7 +103,7 @@ for (const safetyPage of safetyPages) {
       confidenceSafetyVetoed: vetoQuestions.has(questionNum),
       sequenceFrameConsensus: singleFrameSurrogate,
       compactReads,
-      slotCount: (group.digitBoxIds || []).length,
+      slotCount: maxHandwrittenDigitsForGroup(layoutGroupByQuestion.get(questionNum) || group),
       ambiguity,
     })
     const promoted = !currentAutomatic && decision.promote

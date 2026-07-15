@@ -439,7 +439,8 @@ import {
   recognizeDigits,
   recognizeDigitsRobust,
   recognizeDigitsWithPreprocessVariants,
-  getDigitModelInfo
+  getDigitModelInfo,
+  DIGIT_SELECTION_POLICY_VERSION
 } from '../ocr-pipeline.js'
 import { decodeQrFromCanvas, decodeQrFromPageUrl } from '../qr-decode.js'
 import { publicUrl } from '../public-paths.js'
@@ -451,6 +452,7 @@ import {
 import { requestKeyBlindWholeAnswers } from '../hybrid-review-client.js'
 import { extractContinuousAnswerZones } from '../v3/answer-zones.js'
 import { geometryRescuePlan } from '../v3/geometry-rescue.js'
+import { maxHandwrittenDigitsForGroup, optionalDigitIndicesForGroup } from '../v3/layout-contract.js'
 import { V3_POLICY_VERSION } from '../v3/decision-policy.js'
 import { requestCompactWholeAnswers } from '../v3/compact-client.js'
 import {
@@ -1537,7 +1539,7 @@ const localFirstStrongMessage = computed(() => {
 const activeCorrectionMaxLength = computed(() => {
   if (activeCorrectionSlotIndex.value != null) return 1
   const group = activeCorrectionGroup.value
-  const count = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids.length : 1
+  const count = maxHandwrittenDigitsForGroup(group)
   return Math.max(1, count)
 })
 
@@ -1800,7 +1802,7 @@ async function applyManualCorrectionText() {
   const group = activeCorrectionGroup.value
   const slotCount = activeCorrectionSlotIndex.value != null
     ? 1
-    : Math.max(1, Array.isArray(group?.digit_box_ids) ? group.digit_box_ids.length : 1)
+    : maxHandwrittenDigitsForGroup(group)
   const cells = parseManualAnswerText(manualCorrectionText.value, slotCount)
   if (!cells) {
     correctionError.value = slotCount > 1
@@ -1853,6 +1855,8 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   const normalizedSlotIndex = Number.isInteger(slotIndex) && slotIndex >= 0 && slotIndex < ids.length
     ? slotIndex
     : null
+  const overflowSinglePhysicalBox = normalizedSlotIndex == null && ids.length === 1 && cells.length > 1 &&
+    cells.length <= maxHandwrittenDigitsForGroup(group)
   const normalizedCells = ids.map((id) => {
     const predictionIndex = predictionIndexById.get(id)
     const prediction = predictionIndex == null ? null : nextPredictions[predictionIndex]
@@ -1861,16 +1865,22 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     )
     return normalized === undefined ? null : normalized
   })
-  const correctionCells = cells.slice(0, normalizedSlotIndex == null ? ids.length : 1)
+  const correctionCells = cells.slice(0, normalizedSlotIndex == null
+    ? (overflowSinglePhysicalBox ? cells.length : ids.length)
+    : 1)
   if (normalizedSlotIndex == null) {
-    while (correctionCells.length < ids.length) correctionCells.unshift(null)
-    correctionCells.forEach((cell, index) => {
-      normalizedCells[index] = cell
-    })
+    if (!overflowSinglePhysicalBox) {
+      while (correctionCells.length < ids.length) correctionCells.unshift(null)
+      correctionCells.forEach((cell, index) => {
+        normalizedCells[index] = cell
+      })
+    }
   } else {
     normalizedCells[normalizedSlotIndex] = correctionCells[0] ?? null
   }
-  const answerText = cellsToAnswerText(normalizedCells)
+  const answerText = overflowSinglePhysicalBox
+    ? cellsToAnswerText(correctionCells)
+    : cellsToAnswerText(normalizedCells)
   const slotsToUpdate = normalizedSlotIndex == null
     ? ids.map((_, index) => index)
     : [normalizedSlotIndex]
@@ -1884,17 +1894,18 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     const previousTopK = Array.isArray(previous.topK) ? previous.topK : []
     nextPredictions[predictionIndex] = {
       ...previous,
-      digit,
-      blank: digit === null,
-      empty: digit === null,
+      digit: overflowSinglePhysicalBox ? null : digit,
+      blank: overflowSinglePhysicalBox ? false : digit === null,
+      empty: overflowSinglePhysicalBox ? false : digit === null,
       confidence: 1,
       topGap: 1,
       reviewNeeded: false,
       manualCorrected: true,
       manualAnswerText: answerText,
+      ...(overflowSinglePhysicalBox ? { answerTextOverride: answerText } : { answerTextOverride: undefined }),
       originalDigit: previous.originalDigit ?? previous.digit,
       originalConfidence: previous.originalConfidence ?? previous.confidence,
-      topK: digit === null
+      topK: overflowSinglePhysicalBox || digit === null
         ? []
         : [
             { digit, confidence: 1 },
@@ -2306,10 +2317,19 @@ function v3DualCropReviewEnabled() {
   return hasDebugQueryFlag('v3DualCropReview')
 }
 
+function experimentalFrameRegistrationMode() {
+  if (typeof window === 'undefined') return 'current'
+  const value = new URLSearchParams(window.location.search).get('v3FrameRegistrationMode') || 'current'
+  return ['current', 'template-only', 'full-local', 'local-position', 'strong-local'].includes(value)
+    ? value
+    : 'current'
+}
+
 function worksheetProcessingOptions(qrLocation = null) {
   return {
     qrLocation,
     experimentalEightFrameColumnOrder: v3EightFrameColumnOrderEnabled(),
+    experimentalFrameRegistrationMode: experimentalFrameRegistrationMode(),
   }
 }
 
@@ -2317,7 +2337,15 @@ function v3CleanPrintedFramesEnabled() {
   return hasDebugQueryFlag('v3CleanPrintedFrames')
 }
 
-function v3AnswerZoneOptions(rawCrops) {
+function v3NumberBondShiftEvidenceEnabled() {
+  return consensusFeatureEnabled('v3NumberBondShiftDown')
+}
+
+function v3NonrowTrimEvidenceEnabled() {
+  return consensusFeatureEnabled('v3NonrowTrimEvidence')
+}
+
+function v3AnswerZoneOptions(rawCrops, layout = null) {
   return {
     cv,
     rawCrops,
@@ -2341,6 +2369,27 @@ function wholeAnswerSequenceItemsFromZones(zones, frameIndex = null) {
     frameIndex,
     imageDataUrl: zone.imageDataUrl || matToDataURL(zone.image),
   }))
+}
+
+function trimmedWholeAnswerSequenceItemsFromZones(zones, frameIndex = null, fraction = 0.04) {
+  return (zones || []).map((zone) => {
+    const dx = Math.max(1, Math.round(zone.image.cols * fraction))
+    const dy = Math.max(1, Math.round(zone.image.rows * fraction))
+    const width = zone.image.cols - dx * 2
+    const height = zone.image.rows - dy * 2
+    if (width < 1 || height < 1) return null
+    const view = zone.image.roi(new cv.Rect(dx, dy, width, height))
+    try {
+      return {
+        id: `question-${zone.questionNum}-frame-${frameIndex ?? 'selected'}-trim-${fraction}`,
+        questionNum: zone.questionNum,
+        frameIndex,
+        imageDataUrl: matToDataURL(view),
+      }
+    } finally {
+      view.delete?.()
+    }
+  }).filter(Boolean)
 }
 
 function hybridBurstEnabled() {
@@ -3989,7 +4038,17 @@ function answerDigitCount(answer) {
   return /^\d+$/.test(text) ? text.length : 0
 }
 
+function groupAnswerTextOverride(group, predictionById) {
+  const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+  const values = ids
+    .map((id) => predictionById.get(id)?.answerTextOverride)
+    .filter((value) => /^\d{1,4}$/.test(String(value || '')))
+  if (!values.length || !values.every((value) => String(value) === String(values[0]))) return null
+  return String(values[0])
+}
+
 function groupHasRequiredSlotReview(group, ids, predictionById) {
+  if (groupAnswerTextOverride(group, predictionById)) return false
   if (!Array.isArray(ids) || ids.length === 0) return true
   const expectedDigitCount = answerDigitCount(group?.answer)
   const hasMissingPrediction = ids.some((id) => !predictionById.get(id))
@@ -4028,6 +4087,7 @@ function displaySlotCountForGroup(group, layoutGroup = null) {
   const displayDigits = Array.isArray(group?.displayDigits) ? group.displayDigits : []
   return Math.max(
     ids.length,
+    maxHandwrittenDigitsForGroup(layoutGroup || group),
     answerDigitCount(group?.answer ?? layoutGroup?.answer),
     displayDigits.length,
     1
@@ -4138,40 +4198,6 @@ function gradingCellsMatch(a, b) {
 function numberOrZero(value) {
   const number = Number(value)
   return Number.isFinite(number) ? number : 0
-}
-
-function optionalSingleDigitForGroup(group, ids) {
-  if (!Array.isArray(ids) || ids.length !== 2) return null
-  const answer = group?.answer == null ? '' : String(group.answer).trim()
-  if (!/^\d$/.test(answer)) return null
-  const digit = Number(answer)
-  const acceptedResponses = acceptedResponsesForGroup(group, ids.length)
-  const hasFlexibleBlank = acceptedResponses.some((response) => (
-    Array.isArray(response) &&
-    response.length === ids.length &&
-    response.includes(digit) &&
-    response.includes(null)
-  ))
-  return hasFlexibleBlank ? digit : null
-}
-
-function matchingOptionalDigitLooksUsable(prediction, quality) {
-  if (!prediction) return false
-  const confidence = numberOrZero(prediction.confidence)
-  const topGap = numberOrZero(prediction.topGap)
-  if (confidence >= 0.70 && topGap >= 0.40) return true
-  const inkPixels = numberOrZero(quality?.inkPixels)
-  const maxRowCount = numberOrZero(quality?.maxRowCount)
-  const weakRatio = numberOrZero(quality?.weakVariantRatio)
-  const artifactRatio = numberOrZero(quality?.artifactVariantRatio)
-  return (
-    confidence >= 0.58 &&
-    topGap >= 0.26 &&
-    inkPixels >= 28 &&
-    maxRowCount >= 4 &&
-    weakRatio < 0.45 &&
-    artifactRatio < 0.35
-  )
 }
 
 function plausibleSingleDigitResponseSlot(prediction, quality) {
@@ -4399,7 +4425,7 @@ function optionalBlankSlotLooksLikeArtifact(prediction, quality) {
   return !strongExtraDigit && (guideLineOne || (reviewSignal && (weakModel || weakInk)))
 }
 
-function applyOptionalSingleDigitBlankOverrides(questionGroups, predictions, cropQuality) {
+function applyOptionalSingleDigitBlankOverrides(questionGroups, boxes, predictions, cropQuality) {
   if (!Array.isArray(questionGroups) || !Array.isArray(predictions)) return []
   const predictionById = new Map(predictions.map((prediction) => [prediction.id, prediction]))
   const qualityById = new Map((cropQuality || []).map((quality) => [quality.id, quality]))
@@ -4407,8 +4433,8 @@ function applyOptionalSingleDigitBlankOverrides(questionGroups, predictions, cro
 
   for (const group of questionGroups) {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-    const expectedDigit = optionalSingleDigitForGroup(group, ids)
-    if (expectedDigit === null) continue
+    const optionalIndices = optionalDigitIndicesForGroup(group, boxes)
+    if (ids.length !== 2 || optionalIndices.length !== 1) continue
 
     const slots = ids.map((id, slotIndex) => ({
       id,
@@ -4418,50 +4444,40 @@ function applyOptionalSingleDigitBlankOverrides(questionGroups, predictions, cro
     }))
     if (slots.some((slot) => !slot.prediction)) continue
 
-    const expectedMatchingSlots = slots.filter((slot) => (
-      slot.prediction.digit === expectedDigit &&
-      matchingOptionalDigitLooksUsable(slot.prediction, slot.quality)
-    ))
-    const plausibleDigitSlots = slots.filter((slot) => plausibleSingleDigitResponseSlot(slot.prediction, slot.quality))
-    const matchingSlots = expectedMatchingSlots.length === 1 ? expectedMatchingSlots : plausibleDigitSlots
-    if (matchingSlots.length !== 1) continue
-
-    const blankSlot = slots.find((slot) => slot.slotIndex !== matchingSlots[0].slotIndex)
+    const plausibleSlots = slots.filter((slot) => plausibleSingleDigitResponseSlot(slot.prediction, slot.quality))
+    if (plausibleSlots.length !== 1) continue
+    const matchedSlot = plausibleSlots[0]
+    const blankSlot = slots.find((slot) => slot.slotIndex !== matchedSlot.slotIndex)
     if (!blankSlot) continue
     if (!optionalBlankSlotLooksLikeArtifact(blankSlot.prediction, blankSlot.quality)) continue
 
-    const matchedPrediction = matchingSlots[0].prediction
+    const matchedPrediction = matchedSlot.prediction
     const blankPrediction = blankSlot.prediction
-    const canAutoGrade = expectedMatchingSlots.length === 1
-      ? matchingOptionalDigitLooksUsable(matchedPrediction, matchingSlots[0].quality)
-      : oneDigitResponseSlotCanAutoGrade(matchedPrediction, matchingSlots[0].quality)
+    const canAutoGrade = oneDigitResponseSlotCanAutoGrade(matchedPrediction, matchedSlot.quality)
     if (matchedPrediction.reviewNeeded === true && canAutoGrade) {
       matchedPrediction.reviewNeeded = false
       matchedPrediction.preprocessReviewReason = matchedPrediction.preprocessReviewReason || 'flexible-one-digit-answer'
       matchedPrediction.confidencePolicyCleared = true
       matchedPrediction.confidencePolicyClearanceReason = 'flexible-one-digit-answer'
     }
-    if (normalizeGradingDigit(matchedPrediction.digit) === expectedDigit) {
-      matchedPrediction.correct = true
-    }
+    delete matchedPrediction.correct
     blankPrediction.originalDigitBeforeBlankOverride = blankPrediction.digit
     blankPrediction.originalConfidenceBeforeBlankOverride = blankPrediction.confidence
     blankPrediction.digit = null
     blankPrediction.blank = true
     blankPrediction.empty = true
-    blankPrediction.correct = true
+    delete blankPrediction.correct
     blankPrediction.reviewNeeded = false
     blankPrediction.preprocessReviewReason = 'flexible-one-digit-optional-blank'
     blankPrediction.confidencePolicyCleared = true
     blankPrediction.confidencePolicyClearanceReason = 'flexible-one-digit-optional-blank'
     overrides.push({
       questionNum: group?.question_num ?? null,
-      expectedDigit,
-      matchedSlotIndex: matchingSlots[0].slotIndex,
+      matchedSlotIndex: matchedSlot.slotIndex,
       blankSlotIndex: blankSlot.slotIndex,
       blankDigitBoxId: blankSlot.id,
       matchedDigit: matchedPrediction.digit,
-      expectedMatch: expectedMatchingSlots.length === 1,
+      answerKeyUsed: false,
       autoGradeCleared: canAutoGrade,
       originalDigit: blankPrediction.originalDigitBeforeBlankOverride,
       reason: blankPrediction.preprocessReviewReason
@@ -4478,6 +4494,11 @@ function buildQuestionCorrect(questionGroups, predictions) {
   for (const group of questionGroups) {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
     if (ids.length === 0) return null
+    const answerOverride = groupAnswerTextOverride(group, byId)
+    if (answerOverride) {
+      out.push(answerOverride === String(group?.answer ?? '').trim())
+      continue
+    }
     const predictionCells = predictionCellsForIds(ids, byId)
     if (!predictionCells) return null
     const acceptedResponses = acceptedResponsesForGroup(group, ids.length)
@@ -4519,8 +4540,9 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null, 
       return normalized === undefined ? '' : normalized
     })
     const answerText = group?.answer == null ? '' : String(group.answer).trim()
+    const answerTextOverride = groupAnswerTextOverride(group, byId)
     const expectedDigitCount = answerDigitCount(answerText) || predictionCells.length
-    const slotCount = Math.max(ids.length, expectedDigitCount, predictionCells.length, 1)
+    const slotCount = Math.max(ids.length, maxHandwrittenDigitsForGroup(group), expectedDigitCount, predictionCells.length, 1)
     const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
     const hasReview =
       groupPredictions.some((prediction) => prediction?.reviewNeeded) ||
@@ -4533,8 +4555,9 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null, 
       correct === true ? 'correct' :
       correct === false ? 'incorrect' :
       'review'
-    const displayDigits = normalizeDisplayDigits(predictionCells, slotCount)
-    const predictedAnswerText = cellsToAnswerText(predictionCells)
+    const effectiveCells = answerTextOverride ? [...answerTextOverride].map(Number) : predictionCells
+    const displayDigits = normalizeDisplayDigits(effectiveCells, slotCount)
+    const predictedAnswerText = answerTextOverride || cellsToAnswerText(predictionCells)
     const slotStatuses = normalizeDisplayDigits(ids.map((id, slotIndex) => {
       const prediction = byId.get(id)
       if (prediction?.reviewNeeded || slotNeedsReview(group, ids, slotIndex, byId)) return 'review'
@@ -6408,7 +6431,7 @@ async function buildV3BurstShadowItems({
       zones = extractContinuousAnswerZones(
         worksheet.warpedImage,
         layout,
-        v3AnswerZoneOptions(worksheet.rawCrops)
+        v3AnswerZoneOptions(worksheet.rawCrops, layout)
       )
       let allFrameSequenceItems = v3SequenceFromZonesEnabled()
         ? wholeAnswerSequenceItemsFromZones(zones, frame.index)
@@ -6454,7 +6477,12 @@ async function buildV3BurstShadowItems({
 }
 
 async function buildV3AlternateCropReviewItems({ questionGroups, questionReview, layout, qrLocation, burstFrames }) {
-  if (!v3DualCropReviewEnabled() || v3EightFrameColumnOrderEnabled() || questionGroups?.length !== 8) {
+  const numberBondShift = v3NumberBondShiftEvidenceEnabled() &&
+    (layout?.layout_id || layout?.id) === 'sg-g1-lw-08-number-bonds'
+  const layoutId = String(layout?.layout_id || layout?.id || '')
+  const nonrowTrim = v3NonrowTrimEvidenceEnabled() && /sg-g1-lw-(06|07|09|10)-/.test(layoutId)
+  if ((!v3DualCropReviewEnabled() && !numberBondShift && !nonrowTrim) ||
+      (!numberBondShift && !nonrowTrim && (v3EightFrameColumnOrderEnabled() || questionGroups?.length !== 8))) {
     return { sequenceItems: [], frames: [] }
   }
   const reviewQuestions = new Set((questionGroups || [])
@@ -6480,13 +6508,21 @@ async function buildV3AlternateCropReviewItems({ questionGroups, questionReview,
         frames.push({ frameIndex: frame.index, processed: false, reason: 'page-registration-failed' })
         continue
       }
-      zones = extractContinuousAnswerZones(worksheet.warpedImage, layout, v3AnswerZoneOptions(worksheet.rawCrops))
-      const items = wholeAnswerSequenceItemsFromZones(zones, frame.index)
+      const zoneOptions = v3AnswerZoneOptions(worksheet.rawCrops, layout)
+      if (numberBondShift) zoneOptions.offsetYFraction = 0.04
+      zones = extractContinuousAnswerZones(worksheet.warpedImage, layout, zoneOptions)
+      const items = (nonrowTrim
+        ? trimmedWholeAnswerSequenceItemsFromZones(zones, frame.index, 0.04)
+        : wholeAnswerSequenceItemsFromZones(zones, frame.index))
         .filter((item) => reviewQuestions.has(Number(item.questionNum)))
         .map((item) => ({
           ...item,
           id: `${item.id}-alternate-crop`,
-          cropVariant: 'eight-frame-column-order-alternate',
+          cropVariant: numberBondShift
+            ? 'number-bond-down-0.04'
+            : nonrowTrim
+              ? 'nonrow-trim-all-0.04'
+            : 'eight-frame-column-order-alternate',
         }))
       sequenceItems.push(...items)
       frames.push({ frameIndex: frame.index, selected: frame.selected === true, processed: true, itemCount: items.length })
@@ -7061,6 +7097,7 @@ const runRealOCR = async () => {
 
     if ((ocrDebugEnabled.value || liveOcrDebugExportEnabled.value) && typeof window !== 'undefined') {
       window.__SCANGRADE_DEBUG_MARKERS = true
+      window.__SCANGRADE_DEBUG_ANSWER_BOXES = true
       window.__SCANGRADE_DEBUG_PREPROCESS_STATS = []
     }
 
@@ -7078,6 +7115,14 @@ const runRealOCR = async () => {
 
     let worksheetResult = result
     let { warpedImage, rawCrops, processedTensors } = worksheetResult
+    partialDebug.answerBoxRegistration = typeof window !== 'undefined'
+      ? {
+          candidates: clonePlain(window.__SCANGRADE_DEBUG_ANSWER_BOX_CANDIDATES || []),
+          assignments: clonePlain(window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS || []),
+          coherence: clonePlain(window.__SCANGRADE_DEBUG_ANSWER_BOX_COHERENCE || null),
+          virtualFrames: clonePlain(window.__SCANGRADE_DEBUG_VIRTUAL_FRAMES || []),
+        }
+      : null
     const disposeWorksheetImages = (worksheet) => {
       for (const crop of worksheet?.rawCrops || []) {
         try {
@@ -7142,6 +7187,14 @@ const runRealOCR = async () => {
       anchors: layout?.homography?.anchors,
       marker_size: layout?.homography?.marker_size
     }
+    partialDebug.answerBoxRegistration = typeof window !== 'undefined'
+      ? {
+          candidates: clonePlain(window.__SCANGRADE_DEBUG_ANSWER_BOX_CANDIDATES || []),
+          assignments: clonePlain(window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS || []),
+          coherence: clonePlain(window.__SCANGRADE_DEBUG_ANSWER_BOX_COHERENCE || null),
+          virtualFrames: clonePlain(window.__SCANGRADE_DEBUG_VIRTUAL_FRAMES || []),
+        }
+      : partialDebug.answerBoxRegistration
     const saveRecognizedScanAsReview = () => {
       const hasAnswerKey = Array.isArray(layout?.answer_key) || Array.isArray(qrPayload?.answer_key)
       const hasQuestionGroups = Array.isArray(layout?.question_groups) && layout.question_groups.length > 0
@@ -7255,7 +7308,7 @@ const runRealOCR = async () => {
     if (hybridV3Enabled()) {
       let zones = []
       try {
-        zones = extractContinuousAnswerZones(warpedImage, layout, v3AnswerZoneOptions(rawCrops))
+        zones = extractContinuousAnswerZones(warpedImage, layout, v3AnswerZoneOptions(rawCrops, layout))
         partialDebug.v3AnswerZones = zones.map((zone) => ({
           schemaVersion: zone.schemaVersion,
           questionNum: zone.questionNum,
@@ -7500,7 +7553,7 @@ const runRealOCR = async () => {
     }
     const optionalSingleDigitBlankOverrides = forcedFallbackReviewReason
       ? []
-      : applyOptionalSingleDigitBlankOverrides(layout.question_groups, predictions, cropQuality)
+      : applyOptionalSingleDigitBlankOverrides(layout.question_groups, layout.boxes, predictions, cropQuality)
     partialDebug.optionalSingleDigitBlankOverrides = optionalSingleDigitBlankOverrides
     const contextAssistedLeadingOneRescues = forcedFallbackReviewReason
       ? []
@@ -7785,11 +7838,16 @@ const runRealOCR = async () => {
         digitEngineFallback: partialDebug.digitEngineFallback === true,
         digitEngineError: partialDebug.digitEngineError || null,
         activeHomography: partialDebug.activeHomography,
+        answerBoxRegistration: partialDebug.answerBoxRegistration || null,
         warpOrientation: window.__SCANGRADE_DEBUG_WARP_ORIENTATION || null,
         imageSize: partialDebug.imageSize,
         markerDebugSnapshot: markerDebugSnapshot.value || null,
         modelInfo: modelInfoSnapshot.value,
         runtime: getRuntimeDebugInfo(),
+        candidateIdentity: {
+          digitSelectionPolicy: DIGIT_SELECTION_POLICY_VERSION,
+          v3DecisionPolicy: V3_POLICY_VERSION,
+        },
         generatedAt: new Date().toISOString()
       }
       if (typeof window !== 'undefined') {
@@ -7964,7 +8022,7 @@ const runRealOCR = async () => {
             reviewQuestionNums,
             includeCompactItems: !localFirstMode,
           })
-          const alternateCrop = localFirstMode
+          const alternateCrop = localFirstMode && !v3NumberBondShiftEvidenceEnabled() && !v3NonrowTrimEvidenceEnabled()
             ? { sequenceItems: [], frames: [] }
             : await buildV3AlternateCropReviewItems({
                 questionGroups: layout.question_groups,
@@ -7992,7 +8050,7 @@ const runRealOCR = async () => {
                   onError: (error) => console.warn('[ScanGrade] Optional V3 compact model unavailable:', error)
                 })
               : Promise.resolve(immediateCompactReads),
-            v3LargeModelUrl && !localFirstMode && alternateCrop.sequenceItems.length
+            v3LargeModelUrl && alternateCrop.sequenceItems.length
               ? requestWholeAnswerReviewSuggestions(
                   layout.question_groups,
                   questionReview,
@@ -8011,6 +8069,16 @@ const runRealOCR = async () => {
             zones: partialDebug.v3AnswerZones,
             requireCompact: !!v3CompactModelUrl,
           })
+          const alternateDecisions = alternateSequenceReads.length
+            ? buildV3ShadowDecisions({
+                questionGroups: layout.question_groups,
+                predictions,
+                sequenceReads: alternateSequenceReads,
+                compactReads: [],
+                zones: partialDebug.v3AnswerZones,
+                requireCompact: false,
+              })
+            : []
           const consensusPromotionDecisions = []
           let consensusApplication = null
           if (v3ConsensusPromotionEnabled()) {
@@ -8019,6 +8087,7 @@ const runRealOCR = async () => {
               group,
             ]))
             const shadowByQuestion = new Map(decisions.map((decision) => [Number(decision.questionNum), decision]))
+            const alternateShadowByQuestion = new Map(alternateDecisions.map((decision) => [Number(decision.questionNum), decision]))
             const predictionsById = new Map(predictions.map((prediction) => [Number(prediction.id), prediction]))
             const compactByQuestion = new Map()
             for (const read of compactReads || []) {
@@ -8043,8 +8112,9 @@ const runRealOCR = async () => {
                 currentPredictions: groupPredictions,
                 confidenceSafetyVetoed: safetyVetoQuestions.has(questionNum),
                 sequenceFrameConsensus: shadowByQuestion.get(questionNum)?.sequenceFrameConsensus || null,
+                alternateSequenceFrameConsensus: alternateShadowByQuestion.get(questionNum)?.sequenceFrameConsensus || null,
                 compactReads: compactByQuestion.get(questionNum) || [],
-                slotCount: ids.length,
+                slotCount: maxHandwrittenDigitsForGroup(group),
                 ambiguity,
               })
               consensusPromotionDecisions.push({ questionNum, ...decision, ambiguity })
@@ -8149,11 +8219,15 @@ const runRealOCR = async () => {
               frameProcessing: burst.frames,
               frameCount: burst.frames.filter((frame) => frame.processed).length,
               alternateCropReview: {
-                enabled: v3DualCropReviewEnabled(),
+                enabled: v3DualCropReviewEnabled() || v3NumberBondShiftEvidenceEnabled() || v3NonrowTrimEvidenceEnabled(),
+                variant: v3NumberBondShiftEvidenceEnabled()
+                  ? 'number-bond-down-0.04'
+                  : v3NonrowTrimEvidenceEnabled() ? 'nonrow-trim-all-0.04' : 'eight-frame-column-order-alternate',
                 itemCount: alternateCrop.sequenceItems.length,
                 frames: alternateCrop.frames,
                 suggestionCount: alternateSequenceReads.length,
-                affectsGrade: false,
+                decisions: alternateDecisions,
+                affectsGrade: (v3NumberBondShiftEvidenceEnabled() || v3NonrowTrimEvidenceEnabled()) && v3ConsensusPromotionEnabled(),
               },
               largeModelAvailable: sequenceReads.length > 0,
               compactModelAvailable: compactReads.length > 0

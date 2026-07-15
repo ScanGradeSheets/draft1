@@ -1,13 +1,16 @@
 import { normalizeTranscription } from '../hybrid-recognition.js'
 import { compactReviewCandidates } from './local-first-review.js'
 
-export const CONSENSUS_PROMOTION_POLICY_VERSION = 'consensus-promotion-shadow-1'
+export const CONSENSUS_PROMOTION_POLICY_VERSION = 'consensus-promotion-shadow-2'
 export const CONSENSUS_REQUIRED_FRAMES = 3
 export const CONSENSUS_MIN_FRAME_CONFIDENCE = 0.70
 export const CONSENSUS_COMPACT_LIMIT = 2
 export const CONSENSUS_MIN_COMPACT_JOINT_PROBABILITY = 0.05
 export const CONSENSUS_MIN_SECOND_TO_FIRST_RATIO = 0.25
 export const CONSENSUS_BROWSER_MAJORITY_SHARE = 0.85
+export const CONSENSUS_BROWSER_SECONDARY_MIN_FRAME_CONFIDENCE = 0.98
+export const CONSENSUS_BROWSER_SECONDARY_LIMIT = 2
+export const CONSENSUS_BROWSER_SECONDARY_MIN_PROBABILITY = 0.05
 
 function review(reason, evidence = {}) {
   return {
@@ -21,13 +24,13 @@ function review(reason, evidence = {}) {
   }
 }
 
-function automatic(text, evidence = {}) {
+function automatic(text, evidence = {}, reason = 'independent-three-frame-and-compact-consensus') {
   return {
     policyVersion: CONSENSUS_PROMOTION_POLICY_VERSION,
     promote: true,
     automaticText: text,
     requiresTeacherReview: false,
-    reason: 'independent-three-frame-and-compact-consensus',
+    reason,
     answerKeyUsed: false,
     evidence,
   }
@@ -86,6 +89,30 @@ export function browserHasStableConflictingEvidence(currentRead, proposedRead, p
 }
 
 /**
+ * Independent fallback evidence for cases where the compact 28x28 model loses
+ * information visible in the larger grayscale crop. Every proposed character
+ * must still appear in the browser model's own top two probabilities. Short
+ * reads are right-aligned because a leading physical slot may be empty.
+ */
+export function browserSupportsProposedRead(proposedRead, predictions = []) {
+  const proposed = normalizeTranscription(proposedRead)
+  const ordered = [...(predictions || [])]
+    .filter((prediction) => Number.isInteger(Number(prediction?.digitIndex)))
+    .sort((a, b) => Number(a.digitIndex) - Number(b.digitIndex))
+  if (!proposed || proposed.length > ordered.length) return false
+  const aligned = ordered.slice(-proposed.length)
+  return [...proposed].every((character, index) => {
+    const probabilities = Array.isArray(aligned[index]?.probs) ? aligned[index].probs : []
+    const choices = probabilities
+      .map((probability, digit) => ({ digit, probability: Number(probability || 0) }))
+      .sort((a, b) => b.probability - a.probability)
+      .slice(0, CONSENSUS_BROWSER_SECONDARY_LIMIT)
+    return choices.some((choice) =>
+      choice.digit === Number(character) && choice.probability >= CONSENSUS_BROWSER_SECONDARY_MIN_PROBABILITY)
+  })
+}
+
+/**
  * Experimental, key-blind automatic-promotion gate. Truth and answer-key
  * values are intentionally absent from every decision. They may be present in
  * the caller's object, but are ignored and never copied into evidence.
@@ -96,6 +123,7 @@ export function consensusPromotionDecision({
   currentPredictions = [],
   confidenceSafetyVetoed = false,
   sequenceFrameConsensus = null,
+  alternateSequenceFrameConsensus = null,
   compactReads = [],
   slotCount = null,
   ambiguityDetected = false,
@@ -107,6 +135,10 @@ export function consensusPromotionDecision({
   if (!exactThreeFrameConsensus(sequenceFrameConsensus)) return review('insufficient-three-frame-consensus')
 
   const proposed = normalizeTranscription(sequenceFrameConsensus?.text ?? sequenceFrameConsensus?.read)
+  const alternateProposed = normalizeTranscription(
+    alternateSequenceFrameConsensus?.text ?? alternateSequenceFrameConsensus?.read
+  )
+  const spatiallyStable = exactThreeFrameConsensus(alternateSequenceFrameConsensus) && alternateProposed === proposed
   const ambiguityReasons = Array.isArray(ambiguity?.reasons) ? ambiguity.reasons : []
   const unconditionalAmbiguity = ambiguityReasons.some((item) =>
     item?.reason === 'model-families-disagree' || item?.reason === 'answer-ink-may-be-clipped')
@@ -125,16 +157,18 @@ export function consensusPromotionDecision({
 
   const compactChoices = compactReviewCandidates(compactReads, { limit: CONSENSUS_COMPACT_LIMIT })
   const compactRankIndex = compactChoices.findIndex((choice) => choice.text === proposed)
-  if (compactRankIndex < 0) {
+  const browserSecondarySupport = Number(sequenceFrameConsensus?.minConfidence || 0) >= CONSENSUS_BROWSER_SECONDARY_MIN_FRAME_CONFIDENCE &&
+    browserSupportsProposedRead(proposed, currentPredictions)
+  if (compactRankIndex < 0 && !browserSecondarySupport && !spatiallyStable) {
     return review('whole-answer-compact-model-does-not-support-consensus', {
       proposedRead: proposed,
       compactChoices: compactChoices.map((choice) => choice.text),
     })
   }
 
-  const compactChoice = compactChoices[compactRankIndex]
+  const compactChoice = compactRankIndex >= 0 ? compactChoices[compactRankIndex] : null
   const joint = Number(compactChoice?.bestJointProbability || 0)
-  if (joint < CONSENSUS_MIN_COMPACT_JOINT_PROBABILITY) {
+  if (joint < CONSENSUS_MIN_COMPACT_JOINT_PROBABILITY && !browserSecondarySupport && !spatiallyStable) {
     return review('whole-answer-compact-support-too-weak', {
       proposedRead: proposed,
       compactRank: compactRankIndex + 1,
@@ -144,7 +178,7 @@ export function consensusPromotionDecision({
 
   const topJoint = Number(compactChoices[0]?.bestJointProbability || 0)
   const relativeSupport = topJoint > 0 ? joint / topJoint : 0
-  if (compactRankIndex > 0 && relativeSupport < CONSENSUS_MIN_SECOND_TO_FIRST_RATIO) {
+  if (compactRankIndex > 0 && relativeSupport < CONSENSUS_MIN_SECOND_TO_FIRST_RATIO && !browserSecondarySupport && !spatiallyStable) {
     return review('second-choice-compact-support-too-weak', {
       proposedRead: proposed,
       compactRank: compactRankIndex + 1,
@@ -154,17 +188,33 @@ export function consensusPromotionDecision({
     })
   }
 
-  if (browserHasStableConflictingEvidence(current, proposed, currentPredictions)) {
+  const stableBrowserConflict = browserHasStableConflictingEvidence(current, proposed, currentPredictions)
+  if (stableBrowserConflict && !browserSecondarySupport) {
     return review('browser-preprocessing-stably-conflicts', { currentRead: current, proposedRead: proposed })
   }
+
+  const compactFullySupported = compactRankIndex >= 0 &&
+    joint >= CONSENSUS_MIN_COMPACT_JOINT_PROBABILITY &&
+    (compactRankIndex === 0 || relativeSupport >= CONSENSUS_MIN_SECOND_TO_FIRST_RATIO)
+  const usedSpatialStability = spatiallyStable && !compactFullySupported
+  const usedBrowserSecondary = !usedSpatialStability && browserSecondarySupport && (!compactFullySupported || stableBrowserConflict)
 
   return automatic(proposed, {
     proposedRead: proposed,
     slotCount: Number(slotCount),
     agreeingFrames: CONSENSUS_REQUIRED_FRAMES,
     minFrameConfidence: Number(sequenceFrameConsensus.minConfidence),
-    compactRank: compactRankIndex + 1,
+    compactRank: compactRankIndex >= 0 ? compactRankIndex + 1 : null,
     compactJointProbability: joint,
     compactRelativeSupport: relativeSupport,
-  })
+    alternateAgreeingFrames: spatiallyStable ? CONSENSUS_REQUIRED_FRAMES : null,
+    alternateMinFrameConfidence: spatiallyStable ? Number(alternateSequenceFrameConsensus.minConfidence) : null,
+    supportSource: usedSpatialStability
+      ? 'six-read-two-crop-grayscale-stability'
+      : usedBrowserSecondary ? 'three-frame-grayscale-plus-browser-top-two' : 'three-frame-grayscale-plus-compact',
+  }, usedSpatialStability
+    ? 'two-crop-six-read-grayscale-consensus'
+    : usedBrowserSecondary
+      ? 'independent-three-frame-and-browser-secondary-consensus'
+      : 'independent-three-frame-and-compact-consensus')
 }

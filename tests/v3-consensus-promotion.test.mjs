@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   browserHasStableConflictingEvidence,
+  browserSupportsProposedRead,
   consensusPromotionDecision,
 } from '../src/v3/consensus-promotion.js'
 
@@ -24,6 +25,10 @@ function prediction(index, digit, share = 0.90) {
     digit,
     preprocessVoteSummary: { top: { digit, share } },
   }
+}
+
+function probabilityPrediction(index, probabilities) {
+  return { digitIndex: index, probs: probabilities }
 }
 
 test('promotes exact three-frame grayscale consensus supported by compact top choice', () => {
@@ -122,6 +127,75 @@ test('stable browser preprocessing disagreement keeps the answer yellow', () => 
   })
   assert.equal(result.promote, false)
   assert.equal(result.reason, 'browser-preprocessing-stably-conflicts')
+})
+
+test('high-confidence grayscale consensus may use browser top-two evidence when compact loses detail', () => {
+  const predictions = [
+    probabilityPrediction(0, [0.01, 0.70, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.23]),
+    probabilityPrediction(1, [0.01, 0.01, 0.01, 0.01, 0.01, 0.90, 0.01, 0.01, 0.01, 0.03]),
+  ]
+  assert.equal(browserSupportsProposedRead('15', predictions), true)
+  const result = consensusPromotionDecision({
+    currentRead: '19',
+    currentPredictions: predictions,
+    sequenceFrameConsensus: consensus('15', { minConfidence: 0.995 }),
+    compactReads: compact({ read: '19', jointProbability: 0.8, minComponentProbability: 0.8 }),
+    slotCount: 2,
+  })
+  assert.equal(result.promote, true)
+  assert.equal(result.automaticText, '15')
+  assert.equal(result.reason, 'independent-three-frame-and-browser-secondary-consensus')
+  assert.equal(result.evidence.supportSource, 'three-frame-grayscale-plus-browser-top-two')
+})
+
+test('two independently positioned crops may replace weak compact support only with six matching reads', () => {
+  const result = consensusPromotionDecision({
+    currentRead: '1',
+    sequenceFrameConsensus: consensus('9', { minConfidence: 0.78 }),
+    alternateSequenceFrameConsensus: consensus('9', { minConfidence: 0.96 }),
+    compactReads: compact({ read: '6', jointProbability: 0.8, minComponentProbability: 0.8 }),
+    slotCount: 2,
+  })
+  assert.equal(result.promote, true)
+  assert.equal(result.reason, 'two-crop-six-read-grayscale-consensus')
+  assert.equal(result.evidence.supportSource, 'six-read-two-crop-grayscale-stability')
+})
+
+test('alternate-crop disagreement or weak frame evidence cannot replace compact support', () => {
+  for (const alternateSequenceFrameConsensus of [
+    consensus('8', { minConfidence: 0.96 }),
+    consensus('9', { count: 2, minConfidence: 0.96 }),
+    consensus('9', { minConfidence: 0.69 }),
+  ]) {
+    const result = consensusPromotionDecision({
+      currentRead: '1',
+      sequenceFrameConsensus: consensus('9', { minConfidence: 0.78 }),
+      alternateSequenceFrameConsensus,
+      compactReads: compact({ read: '6', jointProbability: 0.8, minComponentProbability: 0.8 }),
+      slotCount: 2,
+    })
+    assert.equal(result.promote, false)
+  }
+})
+
+test('browser secondary evidence cannot rescue weak grayscale confidence or a third-choice digit', () => {
+  const predictions = [
+    probabilityPrediction(0, [0.01, 0.70, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.23]),
+    probabilityPrediction(1, [0.40, 0.01, 0.01, 0.01, 0.01, 0.04, 0.01, 0.01, 0.01, 0.50]),
+  ]
+  assert.equal(browserSupportsProposedRead('15', predictions), false)
+  for (const sequenceFrameConsensus of [
+    consensus('15', { minConfidence: 0.97 }),
+    consensus('15', { minConfidence: 0.995 }),
+  ]) {
+    const result = consensusPromotionDecision({
+      currentPredictions: predictions,
+      sequenceFrameConsensus,
+      compactReads: compact({ read: '19', jointProbability: 0.8, minComponentProbability: 0.8 }),
+      slotCount: 2,
+    })
+    assert.equal(result.promote, false)
+  }
 })
 
 test('ambiguity and confidence-safety vetoes dominate model agreement', () => {

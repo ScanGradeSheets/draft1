@@ -1421,6 +1421,97 @@ function medianNumber(values) {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+function solveThreeByThree(matrix, values) {
+  const rows = matrix.map((row, index) => [...row, values[index]]);
+  for (let column = 0; column < 3; column++) {
+    let pivot = column;
+    for (let row = column + 1; row < 3; row++) {
+      if (Math.abs(rows[row][column]) > Math.abs(rows[pivot][column])) pivot = row;
+    }
+    if (Math.abs(rows[pivot][column]) < 1e-8) return null;
+    [rows[column], rows[pivot]] = [rows[pivot], rows[column]];
+    const divisor = rows[column][column];
+    for (let item = column; item < 4; item++) rows[column][item] /= divisor;
+    for (let row = 0; row < 3; row++) {
+      if (row === column) continue;
+      const factor = rows[row][column];
+      for (let item = column; item < 4; item++) rows[row][item] -= factor * rows[column][item];
+    }
+  }
+  return rows.map((row) => row[3]);
+}
+
+/**
+ * Key-blind proof that a complete set of detected answer frames forms one
+ * coherent page registration. This permits curved-page corrections larger
+ * than the old per-box distance gate without trusting an isolated contour.
+ */
+export function coherentAnswerBoxAssignmentStats(expectedRects, assignments, options = {}) {
+  const expected = Array.isArray(expectedRects) ? expectedRects : [];
+  const assigned = assignments instanceof Map ? assignments : new Map(assignments || []);
+  if (expected.length < 4 || assigned.size !== expected.length) {
+    return { coherent: false, reason: 'incomplete-assignment', assigned: assigned.size, expected: expected.length };
+  }
+  const source = [];
+  const target = [];
+  for (const rect of expected) {
+    const observed = assigned.get(rect.id);
+    if (!observed) return { coherent: false, reason: 'missing-id', id: rect.id };
+    const from = rectCenter(rect);
+    const to = rectCenter(observed);
+    source.push([1, from.x, from.y]);
+    target.push(to);
+  }
+  const normal = Array.from({ length: 3 }, () => Array(3).fill(0));
+  const rhsX = Array(3).fill(0);
+  const rhsY = Array(3).fill(0);
+  for (let index = 0; index < source.length; index++) {
+    for (let row = 0; row < 3; row++) {
+      rhsX[row] += source[index][row] * target[index].x;
+      rhsY[row] += source[index][row] * target[index].y;
+      for (let column = 0; column < 3; column++) normal[row][column] += source[index][row] * source[index][column];
+    }
+  }
+  const x = solveThreeByThree(normal, rhsX);
+  const y = solveThreeByThree(normal, rhsY);
+  if (!x || !y) return { coherent: false, reason: 'singular-fit' };
+  const determinant = x[1] * y[2] - x[2] * y[1];
+  const residuals = source.map((basis, index) => {
+    const px = basis.reduce((sum, value, item) => sum + value * x[item], 0);
+    const py = basis.reduce((sum, value, item) => sum + value * y[item], 0);
+    return Math.hypot(px - target[index].x, py - target[index].y);
+  });
+  const reference = Math.max(1, Number(options.referenceSize) || medianNumber(expected.map((rect) => Math.max(rect.w, rect.h))));
+  const maxResidual = Math.max(...residuals);
+  const medianResidual = medianNumber(residuals);
+  const coherent = determinant > 0.45 && determinant < 1.75 && maxResidual <= reference * 0.26 && medianResidual <= reference * 0.16;
+  return {
+    coherent,
+    reason: coherent ? 'coherent-affine-complete-assignment' : 'affine-residual-or-scale-failed',
+    assigned: assigned.size,
+    expected: expected.length,
+    determinant,
+    maxResidual,
+    medianResidual,
+    reference,
+  };
+}
+
+function trustCoherentAnswerBoxAssignments(assignments, expectedRects, expW, expH) {
+  const stats = coherentAnswerBoxAssignmentStats(expectedRects, assignments, {
+    referenceSize: Math.max(expW, expH),
+  });
+  if (!stats.coherent) return { assignments, stats };
+  return {
+    stats,
+    assignments: new Map([...assignments.entries()].map(([id, rect]) => [id, {
+      ...rect,
+      trustedPhysicalAnswerFrame: true,
+      answerFrameAssignmentMethod: 'coherent-affine-nearest-fallback',
+    }])),
+  };
+}
+
 function chooseBestOrderedSubset(candidates, expectedRow, expW, expH) {
   if (candidates.length < expectedRow.length) return null;
   const sortedCandidates = candidates.slice().sort((a, b) => a.cx - b.cx);
@@ -1878,14 +1969,17 @@ function detectAnswerBoxRects(warped, expectedRects, options = {}) {
       usedExpected.add(pair.expected.id);
       usedCandidates.add(pair.candidate);
     }
+    const coherentResult = trustCoherentAnswerBoxAssignments(assignments, expectedRects, expW, expH);
+    const finalAssignments = coherentResult.assignments;
     if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
-      window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(assignments.entries()).map(([id, rect]) => ({
+      window.__SCANGRADE_DEBUG_ANSWER_BOX_COHERENCE = coherentResult.stats;
+      window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(finalAssignments.entries()).map(([id, rect]) => ({
         id,
         method: rect.answerFrameAssignmentMethod || 'nearest-fallback',
         rect
       }));
     }
-    return assignments;
+    return finalAssignments;
   } finally {
     gray.delete();
     blur.delete();
@@ -2041,12 +2135,12 @@ export function cropBoxes(warped, layout, options = {}) {
       ? ((detectedRect?.trustedPhysicalDigitBox === true || virtualDigitRectLooksLocal(detectedRect, expectedRect))
         ? detectedRect
         : expectedRect)
-      : (answerRectLooksLocal(detectedRect, expectedRect)
+      : ((detectedRect?.trustedPhysicalAnswerFrame === true || answerRectLooksLocal(detectedRect, expectedRect))
         ? detectedRect
         : refineBoxRectFromOutline(warped, expectedRect));
     const refinedRect = usesVirtualDigitBoxes
       ? refinedCandidate
-      : (answerRectLooksLocal(refinedCandidate, expectedRect)
+      : ((refinedCandidate?.trustedPhysicalAnswerFrame === true || answerRectLooksLocal(refinedCandidate, expectedRect))
         ? refinedCandidate
         : expectedRect);
     const ocrRect = refinedRect;

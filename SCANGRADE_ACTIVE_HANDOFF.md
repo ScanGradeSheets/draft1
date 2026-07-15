@@ -1,5 +1,14 @@
 # ScanGrade Active Handoff
 
+## 2026-07-14 remaining-yellow audit and browser-secondary candidate
+
+- Visually audited all 53 scorable yellows remaining after the frozen 222/275 consensus candidate. Classification: 25 readable/compact-28×28 bottlenecks, 11 readable/frame instability, six crop/registration failures, five layout/slot-contract failures, three genuinely ambiguous answers, two browser preprocessing conflicts, and one confidence-safety veto.
+- Added and tested experimental `consensus-promotion-shadow-2`: exact 3/3 large-grayscale agreement with minimum confidence 0.98 may use per-digit browser top-two support (minimum probability 0.05) when compact evidence is inadequate. Ambiguity, safety, and slot gates remain dominant; no answer key is used.
+- Fixed-evidence score: 228/275 automatic (82.9%), 228 correct, zero observed wrong; +6 over frozen candidate. Row 142/160 (88.8%); non-row 86/115 (74.8%).
+- Fresh 40-page browser replay: 226/275 (82.2%), 226 correct, zero observed wrong; all pages, annotations, and marked sheets passed. Six old yellows were rescued, while two previous automatics moved safely to review because current selection behavior differed despite identical retained 28×28 inputs/probabilities. Investigate reproducibility before release.
+- Historical one-frame falsification stress: 457/578 surrogate automatic, zero observed wrong; the new lane contributed nine correct/no wrong surrogate promotions. Historical data cannot validate three-frame stability.
+- Focused 22/22 tests and production build pass. Nothing deployed or pushed. Full report: `docs/SCANGRADE_YELLOW_RESIDUAL_AUDIT_20260714.md`.
+
 Last updated: 2026-07-13
 Current thread: SG 3
 Previous thread: SG 2 (`019e760b-4e8f-7751-be8b-40baddcb8e58`)
@@ -4434,3 +4443,31 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - GitHub Pages Run 99 (`29381415169`) completed successfully for `5ff62c2`.
 - Live public verification: `https://scangradesheets.github.io/draft1/` serves `assets/index-9msytI_D.js`, `assets/index-BU8aNFjE.css`, and build label `2026.07.14-consensus-private-beta-1`.
 - Live private verification: `https://hobbes-mac-mini.tail9a3379.ts.net/` serves the same build; both model health endpoints return OK.
+
+## 2026-07-14 evidence-pipeline repair checkpoint
+
+- Full report: `docs/SCANGRADE_EVIDENCE_PIPELINE_REPAIR_20260714.md`.
+- Coherent page-level answer-frame registration repaired four of the six originally classified crop failures directly; the other two remain safely yellow (one unstable across frames, one reclassified as recognition/print interference because the crop already contains the answer).
+- Physical box geometry is now separate from maximum handwritten length. Number-bond groups can preserve a two-digit transcription such as written `19` inside one printed box, then grade it mathematically wrong without answer-key guessing.
+- Optional two-slot handling is now key-blind and allows a single written digit in either physical slot. Removing the former answer-key preference deliberately moved two borderline dot-collection answers back to review.
+- The identical-input issue was a candidate-identity/freeze-manifest defect, not random inference. Two independent browser replays now match exactly on crop hashes, probabilities, preprocessing evidence, and selected digits.
+- Clean final replay: 40/40 pages, 280/280 groups, 275 scorable; 234 automatic (85.1%), 234 correct, zero observed wrong. Row 144/160 (90.0%); non-row 90/115 (78.3%); one digit 86/100; two digits 148/175. Forty-one answers remain yellow.
+- Historical one-frame falsification stress: 457/578 surrogate automatic, zero observed errors; still not proof of three-frame generalization.
+- 58 focused tests, layout audit (zero errors), production build, exact determinism comparison, and 55-file candidate-manifest verification pass.
+- Candidate freeze: `private-evidence/protocols/evidence-pipeline-candidate-freeze-20260714.json`.
+- Nothing from this checkpoint was deployed, committed, or pushed. Do not enable or release it without Tony's explicit approval.
+
+## 2026-07-15 non-row / number-bond candidate checkpoint
+
+- Candidate 2 remains the immutable matched control: 234/275 automatic (85.1%), 0 observed errors; row 90.0%, non-row 78.3%, number bonds 50.0%.
+- Separate physical-slot recognition was rejected (49/115 non-row; only 1/11 number-bond yellows recovered).
+- Raw alternate crops contained substantial signal but were unsafe alone: the best broad trim produced four confident errors, and the best number-bond crop produced a duplicated `17→1717`.
+- Candidate 3 uses alternate pixels only as a conservative corroboration lane. The primary and layout-specific alternate crop must produce the same exact answer on all three frames (six reads total, minimum confidence 0.70), while all existing length, ambiguity, browser-conflict, and confidence-safety vetoes remain in force.
+- Number bonds use a crop shifted down 4% of slot height; other non-row layouts use a 4% interior trim. Rows are unchanged.
+- Exact 40-page result: 237/275 automatic (86.2%), 237/237 correct; rows 144/160 (90.0%); non-row 93/115 (80.9%); number bonds 13/22 (59.1%). All annotations and marked sheets were consistent.
+- Second exact non-row replay: 20/20 pages identical on inputs, probabilities, alternate evidence, decisions, and final application; 93/115 automatic, 0 wrong.
+- Remaining non-row yellows: 22 total — 11 cross-frame instability, 7 compact-model disagreement, 3 confidence-safety vetoes, 1 stable browser conflict. Nine are number bonds.
+- Complete JavaScript tests 105/105 and production build pass. Candidate manifest verifies 59/59 files.
+- Report: `docs/SCANGRADE_NONROW_DUAL_CROP_RESULT_20260715.md`.
+- Freeze: `private-evidence/protocols/nonrow-dual-crop-candidate-freeze-20260715.json`.
+- Flags remain off by default. Nothing was deployed, committed, or pushed. Candidate 3 should replace candidate 2 only for the next private test after Tony's approval.
