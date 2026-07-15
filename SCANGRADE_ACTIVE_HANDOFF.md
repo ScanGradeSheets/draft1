@@ -4471,3 +4471,16 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - Report: `docs/SCANGRADE_NONROW_DUAL_CROP_RESULT_20260715.md`.
 - Freeze: `private-evidence/protocols/nonrow-dual-crop-candidate-freeze-20260715.json`.
 - Flags remain off by default. Nothing was deployed, committed, or pushed. Candidate 3 should replace candidate 2 only for the next private test after Tony's approval.
+
+## 2026-07-15 candidate 3 private deployment
+
+- Tony explicitly authorized replacing private candidate 2 with candidate 3 and locking it in through commit, push, and private publication.
+- Candidate 3 is now the default on `https://hobbes-mac-mini.tail9a3379.ts.net/` only.
+- Build label: `2026.07.15-nonrow-dual-crop-private-beta-3`.
+- Private `.ts.net` runtime enables `v3NumberBondShiftDown` and `v3NonrowTrimEvidence`; public/non-tailnet hosts leave them off by default.
+- Immediate rollback remains `?consensusCandidate=0`, which disables the entire private candidate including both new crop lanes.
+- Release validation: 105/105 JavaScript tests, standard build, pruned public build, `git diff --check`, and 63/63 manifest verification pass.
+- Live private verification: root loaded with the new build label; strong and compact health routes returned OK; served source contains both candidate 3 feature gates.
+- Public GitHub Pages was intentionally not replaced and still serves build `2026.07.14-consensus-private-beta-1` from `gh-pages-v2` commit `5ff62c2`.
+- Candidate source commit `6883acf` was pushed to `origin/autobuild/safe-20260223`. Private evidence, student images, model experiments, Mission Control state, and unrelated dirty files were excluded.
+- Deployment report: `docs/SCANGRADE_NONROW_PRIVATE_BETA3_DEPLOYMENT_20260715.md`.
