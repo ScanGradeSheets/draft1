@@ -4485,3 +4485,15 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - Candidate source commit `6883acf` was pushed to `origin/autobuild/safe-20260223`. Private evidence, student images, model experiments, Mission Control state, and unrelated dirty files were excluded.
 - Deployment record commit `d3cdcd3` was also pushed; it directly follows the candidate source commit.
 - Deployment report: `docs/SCANGRADE_NONROW_PRIVATE_BETA3_DEPLOYMENT_20260715.md`.
+
+## 2026-07-15 Candidate 3 rugged-drive disaster-recovery backup
+
+- Tony requested a backup sufficient to recover Candidate 3 if the Mac mini were lost.
+- A new dated full snapshot was created at `/Volumes/Tony's Rugged HD/Codex Rescue Backups/scan-grade-project-snapshots/scan-grade-candidate3-20260715/project/` without overwriting the older May snapshot or July 14 archival offloads.
+- The snapshot contains the complete working tree and `.git`, 23 GB of private evidence, current models, datasets, benchmarks, layouts, tests, handoffs, reports, and deployment instructions. Only reinstallable dependency caches, Finder metadata, and Git's nonportable live fsmonitor socket were excluded.
+- Inventory: 82,812 regular files, 5 symlinks, and 33,973,839,429 logical bytes; approximately 346 GiB remained free on the rugged drive.
+- Candidate freeze verification run from inside the backup passed 63/63 required SHA-256 identities.
+- `git fsck --full` run inside the backup returned exit status 0 with no missing/corrupt objects.
+- A complete checksum-mode rsync comparison reread all included source and destination files, returned exit status 0, and reported zero differences.
+- Full restore and verification instructions: `docs/SCANGRADE_CANDIDATE3_RUGGED_BACKUP_20260715.md`.
+- This protects against loss of the Mac, but not simultaneous loss of both the Mac and rugged drive. An encrypted off-site backup remains the next redundancy layer.
