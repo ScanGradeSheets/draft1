@@ -4429,3 +4429,8 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - Live P09 number-pattern smoke after model warm-up: both readers available, consensus enabled, three promotions, overwritten `34` stayed yellow, written wrong-math `40` stayed `40` and became red, marked sheet regenerated.
 - First strong request after model cold compilation exceeded the client window and safely produced no promotions; a warmed 15-answer Tailscale batch completed in about 1.65 seconds. Availability remains fail-open.
 - Deployment report: `docs/SCANGRADE_CONSENSUS_PRIVATE_BETA_DEPLOYMENT_20260714.md`.
+- Source release committed and pushed on `autobuild/safe-20260223`: `2ca7629` (`Promote conservative consensus private beta`).
+- Browser build committed as `5d2f8de`; the configured `gh-pages-v2` deployment was triggered by `5ff62c2`.
+- GitHub Pages Run 99 (`29381415169`) completed successfully for `5ff62c2`.
+- Live public verification: `https://scangradesheets.github.io/draft1/` serves `assets/index-9msytI_D.js`, `assets/index-BU8aNFjE.css`, and build label `2026.07.14-consensus-private-beta-1`.
+- Live private verification: `https://hobbes-mac-mini.tail9a3379.ts.net/` serves the same build; both model health endpoints return OK.
