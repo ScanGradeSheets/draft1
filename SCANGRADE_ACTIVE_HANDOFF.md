@@ -4650,3 +4650,13 @@ Final verification passed 114/114 JavaScript tests, production build, `git diff 
 - Private Tailnet default: enabled. Public GitHub Pages: unchanged/local-only. Feature rollback: `?v3StitchedOnDemandReview=0`; whole-candidate rollback: `?consensusCandidate=0`.
 - Release report: `docs/SCANGRADE_STITCHED_REVIEW_PRIVATE_BETA6_20260716.md`.
 - P05 is still sealed. Candidate 5's old freeze remains historical evidence; create a new Candidate 6 freeze after the final release commit before scanning P05, because the live private build identifier and source hashes will change even though automatic outputs are replay-identical.
+
+### Candidate 6 deployment and recovery record
+
+- Source commit `b7a5df488836ec3b3e1010bec3979bf714f1d76e` was pushed to `origin/autobuild/safe-20260223`.
+- The private Tailnet URL returned HTTP 200 and served build `2026.07.16-stitched-review-private-beta-6`; `/review-model/health` reported the MPS TrOCR adapter healthy and offline, and `/v3-compact/health` reported the compact ONNX service healthy.
+- The public GitHub Pages behavior was not changed or deployed; it remains local-only by default.
+- P05 remains sealed and is now frozen against Candidate 6 at `private-evidence/protocols/p05-prospective-candidate6-freeze-20260716.json`; all 16 recorded file identities verified. Use the URL with no query string and no research flags.
+- Candidate 6 was backed up at `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-07-16-stitched-review-private-beta6/`. The 577 MB backup contains a verified complete Git bundle, the three exact replay directories, score/parity reports, P05 freeze, private model identities, and recovery scripts.
+- After recursive byte comparison and Git-bundle verification, the three bulky replay directories (about 540 MB total) were removed locally. Their score/parity reports remain local; full replays restore from the Rugged backup.
+- Deployment record: `docs/SCANGRADE_STITCHED_REVIEW_PRIVATE_BETA6_DEPLOYMENT_20260716.md`.
