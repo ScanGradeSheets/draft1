@@ -2312,6 +2312,10 @@ function v3SequenceFromZonesEnabled() {
   return consensusFeatureEnabled('v3SequenceFromZones')
 }
 
+function v3StitchedOnDemandReviewEnabled() {
+  return consensusFeatureEnabled('v3StitchedOnDemandReview')
+}
+
 function v3EightFrameColumnOrderEnabled() {
   return consensusFeatureEnabled('v3EightFrameColumnOrder')
 }
@@ -6311,6 +6315,7 @@ function wholeAnswerReviewItemsForFrame(questionGroups, questionReview, rawCrops
       id: `question-${group?.question_num ?? index + 1}${frameIndex == null ? '' : `-frame-${frameIndex}`}`,
       questionNum: group?.question_num ?? index + 1,
       frameIndex,
+      cropVariant: 'stitched-original-grayscale',
       imageDataUrl: wholeAnswerCropDataUrl(group, rawCrops)
     }))
     .filter((item) => !!item.imageDataUrl)
@@ -7964,6 +7969,16 @@ const runRealOCR = async () => {
     const v3CompactModelUrl = optionalV3CompactModelUrl()
     if (hybridV3Enabled() && (v3LargeModelUrl || v3CompactModelUrl) && v3SequenceItems.length) {
       const localFirstMode = v3LocalFirstReviewEnabled()
+      // This evidence is prepared locally but is sent only after a teacher
+      // opens an unresolved yellow answer and asks for another reader. It is
+      // never used by the automatic consensus/promotion path.
+      const selectedStitchedReviewItems = localFirstMode && v3StitchedOnDemandReviewEnabled()
+        ? wholeAnswerReviewItemsForFrame(
+            layout.question_groups,
+            layout.question_groups.map(() => true),
+            rawCrops
+          ).map((item) => ({ ...item, reviewOnly: true }))
+        : []
       payload.v3Shadow = { status: 'pending', policyVersion: V3_POLICY_VERSION, affectsGrade: false }
       const selectedCompactItems = partialDebug.v3AnswerZones.map((zone) => ({
         id: `question-${zone.questionNum}`,
@@ -8365,10 +8380,20 @@ const runRealOCR = async () => {
             const deferred = {}
             for (const questionNum of reviewQuestionNums) deferred[questionNum] = 'deferred'
             localFirstStrongStatusByQuestion.value = deferred
+            const finalReviewQuestionNums = displayedYellowQuestionNumbers(
+              layout.question_groups,
+              payload.questionReview,
+              payload.answerGroups,
+            )
             localFirstStrongContext.value = {
               questionGroups: layout.question_groups,
               predictions,
-              sequenceItems: burst.sequenceItems,
+              sequenceItems: selectedStitchedReviewItems.length
+                ? filterItemsToYellowQuestions(selectedStitchedReviewItems, finalReviewQuestionNums)
+                : burst.sequenceItems,
+              strongEvidenceMode: selectedStitchedReviewItems.length
+                ? 'selected-frame-stitched-review-only'
+                : 'three-frame-continuous-review-only',
               contextCompactItems: filterItemsToYellowQuestions(selectedContextCompactItems, reviewQuestionNums),
               contextAttemptedByQuestion: {},
               payload,

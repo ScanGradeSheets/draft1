@@ -1,4 +1,4 @@
-export const CONSENSUS_PRODUCTION_RELEASE = 'shared-frame-private-beta-5'
+export const CONSENSUS_PRODUCTION_RELEASE = 'stitched-review-private-beta-6'
 
 const FALSE_VALUES = new Set(['0', 'false', 'off', 'no'])
 const TRUE_VALUES = new Set(['1', 'true', 'on', 'yes'])

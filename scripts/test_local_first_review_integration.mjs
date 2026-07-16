@@ -81,7 +81,11 @@ try {
       if (url.includes('127.0.0.1:8872')) {
         let body = null
         try { body = JSON.parse(String(init?.body || '{}')) } catch {}
-        window.__SG_REVIEW_REQUESTS.push({ url, questionNums: (body?.items || []).map((item) => item.questionNum) })
+        window.__SG_REVIEW_REQUESTS.push({
+          url,
+          questionNums: (body?.items || []).map((item) => item.questionNum),
+          cropVariants: (body?.items || []).map((item) => item.cropVariant || null),
+        })
       }
       return originalFetch(input, init)
     }
@@ -91,6 +95,7 @@ try {
   Object.entries({
     mode: 'teacher', ocrdebug: '1', ignoreQrHomography: '1', hybridV3: '1', v3BurstReplay: '1',
     v3PristineWarp: '1', v3SequenceFromZones: '1', v3LocalFirstReview: '1',
+    v3StitchedOnDemandReview: '1', v3ContextCropReview: '0',
     reviewModelUrl: 'http://127.0.0.1:8872', v3CompactModelUrl: 'http://127.0.0.1:8873',
     modelPath: '/models/worksheet-digit-tony-generalist-aug-strong-20260601.onnx',
     rightSlotModelPath: '/models/worksheet-digit-tony-generalist-noaug-20260601.onnx',
@@ -150,6 +155,7 @@ try {
     strongRequestsAfterNoneOfThese: 1,
     strongRequestItemCount: request.questionNums.length,
     strongRequestQuestionNums: uniqueQuestions,
+    strongRequestCropVariants: request.cropVariants,
     latencyMs: {
       localResultReady: Number(localResultReadyMs.toFixed(1)),
       compactChoicesReady: Number(compactChoicesReadyMs.toFixed(1)),
@@ -166,6 +172,7 @@ try {
     compactWasImmediate: report.compactChoiceCount > 0,
     strongWasDeferred: report.strongInferenceDeferred && requestsBeforeTeacherAction === 0,
     oneQuestionOnly: uniqueQuestions.length === 1,
+    oneStitchedCropOnly: request.questionNums.length === 1 && request.cropVariants?.[0] === 'stitched-original-grayscale',
     existingChoicesPreserved: report.existingChoicesPreserved,
     tokenNotLeaked: !report.tokenAppearedInUrl && !report.tokenAppearedInLogs,
   }

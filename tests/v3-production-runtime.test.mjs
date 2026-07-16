@@ -17,6 +17,7 @@ test('promotes the frozen candidate only on the private tailnet deployment by de
   assert.equal(consensusFeatureEnabled('v3ConsensusPromotion', privateLocation), true)
   assert.equal(consensusFeatureEnabled('v3NumberBondShiftDown', privateLocation), true)
   assert.equal(consensusFeatureEnabled('v3NonrowTrimEvidence', privateLocation), true)
+  assert.equal(consensusFeatureEnabled('v3StitchedOnDemandReview', privateLocation), true)
   assert.equal(promotedConsensusRuntimeEnabled({
     hostname: 'scangradesheets.github.io',
     href: 'https://scangradesheets.github.io/draft1/',
@@ -39,6 +40,7 @@ test('uses same-origin private model routes and permits an immediate rollback ov
   assert.equal(consensusFeatureEnabled('v3ConsensusPromotion', rollback), false)
   assert.equal(consensusFeatureEnabled('v3NumberBondShiftDown', rollback), false)
   assert.equal(consensusFeatureEnabled('v3NonrowTrimEvidence', rollback), false)
+  assert.equal(consensusFeatureEnabled('v3StitchedOnDemandReview', rollback), false)
   assert.equal(consensusModelEndpoint('reviewModelUrl', '/review-model', rollback), '')
 })
 

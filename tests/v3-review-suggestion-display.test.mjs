@@ -18,6 +18,20 @@ test('keeps the existing very-high-confidence single-frame review suggestion', (
   }), true)
 })
 
+test('requires 99 percent before showing a selected-frame stitched suggestion', () => {
+  const base = { text: '51', cropVariant: 'stitched-original-grayscale' }
+  assert.equal(reviewSuggestionDisplayEligible({
+    suggestion: { ...base, minTokenProbability: 0.989 },
+    frameConsensus: null,
+    currentText: '31',
+  }), false)
+  assert.equal(reviewSuggestionDisplayEligible({
+    suggestion: { ...base, minTokenProbability: 0.99 },
+    frameConsensus: null,
+    currentText: '31',
+  }), true)
+})
+
 test('shows a lower-confidence suggestion only when at least two frames agree strongly enough', () => {
   assert.equal(reviewSuggestionDisplayEligible({
     suggestion: { text: '9', minTokenProbability: 0.88 },

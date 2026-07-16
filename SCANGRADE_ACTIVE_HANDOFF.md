@@ -4535,3 +4535,118 @@ Full result: `docs/SCANGRADE_CONSENSUS_RELIABILITY_RESULT_20260714.md`.
 - Private build label: `2026.07.15-shared-frame-private-beta-5`. Public GitHub Pages remains unchanged. Rollback remains `?consensusCandidate=0`.
 - Source commit `30372dd` (`Reduce private grading latency with shared frame processing`) was pushed to `origin/autobuild/safe-20260223`. Live private build identity, both new runtime defaults, both model routes, and the remote source SHA were verified. Candidate freeze verified 75/75 files.
 - Deployment report: `docs/SCANGRADE_SHARED_FRAME_PRIVATE_BETA5_DEPLOYMENT_20260715.md`.
+
+## 2026-07-16 five-workstream speed, accuracy, and independence goal checkpoint
+
+Date / thread: 2026-07-16, active ScanGrade five-workstream persistent goal.
+
+What changed:
+- Added opt-in research harnesses for selected-frame geometry reuse, worker-based frame decoding, and shadow-only three-frame median/aligned fusion. Candidate 5 production behavior and frozen recognition policy remain unchanged.
+- Added packet-separated compact-model fine-tuning, final packet-adapted shadow training, and PyTorch/ONNX parity scripts.
+- Deterministically locked physical packet P05 as the next prospective one-shot holdout. P05 remains intact, unscanned, and unseen.
+- Offloaded four bulky reproducible replay directories to Tony's Rugged HD after recursive verification.
+
+Evidence used:
+- Candidate 5 control replay: 250/275 automatic, 250/250 observed correct, 25 yellow; rows 150/160, non-rows 100/115.
+- Four opened recent packets P08/P03/P09/P02 with independently verified handwriting truth; historical development/validation/known holdout manifests.
+- Eighteen recorded frame-instability answers and their saved grayscale answer crops.
+- Current WebKit mobile emulation and P08 saved retained frames. No new physical packet was opened.
+
+Commands run:
+- P08 direct-geometry and worker replay through `scripts/replay_v3_crop_candidate_packets.mjs`, exact parity scoring, and WebKit worker compatibility smoke.
+- Four-packet shadow median fusion plus 24-page aligned-fusion replay; `scripts/analyze_v3_frame_fusion.mjs` scored all 18 instabilities.
+- `.venv/bin/python scripts/evaluate_v3_packet_crossfit.py ... --device mps`.
+- `.venv/bin/python scripts/train_v3_sequence_packet_adapted.py ... --device mps`.
+- `.venv/bin/python scripts/verify_v3_sequence_onnx.py ...`.
+- Final JavaScript regression suite passed 114/114; production build, `git diff --check`, and the 11/11 P05 freeze verification also passed.
+- Added and tested a P05-specific create-only scorer, key-blind shadow manifest builder, and create-only ONNX predictor. The exact Candidate 5 plus shadow boundary is frozen at `private-evidence/protocols/p05-prospective-candidate-freeze-20260716.json`; 11/11 file identities verify.
+
+Results:
+- Direct geometry reuse rejected: P08 59/70 automatic versus 64/70 control, zero observed wrong but failed evidence/output parity.
+- Worker decode produced exact 10-page parity but was about 72 ms slower to crop readiness and 85 ms slower overall. Current WebKit used the worker path; real old-iPad sustained memory remains untested.
+- Repeated WebKit stress proxy completed 8/8 difficult-page runs in both modes. Baseline averaged 3.952 s local / 10.084 s complete; worker averaged 3.963 s / 10.173 s. RSS was noisy and non-monotonic, with the worker reaching the higher transient peak (about 480 MiB versus 436 MiB). This is no speed or memory win; keep the worker off. Physical old-iPad testing is still required.
+- Residual CNN rejected. Packet-separated authentic fine-tuning improved compact top-1 from 173/275 (62.9%) to 192/275 (69.8%), but varied 60.3%-77.1% by held-out packet and remains unsafe as an automatic reader.
+- Final 6.4 MB packet-adapted ONNX is prospective shadow only. It matched PyTorch on 275/275 decisions; SHA-256 `12e31d44638f8ccc463a34c8da3879a348263f140cdd570548a1838ad73ca89d`.
+- A later packet-separated explicit blank-slot model scored 187/275 (68.0%), below the sequence model's 192/275 (69.8%). It improved one-digit accuracy by one answer but lost six two-digit answers, recovered fewer Candidate 3 yellows (15 versus 17), and added no unique correct yellow. It is rejected and is not part of the P05 freeze.
+- A key-blind compact-only consensus analysis joined both models' 275 out-of-fold reads to the exact 25 scorable Candidate 5 reviews. They agreed on 21 reviews, but only 10 were correct and 11 were wrong. A post-hoc 0.995 threshold selected one correct review; nested zero-error calibration on three packets selected zero reviews on every held-out packet. Reject compact-only automatic promotion. Report: `private-evidence/reports/v3-compact-crossfit-consensus-20260716.json`; reproducible script: `scripts/analyze_v3_compact_crossfit_consensus.mjs`.
+- Median and locally aligned fusion each scored 8/18 correct and 10 wrong. Aligned fusion rescued zero cases. Candidate 5 outputs remained unchanged because fusion was shadow-only.
+- The ten wrong fused crops had substantially lower median contrast/edge/sharpness, and failures concentrated in number bonds and optional-slot layouts. Clear crops also failed, so recognition remains a separate cause.
+
+Files changed:
+- Research/runtime harnesses: `src/components/CameraCapture.vue`, `src/v3/frame-preparation.js`, `src/workers/frame-preparation.worker.js`, `scripts/replay_v3_crop_candidate_packets.mjs`, `scripts/test_consensus_webkit_saved_page.mjs`, `tests/v3-frame-preparation.test.mjs`.
+- Model/evaluation scripts: `scripts/train_v3_sequence_residual.py`, `scripts/evaluate_v3_packet_crossfit.py`, `scripts/train_v3_sequence_packet_adapted.py`, `scripts/verify_v3_sequence_onnx.py`, `scripts/analyze_v3_frame_fusion.mjs`.
+- Private model/report/protocol artifacts under `private-evidence/models/v3-sequence-packet-adapted-seed29/`, `private-evidence/reports/`, and `private-evidence/protocols/v3-locked-prospective-p05-20260716.json`.
+- Documentation: `docs/SCANGRADE_FIVE_WORKSTREAM_GOAL_CHECKPOINT_20260716.md`, `docs/SCANGRADE_LOCKED_P05_PROSPECTIVE_GATE_20260716.md`, `docs/SCANGRADE_RUGGED_OFFLOAD_MANIFEST_20260716.md`, and the V3 experiment ledger.
+
+Rollback point:
+- Deployed/private Candidate 5 remains source commit `30372dd`, deployment record `278c0db`, build `2026.07.15-shared-frame-private-beta-5`; runtime rollback remains `?consensusCandidate=0`.
+- All new browser paths require explicit research query flags and are off by default. No deployment, commit, or push occurred in this checkpoint.
+
+Next action:
+1. Ask Tony to scan locked P05 once through the already-deployed private Candidate 5 URL; do not use the research dev server or rescan a page to seek a better result.
+2. Replay and write the key-blind compact-shadow predictions before opening any handwritten truth.
+3. Create blinded truth in two independent passes, then run the create-only scorer exactly once. Never tune from P05 or add it to development.
+
+Open risks:
+- P05 requires Tony's physical scan and independent truth passes; it cannot be completed locally now.
+- The packet-adapted model's generalization is unproved and its confidence is unsafe.
+- Physical old-iPad camera, memory pressure, thermal behavior, and sustained multi-page performance remain untested.
+- The research harness adds off-by-default code to the app; do not deploy it unless a future candidate passes full freeze and release gates.
+
+## 2026-07-17 stitched strong-evidence and local-compression checkpoint
+
+- Candidate 5 remains unchanged at 250/275 automatic (90.9%), 250/250 observed correct, with 25 yellows. P05 and all untouched packets remain sealed.
+- The exact key-blind matched-view test found that input construction is a major strong-reader bottleneck. Adapted TrOCR rose from 175/275 (63.6%) on current continuous zones to 242/275 (88.0%) on the exact historical-style stitched original-grayscale slot view. P09 validation was 63/70 (90.0%); P02 holdout was 60/68 (88.2%).
+- Destructive cleaning was rejected: cleaned stitched scored 229/275 and fell to 50/68 on P02. Preserve original grayscale pixels.
+- Raw strong confidence remains unsafe. The stitched view made two wrong reads above 99.5% confidence (`12→15` and `6→7`) on answers Candidate 5 already handled correctly. Use stitched output as review evidence only until an independent selector passes prospective safety gates.
+- On the 25 Candidate 5 yellows, stitched TrOCR read 14 correctly versus 9 for continuous. The recommended next candidate sends one selected-frame stitched crop per unresolved yellow and exposes the result only as a teacher review choice. It must first pass an exact saved-browser A/B with all automatic outputs frozen.
+- Local compression did not inherit the strong-model gain. Packet-held-out compact results: truth-only CNN 196/275 (71.3%); light teacher loss 196/275; stronger teacher loss 195/275; joint 0–99 classifier 193/275. Reject all as strong-reader replacements.
+- The final technical compact artifact is 6.4 MB, has 0/853 PyTorch/ONNX decision mismatches for identical tensors, and averaged 54.5 ms/answer in conservative single-thread WASM. It is fast but insufficiently accurate/calibrated. Browser/Pillow resizing changed two decisions, so future training must use the exact browser preprocessing contract.
+- Full result and durable artifact index: `docs/SCANGRADE_STITCHED_EVIDENCE_AND_COMPRESSION_RESULT_20260717.md`.
+- Nothing was deployed, committed, or pushed. Candidate 5 and its rollback remain the live private control.
+
+### 2026-07-17 forensic follow-up on two high-confidence stitched-reader errors
+
+- The two stitched TrOCR errors were traced to clipped decisive strokes, not answer-key leakage: `12→15` loses most of the `2` lower stroke at the printed bottom border; `6→7` loses the lower loop at the number-bond answer frame. The original captured pages and Candidate 5 both show/read `12` and `6` correctly.
+- A corrected coordinate-scaled expansion test reduced strong-model confidence to 0.881278 and 0.774449 respectively, but did not correct the reads. Generic larger raw crops scored only 83/275 and remain unsuitable as primary recognition input.
+- Candidate 5 already contains the correct product safeguard: accepted automatic answers cannot be overridden, and local-first strong inference is yellow-only, on-demand, and review-only. Both failures are non-yellow, so they are unreachable by the strong-reader review path and cannot affect grading.
+- Do not weaken this boundary. Raw stitched-model confidence is not an automatic selector. Future promotion requires independent agreement plus prospective data.
+- Durable report and artifacts are appended/indexed in `docs/SCANGRADE_STITCHED_EVIDENCE_AND_COMPRESSION_RESULT_20260717.md`.
+- No production behavior, deployment, commit, push, or P05 freeze state changed.
+
+## Six-workstream improvement goal — first screen
+
+Tony activated a new staged goal covering a stronger browser whole-answer model, non-destructive template residuals, crop containment/quality, TrOCR distillation, writer adaptation, and further latency reduction. Candidate 5 remains the immutable control and P05 plus all other untouched packets remain sealed.
+
+The first new experiment built an additional aligned blank-template residual channel while retaining the original grayscale crop unchanged. Paired channels were generated for 578 historical and 275 recent scorable answers. A dual-channel model initialized from the existing compact checkpoint was evaluated with four packet-separated folds. It scored 190/275 (69.1%) versus 192/275 (69.8%) for the existing compact baseline, with four unique gains and six unique losses. On the exact 25 Candidate 5 reviews it scored 7 correct versus 12 for baseline and added no unique correct rescue. Reject this residual formulation; it is not deployed and is not part of the P05 freeze.
+
+The old writer-adaptive nearest-neighbor lane was independently recovered as already falsified: its automatic zero-error gate accepted nothing, and even teacher-confirmed prototypes introduced held-out errors. Do not repeat or deploy nearest-neighbor writer adaptation. Full staged ledger: `docs/SCANGRADE_SIX_WORKSTREAM_RESEARCH_LEDGER.md`.
+
+## 2026-07-17 six-workstream preliminary completion
+
+All six requested directions received a bounded, packet-separated preliminary screen. Candidate 5 stayed unchanged and P05 stayed unopened. No candidate met the predeclared advancement rule.
+
+- Stronger browser model: a joint 0-99 classifier scored 194/275 (70.5%) versus the compact baseline's 192/275 (69.8%), but traded 12 gains for 10 losses, regressed P02, and added no correct rescue among Candidate 5's remaining reviews. A 1.62M-parameter MobileNetV3-small attempt scored only 80/275 (29.1%). Both are rejected.
+- Template subtraction: dual untouched-grayscale plus aligned-residual input scored 190/275 (69.1%), below baseline, with no unique Candidate 5 review rescue. Rejected.
+- Crop containment: larger crops increase top-three diversity but substantially reduce top-one accuracy; generic containment signals are dominated by printed structure. Keep the existing on-demand larger crop only as corroborating/review evidence.
+- Distillation: the key-blind TrOCR teacher scored 356/578 (61.6%) on the current raw continuous crop export. Hard-read-assisted packet crossfit reached 194/275 (70.5%) but regressed P02 and supplied no unique correct Candidate 5 review rescue. Reject this teacher-target formulation. A future distillation attempt first requires the same stitched/cleaned teacher view that performs well in Candidate 5.
+- Writer adaptation: nearest-prototype adaptation remains rejected because its zero-error automatic gate accepted nothing and teacher-confirmed prototypes created held-out errors.
+- Latency: yellow-only extra-frame zone extraction produced identical P08 evidence/output, but eight matched WebKit runs were 0.16% slower overall and 0.78% slower to local readiness. A 0.75-scale registration attempt did not complete within 120 seconds versus the 13.5-second control. Both experimental paths were removed from app code. Candidate 5's existing shared-frame/deferred path remains best.
+
+Reproducible scripts and reports are listed in `docs/SCANGRADE_SIX_WORKSTREAM_RESEARCH_LEDGER.md`. The practical conclusion is not that better local recognition is impossible; it is that none of these cheap variants supplies the required jump. The next technically credible model experiment is gated on exporting stronger stitched/cleaned grayscale teacher inputs, verifying that TrOCR is actually strong on that exact view, then considering soft-feature/logit distillation. Do not deploy or spend P05 on the current research candidates.
+
+Final verification passed 114/114 JavaScript tests, production build, `git diff --check`, 33-layout audit with zero errors, and 11/11 P05 freeze identities. The two 54 MB P08 latency replay directories were copied to the Rugged drive, recursively compared with zero differences, and removed locally; their compact reports remain in `private-evidence/reports/`.
+
+## 2026-07-16 stitched-review private beta 6 release candidate
+
+- Candidate 5's automatic recognition/promotion path is unchanged. The accepted change affects only a teacher-requested second opinion for answers that remain yellow.
+- The rejected primary-evidence experiment used stitched original-grayscale crops for automatic strong-model consensus. It stayed safe but regressed to 237/275 automatic (86.2%), so it was removed.
+- The accepted implementation sends one selected-frame stitched original-grayscale answer crop only after the teacher requests another reader. The result is review-only and cannot automatically grade or override.
+- Exact 40-page control/candidate parity passed: all 40 pages had identical automatic evidence and final output; both scored 251/275 automatic and correct on the fresh replay. Continue to publish the frozen conservative Candidate 5 figure of 250/275 (90.9%) until prospective evidence exists.
+- On the 24 fresh yellow answers, stitched strong recognition was correct on 13 versus 9 for continuous-frame evidence. A 0.99 stitched-suggestion display threshold showed four differing suggestions and all four were correct retrospectively; at 0.98 one of five would have been wrong.
+- WebKit iPad emulation reduced the on-demand strong wait from about 3.50 s to 1.30 s; a warm Chromium run was about 0.40 s and a cold CPU-only run about 2.75 s. These remain controlled timings, not physical old-device claims.
+- The both-services-unavailable test passed: local grading, yellow review, manual correction, and recovery remained usable with no token leakage or grade effect.
+- Final validation passed 115/115 JavaScript tests, the standard production build, the pruned GitHub Pages build, and `git diff --check`.
+- Private Tailnet default: enabled. Public GitHub Pages: unchanged/local-only. Feature rollback: `?v3StitchedOnDemandReview=0`; whole-candidate rollback: `?consensusCandidate=0`.
+- Release report: `docs/SCANGRADE_STITCHED_REVIEW_PRIVATE_BETA6_20260716.md`.
+- P05 is still sealed. Candidate 5's old freeze remains historical evidence; create a new Candidate 6 freeze after the final release commit before scanning P05, because the live private build identifier and source hashes will change even though automatic outputs are replay-identical.

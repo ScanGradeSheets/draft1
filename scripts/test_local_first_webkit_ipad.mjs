@@ -77,7 +77,10 @@ try {
       if (url.includes('127.0.0.1:8876')) {
         let body = null
         try { body = JSON.parse(String(init?.body || '{}')) } catch {}
-        window.__SG_STRONG_REQUESTS.push((body?.items || []).map((item) => Number(item.questionNum)))
+        window.__SG_STRONG_REQUESTS.push((body?.items || []).map((item) => ({
+          questionNum: Number(item.questionNum),
+          cropVariant: item.cropVariant || null,
+        })))
       }
       return originalFetch(input, init)
     }
@@ -88,6 +91,7 @@ try {
   Object.entries({
     mode: 'teacher', ocrdebug: '1', ignoreQrHomography: '1', hybridV3: '1', v3BurstReplay: '1',
     v3PristineWarp: '1', v3SequenceFromZones: '1', v3LocalFirstReview: '1',
+    v3StitchedOnDemandReview: '1', v3ContextCropReview: '0',
     reviewModelUrl: 'https://127.0.0.1:8876', v3CompactModelUrl: 'https://127.0.0.1:8877',
     modelPath: '/models/worksheet-digit-tony-generalist-aug-strong-20260601.onnx',
     rightSlotModelPath: '/models/worksheet-digit-tony-generalist-noaug-20260601.onnx',
@@ -156,7 +160,8 @@ try {
     appAndModelsLoaded: Array.isArray(debug.predictions) && debug.predictions.length > 0,
     localFirstCompleted: debug.v3Shadow?.status === 'complete',
     strongDeferred: requestsBeforeTeacher === 0,
-    oneQuestionThreeFrames: strongRequests.length === 1 && strongRequests[0].length === 3 && strongRequests[0].every((q) => q === 4),
+    oneQuestionOneStitchedCrop: strongRequests.length === 1 && strongRequests[0].length === 1 &&
+      strongRequests[0][0]?.questionNum === 4 && strongRequests[0][0]?.cropVariant === 'stitched-original-grayscale',
     truthChoiceUsable: report.truthAvailableAfterStrong && report.correctionRecorded,
     noChoiceLoss: report.existingChoicesPreserved,
     tokenNotLeaked: !report.tokenAppearedInUrlOrLogs,

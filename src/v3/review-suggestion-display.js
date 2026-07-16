@@ -1,10 +1,14 @@
 export const REVIEW_SUGGESTION_SINGLE_FRAME_MIN_CONFIDENCE = 0.98
+export const STITCHED_REVIEW_SUGGESTION_MIN_CONFIDENCE = 0.99
 export const REVIEW_SUGGESTION_MULTI_FRAME_MIN_CONFIDENCE = 0.8
 
 export function reviewSuggestionDisplayEligible({ suggestion, frameConsensus, currentText, allowRelaxedMultiFrame = false }) {
   const text = String(suggestion?.text || '')
   if (!text || text === String(currentText || '')) return false
-  if (Number(suggestion?.minTokenProbability || 0) >= REVIEW_SUGGESTION_SINGLE_FRAME_MIN_CONFIDENCE) {
+  const singleFrameThreshold = suggestion?.cropVariant === 'stitched-original-grayscale'
+    ? STITCHED_REVIEW_SUGGESTION_MIN_CONFIDENCE
+    : REVIEW_SUGGESTION_SINGLE_FRAME_MIN_CONFIDENCE
+  if (Number(suggestion?.minTokenProbability || 0) >= singleFrameThreshold) {
     return true
   }
   return allowRelaxedMultiFrame
