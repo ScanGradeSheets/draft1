@@ -35,8 +35,8 @@ The public response also supplied:
 - Account: `scangradesheets@gmail.com`
 - Pages project: `scangrade`
 - Production branch: `autobuild/safe-20260223`
-- Production deployment ID: `a5b4bc89-aeb0-4fed-9e72-f6125283a6c7`
-- Immutable deployment URL: `https://a5b4bc89.scangrade.pages.dev/`
+- Current production deployment ID: `f3d5ea39-e2ed-47c7-9f84-b3870837e581`
+- Current immutable deployment URL: `https://f3d5ea39.scangrade.pages.dev/`
 - Custom apex domain: `scangrade.io`
 - DNS: apex CNAME managed by Cloudflare to `scangrade.pages.dev`
 
@@ -54,8 +54,10 @@ The official Cloudflare setup prompt was fetched from `https://developers.cloudf
 ## Verification
 
 - `https://scangrade.io/`: HTTP 200.
-- Public HTML references Beta 8 asset `assets/index-Bokf8J_g.js`.
-- Cloudflare Pages production deployment is listed under deployment ID `a5b4bc89-aeb0-4fed-9e72-f6125283a6c7`.
+- Public HTML references the root-domain Beta 8 asset `assets/index-CqgTxVDW.js`.
+- That JavaScript was served as `application/javascript` and matched the local production artifact byte-for-byte at SHA-256 `0ede0abb6eecddcb14dcb0056a08ee55b2e1490fc835bb0d77b20b58d9094813`.
+- Cloudflare Pages production deployment is listed under deployment ID `f3d5ea39-e2ed-47c7-9f84-b3870837e581` with source commit `478d92d`.
+- A live browser smoke test mounted the Beta 8 home screen and produced no console errors.
 - Security headers are present.
 - Private-model and submission paths do not expose services.
 
@@ -65,6 +67,14 @@ The official Cloudflare setup prompt was fetched from `https://developers.cloudf
 - Existing printed worksheet QR codes still point to the previously encoded public URL. They were not silently rewritten. Future worksheet generation can move to `https://scangrade.io/` after the QR target change is approved and tested.
 - `www.scangrade.io` was not configured.
 - Public shared storage, login, upload recovery, abuse controls, and a safe authenticated strong-model gateway remain separate future work.
+
+## Initial deployment incident and repair
+
+The first Cloudflare upload (`a5b4bc89-aeb0-4fed-9e72-f6125283a6c7`) accidentally used the GitHub Pages build. Its HTML addressed scripts, styles, fonts, logo and OpenCV under `/draft1/`. That prefix is required only by the old GitHub Pages repository path. On the apex domain, Cloudflare returned the SPA HTML fallback for those missing module paths; Safari showed the loading screen and then a blank page.
+
+The site was rebuilt from the same clean Beta 8 source commit with Vite base `/`, pruned to the same public runtime assets, and redeployed as `f3d5ea39-e2ed-47c7-9f84-b3870837e581`. The corrected public HTML contains no `/draft1/` prefix. During the few seconds of propagation, the custom domain briefly paired the new HTML with the old asset map; subsequent checks served the correct JavaScript and the browser mounted normally.
+
+`draft1` was a GitHub Pages URL prefix, not the current product version. The present Beta 8 source branch is `autobuild/safe-20260223`; the public custom-domain path intentionally has no `draft1` or `draft2` segment.
 
 ## Rollback
 

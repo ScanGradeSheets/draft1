@@ -4870,3 +4870,12 @@ Next action:
 - Existing worksheet QR codes were not rewritten. Future generated sheets can target `https://scangrade.io/` only after an explicit QR migration and scan test.
 - Official Cloudflare agent skills and MCP entries were installed, but Codex must be restarted to load them. Wrangler administration works. MCP OAuth was not bypassed after macOS blocked the bundled CLI executable.
 - Durable deployment record: `docs/SCANGRADE_CLOUDFLARE_BROWSER_ONLY_PUBLIC_BETA8_20260717.md`.
+
+### 2026-07-17 Cloudflare blank-screen incident repaired
+
+- Tony's iPhone correctly exposed a production deployment fault: the loading screen appeared and then the page became blank.
+- Root cause was not Safari or the application runtime. The first Cloudflare deployment accidentally used the GitHub Pages build, so the HTML requested modules and other assets below `/draft1/`. On `scangrade.io`, those missing paths returned the SPA HTML fallback instead of JavaScript.
+- Rebuilt the exact clean Beta 8 source commit `478d92d` with Vite base `/` and the public asset-pruning gate, then redeployed. Current production deployment: `f3d5ea39-e2ed-47c7-9f84-b3870837e581`, immutable URL `https://f3d5ea39.scangrade.pages.dev/`.
+- `https://scangrade.io/` now references `/assets/index-CqgTxVDW.js`; it is served as JavaScript and matches the local artifact at SHA-256 `0ede0abb6eecddcb14dcb0056a08ee55b2e1490fc835bb0d77b20b58d9094813`.
+- Live browser verification mounted the Beta 8 home screen and showed no console errors. The private/public boundary was unchanged.
+- There is no current `/draft2/` deployment path. `draft1` was a legacy GitHub Pages prefix; current Beta 8 source lives on `autobuild/safe-20260223`, while the custom domain intentionally serves from `/`.
