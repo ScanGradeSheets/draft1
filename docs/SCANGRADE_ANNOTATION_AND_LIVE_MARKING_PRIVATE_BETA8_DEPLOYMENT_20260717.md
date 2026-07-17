@@ -5,6 +5,7 @@ Date: 2026-07-17
 ## Release identity
 
 - Branch: `autobuild/safe-20260223`
+- Source commit: `021305d`
 - Build label: `2026.07.17-physical-annotations-live-marking-beta-8`
 - Recognition policy: unchanged `p05-safety-private-beta-7`
 - Private URL: `https://hobbes-mac-mini.tail9a3379.ts.net/`
@@ -34,4 +35,9 @@ The previous private build is source commit `2a6c8c5` with build label `2026.07.
 
 ## Final deployment record
 
-Pending commit, push, private URL verification, and Rugged backup.
+- Source commit `021305d` was pushed to `origin/autobuild/safe-20260223`.
+- The source-served private URL returned HTTP 200 and exposed the Beta 8 build label.
+- `/review-model/health` reported the MPS TrOCR adapter loaded, offline, and rejecting answer-key input.
+- `/v3-compact/health` reported the compact continuous-answer reader healthy.
+- Public GitHub Pages was not redeployed. `scangrade.io` did not resolve in an unrestricted DNS/network check, and no anonymous public proxy to the home model was created.
+- Rugged recovery backup pending the deployment-record commit.
