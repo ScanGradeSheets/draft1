@@ -1,7 +1,7 @@
 import { normalizeTranscription } from '../hybrid-recognition.js'
 import { compactReviewCandidates } from './local-first-review.js'
 
-export const CONSENSUS_PROMOTION_POLICY_VERSION = 'consensus-promotion-shadow-2'
+export const CONSENSUS_PROMOTION_POLICY_VERSION = 'consensus-promotion-shadow-3'
 export const CONSENSUS_REQUIRED_FRAMES = 3
 export const CONSENSUS_MIN_FRAME_CONFIDENCE = 0.70
 export const CONSENSUS_COMPACT_LIMIT = 2
@@ -12,11 +12,17 @@ export const CONSENSUS_BROWSER_SECONDARY_MIN_FRAME_CONFIDENCE = 0.98
 export const CONSENSUS_BROWSER_SECONDARY_LIMIT = 2
 export const CONSENSUS_BROWSER_SECONDARY_MIN_PROBABILITY = 0.05
 export const CONSENSUS_REQUIRED_CORE_CROPS = 3
+export const CONSENSUS_NEAR_CERTAIN_COMPACT_CONFLICT = 0.99
 export const CORE_CROP_REVIEW_ELIGIBLE_REASONS = new Set([
   'whole-answer-compact-model-does-not-support-consensus',
   'whole-answer-compact-support-too-weak',
   'second-choice-compact-support-too-weak',
   'browser-preprocessing-stably-conflicts',
+])
+export const CONSENSUS_REVIEW_VETO_REASONS = new Set([
+  'confidence-safety-veto-dominates',
+  'handwriting-ambiguity-detected',
+  'high-risk-browser-and-near-certain-compact-conflict',
 ])
 
 export function coreCropReviewEligibleQuestionNums(decisions = []) {
@@ -26,6 +32,32 @@ export function coreCropReviewEligibleQuestionNums(decisions = []) {
       decision?.ambiguity?.detected !== true)
     .map((decision) => Number(decision?.questionNum))
     .filter(Number.isFinite)
+}
+
+/**
+ * Questions whose displayed browser transcription must remain yellow. This is
+ * deliberately key-blind: either a promotion safety rule fired, or the two
+ * independent whole-answer readers agree with each other and disagree with
+ * the browser. Weak frame stability may prevent auto-correction, but it must
+ * not turn that known transcription dispute into a confident red math mark.
+ */
+export function consensusReviewVetoQuestionNums({ shadowDecisions = [], promotionDecisions = [] } = {}) {
+  const questions = new Set()
+  for (const decision of shadowDecisions || []) {
+    const slot = normalizeTranscription(decision?.slotRead)
+    const sequence = normalizeTranscription(decision?.sequenceRead)
+    const compact = normalizeTranscription(decision?.compactRead)
+    if (
+      slot && sequence && compact &&
+      sequence === compact && sequence !== slot
+    ) questions.add(Number(decision.questionNum))
+  }
+  for (const decision of promotionDecisions || []) {
+    if (decision?.promote !== true && CONSENSUS_REVIEW_VETO_REASONS.has(decision?.reason)) {
+      questions.add(Number(decision.questionNum))
+    }
+  }
+  return [...questions].filter(Number.isFinite).sort((a, b) => a - b)
 }
 
 function review(reason, evidence = {}) {
@@ -177,10 +209,10 @@ export function consensusPromotionDecision({
     ambiguityDetected !== true && ambiguity?.detected !== true
   const ambiguityReasons = Array.isArray(ambiguity?.reasons) ? ambiguity.reasons : []
   const unconditionalAmbiguity = ambiguityReasons.some((item) =>
-    item?.reason === 'model-families-disagree' || item?.reason === 'answer-ink-may-be-clipped')
-  const echoedOverrideAmbiguity = proposed === current && ambiguityReasons.some((item) =>
-    item?.reason === 'override-retained-material-rival')
-  if ((ambiguityDetected && !ambiguity) || unconditionalAmbiguity || echoedOverrideAmbiguity) {
+    item?.reason === 'model-families-disagree' ||
+      item?.reason === 'answer-ink-may-be-clipped' ||
+      item?.reason === 'override-retained-material-rival')
+  if ((ambiguityDetected && !ambiguity) || unconditionalAmbiguity) {
     return review('handwriting-ambiguity-detected', {
       currentRead: current,
       proposedRead: proposed,
@@ -193,6 +225,26 @@ export function consensusPromotionDecision({
 
   const compactChoices = compactReviewCandidates(compactReads, { limit: CONSENSUS_COMPACT_LIMIT })
   const compactRankIndex = compactChoices.findIndex((choice) => choice.text === proposed)
+  const compactTopChoice = compactChoices[0] || null
+  const highRiskBrowserDisagreement = (currentPredictions || []).some((prediction) =>
+    prediction?.highRiskPreprocessReview === true && prediction?.preprocessDisagreement === true)
+  // P05's 17 -> 12 failure survived repeated grayscale crops, but the browser
+  // itself marked the affected slot high-risk and the independent compact
+  // whole-answer reader was nearly certain it was 17. That combination is a
+  // veto, not another candidate-selection vote. It is intentionally narrower
+  // than blocking all model-family disagreement, which would discard many
+  // prospectively correct promotions.
+  if (
+    compactRankIndex < 0 &&
+    highRiskBrowserDisagreement &&
+    Number(compactTopChoice?.minComponentProbability || 0) >= CONSENSUS_NEAR_CERTAIN_COMPACT_CONFLICT
+  ) {
+    return review('high-risk-browser-and-near-certain-compact-conflict', {
+      proposedRead: proposed,
+      compactRead: compactTopChoice?.text || null,
+      compactMinComponentProbability: Number(compactTopChoice?.minComponentProbability || 0),
+    })
+  }
   const browserSecondarySupport = Number(sequenceFrameConsensus?.minConfidence || 0) >= CONSENSUS_BROWSER_SECONDARY_MIN_FRAME_CONFIDENCE &&
     browserSupportsProposedRead(proposed, currentPredictions)
   if (compactRankIndex < 0 && !browserSecondarySupport && !spatiallyStable && !coreCropStable) {

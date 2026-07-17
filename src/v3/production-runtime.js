@@ -1,4 +1,4 @@
-export const CONSENSUS_PRODUCTION_RELEASE = 'stitched-review-private-beta-6'
+export const CONSENSUS_PRODUCTION_RELEASE = 'p05-safety-private-beta-7'
 
 const FALSE_VALUES = new Set(['0', 'false', 'off', 'no'])
 const TRUE_VALUES = new Set(['1', 'true', 'on', 'yes'])

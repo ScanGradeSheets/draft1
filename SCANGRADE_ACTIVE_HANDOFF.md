@@ -1,5 +1,19 @@
 # ScanGrade Active Handoff
 
+## 2026-07-16 browser-local stronger-reader checkpoint (current)
+
+- Built a ScanGrade-adapted TrOCR-small whole-answer model that reads preserved stitched grayscale answers and receives no answer key. Four packet-held-out folds scored **244/275 (88.7%)**: rows 149/160, non-rows 95/115, one digit 92/100, two digits 152/175, number bonds 12/22.
+- This materially exceeds the previous 6.4 MB compact model (196/275) and slightly exceeds the 335M adapted strong reader's stitched top-1 result (242/275), but raw confidence remains unsafe and the model must not override accepted Candidate 6 reads.
+- Final opened-data adapter selected 122/136 historical validation and scored 96/114 historical holdout. P05 remains sealed and untouched.
+- Exported a leading **84 MB** browser package (FP16 encoder + int8 decoder). Native P02 parity is 68/68. Single-answer Chromium/WebKit parity passes at about 0.78–0.79 seconds inference on the Mac.
+- A decoder causal-mask tracing bug initially produced `5→55`/`8→8888`; corrected export uses the actual start token and traces the two-token path. Full float and 84 MB hybrid parity now pass.
+- Batch/session reuse can stall ONNX Runtime Web. The implemented shadow path uses disposable workers, sequential yellow-only reads, a strict cap/timeout, and fail-open behavior. Physical old-iPad sustained memory is untested.
+- Wider robust crops repair real clipping (including full `19` on P02 number-bond Q2) but regress overall recognition because printed borders create duplicates. Keep the uncleaned stitched original as primary evidence; use wider/cleaned views only as clipping or disagreement evidence.
+- Nothing was deployed, pushed, or allowed to change grades/yellows. Candidate 6 remains the production/private control.
+- Full report: `docs/SCANGRADE_BROWSER_LOCAL_TROCR_SMALL_RESULT_20260716.md`.
+
+Next action: host/cache the 84 MB files from a durable HTTPS model origin and run the sustained physical old-iPad test. Do not freeze or spend P05 on an automatic selector yet; every tested selector still admits known errors or no useful safe coverage.
+
 ## 2026-07-14 remaining-yellow audit and browser-secondary candidate
 
 - Visually audited all 53 scorable yellows remaining after the frozen 222/275 consensus candidate. Classification: 25 readable/compact-28×28 bottlenecks, 11 readable/frame instability, six crop/registration failures, five layout/slot-contract failures, three genuinely ambiguous answers, two browser preprocessing conflicts, and one confidence-safety veto.
@@ -4660,3 +4674,163 @@ Final verification passed 114/114 JavaScript tests, production build, `git diff 
 - Candidate 6 was backed up at `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-07-16-stitched-review-private-beta6/`. The 577 MB backup contains a verified complete Git bundle, the three exact replay directories, score/parity reports, P05 freeze, private model identities, and recovery scripts.
 - After recursive byte comparison and Git-bundle verification, the three bulky replay directories (about 540 MB total) were removed locally. Their score/parity reports remain local; full replays restore from the Rugged backup.
 - Deployment record: `docs/SCANGRADE_STITCHED_REVIEW_PRIVATE_BETA6_DEPLOYMENT_20260716.md`.
+
+## 2026-07-16 crop/layout browser-local candidate falsification
+
+- Candidate 6 remained unchanged, P05 remained sealed, and no production behavior was modified or deployed.
+- A truth/output-blinded geometry audit found visible crop/layout failure in 13/19 packet-held-out TrOCR-small misses versus 5/19 matched successful controls. Fourteen of 18 flagged cases were number bonds.
+- Existing key-blind containment features reached 83.3% sensitivity and 80.0% specificity under packet-held-out threshold selection. This is useful for routing alternate evidence, not choosing an answer.
+- The existing 4%-down number-bond view improved TrOCR-small from 12/22 to 14/22. Nine bounded variants showed that larger general expansion is harmful. A detector-routed analysis reached 15/22, but the selector is not prospectively calibrated.
+- A separately trained shifted-view specialist also reached 15/22, but fell to 233/275 if used globally. Among eight current number-bond reviews it fixed two and was wrong on five others. It remains review-only evidence.
+- Non-destructive template residuals failed: direct answer-zone residual 86/275, bounded context residual 64/275, and residual-augmented held-out P02 57/68 versus 58/68 control. Printed-line subtraction still erases overlapping pencil.
+- Decision: preserve original stitched grayscale; retain the containment detector and small downward crop as research/review evidence only; reject global crop expansion, print subtraction, global specialist replacement, and automatic shifted-read selection.
+- Full report: `docs/SCANGRADE_CROP_LAYOUT_LOCAL_CANDIDATE_RESULT_20260716.md`.
+
+Next action: freeze this branch. The cheapest decisive continuation is prospective new-student crop-containment and alternate-view scoring with policy frozen before truth. Do not spend P05 on this candidate.
+
+## 2026-07-16 browser-only yellow-gap audit
+
+- Reconstructed the exact no-Mac baseline from the 40-page Candidate replay: 176/275 automatic (64.0%), 176/176 correct, 99 yellow. Older non-development scans were 69.2%, which explains the earlier approximate 70% description; do not combine the corpora into one benchmark.
+- Audited all 99 browser yellows visually and from their saved debug stages. The large grayscale reader got 87/99 right, browser local read was already right on 17, coherent named browser preprocessing produced the full correct answer on 55, and per-slot variant tops contained the truth on 92. Most yellows retain usable camera information but lose or mishandle it in the 28×28 conversion/model/selector path.
+- Exact mutually exclusive partition: 17 correct browser reads blocked by safety; 37 wrong browser reads where large grayscale and a coherent browser variant were correct; 34 wrong browser reads where large grayscale was correct but no coherent browser variant was; 6 wrong browser/large reads with a coherent correct browser variant; 5 wrong browser/large reads with no coherent correct variant.
+- Crop/capture quality does not generally separate yellow from automatic: 35/40 pages contain both cohorts from the same capture, and measured quality-statistic AUCs were 0.459–0.538. Real crop/layout failures concentrate in number bonds and optional-slot layouts. Browser coverage: row 113/160 (70.6%), non-row 63/115 (54.8%), number bonds 7/22 (31.8%).
+- Falsified a tempting local-only rule. Exact browser-plus-compact agreement on recent arithmetic rows looked like 9/9 safe rescues, but historical validation/holdout gave 2 correct and 3 wrong; reject and do not deploy.
+- No production policy changed. Candidate 6 and the sealed P05 freeze remain intact. Future no-Mac work should use a materially stronger whole-answer browser model over exact browser-rendered larger grayscale plus slot/layout metadata; the tested 6.4 MB compact model is fast enough but not accurate/calibrated enough.
+- Full report: `docs/SCANGRADE_BROWSER_ONLY_YELLOW_GAP_AUDIT_20260716.md`. Reproducible outputs: `private-evidence/reports/browser-only-gap-audit-20260716.json`, `private-evidence/reports/browser-compact-agreement-falsification-20260716.json`, and the 15 private visual contact sheets under `private-evidence/reports/browser-only-yellow-visual-audit-20260716/`.
+
+## 2026-07-16 browser-local TrOCR-small shadow and crop-falsification checkpoint
+
+- Built the requested materially stronger Mac-independent whole-answer browser candidate. The packet-held-out model remains 244/275 (88.7%): rows 149/160, non-rows 95/115, Candidate 5 residual yellows 16/25, and number bonds 12/22. It consumes the preserved stitched grayscale answer and never receives an answer key.
+- Integrated an explicit off-by-default, review-only browser shadow lane. It attaches layout family, physical slot count, maximum handwritten digits, and declared optional-slot indices; unknown/nonnumeric/overlength output is rejected, and only declared optional slots can be inferred blank. It runs one yellow answer per disposable worker with a timeout and cannot affect grades.
+- Chromium and WebKit exact-token tests passed, including eight sequential disposable workers and forced non-SIMD. Warm execution is about 1.5 seconds per yellow including per-answer initialization; non-SIMD is about 3.2 seconds. The 25 opened-data yellows produced identical browser reads across engines. Physical old-iPad sustained memory/download/camera testing is still required.
+- Fresh 40-page feature-off replay matched restored Candidate 6 on all 40 evidence and output pages. Candidate 6 remains deployed commit `b7a5df4`, and P05 remains sealed.
+- Exact packet-held-out scoring on the 99 browser-only yellows is 80/99 (80.8%): row 42/47 and non-row 38/52. The new model is wrong on 12 of 176 answers the current browser safely accepts, so it must never override an accepted result.
+- Four verified whole-answer blanks were all hallucinated as digits by the model. Optional-slot inference is structurally implemented, but whole-answer blank/erasure/cross-out automation remains unproved and must stay yellow.
+- Global cleaned crops were rejected: 236/275 versus 244/275, with 6 rescues and 14 regressions. A packet-crossfit crop selector rescued 1 and regressed 2. Mixed original/clean training fell to 56/68 on P02 and 3/8 Candidate 5 reviews.
+- Visual audit of the 19 whole-answer misses among browser yellows found roughly 12 with visibly clipped/mispositioned strokes or dominant number-bond frames. The existing 4%-down number-bond view improved raw top-one from 12/22 to 14/22 but made two regressions; shifted-view training fell to 50/68 on P02 and did not improve shifted P02 number bonds. Keep alternate crops as disagreement/review evidence only.
+- TrOCR-small plus compact exact agreement is not safe: historical browser-yellow falsification contains known wrong agreements. Raw model confidence also remains unsafe above 0.999.
+- No deployment, commit, push, automatic-policy change, or P05 access occurred. Full result: `docs/SCANGRADE_BROWSER_LOCAL_TROCR_SMALL_RESULT_20260716.md`.
+
+## 2026-07-17 Candidate 6 / P05 readiness rehearsal
+
+Date / thread: 2026-07-17, final preparation before Tony scans locked packet P05.
+
+What changed:
+- No recognition, capture, confidence, model, threshold, worksheet layout, or deployed Candidate 6 behavior changed.
+- Added a reproducible Candidate 6 freeze verifier and a generic scorer for rehearsing the prospective path on an already-open packet.
+- Corrected two scorer-integrity assumptions found by rehearsal: `affectsGrade` is false on a complete page when no promotion was applied, and teacher-facing question annotation state—not a retained physical-slot flag—determines whether a resolved whole answer is still yellow.
+- Added a one-shot P05 scan checklist, a prediction-blinded two-pass truth protocol, create-only blank 70-answer truth templates, and a hash freeze for all P05 execution/scoring tools.
+- Added a tiny debug-image extraction utility for visually checking the rendered marked sheet.
+
+Evidence used:
+- Frozen Candidate 6 source commit `b7a5df488836ec3b3e1010bec3979bf714f1d76e`, build `2026.07.16-stitched-review-private-beta-6`.
+- Live private URL `https://hobbes-mac-mini.tail9a3379.ts.net/` and both same-origin model health routes.
+- The already-open, independently verified P02 ten-page packet and its three saved burst frames per page. P05 remained sealed, unscanned, and unseen.
+- Candidate 6 rugged backup at `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-07-16-stitched-review-private-beta6/`.
+
+Commands run:
+- `node scripts/verify_candidate6_p05_readiness.mjs`.
+- Full ten-page live WebKit/older-iPad-emulated P02 replay through Candidate 6, with three retained saved frames per page, then `node scripts/score_prospective_rehearsal.mjs ...`.
+- One full-debug number-bond replay plus extraction/visual inspection of `markedSheetDataUrl`.
+- `node scripts/test_local_first_failure_recovery.mjs`.
+- `node scripts/test_local_first_webkit_ipad.mjs`.
+- `node --test tests/p05-prospective-candidate.test.mjs tests/v3-production-runtime.test.mjs tests/v3-review-suggestion-display.test.mjs`.
+
+Results:
+- Candidate 6 freeze verification passed 16/16 identities. Live private root returned HTTP 200; strong and compact services were healthy.
+- P02 rehearsal completed all 10 unique pages and 70 answer records. Of 68 scorable answers, 60 were automatic and 60/60 matched handwriting: 88.2% overall coverage, rows 36/40 (90.0%), non-rows 24/28 (85.7%), zero confident transcription errors, eight yellows. All prospective rehearsal gates passed after the scorer clarification.
+- The questioned number-bond `19` is rendered correctly as a red X (confident transcription, mathematically wrong), not yellow. The internal slot flag was harmless metadata; the marked sheet and question-level annotation are correct.
+- Both-optional-services-down recovery passed every gate: local grading completed, no automatic promotion occurred, local output stayed unchanged, a clear unavailable message appeared, manual correction worked, and the token did not leak.
+- WebKit older-iPad emulation passed every gate. Controlled timing on one difficult page: app ready 1.00 s, local result 6.11 s, compact choices 9.87 s, strong context prepared 14.90 s, teacher-requested strong response 3.03 s. This is emulation, not physical-old-iPad proof.
+- P05 execution scorer tests now pass 7/7; combined targeted suite passes 20/20. Candidate 6 recognition remains unchanged.
+- Local disk has about 4.4 GiB available; Rugged has about 333 GiB. The saved 2026-07-14 debug corpus is 1.1 GiB. Avoid further bulky local replays before P05.
+
+Important QR correction:
+- The printed worksheet QR payloads currently point to `https://scangradesheets.github.io/draft1/`, which opens the public local-only app if scanned with the iPhone Camera app.
+- For P05, Tony must manually open `https://hobbes-mac-mini.tail9a3379.ts.net/`, verify the exact Candidate 6 build label and no query string, then tap **Start Scan**. Candidate 6 will read the photographed page QR internally to select the layout.
+- Do not change public/QR routing before P05; doing so would change the frozen candidate.
+
+Files changed:
+- `scripts/verify_candidate6_p05_readiness.mjs`
+- `scripts/score_prospective_rehearsal.mjs`
+- `scripts/score_p05_prospective_candidate.mjs`
+- `scripts/extract_debug_image.mjs`
+- `scripts/create_p05_truth_templates.mjs`
+- `scripts/freeze_p05_execution_tools.mjs`
+- `tests/p05-prospective-candidate.test.mjs`
+- `docs/SCANGRADE_P05_SCAN_CHECKLIST_20260717.md`
+- `docs/SCANGRADE_P05_BLINDED_TRUTH_PROTOCOL_20260717.md`
+- private readiness/rehearsal reports and P05 templates/freezes under `private-evidence/`.
+
+Rollback point:
+- Live Candidate 6 remains frozen source commit `b7a5df4`; deployment record branch tip is `2c180ef`. Public GitHub Pages is unchanged. No deployment, commit, push, or production modification occurred in this readiness work.
+- P05 execution/scoring tool identities are frozen at `private-evidence/protocols/p05-execution-tools-freeze-20260717.json`.
+
+Next action:
+1. Tony follows `docs/SCANGRADE_P05_SCAN_CHECKLIST_20260717.md` and scans intact P05 exactly once through the manually opened private Candidate 6 link.
+2. Freeze all ten successful capture/debug records before any corrections, truth inspection, or scoring.
+3. Create two independent prediction-blinded truth passes, adjudicate without the answer key, freeze truth, then run the create-only prospective scorer once.
+
+Open risks:
+- P05 still requires Tony's physical scan. Nothing in this rehearsal authorizes rescans to improve a result.
+- Physical old-iPad multi-page camera/memory/thermal behavior remains unproved; WebKit emulation passed but is not equivalent.
+- The private strong service depends on the Mac mini, but verified fail-open behavior means an outage increases yellow/manual review rather than stopping local grading.
+- A single 70-answer packet can falsify Candidate 6 but cannot establish a market-ready zero-error claim or a narrow confidence interval.
+
+## 2026-07-17 P05 physical scan completed; summary recovery required
+
+Date / thread: 2026-07-17, immediately after Tony scanned all ten physical P05 pages through Candidate 6.
+
+What happened:
+- Tony completed all ten pages and reported several visible product observations: repeated child-written reversed 9s resembling `P`; some yellow review circles not centered on the visible answer; useful delayed improvements from the Mac-mini reader without adequate “still thinking” feedback; and a yellow-correction interface that can obscure the handwriting.
+- No new full debug bundles appeared under `private-evidence/debug-scans`. The private no-query URL did not establish debug auto-upload on this phone/origin. This is a test-preparation failure: the checklist verified the frozen build but did not verify device-side debug persistence before spending P05.
+- Candidate 6 guest mode should still have stored one compact submission summary per successful page in the phone browser under `scangrade.savedSubmissions.v1`. Those records contain final answer groups, review states, scores, timings, template IDs and suggestions, but not full captured images/frames/crops.
+
+Recovery action:
+- Added a read-only same-origin recovery page at `https://hobbes-mac-mini.tail9a3379.ts.net/p05-recovery.html`.
+- The page reads only the saved-submission storage key, reports the count/templates, and downloads an exact JSON wrapper including the raw storage value. It does not grade, upload, modify or delete records.
+- Live Tailnet retrieval and visual browser loading passed. The in-app browser correctly showed its own empty-origin state; Tony must open it in the same Safari/browser on the same phone used for scanning.
+- Tony must not clear ScanGrade's queue, Safari website data, or the original ScanGrade tab before recovery.
+
+Integrity consequence:
+- First recover and freeze the original ten submission summaries. Do not change recognition policy based on Tony's observations before that recovery.
+- If ten distinct P05 templates are recovered, transcription coverage/error scoring may still be possible from the original final answer groups after blinded truth is created. Capture/crop/annotation forensics will not be possible from those compact records alone.
+- Any later rescan must be explicitly classified as forensic/development evidence and must not silently replace the original one-shot P05 outcome.
+
+Next action:
+1. Tony opens the recovery page in the same phone/browser and downloads/attaches the JSON.
+2. Verify ten records and ten distinct layouts; freeze/hash the recovered file immediately.
+3. Decide the least-contaminating way to obtain full-page truth and crop evidence without replacing the original performance outcome.
+4. Only then analyze reversed digits, crop/annotation placement, delayed-result feedback, and the correction workflow as separate failure classes.
+
+### P05 original summaries recovered and frozen
+
+- Tony attached `scangrade-p05-original-scan-summaries-1784294995983.json`. Exact source SHA-256: `bf81c96a3cb76b197d4a05fd1b6c3487329767aabfc58cc31b2dd999656f26af`; 646,568 bytes.
+- The ten newest records are a single uninterrupted July 17 sequence from `13:14:52.827Z` through `13:19:29.772Z`. They contain exactly one of each expected layout, 70 answer groups, and zero manual corrections. The next older record is from July 14, so the selection boundary is unambiguous.
+- Create-only freeze: `private-evidence/p05-prospective-20260717/`, produced by `scripts/freeze_p05_recovered_summaries.mjs`. Both frozen files reverified against their manifest.
+- The freeze was copied to the Candidate 6 Rugged backup under `p05-original-20260717/`; checksum-mode rsync reported zero differences.
+- Pre-truth coverage only: 48/70 automatic (68.6%), 22 yellow; rows 30/40 automatic (75.0%), non-rows 18/30 (60.0%). Number bonds were 1/6 automatic and 5/6 yellow. This is not transcription accuracy. The saved worksheet-key agreement is math grading and must not be used as handwriting truth.
+- Saved page processing time was 1.421–5.238 seconds, median 3.664 seconds, mean 3.525 seconds. This excludes any later teacher-requested strong-review wait.
+- Full original captures/frames/crops/annotation geometry were not present in the recovered summaries. A second Debug Scan is now permitted only as explicitly labeled forensic evidence for handwriting truth, crop inspection, capture variability and UX study. It must never replace the frozen original outcomes.
+
+## 2026-07-17 P05 forensic safety and answer-card repair candidate
+
+- The frozen original one-shot outcome remains 48/70 automatic (68.6%), 22 yellow; a full-resolution visual audit found all 48 automatic reads matched the handwriting. The later forensic scan is development evidence only.
+- The full-debug rescan's immediate browser result was 42/70 automatic and 42/42 matching the visual audit. Its final strong-model result was 55/70 automatic (78.6%) with one genuine confident transcription error: row 04 QF, visible `17` promoted to `12`. The independent compact reader read `17` at about 99.98% while the affected browser slot was high-risk and preprocessing-disputed.
+- The other two red-styled review cases were row 04 QG (`11` vs visible `16`; the whole-answer readers both proposed the also-wrong `17`) and number-bond 08 QC (`11` vs visible `14`; both whole-answer readers proposed `14`). These were internally review-needed but styled as incorrect/red.
+- Candidate repair in `src/v3/consensus-promotion.js`: policy `consensus-promotion-shadow-3`; unconditional retained-material-rival veto; a narrow high-risk-browser plus >=0.99 compact-conflict veto that cannot re-enter through core crops; and a key-blind display-review veto when both independent whole-answer readers agree against the browser.
+- Candidate UI repair in `src/components/CameraCapture.vue`: review state now drives cards, annotations, and overlays consistently; ordinary confidently transcribed incorrect math remains red; evidence-backed transcription disputes remain yellow.
+- Answer cards now follow physical worksheet slot metadata. Single-box number bonds display one box/token; genuine two-slot answers display two.
+- Counterfactual exact-saved-decision result after the unsafe QF promotion becomes yellow: 54/70 automatic (77.1%), 54/54 matching the single visual truth audit, 16 yellow; rows 34/40 and non-rows 20/30. This is not prospective evidence.
+- Fresh full saved-image replay: 48/70 automatic, 48/48 matching visual truth, 22 yellow. Fresh replay geometry/output varied from the live forensic run, so its coverage is not substituted for the live result. A focused replay verified safety-veto yellow rendering and number-bond one/two-slot formatting.
+- Limitation: optional whole-answer readers still run only on initially yellow answers. The display repair handles the observed saved-evidence cases but cannot expose a confident browser-only error when no independent evidence is requested. Recognition/replay variability remains open.
+- Verification: 128/128 JavaScript tests, production build, and diff check passed. Nothing deployed, committed, or pushed in this checkpoint.
+- Disk recovery: five P05 safety replay folders were copied to `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-07-17-p05-forensic-safety-replays/`, each checksum-compared with zero differences, then bulky local copies were removed. Compact `rows.json`, `summary.json`, and `summary.md` remain locally for replay 4 and the focused final UI replay.
+- Durable report: `docs/SCANGRADE_P05_FORENSIC_SAFETY_AND_UI_RESULT_20260717.md`.
+
+### 2026-07-17 identical-input and retained-frame follow-up
+
+- Two production-matched ten-page replays of identical image files matched on geometry, predictions, answer groups, review state, and annotation regions. The apparent identical-input variability came from runtime timing fields and a random annotation decoration seed, not grading behavior. Annotation seeds are now derived deterministically from result evidence; a focused A/B replay matched fully.
+- Each phone scan captured eight frames and retained three; all selected frames cleared focus and perspective gates. Independent replay of all 30 retained frames showed 42/70 raw top-one correct for the whole-page selected frames, 47/70 for the best single frame per page chosen with truth hindsight, 50/70 for an impossible per-answer truth oracle, and 39/70 for simple three-frame majority.
+- Conclusion: alternate frames sometimes contain useful pixels, but whole-page focus, stricter capture thresholds, and majority voting do not identify the better answer safely. Do not raise the capture gate on this evidence. Recognition/candidate selection remains the dominant bottleneck, with number-bond crop/layout failures concentrated separately.
+- An experimental attempt to run the strong path over every red answer was rejected: it added work and did not safely eliminate the broad raw replay errors. Keep the strong path yellow-only plus the narrow P05 ambiguity/conflict safety veto.

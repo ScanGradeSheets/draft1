@@ -4,6 +4,7 @@ import {
   browserHasStableConflictingEvidence,
   browserSupportsProposedRead,
   consensusPromotionDecision,
+  consensusReviewVetoQuestionNums,
   coreCropReviewEligibleQuestionNums,
 } from '../src/v3/consensus-promotion.js'
 
@@ -45,6 +46,23 @@ test('routes only unresolved model-support vetoes to selected core-crop review',
     { questionNum: 'not-a-question', reason: 'whole-answer-compact-support-too-weak' },
   ]
   assert.deepEqual(coreCropReviewEligibleQuestionNums(decisions), [1, 2, 3, 4])
+})
+
+test('forces display review only for safety vetoes or two independent readers agreeing against browser', () => {
+  const result = consensusReviewVetoQuestionNums({
+    shadowDecisions: [
+      { questionNum: 1, slotRead: '11', sequenceRead: '17', compactRead: '17', decision: { action: 'review' } },
+      { questionNum: 2, slotRead: '19', sequenceRead: '17', compactRead: '14', decision: { action: 'review' } },
+      { questionNum: 3, slotRead: '12', sequenceRead: '12', compactRead: '12', decision: { action: 'review' } },
+      { questionNum: 7, slotRead: '15', sequenceRead: '16', compactRead: '16', decision: { action: 'automatic' } },
+    ],
+    promotionDecisions: [
+      { questionNum: 4, promote: false, reason: 'high-risk-browser-and-near-certain-compact-conflict' },
+      { questionNum: 5, promote: false, reason: 'insufficient-three-frame-consensus' },
+      { questionNum: 6, promote: true, reason: 'independent-three-frame-and-compact-consensus' },
+    ],
+  })
+  assert.deepEqual(result, [1, 4, 7])
 })
 
 test('promotes exact three-frame grayscale consensus supported by compact top choice', () => {
@@ -164,6 +182,70 @@ test('high-confidence grayscale consensus may use browser top-two evidence when 
   assert.equal(result.evidence.supportSource, 'three-frame-grayscale-plus-browser-top-two')
 })
 
+test('P05 17 to 12 prospective error remains review when the browser retained 7 as a material rival', () => {
+  const result = consensusPromotionDecision({
+    currentRead: '11',
+    currentPredictions: [
+      probabilityPrediction(0, [0.02, 0.83, 0.01, 0.01, 0.10, 0.01, 0.01, 0.01, 0, 0.01]),
+      probabilityPrediction(1, [0.05, 0.39, 0.22, 0, 0.02, 0.02, 0.06, 0.22, 0.01, 0.01]),
+    ],
+    sequenceFrameConsensus: consensus('12', { minConfidence: 0.993697 }),
+    compactReads: compact({
+      read: '17',
+      jointProbability: 0.999916772,
+      minComponentProbability: 0.999752223,
+    }),
+    slotCount: 2,
+    ambiguity: { detected: true, reasons: [{ reason: 'override-retained-material-rival' }] },
+  })
+  assert.equal(result.promote, false)
+  assert.equal(result.reason, 'handwriting-ambiguity-detected')
+})
+
+test('P05 replay 17 to 12 remains review through every crop lane despite ambiguity-run variance', () => {
+  const result = consensusPromotionDecision({
+    currentRead: '11',
+    currentPredictions: [
+      {
+        ...probabilityPrediction(0, [0.01, 0.97, 0.01, 0.01, 0.01, 0, 0, 0, 0, 0]),
+        preprocessDisagreement: false,
+        highRiskPreprocessReview: false,
+      },
+      {
+        ...probabilityPrediction(1, [0.01, 0.65, 0.04, 0.01, 0.01, 0.03, 0.16, 0.06, 0.02, 0.01]),
+        preprocessDisagreement: true,
+        highRiskPreprocessReview: true,
+      },
+    ],
+    sequenceFrameConsensus: consensus('12', { minConfidence: 0.995842 }),
+    coreCropConsensus: consensus('12', { minConfidence: 0.995842 }),
+    compactReads: compact({
+      read: '17',
+      jointProbability: 0.99975032,
+      minComponentProbability: 0.999752,
+    }),
+    slotCount: 2,
+    ambiguity: { detected: false, reasons: [] },
+  })
+  assert.equal(result.promote, false)
+  assert.equal(result.reason, 'high-risk-browser-and-near-certain-compact-conflict')
+})
+
+test('near-certain compact conflict alone does not erase stable grayscale evidence', () => {
+  const result = consensusPromotionDecision({
+    currentRead: '10',
+    currentPredictions: [
+      { ...probabilityPrediction(0, [0.01, 0.58, 0, 0, 0.17, 0, 0, 0, 0, 0]), preprocessDisagreement: false, highRiskPreprocessReview: false },
+      { ...probabilityPrediction(1, [0.85, 0, 0, 0, 0, 0.05, 0, 0, 0, 0.04]), preprocessDisagreement: false, highRiskPreprocessReview: false },
+    ],
+    sequenceFrameConsensus: consensus('40', { minConfidence: 0.995 }),
+    compactReads: compact({ read: '10', jointProbability: 0.999, minComponentProbability: 0.999 }),
+    slotCount: 2,
+  })
+  assert.equal(result.promote, true)
+  assert.equal(result.automaticText, '40')
+})
+
 test('two independently positioned crops may replace weak compact support only with six matching reads', () => {
   const result = consensusPromotionDecision({
     currentRead: '1',
@@ -218,7 +300,7 @@ test('selected crop stability cannot override an existing ambiguity signal', () 
     ambiguity: { detected: true, reasons: [{ reason: 'override-retained-material-rival' }] },
   })
   assert.equal(result.promote, false)
-  assert.equal(result.reason, 'whole-answer-compact-model-does-not-support-consensus')
+  assert.equal(result.reason, 'handwriting-ambiguity-detected')
 })
 
 test('selected crop disagreement blocks the overwritten 34 to 39 case', () => {
@@ -294,7 +376,7 @@ test('ambiguity and confidence-safety vetoes dominate model agreement', () => {
   }
 })
 
-test('override ambiguity blocks models echoing the browser but not independent correction agreement', () => {
+test('override ambiguity always blocks automatic promotion even when models propose a correction', () => {
   const ambiguity = { detected: true, reasons: [{ reason: 'override-retained-material-rival' }] }
   const echoed = consensusPromotionDecision({
     currentRead: '11',
@@ -313,7 +395,8 @@ test('override ambiguity blocks models echoing the browser but not independent c
     compactReads: compact({ read: '12', jointProbability: .8, minComponentProbability: .8 }),
     slotCount: 2,
   })
-  assert.equal(corrected.promote, true)
+  assert.equal(corrected.promote, false)
+  assert.equal(corrected.reason, 'handwriting-ambiguity-detected')
 })
 
 test('mathematical answer keys cannot influence the decision', () => {
