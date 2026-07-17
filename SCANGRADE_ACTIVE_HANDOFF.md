@@ -4859,3 +4859,14 @@ Next action:
 - Public domain check: `scangrade.io` currently does not resolve from an unrestricted DNS/network check. The repo has a Cloudflare Pages scaffold, but no safe authenticated public gateway to the home-Mac model is deployed. Public hosting should remain browser-only until a session/auth, origin, rate-limit, request-size, and no-retention boundary exists.
 - Beta 8 source commit `021305d` and deployment-record commit `65f6cc7` are pushed. The private Tailnet root, build label, adapted MPS reader health, and compact-reader health all verified.
 - Beta 8 recovery was copied to `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-07-17-physical-annotations-live-marking-beta8/`. The Git bundle verified as complete and all copied reports/evidence matched source SHA-256 hashes.
+
+### 2026-07-17 Cloudflare browser-only public Beta 8
+
+- Tony confirmed the intended domain is `scangrade.io` and authenticated the Cloudflare account with Wrangler OAuth.
+- Cloudflare Pages project `scangrade` now serves the clean Beta 8 static build from Git source commit `478d92d` at `https://scangrade.io/`, `https://scangrade.pages.dev/`, and immutable deployment `https://a5b4bc89.scangrade.pages.dev/`.
+- The custom apex domain is active and returned HTTP 200 with Beta 8 asset `assets/index-Bokf8J_g.js`.
+- This is deliberately browser-only. No Pages Functions, D1 binding, public Mac-Mini proxy, or submission backend was deployed. Requests to `/review-model/health` and `/api/submissions` returned byte-identical static SPA homepages, proving those routes are not exposed services.
+- Public response headers include camera restriction to self, SAMEORIGIN framing, nosniff, and strict-origin referrer policy.
+- Existing worksheet QR codes were not rewritten. Future generated sheets can target `https://scangrade.io/` only after an explicit QR migration and scan test.
+- Official Cloudflare agent skills and MCP entries were installed, but Codex must be restarted to load them. Wrangler administration works. MCP OAuth was not bypassed after macOS blocked the bundled CLI executable.
+- Durable deployment record: `docs/SCANGRADE_CLOUDFLARE_BROWSER_ONLY_PUBLIC_BETA8_20260717.md`.
