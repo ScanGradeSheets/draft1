@@ -40,4 +40,5 @@ The previous private build is source commit `2a6c8c5` with build label `2026.07.
 - `/review-model/health` reported the MPS TrOCR adapter loaded, offline, and rejecting answer-key input.
 - `/v3-compact/health` reported the compact continuous-answer reader healthy.
 - Public GitHub Pages was not redeployed. `scangrade.io` did not resolve in an unrestricted DNS/network check, and no anonymous public proxy to the home model was created.
-- Rugged recovery backup pending the deployment-record commit.
+- Rugged recovery folder: `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-07-17-physical-annotations-live-marking-beta8/`.
+- Its complete Git bundle verified as a complete history. The copied handoff, reports, WebKit proof, strong-view benchmark, and residual contact sheet matched their source SHA-256 hashes.
