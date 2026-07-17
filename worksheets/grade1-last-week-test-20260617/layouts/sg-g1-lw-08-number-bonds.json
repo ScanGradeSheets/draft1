@@ -116,6 +116,7 @@
   "question_groups": [
     {
       "question_num": 1,
+      "max_handwritten_digits": 2,
       "problem": "4 + 5",
       "answer": 9,
       "digit_box_ids": [
@@ -144,6 +145,7 @@
     },
     {
       "question_num": 2,
+      "max_handwritten_digits": 2,
       "problem": "12 - 7",
       "answer": 5,
       "digit_box_ids": [
@@ -172,6 +174,7 @@
     },
     {
       "question_num": 3,
+      "max_handwritten_digits": 2,
       "problem": "8 + 6",
       "answer": 14,
       "digit_box_ids": [
@@ -205,6 +208,7 @@
     },
     {
       "question_num": 4,
+      "max_handwritten_digits": 2,
       "problem": "15 - 9",
       "answer": 6,
       "digit_box_ids": [
@@ -233,6 +237,7 @@
     },
     {
       "question_num": 5,
+      "max_handwritten_digits": 2,
       "problem": "10 + 7",
       "answer": 17,
       "digit_box_ids": [
@@ -266,6 +271,7 @@
     },
     {
       "question_num": 6,
+      "max_handwritten_digits": 2,
       "problem": "20 - 11",
       "answer": 9,
       "digit_box_ids": [
