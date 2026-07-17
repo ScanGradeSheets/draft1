@@ -4842,4 +4842,5 @@ Next action:
 - Live source and both same-origin services verified: strong TrOCR adapter healthy/offline/key-rejecting; compact continuous-answer service healthy.
 - Shipped scope is narrow: the demonstrated P05 ambiguity/conflict veto, consistent yellow/card/annotation state, physical-slot card formatting, deterministic annotation seeds, and preserved off-by-default research harnesses. The rejected all-red model screen and unproved stricter capture gate were not shipped.
 - Release verification: 130/130 JavaScript tests, production build, pruned GitHub build, and diff check passed. Public GitHub Pages was not redeployed.
+- Rugged recovery: complete Git bundle through `003bec5` plus the active handoff and both Beta 7 reports at `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-07-17-p05-safety-private-beta7/`; bundle verification passed.
 - Deployment record: `docs/SCANGRADE_P05_SAFETY_PRIVATE_BETA7_DEPLOYMENT_20260717.md`.

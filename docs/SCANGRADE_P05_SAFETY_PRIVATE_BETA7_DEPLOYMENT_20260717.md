@@ -50,3 +50,4 @@ This release fixes a demonstrated safety failure and UI inconsistency. It does n
 - `/review-model/health` reported the MPS TrOCR adapter loaded, offline, and rejecting answer-key input.
 - `/v3-compact/health` reported the compact continuous-answer model healthy.
 - Public GitHub Pages behavior was not redeployed and remains local-only by default.
+- A complete Git bundle through deployment-record commit `003bec5`, plus this deployment record, the forensic report, and the active handoff, were copied to `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-07-17-p05-safety-private-beta7/`; `git bundle verify` passed.
