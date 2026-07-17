@@ -5,6 +5,7 @@ Date: 2026-07-17
 ## Release identity
 
 - Branch: `autobuild/safe-20260223`
+- Source commit: `2a6c8c5`
 - Build label: `2026.07.17-p05-safety-private-beta-7`
 - Runtime release: `p05-safety-private-beta-7`
 - Private URL: `https://hobbes-mac-mini.tail9a3379.ts.net/`
@@ -44,4 +45,8 @@ This release fixes a demonstrated safety failure and UI inconsistency. It does n
 
 ## Final deployment record
 
-Pending commit, push, and live verification.
+- Source commit `2a6c8c5` was pushed to `origin/autobuild/safe-20260223`.
+- The source-served private URL returned build `2026.07.17-p05-safety-private-beta-7` and runtime `p05-safety-private-beta-7`.
+- `/review-model/health` reported the MPS TrOCR adapter loaded, offline, and rejecting answer-key input.
+- `/v3-compact/health` reported the compact continuous-answer model healthy.
+- Public GitHub Pages behavior was not redeployed and remains local-only by default.

@@ -4834,3 +4834,12 @@ Next action:
 - Each phone scan captured eight frames and retained three; all selected frames cleared focus and perspective gates. Independent replay of all 30 retained frames showed 42/70 raw top-one correct for the whole-page selected frames, 47/70 for the best single frame per page chosen with truth hindsight, 50/70 for an impossible per-answer truth oracle, and 39/70 for simple three-frame majority.
 - Conclusion: alternate frames sometimes contain useful pixels, but whole-page focus, stricter capture thresholds, and majority voting do not identify the better answer safely. Do not raise the capture gate on this evidence. Recognition/candidate selection remains the dominant bottleneck, with number-bond crop/layout failures concentrated separately.
 - An experimental attempt to run the strong path over every red answer was rejected: it added work and did not safely eliminate the broad raw replay errors. Keep the strong path yellow-only plus the narrow P05 ambiguity/conflict safety veto.
+
+### 2026-07-17 P05 safety private beta 7 deployed
+
+- Source commit `2a6c8c5` was pushed to `origin/autobuild/safe-20260223`.
+- Live private build: `2026.07.17-p05-safety-private-beta-7`; runtime release: `p05-safety-private-beta-7`.
+- Live source and both same-origin services verified: strong TrOCR adapter healthy/offline/key-rejecting; compact continuous-answer service healthy.
+- Shipped scope is narrow: the demonstrated P05 ambiguity/conflict veto, consistent yellow/card/annotation state, physical-slot card formatting, deterministic annotation seeds, and preserved off-by-default research harnesses. The rejected all-red model screen and unproved stricter capture gate were not shipped.
+- Release verification: 130/130 JavaScript tests, production build, pruned GitHub build, and diff check passed. Public GitHub Pages was not redeployed.
+- Deployment record: `docs/SCANGRADE_P05_SAFETY_PRIVATE_BETA7_DEPLOYMENT_20260717.md`.
