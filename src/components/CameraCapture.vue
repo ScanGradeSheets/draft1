@@ -23,6 +23,39 @@
           class="captured-image"
           alt="Captured worksheet"
         >
+        <svg
+          v-if="progressiveMarkingActive && progressiveAnnotatedImage"
+          class="progressive-marking-layer"
+          :viewBox="`0 0 ${progressiveMarkingDimensions.width} ${progressiveMarkingDimensions.height}`"
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden="true"
+        >
+          <defs>
+            <clipPath
+              v-for="step in revealedProgressiveMarkingSteps"
+              :id="`progressive-clip-${step.questionNum}`"
+              :key="`clip-${step.questionNum}`"
+            >
+              <rect :x="step.x" :y="step.y" :width="step.w" :height="step.h" rx="18" ry="18" />
+            </clipPath>
+          </defs>
+          <image
+            v-for="step in revealedProgressiveMarkingSteps"
+            :key="step.key"
+            class="progressive-marking-reveal"
+            x="0"
+            y="0"
+            :width="progressiveMarkingDimensions.width"
+            :height="progressiveMarkingDimensions.height"
+            preserveAspectRatio="none"
+            :href="progressiveAnnotatedImage"
+            :clip-path="`url(#progressive-clip-${step.questionNum})`"
+          />
+        </svg>
+        <div v-if="progressiveMarkingActive" class="progressive-marking-status" role="status" aria-live="polite">
+          <span class="progressive-marking-pen" aria-hidden="true">✎</span>
+          <span>{{ progressiveMarkingStatusText }}</span>
+        </div>
         <button
           v-for="region in correctionRegions"
           :key="region.key"
@@ -486,6 +519,8 @@ import { applyConsensusPromotionsToPredictions } from '../v3/consensus-applicati
 import { consensusFeatureEnabled, consensusModelEndpoint } from '../v3/production-runtime.js'
 import { decodeFrameDataUrlInWorker, frameDecodeWorkerSupported } from '../v3/frame-preparation.js'
 import { annotationSeedForResult } from '../v3/annotation-seed.js'
+import { annotationRectForCrop } from '../v3/annotation-geometry.js'
+import { progressiveMarkingSteps } from '../v3/progressive-marking.js'
 import {
   browserLocalStrongShadowConfig,
   requestBrowserLocalStrongShadow,
@@ -1212,6 +1247,11 @@ const manualCorrectionClearedForSession = ref(false)
 const correctionError = ref('')
 const localFirstStrongStatusByQuestion = ref({})
 const localFirstStrongContext = ref(null)
+const progressiveRevealedQuestionNums = ref([])
+const progressiveMarkingComplete = ref(false)
+const progressiveMarkingSessionKey = ref('')
+let progressiveMarkingTimer = null
+let progressiveMarkingEarliestFinish = 0
 let digitModelWarmupStarted = false
 let activeScanSessionId = null
 let captureGateTelemetry = newCaptureGateTelemetry()
@@ -1239,8 +1279,66 @@ const showAnnotatedResultImage = computed(() =>
   !!ocrResult.value?.annotatedImageUrl
 )
 
+const progressiveAnnotatedImage = computed(() => ocrResult.value?.annotatedImageUrl || '')
+
+const progressiveMarkingDimensions = computed(() => ({
+  width: Math.max(1, Number(ocrResult.value?.annotationGeometry?.warpedW) || 1),
+  height: Math.max(1, Number(ocrResult.value?.annotationGeometry?.warpedH) || 1),
+}))
+
+const progressiveMarkingStepList = computed(() => progressiveMarkingSteps(
+  studentAnswerGroups.value,
+  allAnnotationRegions.value,
+  progressiveMarkingDimensions.value,
+  {
+    // While the stronger review is running, reveal only questions that are not
+    // in its queue. Questions it may promote or veto appear only after it has
+    // reached a final decision, so a teacher/student never sees a mark retracted.
+    excludedQuestionNums: ocrResult.value?.v3Shadow?.status === 'compact-ready'
+      ? ocrResult.value?.v3Shadow?.pendingReviewQuestionNums
+      : [],
+  },
+))
+
+const revealedProgressiveMarkingSteps = computed(() => {
+  const revealed = new Set(progressiveRevealedQuestionNums.value.map(Number))
+  return progressiveMarkingStepList.value.filter((step) => revealed.has(Number(step.questionNum)))
+})
+
+const progressiveReviewPending = computed(() => {
+  const status = String(ocrResult.value?.v3Shadow?.status || '')
+  return status === 'pending' || status === 'compact-ready'
+})
+
+const progressiveEvidenceReady = computed(() => {
+  const status = String(ocrResult.value?.v3Shadow?.status || '')
+  return status !== 'pending'
+})
+
+const progressiveMarkingActive = computed(() => (
+  props.studentMode
+  && !!ocrResult.value
+  && !ocrResult.value?.error
+  && !!progressiveAnnotatedImage.value
+  && !progressiveMarkingComplete.value
+))
+
+const progressiveMarkingStatusText = computed(() => {
+  const revealed = revealedProgressiveMarkingSteps.value.length
+  const total = progressiveMarkingStepList.value.length
+  if (!progressiveEvidenceReady.value) return 'Preparing to mark your page…'
+  if (revealed < total) return `Marking ${revealed + 1} of ${total}`
+  const yellow = studentAnswerGroups.value.filter((group) => group?.status === 'review').length
+  if (progressiveReviewPending.value && yellow > 0) {
+    return `Double-checking ${yellow} unclear answer${yellow === 1 ? '' : 's'}…`
+  }
+  return 'Finishing your page…'
+})
+
 const displayedResultImage = computed(() =>
-  showAnnotatedResultImage.value && ocrResult.value?.annotatedImageUrl
+  progressiveMarkingActive.value
+    ? (ocrResult.value?.annotationBaseUrl || capturedImage.value)
+    : showAnnotatedResultImage.value && ocrResult.value?.annotatedImageUrl
     ? ocrResult.value.annotatedImageUrl
     : (ocrResult.value?.annotationBaseUrl || capturedImage.value)
 )
@@ -3125,6 +3223,86 @@ watch(
   { immediate: true }
 )
 
+function clearProgressiveMarkingTimer() {
+  if (progressiveMarkingTimer != null && typeof window !== 'undefined') {
+    window.clearTimeout(progressiveMarkingTimer)
+  }
+  progressiveMarkingTimer = null
+}
+
+function finishProgressiveMarkingSoon(delayMs = 420) {
+  clearProgressiveMarkingTimer()
+  const remaining = Math.max(0, progressiveMarkingEarliestFinish - Date.now())
+  progressiveMarkingTimer = window.setTimeout(() => {
+    progressiveMarkingComplete.value = true
+    progressiveMarkingTimer = null
+  }, Math.max(delayMs, remaining))
+}
+
+function advanceProgressiveMarking() {
+  if (!progressiveMarkingActive.value || typeof window === 'undefined') return
+  if (!progressiveEvidenceReady.value) {
+    clearProgressiveMarkingTimer()
+    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 120)
+    return
+  }
+  const revealed = new Set(progressiveRevealedQuestionNums.value.map(Number))
+  const next = progressiveMarkingStepList.value.find((step) => !revealed.has(Number(step.questionNum)))
+  if (next) {
+    progressiveRevealedQuestionNums.value = [
+      ...progressiveRevealedQuestionNums.value,
+      Number(next.questionNum),
+    ]
+    clearProgressiveMarkingTimer()
+    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 620)
+    return
+  }
+  if (progressiveReviewPending.value) {
+    clearProgressiveMarkingTimer()
+    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 320)
+    return
+  }
+  finishProgressiveMarkingSoon()
+}
+
+function resetProgressiveMarking() {
+  clearProgressiveMarkingTimer()
+  progressiveRevealedQuestionNums.value = []
+  progressiveMarkingComplete.value = false
+  progressiveMarkingSessionKey.value = ''
+  progressiveMarkingEarliestFinish = 0
+}
+
+watch(
+  () => ({
+    result: ocrResult.value,
+    annotatedImage: ocrResult.value?.annotatedImageUrl || '',
+    shadowStatus: ocrResult.value?.v3Shadow?.status || '',
+    steps: progressiveMarkingStepList.value.map((step) => `${step.questionNum}:${step.status}`).join('|'),
+  }),
+  ({ result, annotatedImage }) => {
+    if (!props.studentMode || !result || result.error || !annotatedImage || typeof window === 'undefined') return
+    const sessionKey = String(result.annotationSeed || result.scanSessionId || capturedImage.value?.length || 'scan')
+    if (progressiveMarkingSessionKey.value !== sessionKey) {
+      resetProgressiveMarking()
+      progressiveMarkingSessionKey.value = sessionKey
+      progressiveMarkingEarliestFinish = Date.now() + 2200
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true
+      if (reduceMotion) {
+        progressiveRevealedQuestionNums.value = progressiveMarkingStepList.value.map((step) => Number(step.questionNum))
+        progressiveMarkingComplete.value = true
+        return
+      }
+      progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 360)
+      return
+    }
+    if (progressiveMarkingActive.value && progressiveMarkingTimer == null) {
+      progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 120)
+    }
+  },
+  { flush: 'post' }
+)
+
 watch(
   () => [props.autoStart, props.captureEnabled, streamActive.value, capturedImage.value, processing.value, ocrResult.value, isLoading.value, autoStartCameraBlocked.value],
   async ([autoStart, captureEnabled, isStreamActive, currentCapturedImage, isProcessing, currentOcrResult, loading, autoBlocked]) => {
@@ -4981,10 +5159,6 @@ function layoutBoxRectMap(layout, warpedW, warpedH) {
     if (rect) out.set(box.id, rect)
   }
   return out
-}
-
-function annotationRectForCrop(crop) {
-  return crop?.layoutBoxRect || crop?.expectedRect || crop?.boxRect || crop?.refinedRect || crop?.cropRect || null
 }
 
 function buildLayoutSnapshot(layout) {
@@ -8344,6 +8518,7 @@ const runRealOCR = async () => {
               confidenceSafetyEnabled: v3ConfidenceSafetyEnabled(),
               confidenceSafetyCandidateCount: confidenceSafetyQuestionNums.length,
               confidenceSafetyVetoCount: confidenceSafetyVetoRecords.length,
+              pendingReviewQuestionNums: [...reviewQuestionNums],
             }
             partialDebug.v3Shadow = payload.v3Shadow
             if (lastLiveOcrDebug.value) {
@@ -8972,6 +9147,7 @@ function exportLiveOcrDebugJson() {
 }
 
 const retake = () => {
+  resetProgressiveMarking()
   pendingHybridBurstFrames = []
   captureGateTelemetry = newCaptureGateTelemetry()
   capturedImage.value = null
@@ -9001,6 +9177,7 @@ const stopStream = () => {
 }
 
 onUnmounted(() => {
+  clearProgressiveMarkingTimer()
   stopStream()
   if (typeof window !== 'undefined') {
     delete window.__SCANGRADE_SET_V3_BURST_FRAMES
@@ -9162,6 +9339,65 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 100%;
+}
+
+.progressive-marking-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.progressive-marking-reveal {
+  animation: progressive-ink-reveal 480ms cubic-bezier(0.2, 0.7, 0.25, 1) both;
+}
+
+.progressive-marking-status {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100% - 24px);
+  padding: 8px 13px;
+  border: 1px solid rgba(224, 210, 139, 0.78);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #202124;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.13);
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 800;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.progressive-marking-pen {
+  color: #245aa4;
+  font-size: 18px;
+  line-height: 1;
+  animation: progressive-pen-motion 720ms ease-in-out infinite alternate;
+}
+
+@keyframes progressive-ink-reveal {
+  from { opacity: 0; transform: translate(-5px, 3px); }
+  to { opacity: 1; transform: translate(0, 0); }
+}
+
+@keyframes progressive-pen-motion {
+  from { transform: rotate(-10deg) translateX(-2px); }
+  to { transform: rotate(2deg) translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressive-marking-reveal,
+  .progressive-marking-pen {
+    animation: none;
+  }
 }
 
 .video-preview, .captured-image {
