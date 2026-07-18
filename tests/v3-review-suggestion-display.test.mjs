@@ -71,15 +71,16 @@ test('auto-advance skips confidently wrong red answers and visits only yellow an
   assert.equal(nextYellowReviewGroup(groups, [false, false, false, false], 2), null)
 })
 
-test('a validated whole-answer suggestion keeps a partially yellow two-digit answer in whole-answer review mode', () => {
-  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 1, hasWholeAnswerSuggestion: true }), true)
-  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 1, hasWholeAnswerSuggestion: false }), true)
+test('a partially yellow two-digit answer asks only for the yellow physical slot', () => {
+  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 1, hasWholeAnswerSuggestion: true }), false)
+  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 1, hasWholeAnswerSuggestion: false }), false)
   assert.equal(wholeAnswerReviewModeEligible({ slotCount: 1, reviewSlotCount: 1, hasWholeAnswerSuggestion: true }), false)
 })
 
-test('every multi-slot correction is whole-answer so a hidden OCR error cannot survive teacher review', () => {
-  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 1, hasWholeAnswerSuggestion: false }), true)
-  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 3, reviewSlotCount: 1, hasWholeAnswerSuggestion: false }), true)
+test('whole-answer correction remains mandatory when multiple physical slots are unresolved', () => {
+  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 2, hasWholeAnswerSuggestion: false }), true)
+  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 3, reviewSlotCount: 2, hasWholeAnswerSuggestion: false }), true)
+  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 3, reviewSlotCount: 1, hasWholeAnswerSuggestion: false }), false)
 })
 
 test('strong-model work is restricted to yellow questions without changing item content', () => {

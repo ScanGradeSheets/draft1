@@ -66,6 +66,22 @@ test('checkmark stroke travels continuously from left to right', () => {
   assert.equal(step.strokes[0].delayMs, 0)
 })
 
+test('an X draws top-left to bottom-right, then crosses only after the first stroke finishes', () => {
+  const [step] = progressiveMarkingSteps(
+    [{ questionNum: 1, status: 'incorrect' }],
+    [{ questionNum: 1, x: 20, y: 20, w: 40, h: 30, focusX: 25, focusY: 25, focusW: 30, focusH: 20 }],
+    { width: 200, height: 120 },
+  )
+  const coordinates = (stroke) => [...stroke.d.matchAll(/[ML] (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g)]
+    .map((match) => ({ x: Number(match[1]), y: Number(match[2]) }))
+  const first = coordinates(step.strokes[0])
+  const second = coordinates(step.strokes[1])
+
+  assert.ok(first.at(-1).x > first[0].x && first.at(-1).y > first[0].y)
+  assert.ok(second.at(-1).x < second[0].x && second.at(-1).y > second[0].y)
+  assert.ok(step.strokes[1].delayMs >= step.strokes[0].durationMs)
+})
+
 test('a settled review answer uses one left-to-right highlighter swipe', () => {
   const [step] = progressiveMarkingSteps(
     [{ questionNum: 2, status: 'review', reviewNeeded: true }],

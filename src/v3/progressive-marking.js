@@ -100,7 +100,9 @@ function teacherStrokePaths(status, rect, seed, width, height) {
   )
   return [
     { d: pathData(first), durationMs: 270, delayMs: 0 },
-    { d: pathData(second), durationMs: 270, delayMs: 210 },
+    // Finish the top-left to bottom-right stroke before lifting the pen and
+    // drawing the crossing top-right to bottom-left stroke.
+    { d: pathData(second), durationMs: 270, delayMs: 300 },
   ]
 }
 

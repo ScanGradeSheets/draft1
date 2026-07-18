@@ -132,7 +132,7 @@
               &times;
             </button>
           </div>
-          <div v-if="activeCorrectionChoices.length" class="student-correction-choices">
+          <div v-if="activeCorrectionChoices.length || activeCorrectionSlotIndex != null" class="student-correction-choices">
             <button
               v-for="choice in activeCorrectionChoices"
               :key="choice.key"
@@ -141,6 +141,15 @@
               @click="applyCorrectionChoice(choice)"
             >
               {{ choice.text }}
+            </button>
+            <button
+              v-if="activeCorrectionSlotIndex != null"
+              type="button"
+              class="btn btn-secondary correction-choice-btn student-correction-empty-choice"
+              :aria-label="`Leave ${activeCorrectionSlotLabel} blank`"
+              @click="applyNoAnswerCorrection"
+            >
+              _
             </button>
           </div>
           <div class="student-correction-manual">
@@ -192,7 +201,7 @@
             </button>
           </div>
           <button
-            v-else-if="activeCorrectionPhysicalSlotCount === 2"
+            v-else-if="activeCorrectionSlotIndex == null && activeCorrectionPhysicalSlotCount === 2"
             type="button"
             class="student-correction-blank-link"
             @click="applyNoAnswerCorrection"
@@ -200,7 +209,7 @@
             Blank answer
           </button>
           <button
-            v-else
+            v-else-if="activeCorrectionSlotIndex == null"
             type="button"
             class="student-correction-blank-link"
             @click="applyNoAnswerCorrection"
@@ -409,9 +418,9 @@
                 :class="[
                   { 'student-answer-pill--blank': digit === null || digit === undefined || digit === '' },
                   `student-answer-pill--${group.slotStatuses?.[digitIndex] || group.status}`,
-                  { 'student-answer-pill--clickable': isAnswerGroupEditable(group) }
+                  { 'student-answer-pill--clickable': isAnswerSlotEditable(group, digitIndex) }
                 ]"
-                :disabled="!isAnswerGroupEditable(group)"
+                :disabled="!isAnswerSlotEditable(group, digitIndex)"
                 :aria-label="`Fix ${group.label} digit ${digitIndex + 1}`"
                 @click.stop="openCorrectionByGroupSlot(group, shouldUseWholeAnswerCorrection(group) ? null : digitIndex)"
               >
@@ -1790,6 +1799,12 @@ function isAnswerGroupEditable(group) {
   return !!(group && !ocrResult.value?.error && Array.isArray(group.digitBoxIds) && group.digitBoxIds.length)
 }
 
+function isAnswerSlotEditable(group, slotIndex) {
+  if (!isAnswerGroupEditable(group)) return false
+  const reviewSlots = reviewSlotIndexesForGroup(group)
+  return reviewSlots.length !== 1 || reviewSlots[0] === slotIndex
+}
+
 function reviewSlotIndexesForGroup(group) {
   if (!isAnswerGroupEditable(group)) return []
   const ids = Array.isArray(group?.digitBoxIds) ? group.digitBoxIds : []
@@ -1811,6 +1826,11 @@ function shouldUseWholeAnswerCorrection(group) {
       ? prediction.wholeAnswerReviewSuggestions.length > 0
       : !!prediction?.wholeAnswerReviewSuggestion
   })
+  if (!wholeAnswerReviewModeEligible({
+    slotCount: ids.length,
+    reviewSlotCount: reviewSlots.length,
+    hasWholeAnswerSuggestion,
+  })) return false
   if (v3LocalFirstReviewEnabled() && hasWholeAnswerSuggestion) return true
   const questionNum = Number(group?.questionNum ?? group?.question_num)
   const hasPreparedStrongFallback = v3LocalFirstReviewEnabled()
@@ -1818,11 +1838,7 @@ function shouldUseWholeAnswerCorrection(group) {
     && (localFirstStrongContext.value?.sequenceItems || [])
       .some((item) => Number(item?.questionNum) === questionNum)
   if (hasPreparedStrongFallback) return true
-  return wholeAnswerReviewModeEligible({
-    slotCount: ids.length,
-    reviewSlotCount: reviewSlots.length,
-    hasWholeAnswerSuggestion,
-  })
+  return true
 }
 
 function groupForQuestionNum(questionNum) {
@@ -1874,11 +1890,13 @@ function openCorrection(region) {
 
 function openCorrectionByGroupSlot(group, slotIndex = null) {
   if (!isAnswerGroupEditable(group)) return
-  const useWholeAnswer = slotIndex == null || shouldUseWholeAnswerCorrection(group)
+  const reviewSlots = reviewSlotIndexesForGroup(group)
+  const requestedSlotIndex = reviewSlots.length === 1 ? reviewSlots[0] : slotIndex
+  const useWholeAnswer = requestedSlotIndex == null || shouldUseWholeAnswerCorrection(group)
   const selectedSlotIndex = useWholeAnswer
     ? null
-    : Number.isInteger(slotIndex)
-    ? slotIndex
+    : Number.isInteger(requestedSlotIndex)
+    ? requestedSlotIndex
     : preferredCorrectionSlotIndex(group)
   const region = allAnnotationRegions.value.find((item) =>
     item.questionNum === group.questionNum &&
@@ -1916,7 +1934,11 @@ function keepCorrectionPanelAboveKeyboard() {
 }
 
 function handleManualCorrectionFocus(event) {
-  event?.target?.select?.()
+  const input = event?.target
+  const caret = String(input?.value || '').length
+  // Selecting the whole value opens iPadOS's black Cut/Copy/Look Up menu and
+  // obscures the correction card. Keep a collapsed caret at the end instead.
+  input?.setSelectionRange?.(caret, caret)
   const keyboardSettleDelays = [40, 180, 360]
   keyboardSettleDelays.forEach((delay) => {
     window.setTimeout(keepCorrectionPanelAboveKeyboard, delay)
@@ -10114,6 +10136,12 @@ onUnmounted(() => {
   min-width: 0;
   height: 36px;
   padding: 0 4px;
+}
+
+.student-correction-panel--image .student-correction-empty-choice {
+  color: #6e6e73;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .student-correction-panel--image .student-correction-manual input {

@@ -27,7 +27,15 @@ export function nextYellowReviewGroup(answerGroups, questionReview, currentQuest
 }
 
 export function wholeAnswerReviewModeEligible({ slotCount, reviewSlotCount, hasWholeAnswerSuggestion }) {
-  return Number(slotCount) > 1
+  const slots = Number(slotCount)
+  const yellowSlots = Number(reviewSlotCount)
+  if (slots <= 1) return false
+
+  // When exactly one physical box is yellow, let the teacher correct only that
+  // box. The application still merges the correction into—and regrades—the
+  // complete answer atomically, so a slot edit cannot desynchronise the grade.
+  // Whole-answer mode remains mandatory when more than one box is unresolved.
+  return yellowSlots !== 1
 }
 
 export function yellowQuestionNumbers(questionGroups, questionReview) {

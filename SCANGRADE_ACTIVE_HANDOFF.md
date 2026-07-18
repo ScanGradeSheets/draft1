@@ -4970,3 +4970,14 @@ Next action:
 - Catalog expansion can become low marginal effort only after a worksheet-family structure is proven. Every new family must still pass curriculum QA, layout-contract audit, answer-key/metadata agreement, QR routing, visual QA, device capture replay, handwriting-truth safety, and listing QA.
 - Initial catalog scope remains Grade 1. Grades 2–6 are an expansion reservoir, not a launch promise. Advance by proven worksheet families rather than generating a large unvalidated catalog.
 - Durable decision record: `docs/SCANGRADE_LOCKED_TPT_WORKSHEET_BUSINESS_STRATEGY_20260718.md`. Do not change this launch business model without Tony's explicit approval.
+
+### 2026-07-18 single-slot review Beta 13 local candidate
+
+- Live Beta 12 testing on a two-box mixed addition/subtraction answer exposed an over-broad correction rule: although only the right physical digit was yellow, the panel asked the teacher to reconfirm full answers such as `15`, `19`, and `75`, and placed a small `Blank answer` text action at the bottom.
+- Root cause: Beta 10's correction-integrity repair intentionally forced every multi-slot review into complete-answer mode so a hidden wrong OCR digit could not survive a partial correction. Beta 13 narrows the interface while preserving the integrity mechanism.
+- When exactly one physical slot is unresolved, the panel now opens that slot only, offers only single-digit candidates from that slot's key-blind OCR evidence, limits manual entry to one digit, and shows `_` in the same choice grid for “this highlighted box is blank.” The settled slot is not presented as editable.
+- Applying the one-slot correction still merges it into the full cell array and atomically recomputes the complete transcription, grade, answer card, stored correction history, and raster annotation. If multiple physical slots are unresolved, full-answer mode and explicit position choices (`9_`, `_9`, `__`) remain mandatory.
+- The iPadOS Cut/Copy/Look Up bar was traced to calling `select()` on input focus. Beta 13 instead places a collapsed caret at the end, so tapping the field opens the numeric keyboard without deliberately invoking text selection.
+- Red X animation is now strictly sequential: top-left to bottom-right for 270 ms, then—after that stroke is complete—top-right to bottom-left. The second stroke delay increased from 210 ms to 300 ms.
+- Verification: all 164 repository tests pass, including explicit X direction/non-overlap timing and the single-yellow-slot review contract; production build passes. Recognition, capture, crops, confidence policy, answer-key separation, and automatic acceptance behavior are unchanged.
+- Candidate label: `2026.07.18-single-slot-review-beta-13`. This entry records a local candidate only; it is not public until a later deployment record says otherwise.
