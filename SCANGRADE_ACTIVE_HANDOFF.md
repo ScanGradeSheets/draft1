@@ -4953,3 +4953,10 @@ Next action:
 - Final immutable deployment: `https://ea1d3e0a.scangrade.pages.dev/`; production: `https://scangrade.io/`. Production, immutable, and local HTML are byte-identical at SHA-256 `24c8837cece44ea849c8e2052d99861fe723ae04143ab90e115f229ef269a3c2`.
 - Post-deploy verification: exact Beta 11 label, zero browser console errors, valid HTTP-to-HTTPS redirect, JavaScript MIME type, QR layout JSON availability, and static-only `/api/submissions` plus `/review-model/health` behavior all pass. Durable record: `docs/SCANGRADE_NATURAL_REVIEW_PUBLIC_BETA11_20260718.md`.
 - A first successful upload at `188541ac` had correct files but incorrect expanded commit metadata. It was immediately superseded by the byte-identical `ea1d3e0a` deployment carrying the correct full source hash.
+
+### 2026-07-18 local post-Beta-11 blank-position correction refinement
+
+- This refinement is local and not deployed. Public production remains Beta 11.
+- A confidently empty worksheet-declared optional slot remains ordinary recognition evidence: it is stored as blank with `reviewNeeded: false`, receives no yellow highlight or blank-position prompt, and the complete answer receives only its normal check/X after grading. A regression assertion now explicitly protects this behavior.
+- Only answers already sent to review expose blank-position controls. When a teacher types one digit for a two-slot reviewed answer, the panel now shows direct visual choices such as `9_`, `_9`, and `__`; the teacher never types an underscore. Choosing one immediately saves, regrades, closes the panel, and uses the correction animation.
+- Focused recognition/annotation tests pass 18/18. The complete mobile WebKit correction flow also passes, including visual blank-position choices and teacher-confirmed all-blank handling.

@@ -268,9 +268,14 @@ try {
   await positionedInput.fill('9')
   await page.locator('.student-correction-save').click()
   const ambiguousSingleDigitBlocked = await page.locator('.student-correction-error').isVisible()
-  await page.getByRole('button', { name: 'Left blank' }).click()
-  const positionedEntry = await positionedInput.inputValue()
-  await page.locator('.student-correction-save').click()
+  const positionedChoices = await page.evaluate(() => (
+    [...document.querySelectorAll('.student-correction-position-choice')]
+      .map((button) => ({
+        label: button.getAttribute('aria-label') || '',
+        text: button.textContent?.replace(/\s+/g, ' ').trim() || '',
+      }))
+  ))
+  await page.getByRole('button', { name: 'Leave left box blank and put 9 in right box' }).click()
   await page.waitForFunction(() => !document.querySelector('.student-correction-panel--image'))
   await page.waitForFunction(() => !document.querySelector('.student-scan-grading-word'))
   console.log('[webkit] positioned one-digit correction complete')
@@ -282,7 +287,9 @@ try {
   })
 
   await page.locator('.annotation-hotspot').filter({ hasText: /^A/ }).last().click({ force: true })
-  await page.getByRole('button', { name: 'All blank' }).click()
+  const blankBothButton = page.getByRole('button', { name: 'Leave both boxes blank' })
+  if (await blankBothButton.count() === 1) await blankBothButton.click()
+  else await page.getByRole('button', { name: 'Blank answer' }).click()
   await page.waitForFunction(() => !document.querySelector('.student-correction-panel--image'))
   await page.waitForFunction(() => !document.querySelector('.student-scan-grading-word'))
   console.log('[webkit] no-answer correction complete')
@@ -298,7 +305,7 @@ try {
   })
   const manualBlankCorrection = {
     ambiguousSingleDigitBlocked,
-    positionedEntry,
+    positionedChoices,
     positionedDisplay,
     noAnswerCorrection,
   }
@@ -346,7 +353,7 @@ try {
         manualCorrectionAnimation.strokeCount >= 2,
       manualBlankCorrection:
         manualBlankCorrection.ambiguousSingleDigitBlocked === true &&
-        manualBlankCorrection.positionedEntry === '_9' &&
+        JSON.stringify(manualBlankCorrection.positionedChoices.map((choice) => choice.text)) === JSON.stringify(['9_', '_9', '__']) &&
         JSON.stringify(manualBlankCorrection.positionedDisplay) === JSON.stringify(['', '9']) &&
         JSON.stringify(manualBlankCorrection.noAnswerCorrection.display) === JSON.stringify(['', '']) &&
         manualBlankCorrection.noAnswerCorrection.review === false &&

@@ -29,6 +29,7 @@ test('right-aligns a one-digit answer in an optional two-slot zone', () => {
   })
   assert.deepEqual(result.predictions.map((row) => row.digit), [null, 7])
   assert.deepEqual(result.predictions.map((row) => row.blank), [true, false])
+  assert.deepEqual(result.predictions.map((row) => row.reviewNeeded), [false, false])
 })
 
 test('retains a two-digit incorrect transcription written inside one physical box', () => {

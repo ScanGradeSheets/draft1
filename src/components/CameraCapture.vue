@@ -165,17 +165,40 @@
               Save
             </button>
           </div>
-          <div v-if="activeCorrectionPhysicalSlotCount === 2" class="student-correction-blank-actions">
-            <button type="button" class="btn btn-secondary" @click="setManualCorrectionBlankSlot(0)">
-              Left blank
+          <div v-if="showManualCorrectionPositionChoices" class="student-correction-blank-actions">
+            <button
+              type="button"
+              class="btn btn-secondary student-correction-position-choice"
+              :aria-label="`Put ${manualCorrectionPositionDigit} in left box and leave right box blank`"
+              @click="applyManualCorrectionPositionChoice(1)"
+            >
+              <span>{{ manualCorrectionPositionDigit }}</span><span class="student-correction-empty-slot">_</span>
             </button>
-            <button type="button" class="btn btn-secondary" @click="setManualCorrectionBlankSlot(1)">
-              Right blank
+            <button
+              type="button"
+              class="btn btn-secondary student-correction-position-choice"
+              :aria-label="`Leave left box blank and put ${manualCorrectionPositionDigit} in right box`"
+              @click="applyManualCorrectionPositionChoice(0)"
+            >
+              <span class="student-correction-empty-slot">_</span><span>{{ manualCorrectionPositionDigit }}</span>
             </button>
-            <button type="button" class="btn btn-secondary" @click="applyNoAnswerCorrection">
-              All blank
+            <button
+              type="button"
+              class="btn btn-secondary student-correction-position-choice"
+              aria-label="Leave both boxes blank"
+              @click="applyNoAnswerCorrection"
+            >
+              <span class="student-correction-empty-slot">_</span><span class="student-correction-empty-slot">_</span>
             </button>
           </div>
+          <button
+            v-else-if="activeCorrectionPhysicalSlotCount === 2"
+            type="button"
+            class="student-correction-blank-link"
+            @click="applyNoAnswerCorrection"
+          >
+            Blank answer
+          </button>
           <button
             v-else
             type="button"
@@ -1629,6 +1652,17 @@ const activeCorrectionPhysicalSlotCount = computed(() => {
   return Math.max(1, ids.length)
 })
 
+const manualCorrectionPositionDigit = computed(() => {
+  const digits = String(manualCorrectionText.value || '').match(/\d/g) || []
+  return digits.length === 1 ? digits[0] : ''
+})
+
+const showManualCorrectionPositionChoices = computed(() => (
+  activeCorrectionPhysicalSlotCount.value === 2 &&
+  manualCorrectionNeedsExplicitPosition(manualCorrectionText.value, 2) &&
+  !!manualCorrectionPositionDigit.value
+))
+
 const activeCorrectionPlaceholder = computed(() =>
   activeCorrectionMaxLength.value > 1 ? '37' : '8'
 )
@@ -1915,7 +1949,8 @@ async function applyManualCorrectionText() {
   normalizeManualCorrectionInput()
   const group = activeCorrectionGroup.value
   if (manualCorrectionNeedsExplicitPosition(manualCorrectionText.value, activeCorrectionPhysicalSlotCount.value)) {
-    correctionError.value = 'Choose “Left blank” or “Right blank” so the digit stays where the student wrote it.'
+    const digit = manualCorrectionPositionDigit.value || 'digit'
+    correctionError.value = `Choose “${digit} _” or “_ ${digit}” so the digit stays where the student wrote it.`
     return
   }
   const slotCount = activeCorrectionSlotIndex.value != null
@@ -1935,14 +1970,23 @@ async function applyManualCorrectionText() {
   })
 }
 
-function setManualCorrectionBlankSlot(slotIndex) {
-  manualCorrectionText.value = manualCorrectionTextWithBlank(
+async function applyManualCorrectionPositionChoice(blankSlotIndex) {
+  const positionedText = manualCorrectionTextWithBlank(
     manualCorrectionText.value,
-    slotIndex,
+    blankSlotIndex,
     activeCorrectionPhysicalSlotCount.value,
   )
+  const cells = parseManualAnswerText(positionedText, activeCorrectionPhysicalSlotCount.value)
+  if (!cells) {
+    correctionError.value = 'Enter one digit before choosing its box.'
+    return
+  }
+  manualCorrectionText.value = positionedText
   correctionError.value = ''
-  nextTick(() => manualCorrectionInputRef.value?.focus())
+  await applyManualCorrectionCells(cells, {
+    correctionSource: 'manual-keypad-position',
+    oneTap: true,
+  })
 }
 
 async function applyNoAnswerCorrection() {
@@ -10098,6 +10142,28 @@ onUnmounted(() => {
   padding: 6px 3px;
   font-size: 10px;
   font-weight: 750;
+}
+
+.student-correction-blank-actions .student-correction-position-choice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(15px, 1fr));
+  align-items: end;
+  gap: 2px;
+  height: 38px;
+  padding: 4px 5px 5px;
+  color: #1d1d1f;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.student-correction-position-choice span {
+  display: block;
+  text-align: center;
+}
+
+.student-correction-empty-slot {
+  color: #77777c;
+  font-weight: 650;
 }
 
 .student-correction-blank-link {
