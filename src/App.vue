@@ -109,10 +109,10 @@
         <div
           v-if="showStudentCaptureUi"
           class="student-scan-bar"
-          :class="{ 'student-scan-bar--grading': studentCameraProcessing }"
+          :class="{ 'student-scan-bar--grading': studentScanStage }"
         >
-          <div v-if="studentCameraProcessing" class="student-scan-grading" aria-live="polite">
-            <span class="student-scan-grading-word">Grading</span>
+          <div v-if="studentScanStage" class="student-scan-grading" aria-live="polite">
+            <span class="student-scan-grading-word">{{ studentScanStage === 'grading' ? 'Grading' : 'Scanning' }}</span>
           </div>
           <template v-else>
             <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
@@ -142,6 +142,7 @@
           @image-captured="handleImageCaptured"
           @ocr-complete="handleOCRComplete"
           @processing-change="handleCameraProcessingChange"
+          @student-stage-change="handleStudentStageChange"
           @student-done="handleStudentDone"
           ref="cameraRef"
         />
@@ -357,7 +358,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.18-teacher-pen-strokes-beta-9'
+const APP_BUILD_LABEL = '2026.07.18-correction-integrity-beta-10'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -394,6 +395,7 @@ const studentView = ref(isStudentMode.value ? 'landing' : 'capture')
 const showStudentCaptureUi = computed(() => isStudentMode.value && studentView.value === 'capture')
 const ocrResult = ref(null)
 const studentCameraProcessing = ref(false)
+const studentScanStage = ref('')
 const studentScanKey = ref(0)
 const cameraKey = computed(() => isStudentMode.value ? `student-camera-${studentScanKey.value}` : 'teacher-camera')
 const classRoster = ref([])
@@ -506,6 +508,7 @@ const clearActiveScanResult = () => {
   ocrResult.value = null
   showAnnotationLayer.value = false
   studentCameraProcessing.value = false
+  studentScanStage.value = ''
 }
 
 const resetStudentScan = () => {
@@ -707,6 +710,10 @@ const handleOCRComplete = async (res) => {
 
 const handleCameraProcessingChange = (isProcessing) => {
   studentCameraProcessing.value = !!isProcessing
+}
+
+const handleStudentStageChange = (stage) => {
+  studentScanStage.value = stage === 'scanning' || stage === 'grading' ? stage : ''
 }
 
 // Runtime test status tracking

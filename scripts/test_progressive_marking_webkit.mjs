@@ -128,7 +128,7 @@ try {
   await page.waitForTimeout(180)
 
   const during = await page.evaluate(() => ({
-    status: document.querySelector('.progressive-marking-status')?.textContent?.trim() || '',
+    status: document.querySelector('.student-scan-grading-word')?.textContent?.trim() || '',
     revealQuestionNums: [...document.querySelectorAll('mask[id^="progressive-mask-"]')]
       .map((node) => Number(node.id.replace('progressive-mask-', ''))),
     revealedStrokeCounts: [...document.querySelectorAll('mask[id^="progressive-mask-"]')]
@@ -147,18 +147,160 @@ try {
   })
 
   await page.waitForFunction(() => ['complete', 'unavailable'].includes(window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.status))
-  await page.waitForFunction(() => !document.querySelector('.progressive-marking-status'))
+  await page.waitForFunction(() => !document.querySelector('.student-scan-grading-word'))
   const after = await page.evaluate(() => ({
     shadowStatus: window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.status || '',
-    progressiveStatusVisible: !!document.querySelector('.progressive-marking-status'),
+    progressiveStatusVisible: !!document.querySelector('.student-scan-grading-word'),
     markedSheetAvailable: !!window.__SCANGRADE_LIVE_OCR_DEBUG?.markedSheetDataUrl,
   }))
+  console.log('[webkit] initial grading complete')
+  await page.screenshot({
+    path: path.join(ROOT, 'private-evidence/reports/progressive-marking-highlighter-webkit-20260718.png'),
+    fullPage: true,
+  })
+  await page.locator('.annotation-hotspot').filter({ hasText: /^A/ }).last().click()
+  await page.waitForFunction(() => !!document.querySelector('.student-correction-panel--image'))
+  const correctionOpen = await page.evaluate(() => {
+    const panel = document.querySelector('.student-correction-panel--image')
+    const hotspot = document.querySelector('.annotation-hotspot--active')
+    const input = panel?.querySelector('input')
+    if (!panel || !hotspot || !input) return null
+    const panelRect = panel.getBoundingClientRect()
+    const hotspotRect = hotspot.getBoundingClientRect()
+    const wrapRect = panel.closest('.captured-image-wrap')?.getBoundingClientRect()
+    const focusRect = wrapRect ? {
+      left: wrapRect.left + wrapRect.width * Number(hotspot.dataset.focusLeftPct) / 100,
+      top: wrapRect.top + wrapRect.height * Number(hotspot.dataset.focusTopPct) / 100,
+      right: wrapRect.left + wrapRect.width * (Number(hotspot.dataset.focusLeftPct) + Number(hotspot.dataset.focusWidthPct)) / 100,
+      bottom: wrapRect.top + wrapRect.height * (Number(hotspot.dataset.focusTopPct) + Number(hotspot.dataset.focusHeightPct)) / 100,
+    } : hotspotRect
+    const arrowX = Number.parseFloat(getComputedStyle(panel).getPropertyValue('--correction-arrow-x'))
+    const above = panel.classList.contains('student-correction-panel--above')
+    const below = panel.classList.contains('student-correction-panel--below')
+    const arrowPoint = {
+      x: panelRect.left + panelRect.width * arrowX / 100,
+      y: above ? panelRect.bottom : panelRect.top,
+    }
+    return {
+      above,
+      below,
+      inputFocused: document.activeElement === input,
+      arrowInsideActiveHotspot:
+        arrowPoint.x >= hotspotRect.left && arrowPoint.x <= hotspotRect.right &&
+        arrowPoint.y >= hotspotRect.top - 16 && arrowPoint.y <= hotspotRect.bottom + 16,
+      panelOverlapsActiveAnswer: !(
+        panelRect.right <= focusRect.left ||
+        panelRect.left >= focusRect.right ||
+        panelRect.bottom <= focusRect.top ||
+        panelRect.top >= focusRect.bottom
+      ),
+      choiceCount: panel.querySelectorAll('.correction-choice-btn').length,
+    }
+  })
+  await page.locator('.captured-image').click({ position: { x: 8, y: 8 } })
+  await page.waitForFunction(() => !document.querySelector('.student-correction-panel--image'))
+  const outsideTapClosed = await page.evaluate(() => !document.querySelector('.student-correction-panel--image'))
+  console.log('[webkit] correction placement and outside-close complete')
+
+  await page.locator('.annotation-hotspot').filter({ hasText: /^A/ }).last().click({ force: true })
+  const firstChoice = page.locator('.correction-choice-btn').first()
+  await firstChoice.waitFor()
+  await firstChoice.click()
+  await page.waitForFunction(() => !document.querySelector('.student-correction-panel--image'))
+  const oneTapChoiceClosed = await page.evaluate(() => !document.querySelector('.student-correction-panel--image'))
+  console.log('[webkit] one-tap correction complete')
+
+  const questionCHotspot = page.locator('.annotation-hotspot').filter({ hasText: /^C/ }).first()
+  await questionCHotspot.click({ force: true })
+  const wholeAnswerInput = page.locator('.student-correction-panel--image input')
+  await wholeAnswerInput.waitFor()
+  const wholeAnswerMaxLength = await wholeAnswerInput.getAttribute('maxlength')
+  const imageBeforeManualCorrection = await page.locator('.captured-image').getAttribute('src')
+  await wholeAnswerInput.fill('11')
+  await page.locator('.student-correction-save').click()
+  await page.waitForFunction(() => !document.querySelector('.student-correction-panel--image'))
+  console.log('[webkit] two-digit correction saved')
+  await page.waitForFunction(() => document.querySelector('.student-scan-grading-word')?.textContent?.trim() === 'Grading')
+  await page.waitForFunction(() => !!document.querySelector('mask[id="progressive-mask-3"]'))
+  const manualCorrectionAnimation = await page.evaluate(() => ({
+    status: document.querySelector('.student-scan-grading-word')?.textContent?.trim() || '',
+    strokeCount: document.querySelector('mask[id="progressive-mask-3"]')
+      ?.querySelectorAll('.progressive-marking-stroke').length || 0,
+  }))
+  await page.waitForFunction(() => {
+    const item = [...document.querySelectorAll('.student-answer-item')]
+      .find((node) => node.querySelector('.student-answer-label')?.getAttribute('aria-label')?.startsWith('C'))
+    return item?.classList.contains('student-answer-item--correct')
+  })
+  await page.waitForFunction(() => !document.querySelector('.student-scan-grading-word'))
+  console.log('[webkit] correction animation complete')
+  const manualWholeAnswerCorrection = await page.evaluate((imageBefore) => {
+    const item = [...document.querySelectorAll('.student-answer-item')]
+      .find((node) => node.querySelector('.student-answer-label')?.getAttribute('aria-label')?.startsWith('C'))
+    return {
+      maxLength: document.querySelector('.student-correction-panel--image input')?.getAttribute('maxlength') || null,
+      displayText: [...(item?.querySelectorAll('.student-answer-pill') || [])]
+        .map((node) => node.textContent?.trim() || '')
+        .join(''),
+      correct: item?.classList.contains('student-answer-item--correct') === true,
+      annotationRecomposed: document.querySelector('.captured-image')?.getAttribute('src') !== imageBefore,
+    }
+  }, imageBeforeManualCorrection)
+  manualWholeAnswerCorrection.maxLength = wholeAnswerMaxLength
+
+  await page.locator('.annotation-hotspot').filter({ hasText: /^A/ }).last().click({ force: true })
+  const positionedInput = page.locator('.student-correction-panel--image input')
+  await positionedInput.fill('9')
+  await page.locator('.student-correction-save').click()
+  const ambiguousSingleDigitBlocked = await page.locator('.student-correction-error').isVisible()
+  await page.getByRole('button', { name: 'Left blank' }).click()
+  const positionedEntry = await positionedInput.inputValue()
+  await page.locator('.student-correction-save').click()
+  await page.waitForFunction(() => !document.querySelector('.student-correction-panel--image'))
+  await page.waitForFunction(() => !document.querySelector('.student-scan-grading-word'))
+  console.log('[webkit] positioned one-digit correction complete')
+  const positionedDisplay = await page.evaluate(() => {
+    const item = [...document.querySelectorAll('.student-answer-item')]
+      .find((node) => node.querySelector('.student-answer-label')?.getAttribute('aria-label')?.startsWith('A'))
+    return [...(item?.querySelectorAll('.student-answer-pill') || [])]
+      .map((node) => node.textContent?.trim() || '')
+  })
+
+  await page.locator('.annotation-hotspot').filter({ hasText: /^A/ }).last().click({ force: true })
+  await page.getByRole('button', { name: 'No answer' }).click()
+  await page.waitForFunction(() => !document.querySelector('.student-correction-panel--image'))
+  await page.waitForFunction(() => !document.querySelector('.student-scan-grading-word'))
+  console.log('[webkit] no-answer correction complete')
+  const noAnswerCorrection = await page.evaluate(() => {
+    const item = [...document.querySelectorAll('.student-answer-item')]
+      .find((node) => node.querySelector('.student-answer-label')?.getAttribute('aria-label')?.startsWith('A'))
+    return {
+      display: [...(item?.querySelectorAll('.student-answer-pill') || [])]
+        .map((node) => node.textContent?.trim() || ''),
+      review: item?.classList.contains('student-answer-item--review') === true,
+      incorrect: item?.classList.contains('student-answer-item--incorrect') === true,
+    }
+  })
+  const manualBlankCorrection = {
+    ambiguousSingleDigitBlocked,
+    positionedEntry,
+    positionedDisplay,
+    noAnswerCorrection,
+  }
   const overlap = during.revealQuestionNums.filter((questionNum) => during.pendingQuestionNums.includes(questionNum))
   report = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     during,
     after,
+    correctionInteraction: {
+      ...correctionOpen,
+      outsideTapClosed,
+      oneTapChoiceClosed,
+      manualWholeAnswerCorrection,
+      manualCorrectionAnimation,
+      manualBlankCorrection,
+    },
     gates: {
       earlySettledMarkVisible: during.revealQuestionNums.length > 0,
       teacherStrokeStructure: during.revealedStrokeCounts.length > 0 &&
@@ -168,6 +310,27 @@ try {
       provisionalFinalImageHidden: during.finalImageVisible === false,
       strongReviewCompleted: after.shadowStatus === 'complete',
       animationFinished: after.progressiveStatusVisible === false && after.markedSheetAvailable,
+      correctionArrowAnchored: correctionOpen?.arrowInsideActiveHotspot === true,
+      correctionPanelDoesNotCoverAnswer: correctionOpen?.panelOverlapsActiveAnswer === false,
+      correctionUsesVerticalArrow: correctionOpen?.above === true || correctionOpen?.below === true,
+      manualInputFocused: correctionOpen?.inputFocused === true,
+      outsideTapClosed,
+      oneTapChoiceClosed,
+      manualWholeAnswerCorrection:
+        manualWholeAnswerCorrection.maxLength === '2' &&
+        manualWholeAnswerCorrection.displayText === '11' &&
+        manualWholeAnswerCorrection.correct === true &&
+        manualWholeAnswerCorrection.annotationRecomposed === true,
+      manualCorrectionAnimated:
+        manualCorrectionAnimation.status === 'Grading' &&
+        manualCorrectionAnimation.strokeCount >= 2,
+      manualBlankCorrection:
+        manualBlankCorrection.ambiguousSingleDigitBlocked === true &&
+        manualBlankCorrection.positionedEntry === '_9' &&
+        JSON.stringify(manualBlankCorrection.positionedDisplay) === JSON.stringify(['', '9']) &&
+        JSON.stringify(manualBlankCorrection.noAnswerCorrection.display) === JSON.stringify(['', '']) &&
+        manualBlankCorrection.noAnswerCorrection.review === false &&
+        manualBlankCorrection.noAnswerCorrection.incorrect === true,
     },
   }
   await page.close()

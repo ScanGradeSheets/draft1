@@ -28,7 +28,6 @@ export function nextYellowReviewGroup(answerGroups, questionReview, currentQuest
 
 export function wholeAnswerReviewModeEligible({ slotCount, reviewSlotCount, hasWholeAnswerSuggestion }) {
   return Number(slotCount) > 1
-    && (Number(reviewSlotCount) === Number(slotCount) || hasWholeAnswerSuggestion === true)
 }
 
 export function yellowQuestionNumbers(questionGroups, questionReview) {

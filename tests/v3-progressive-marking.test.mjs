@@ -14,7 +14,7 @@ test('progressive marking reveals only settled answers in worksheet order', () =
     { questionNum: 2, x: 50, y: 20, w: 30, h: 40 },
     { questionNum: 3, x: 10, y: 80, w: 30, h: 40 },
   ]
-  const steps = progressiveMarkingSteps(groups, regions, { width: 200, height: 300 })
+  const steps = progressiveMarkingSteps(groups, regions, { width: 200, height: 300 }, { excludeReview: true })
   assert.deepEqual(steps.map((step) => [step.questionNum, step.status]), [[1, 'correct'], [3, 'incorrect']])
   assert.ok(steps.every((step) => step.x >= 0 && step.y >= 0 && step.w > 0 && step.h > 0))
   assert.equal(steps[0].strokes.length, 1, 'a checkmark must be one continuous pen stroke')
@@ -64,4 +64,30 @@ test('checkmark stroke travels continuously from left to right', () => {
   assert.ok(coordinates.length >= 5)
   assert.ok(coordinates.at(-1).x > coordinates[0].x)
   assert.equal(step.strokes[0].delayMs, 0)
+})
+
+test('a settled review answer uses one left-to-right highlighter swipe', () => {
+  const [step] = progressiveMarkingSteps(
+    [{ questionNum: 2, status: 'review', reviewNeeded: true }],
+    [{ questionNum: 2, x: 40, y: 30, w: 42, h: 24, focusX: 44, focusY: 34, focusW: 34, focusH: 16 }],
+    { width: 200, height: 120 },
+  )
+  assert.equal(step.status, 'review')
+  assert.equal(step.strokes.length, 1)
+  assert.ok(step.strokeWidth >= 18)
+  assert.ok(step.strokes[0].d.startsWith('M '))
+})
+
+test('a manual correction reveals the replacement answer before drawing its new mark', () => {
+  const steps = progressiveMarkingSteps(
+    [{ questionNum: 2, status: 'correct', reviewNeeded: false }],
+    [{ questionNum: 2, x: 100, y: 80, w: 70, h: 42, focusX: 105, focusY: 85, focusW: 60, focusH: 32 }],
+    { width: 500, height: 700 },
+    { onlyQuestionNums: [2], revealAnswerQuestionNums: [2] },
+  )
+  assert.equal(steps.length, 1)
+  assert.equal(steps[0].strokes.length, 2)
+  assert.ok(steps[0].strokes[0].width > steps[0].strokeWidth)
+  assert.equal(steps[0].strokes[0].delayMs, 0)
+  assert.ok(steps[0].strokes[1].delayMs >= 260)
 })

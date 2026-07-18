@@ -73,8 +73,13 @@ test('auto-advance skips confidently wrong red answers and visits only yellow an
 
 test('a validated whole-answer suggestion keeps a partially yellow two-digit answer in whole-answer review mode', () => {
   assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 1, hasWholeAnswerSuggestion: true }), true)
-  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 1, hasWholeAnswerSuggestion: false }), false)
+  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 1, hasWholeAnswerSuggestion: false }), true)
   assert.equal(wholeAnswerReviewModeEligible({ slotCount: 1, reviewSlotCount: 1, hasWholeAnswerSuggestion: true }), false)
+})
+
+test('every multi-slot correction is whole-answer so a hidden OCR error cannot survive teacher review', () => {
+  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 2, reviewSlotCount: 1, hasWholeAnswerSuggestion: false }), true)
+  assert.equal(wholeAnswerReviewModeEligible({ slotCount: 3, reviewSlotCount: 1, hasWholeAnswerSuggestion: false }), true)
 })
 
 test('strong-model work is restricted to yellow questions without changing item content', () => {

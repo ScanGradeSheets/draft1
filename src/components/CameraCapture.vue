@@ -17,7 +17,12 @@
         <p class="overlay-frame-text">{{ studentMode ? studentAutoStatus : 'Line up your sheet' }}</p>
       </div>
 
-      <div v-else-if="displayedResultImage" ref="capturedImageWrapRef" class="captured-image-wrap">
+      <div
+        v-else-if="displayedResultImage"
+        ref="capturedImageWrapRef"
+        class="captured-image-wrap"
+        @click="handleCorrectionOutsideClick"
+      >
         <img
           :src="displayedResultImage"
           class="captured-image"
@@ -48,7 +53,7 @@
                 :d="stroke.d"
                 fill="none"
                 stroke="white"
-                :stroke-width="step.strokeWidth"
+                :stroke-width="stroke.width || step.strokeWidth"
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 pathLength="1"
@@ -72,10 +77,6 @@
             :mask="`url(#progressive-mask-${step.questionNum})`"
           />
         </svg>
-        <div v-if="progressiveMarkingActive" class="progressive-marking-status" role="status" aria-live="polite">
-          <span class="progressive-marking-pen" aria-hidden="true">✎</span>
-          <span>{{ progressiveMarkingStatusText }}</span>
-        </div>
         <button
           v-for="region in correctionRegions"
           :key="region.key"
@@ -83,6 +84,10 @@
           class="annotation-hotspot"
           :class="{ 'annotation-hotspot--active': activeCorrectionQuestion?.questionNum === region.questionNum }"
           :style="correctionHotspotStyle(region)"
+          :data-focus-left-pct="region.focusLeftPct ?? region.leftPct"
+          :data-focus-top-pct="region.focusTopPct ?? region.topPct"
+          :data-focus-width-pct="region.focusWidthPct ?? region.widthPct"
+          :data-focus-height-pct="region.focusHeightPct ?? region.heightPct"
           :aria-label="`Fix ${region.label} answer`"
           @click="openCorrection(region)"
         >
@@ -108,8 +113,20 @@
               &times;
             </button>
           </div>
+          <div v-if="activeCorrectionChoices.length" class="student-correction-choices">
+            <button
+              v-for="choice in activeCorrectionChoices"
+              :key="choice.key"
+              type="button"
+              class="btn btn-secondary correction-choice-btn"
+              @click="applyCorrectionChoice(choice)"
+            >
+              {{ choice.text }}
+            </button>
+          </div>
           <div class="student-correction-manual">
             <input
+              ref="manualCorrectionInputRef"
               v-model="manualCorrectionText"
               type="text"
               :aria-label="activeCorrectionInputLabel"
@@ -122,25 +139,23 @@
               :maxlength="activeCorrectionMaxLength"
               :placeholder="activeCorrectionPlaceholder"
               @input="normalizeManualCorrectionInput"
-              @focus="clearManualCorrectionInput"
-              @click="clearManualCorrectionInput"
               @keydown.enter.prevent="applyManualCorrectionText"
             >
             <button type="button" class="btn btn-primary student-correction-save" @click="applyManualCorrectionText">
               Save
             </button>
           </div>
-          <div v-if="activeCorrectionChoices.length" class="student-correction-choices">
-            <button
-              v-for="choice in activeCorrectionChoices"
-              :key="choice.key"
-              type="button"
-              class="btn btn-secondary correction-choice-btn"
-              @click="applyCorrectionChoice(choice)"
-            >
-              {{ choice.text }}
+          <div v-if="activeCorrectionPhysicalSlotCount === 2" class="student-correction-blank-actions">
+            <button type="button" class="btn btn-secondary" @click="setManualCorrectionBlankSlot(0)">
+              Left blank
+            </button>
+            <button type="button" class="btn btn-secondary" @click="setManualCorrectionBlankSlot(1)">
+              Right blank
             </button>
           </div>
+          <button type="button" class="btn btn-secondary student-correction-no-answer" @click="applyNoAnswerCorrection">
+            No answer
+          </button>
           <button
             v-if="showLocalFirstStrongFallback"
             type="button"
@@ -524,7 +539,6 @@ import {
 import {
   displayedYellowQuestionNumbers,
   filterItemsToYellowQuestions,
-  nextYellowReviewGroup,
   reviewSuggestionDisplayEligible,
   wholeAnswerReviewModeEligible,
   yellowQuestionNumbers,
@@ -541,6 +555,12 @@ import { decodeFrameDataUrlInWorker, frameDecodeWorkerSupported } from '../v3/fr
 import { annotationSeedForResult } from '../v3/annotation-seed.js'
 import { annotationRectForCrop } from '../v3/annotation-geometry.js'
 import { progressiveMarkingSteps } from '../v3/progressive-marking.js'
+import { correctionPanelPlacementForRegion } from '../v3/correction-panel-placement.js'
+import {
+  manualCorrectionContract,
+  manualCorrectionNeedsExplicitPosition,
+  manualCorrectionTextWithBlank,
+} from '../v3/manual-correction-contract.js'
 import {
   browserLocalStrongShadowConfig,
   requestBrowserLocalStrongShadow,
@@ -1229,7 +1249,7 @@ function highRiskSingleDigitMismatchReviewForDigit(proc, result, expectedDigit) 
   return digit === 6 && (expected === 5 || expected === 8)
 }
 
-const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done', 'processing-change'])
+const emit = defineEmits(['image-captured', 'ocr-complete', 'student-done', 'processing-change', 'student-stage-change'])
 
 const videoRef = ref(null)
 const stream = ref(null)
@@ -1261,6 +1281,7 @@ const modelInfoSnapshot = ref(null)
 const modelSanityRunning = ref(false)
 const modelSanityResults = ref(null)
 const capturedImageWrapRef = ref(null)
+const manualCorrectionInputRef = ref(null)
 const activeCorrectionQuestion = ref(null)
 const manualCorrectionText = ref('')
 const manualCorrectionClearedForSession = ref(false)
@@ -1270,6 +1291,8 @@ const localFirstStrongContext = ref(null)
 const progressiveRevealedQuestionNums = ref([])
 const progressiveMarkingComplete = ref(false)
 const progressiveMarkingSessionKey = ref('')
+const progressiveCorrectionQuestionNum = ref(null)
+const progressiveBaseImageOverride = ref('')
 let progressiveMarkingTimer = null
 let progressiveMarkingEarliestFinish = 0
 let digitModelWarmupStarted = false
@@ -1317,6 +1340,13 @@ const progressiveMarkingStepList = computed(() => progressiveMarkingSteps(
     excludedQuestionNums: ocrResult.value?.v3Shadow?.status === 'compact-ready'
       ? ocrResult.value?.v3Shadow?.pendingReviewQuestionNums
       : [],
+    excludeReview: progressiveReviewPending.value,
+    onlyQuestionNums: progressiveCorrectionQuestionNum.value != null && Number.isFinite(Number(progressiveCorrectionQuestionNum.value))
+      ? [Number(progressiveCorrectionQuestionNum.value)]
+      : [],
+    revealAnswerQuestionNums: progressiveCorrectionQuestionNum.value != null && Number.isFinite(Number(progressiveCorrectionQuestionNum.value))
+      ? [Number(progressiveCorrectionQuestionNum.value)]
+      : [],
   },
 ))
 
@@ -1343,21 +1373,9 @@ const progressiveMarkingActive = computed(() => (
   && !progressiveMarkingComplete.value
 ))
 
-const progressiveMarkingStatusText = computed(() => {
-  const revealed = revealedProgressiveMarkingSteps.value.length
-  const total = progressiveMarkingStepList.value.length
-  if (!progressiveEvidenceReady.value) return 'Preparing to mark your page…'
-  if (revealed < total) return `Marking ${revealed + 1} of ${total}`
-  const yellow = studentAnswerGroups.value.filter((group) => group?.status === 'review').length
-  if (progressiveReviewPending.value && yellow > 0) {
-    return `Double-checking ${yellow} unclear answer${yellow === 1 ? '' : 's'}…`
-  }
-  return 'Finishing your page…'
-})
-
 const displayedResultImage = computed(() =>
   progressiveMarkingActive.value
-    ? (ocrResult.value?.annotationBaseUrl || capturedImage.value)
+    ? (progressiveBaseImageOverride.value || ocrResult.value?.annotationBaseUrl || capturedImage.value)
     : showAnnotatedResultImage.value && ocrResult.value?.annotatedImageUrl
     ? ocrResult.value.annotatedImageUrl
     : (ocrResult.value?.annotationBaseUrl || capturedImage.value)
@@ -1443,122 +1461,11 @@ const correctionPanelStyle = computed(() => {
 
 const correctionPanelPlacement = computed(() => {
   const region = activeCorrectionRegion.value
-  if (!region) return null
-  if (
-    !Number.isFinite(region.leftPct) ||
-    !Number.isFinite(region.topPct) ||
-    !Number.isFinite(region.widthPct) ||
-    !Number.isFinite(region.heightPct)
-  ) {
-    return null
-  }
   const wholeAnswer = activeCorrectionSlotIndex.value == null && activeCorrectionMaxLength.value > 1
-  const panelWidthPct = wholeAnswer ? 43 : 40
-  const panelHeightPct = wholeAnswer ? 27 : 25
-  const gapPct = 1.65
-  const focusLeft = Number.isFinite(region.focusLeftPct) ? region.focusLeftPct : region.leftPct
-  const focusTop = Number.isFinite(region.focusTopPct) ? region.focusTopPct : region.topPct
-  const focusWidth = Number.isFinite(region.focusWidthPct) ? region.focusWidthPct : region.widthPct
-  const focusHeight = Number.isFinite(region.focusHeightPct) ? region.focusHeightPct : region.heightPct
-  const focusRight = focusLeft + focusWidth
-  const focusBottom = focusTop + focusHeight
-  const centerX = focusLeft + focusWidth / 2
-  const centerY = focusTop + focusHeight / 2
-  const lowerRow = centerY > 60
-  const upperRow = centerY < 30
-  const rightEdgeRisk = focusRight > 74 || centerX > 67
-  const leftEdgeRisk = focusLeft < 17 || centerX < 20
-  const preferVertical = lowerRow || rightEdgeRisk
-  const bounds = { left: 2, top: 4, right: 98, bottom: 96 }
-  const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
-  const activeQuestionRects = allAnnotationRegions.value
-    .filter((item) => item.questionNum === region.questionNum)
-    .map((item) => ({
-      left: Number.isFinite(item.leftPct) ? item.leftPct : focusLeft,
-      top: Number.isFinite(item.topPct) ? item.topPct : focusTop,
-      right: Number.isFinite(item.leftPct) && Number.isFinite(item.widthPct)
-        ? item.leftPct + item.widthPct
-        : focusRight,
-      bottom: Number.isFinite(item.topPct) && Number.isFinite(item.heightPct)
-        ? item.topPct + item.heightPct
-        : focusBottom
-    }))
-  const intersectionArea = (candidate, rect = null) => {
-    const avoid = rect || { left: focusLeft, top: focusTop, right: focusRight, bottom: focusBottom }
-    const x0 = Math.max(candidate.left, avoid.left)
-    const y0 = Math.max(candidate.top, avoid.top)
-    const x1 = Math.min(candidate.left + panelWidthPct, avoid.right)
-    const y1 = Math.min(candidate.top + panelHeightPct, avoid.bottom)
-    return Math.max(0, x1 - x0) * Math.max(0, y1 - y0)
-  }
-  const questionOverlap = (candidate) => activeQuestionRects
-    .reduce((sum, rect) => sum + intersectionArea(candidate, rect), 0)
-  const rawCandidates = [
-    {
-      placement: 'left',
-      left: focusLeft - panelWidthPct - gapPct,
-      top: centerY - panelHeightPct / 2,
-      preference: centerX > 54 ? 2 : 7
-    },
-    {
-      placement: 'right',
-      left: focusRight + gapPct,
-      top: centerY - panelHeightPct / 2,
-      preference: centerX < 46 ? 2 : 9
-    },
-    {
-      placement: 'above',
-      left: centerX - panelWidthPct / 2,
-      top: focusTop - panelHeightPct - gapPct,
-      preference: lowerRow ? 0 : (centerY > 33 ? 1 : 8)
-    },
-    {
-      placement: 'below',
-      left: centerX - panelWidthPct / 2,
-      top: focusBottom + gapPct,
-      preference: upperRow ? 0 : (lowerRow ? 11 : 2)
-    }
-  ]
-
-  const candidates = rawCandidates.map((candidate) => {
-    const left = clamp(candidate.left, bounds.left, bounds.right - panelWidthPct)
-    const top = clamp(candidate.top, bounds.top, bounds.bottom - panelHeightPct)
-    const offscreen =
-      Math.abs(left - candidate.left) +
-      Math.abs(top - candidate.top)
-    const overlap = intersectionArea({ left, top })
-    const siblingOverlap = questionOverlap({ left, top })
-    const score =
-      candidate.preference +
-      offscreen * 9 +
-      overlap * 24 +
-      siblingOverlap * 9 +
-      (candidate.placement === 'right' && rightEdgeRisk ? 90 : 0) +
-      (candidate.placement === 'left' && leftEdgeRisk ? 40 : 0) +
-      (candidate.placement === 'below' && centerY > 67 ? 30 : 0) +
-      ((candidate.placement === 'left' || candidate.placement === 'right') && preferVertical ? 58 : 0)
-    return { ...candidate, left, top, score }
+  return correctionPanelPlacementForRegion(region, {
+    panelWidthPct: wholeAnswer ? 43 : 40,
+    estimatedPanelHeightPct: wholeAnswer ? 27 : 25,
   })
-  const best = candidates.sort((a, b) => a.score - b.score)[0]
-  const arrowX = best.placement === 'left'
-    ? 100
-    : best.placement === 'right'
-      ? 0
-      : clamp(((centerX - best.left) / panelWidthPct) * 100, 12, 88)
-  const arrowY = best.placement === 'above'
-    ? 100
-    : best.placement === 'below'
-      ? 0
-      : clamp(((centerY - best.top) / panelHeightPct) * 100, 12, 88)
-  return {
-    placement: best.placement,
-    left: best.left,
-    top: best.top,
-    width: panelWidthPct,
-    transform: 'none',
-    arrowX,
-    arrowY
-  }
 })
 
 const correctionPanelClass = computed(() => {
@@ -1610,13 +1517,16 @@ const activeCorrectionCurrentText = computed(() => {
   }
   const predictions = activeCorrectionPredictions.value
   if (!predictions.length) return 'not sure'
+  const predictionById = new Map(predictions.map((prediction) => [prediction?.id, prediction]))
+  const override = groupAnswerTextOverride(activeCorrectionGroup.value, predictionById)
+  if (override) return override
   const text = predictions
     .map((prediction) => {
-      if (prediction?.blank === true || prediction?.empty === true) return ''
-      return prediction?.digit == null ? '' : String(prediction.digit)
+      if (prediction?.blank === true || prediction?.empty === true) return predictions.length > 1 ? '_' : ''
+      return prediction?.digit == null ? (predictions.length > 1 ? '_' : '') : String(prediction.digit)
     })
     .join('')
-  return text || 'blank'
+  return text && !/^_+$/.test(text) ? text : 'blank'
 })
 
 const activeCorrectionChoices = computed(() => {
@@ -1669,6 +1579,14 @@ const activeCorrectionMaxLength = computed(() => {
   const group = activeCorrectionGroup.value
   const count = maxHandwrittenDigitsForGroup(group)
   return Math.max(1, count)
+})
+
+const activeCorrectionPhysicalSlotCount = computed(() => {
+  if (activeCorrectionSlotIndex.value != null) return 1
+  const ids = Array.isArray(activeCorrectionGroup.value?.digit_box_ids)
+    ? activeCorrectionGroup.value.digit_box_ids
+    : []
+  return Math.max(1, ids.length)
 })
 
 const activeCorrectionPlaceholder = computed(() =>
@@ -1878,6 +1796,7 @@ function openCorrection(region) {
   manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
   correctionError.value = ''
+  focusManualCorrectionInput()
 }
 
 function openCorrectionByGroupSlot(group, slotIndex = null) {
@@ -1908,6 +1827,27 @@ function openCorrectionByGroupSlot(group, slotIndex = null) {
   nextTick(() => {
     capturedImageWrapRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
   })
+  focusManualCorrectionInput()
+}
+
+function focusManualCorrectionInput() {
+  nextTick(() => {
+    const input = manualCorrectionInputRef.value
+    if (!input) return
+    try {
+      input.focus({ preventScroll: true })
+    } catch {
+      input.focus()
+    }
+    input.select()
+  })
+}
+
+function handleCorrectionOutsideClick(event) {
+  if (!activeCorrectionQuestion.value) return
+  const target = event?.target
+  if (target instanceof Element && target.closest('.student-correction-panel, .annotation-hotspot')) return
+  cancelCorrection()
 }
 
 function cancelCorrection() {
@@ -1928,6 +1868,10 @@ async function applyCorrectionChoice(choice) {
 async function applyManualCorrectionText() {
   normalizeManualCorrectionInput()
   const group = activeCorrectionGroup.value
+  if (manualCorrectionNeedsExplicitPosition(manualCorrectionText.value, activeCorrectionPhysicalSlotCount.value)) {
+    correctionError.value = 'Choose “Left blank” or “Right blank” so the digit stays where the student wrote it.'
+    return
+  }
   const slotCount = activeCorrectionSlotIndex.value != null
     ? 1
     : maxHandwrittenDigitsForGroup(group)
@@ -1945,6 +1889,27 @@ async function applyManualCorrectionText() {
   })
 }
 
+function setManualCorrectionBlankSlot(slotIndex) {
+  manualCorrectionText.value = manualCorrectionTextWithBlank(
+    manualCorrectionText.value,
+    slotIndex,
+    activeCorrectionPhysicalSlotCount.value,
+  )
+  correctionError.value = ''
+  nextTick(() => manualCorrectionInputRef.value?.focus())
+}
+
+async function applyNoAnswerCorrection() {
+  const slotCount = activeCorrectionSlotIndex.value != null
+    ? 1
+    : activeCorrectionPhysicalSlotCount.value
+  await applyManualCorrectionCells(Array(slotCount).fill(null), {
+    slotIndex: activeCorrectionSlotIndex.value,
+    correctionSource: 'manual-no-answer',
+    oneTap: true,
+  })
+}
+
 function normalizeManualCorrectionInput(event) {
   const maxLength = activeCorrectionMaxLength.value
   const rawText = event?.target?.value ?? manualCorrectionText.value
@@ -1956,14 +1921,6 @@ function normalizeManualCorrectionInput(event) {
   if (correctionError.value) correctionError.value = ''
 }
 
-function clearManualCorrectionInput() {
-  if (manualCorrectionClearedForSession.value) return
-  manualCorrectionClearedForSession.value = true
-  if (!manualCorrectionText.value) return
-  manualCorrectionText.value = ''
-  if (correctionError.value) correctionError.value = ''
-}
-
 async function applyManualCorrectionCells(cells, { slotIndex = null, correctionSource = 'manual', oneTap = false } = {}) {
   const result = ocrResult.value
   const group = activeCorrectionGroup.value
@@ -1971,6 +1928,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   const questionGroups = Array.isArray(layoutSnapshot?.question_groups) ? layoutSnapshot.question_groups : []
   const annotationGeometry = result?.annotationGeometry
   if (!result || !group || !annotationGeometry || !Array.isArray(result.predictions)) return
+  const previousAnnotatedImageUrl = result.annotatedImageUrl || result.annotationBaseUrl || capturedImage.value
 
   const ids = Array.isArray(group.digit_box_ids) ? group.digit_box_ids : []
   if (!ids.length) return
@@ -1983,8 +1941,11 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   const normalizedSlotIndex = Number.isInteger(slotIndex) && slotIndex >= 0 && slotIndex < ids.length
     ? slotIndex
     : null
-  const overflowSinglePhysicalBox = normalizedSlotIndex == null && ids.length === 1 && cells.length > 1 &&
-    cells.length <= maxHandwrittenDigitsForGroup(group)
+  const wholeAnswerContract = normalizedSlotIndex == null
+    ? manualCorrectionContract(cells, ids.length)
+    : null
+  const overflowSinglePhysicalBox = wholeAnswerContract?.overflowSinglePhysicalBox === true &&
+    wholeAnswerContract.correctionCells.length <= maxHandwrittenDigitsForGroup(group)
   const normalizedCells = ids.map((id) => {
     const predictionIndex = predictionIndexById.get(id)
     const prediction = predictionIndex == null ? null : nextPredictions[predictionIndex]
@@ -1993,9 +1954,9 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     )
     return normalized === undefined ? null : normalized
   })
-  const correctionCells = cells.slice(0, normalizedSlotIndex == null
-    ? (overflowSinglePhysicalBox ? cells.length : ids.length)
-    : 1)
+  const correctionCells = normalizedSlotIndex == null
+    ? wholeAnswerContract.correctionCells
+    : cells.slice(0, 1)
   if (normalizedSlotIndex == null) {
     if (!overflowSinglePhysicalBox) {
       while (correctionCells.length < ids.length) correctionCells.unshift(null)
@@ -2006,8 +1967,8 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   } else {
     normalizedCells[normalizedSlotIndex] = correctionCells[0] ?? null
   }
-  const answerText = overflowSinglePhysicalBox
-    ? cellsToAnswerText(correctionCells)
+  const answerText = normalizedSlotIndex == null
+    ? wholeAnswerContract.answerText
     : cellsToAnswerText(normalizedCells)
   const slotsToUpdate = normalizedSlotIndex == null
     ? ids.map((_, index) => index)
@@ -2062,7 +2023,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     [correctionKey]: {
       questionNum: group.question_num ?? activeCorrectionQuestion.value?.questionNum ?? null,
       label: activeCorrectionQuestion.value?.label || '',
-      cells: normalizedCells,
+      cells: overflowSinglePhysicalBox ? correctionCells : normalizedCells,
       text: answerText,
       correctedSlots: Array.from(correctedSlots).sort((a, b) => a - b),
       correctionSource,
@@ -2142,6 +2103,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     nextResult.correct = nextPredictions.map((prediction) => prediction.correct)
   }
   ocrResult.value = nextResult
+  startManualCorrectionAnimation(group.question_num ?? activeCorrectionQuestion.value?.questionNum, previousAnnotatedImageUrl)
   if (lastLiveOcrDebug.value) {
     lastLiveOcrDebug.value = {
       ...lastLiveOcrDebug.value,
@@ -2171,16 +2133,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     }
     uploadLiveOcrDebug(correctionTelemetry, 'manual-correction')
   }
-  const currentQuestionNum = Number(group.question_num ?? activeCorrectionQuestion.value?.questionNum)
-  const nextReviewGroup = nextYellowReviewGroup(
-    nextResult.answerGroups,
-    nextResult.questionReview,
-    currentQuestionNum
-  )
   cancelCorrection()
-  if (hybridBurstEnabled() && nextReviewGroup) {
-    nextTick(() => openCorrectionByGroupSlot(nextReviewGroup))
-  }
   emit('ocr-complete', nextResult)
 }
 
@@ -3243,6 +3196,14 @@ watch(
   { immediate: true }
 )
 
+watch(
+  () => processing.value ? 'scanning' : (progressiveMarkingActive.value ? 'grading' : ''),
+  (stage) => {
+    emit('student-stage-change', stage)
+  },
+  { immediate: true }
+)
+
 function clearProgressiveMarkingTimer() {
   if (progressiveMarkingTimer != null && typeof window !== 'undefined') {
     window.clearTimeout(progressiveMarkingTimer)
@@ -3255,6 +3216,8 @@ function finishProgressiveMarkingSoon(delayMs = 420) {
   const remaining = Math.max(0, progressiveMarkingEarliestFinish - Date.now())
   progressiveMarkingTimer = window.setTimeout(() => {
     progressiveMarkingComplete.value = true
+    progressiveCorrectionQuestionNum.value = null
+    progressiveBaseImageOverride.value = ''
     progressiveMarkingTimer = null
   }, Math.max(delayMs, remaining))
 }
@@ -3290,7 +3253,21 @@ function resetProgressiveMarking() {
   progressiveRevealedQuestionNums.value = []
   progressiveMarkingComplete.value = false
   progressiveMarkingSessionKey.value = ''
+  progressiveCorrectionQuestionNum.value = null
+  progressiveBaseImageOverride.value = ''
   progressiveMarkingEarliestFinish = 0
+}
+
+function startManualCorrectionAnimation(questionNum, previousAnnotatedImageUrl) {
+  if (typeof window === 'undefined' || !props.studentMode) return
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true) return
+  clearProgressiveMarkingTimer()
+  progressiveCorrectionQuestionNum.value = Number(questionNum)
+  progressiveBaseImageOverride.value = previousAnnotatedImageUrl || ocrResult.value?.annotationBaseUrl || capturedImage.value
+  progressiveRevealedQuestionNums.value = []
+  progressiveMarkingComplete.value = false
+  progressiveMarkingEarliestFinish = Date.now() + 900
+  progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 90)
 }
 
 watch(
@@ -3539,7 +3516,7 @@ function composeStudentAnnotatedImage(
         ]
         ctx.save()
         ctx.strokeStyle = color
-        ctx.globalCompositeOperation = 'multiply'
+        ctx.globalCompositeOperation = 'source-over'
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         strokePasses.forEach((passConfig, pass) => {
@@ -3632,47 +3609,34 @@ function composeStudentAnnotatedImage(
       }
 
       const drawReviewMark = (rect, seed) => {
-        const cx = rect.x + rect.w * (0.5 + jitter(seed + 205, 0.025))
-        const cy = rect.y + rect.h * (0.52 + jitter(seed + 207, 0.035))
-        const rx = Math.max(rect.w * (0.39 + seededUnit(seed + 211) * 0.07), rect.h * 0.34)
-        const ry = Math.max(rect.h * (0.49 + seededUnit(seed + 213) * 0.085), rect.w * 0.39)
-        const angle = jitter(seed + 193, 0.18)
-        const pointsPerLoop = 34 + Math.floor(seededUnit(seed + 215) * 11)
-        const highlighter = 'rgb(253, 255, 50)'
+        const x0 = rect.x - rect.w * (0.018 + seededUnit(seed + 211) * 0.012)
+        const x1 = rect.x + rect.w * (1.018 + seededUnit(seed + 213) * 0.012)
+        const centerY = rect.y + rect.h * (0.51 + jitter(seed + 207, 0.012))
+        const highlighter = 'rgb(255, 255, 28)'
+        const baseWidth = Math.max(24, rect.h * 0.94)
 
         ctx.save()
-        ctx.globalCompositeOperation = 'multiply'
-        ctx.lineCap = 'round'
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.lineCap = 'butt'
         ctx.lineJoin = 'round'
-        for (let pass = 0; pass < 3; pass++) {
+        for (let pass = 0; pass < 2; pass++) {
           const passSeed = seed + pass * 97
-          const passCx = cx + jitter(passSeed + 37, rect.w * 0.025)
-          const passCy = cy + jitter(passSeed + 41, rect.h * 0.035)
-          const passRx = rx * (0.96 + seededUnit(passSeed + 43) * 0.11)
-          const passRy = ry * (0.93 + seededUnit(passSeed + 47) * 0.13)
-          const passAngle = angle + jitter(passSeed + 53, 0.045)
-          const start = -Math.PI * (0.1 + seededUnit(passSeed + 5) * 0.1)
-          const end = Math.PI * (1.82 + seededUnit(passSeed + 7) * 0.2)
+          const passY = centerY + jitter(passSeed + 41, rect.h * 0.018)
+          const curveA = passY + jitter(passSeed + 43, rect.h * 0.025)
+          const curveB = passY + jitter(passSeed + 47, rect.h * 0.025)
           ctx.beginPath()
-          for (let i = 0; i <= pointsPerLoop; i++) {
-            const t = start + ((end - start) * i) / pointsPerLoop
-            const wobbleX = 1 + jitter(passSeed + i * 7, 0.065)
-            const wobbleY = 1 + jitter(passSeed + i * 11, 0.07)
-            const localX = Math.cos(t) * passRx * wobbleX
-            const localY = Math.sin(t) * passRy * wobbleY
-            const x = passCx + localX * Math.cos(passAngle) - localY * Math.sin(passAngle) + jitter(passSeed + i * 13, 1.05)
-            const y = passCy + localX * Math.sin(passAngle) + localY * Math.cos(passAngle) + jitter(passSeed + i * 17, 1.05)
-            if (i === 0) ctx.moveTo(x, y)
-            else {
-              const prevT = start + ((end - start) * (i - 1)) / pointsPerLoop
-              const prevX = passCx + Math.cos(prevT) * passRx * Math.cos(passAngle) - Math.sin(prevT) * passRy * Math.sin(passAngle)
-              const prevY = passCy + Math.cos(prevT) * passRx * Math.sin(passAngle) + Math.sin(prevT) * passRy * Math.cos(passAngle)
-              ctx.quadraticCurveTo(prevX, prevY, x, y)
-            }
-          }
+          ctx.moveTo(x0 + jitter(passSeed + 37, rect.w * 0.018), passY)
+          ctx.bezierCurveTo(
+            rect.x + rect.w * 0.28,
+            curveA,
+            rect.x + rect.w * 0.7,
+            curveB,
+            x1 + jitter(passSeed + 53, rect.w * 0.018),
+            passY + jitter(passSeed + 59, rect.h * 0.035)
+          )
           ctx.strokeStyle = highlighter
-          ctx.globalAlpha = pass === 0 ? 0.82 : pass === 1 ? 0.56 : 0.38
-          ctx.lineWidth = Math.max(11, Math.min(20, rect.h * (0.18 + seededUnit(passSeed + 29) * 0.052)))
+          ctx.globalAlpha = pass === 0 ? 0.18 : 0.07
+          ctx.lineWidth = baseWidth * (pass === 0 ? 1 : 0.84)
           ctx.stroke()
         }
         ctx.restore()
@@ -3954,7 +3918,10 @@ function composeStudentAnnotatedImage(
         validRects.forEach((rect, index) => {
           const digit = cells[index]
           if (digit === null || digit === undefined || digit === '') return
-          const fontSize = Math.max(38, Math.min(rect.h * 0.86, rect.w * 1.05))
+          const digitText = String(digit)
+          const widthScale = digitText.length > 1 ? 0.58 : 1.05
+          const minimumSize = digitText.length > 1 ? 30 : 38
+          const fontSize = Math.max(minimumSize, Math.min(rect.h * 0.86, rect.w * widthScale))
           const x = rect.x + rect.w * 0.52 + jitter(seed + index * 17, rect.w * 0.035)
           const y = rect.y + rect.h * 0.58 + jitter(seed + index * 19, rect.h * 0.035)
           ctx.save()
@@ -3966,12 +3933,12 @@ function composeStudentAnnotatedImage(
           ctx.lineJoin = 'round'
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
           ctx.lineWidth = Math.max(3, fontSize * 0.08)
-          ctx.strokeText(String(digit), 0, 0)
+          ctx.strokeText(digitText, 0, 0)
           ctx.fillStyle = '#171717'
           ctx.globalAlpha = 0.96
-          ctx.fillText(String(digit), 0, 0)
+          ctx.fillText(digitText, 0, 0)
           ctx.globalAlpha = 0.28
-          ctx.fillText(String(digit), jitter(seed + index * 29, 1.3), jitter(seed + index * 31, 1.1))
+          ctx.fillText(digitText, jitter(seed + index * 29, 1.3), jitter(seed + index * 31, 1.1))
           ctx.restore()
         })
         ctx.restore()
@@ -4031,22 +3998,19 @@ function composeStudentAnnotatedImage(
                   slotIndex < slotRects.length
                 )
               : correction.cells.map((_, slotIndex) => slotIndex)
-            drawManualAnswer(
-              correctedSlots.map((slotIndex) => slotRects[slotIndex]),
-              correctedSlots.map((slotIndex) => correction.cells[slotIndex]),
-              seed + 47
-            )
+            const correctedEntries = correctedSlots
+              .map((slotIndex) => ({ rect: slotRects[slotIndex], cell: correction.cells[slotIndex] }))
+              .filter((entry) => entry.rect)
+            const correctedText = String(correction.text || '').replace(/\D/g, '')
+            const displayCells = correctedEntries.length === 1 && correctedText.length > 1
+              ? [correctedText]
+              : correctedEntries.map((entry) => entry.cell)
+            drawManualAnswer(correctedEntries.map((entry) => entry.rect), displayCells, seed + 47)
           }
           if (hasReview) {
             const validSlotRects = slotRects.filter(Boolean)
-            if (reviewSlotRects.length === 0 || (validSlotRects.length > 1 && reviewSlotRects.length === validSlotRects.length)) {
-              const reviewRect = unionRects(validSlotRects)
-              if (reviewRect) drawReviewMark(reviewRect, seed + 211)
-            } else {
-              reviewSlotRects.forEach(({ slotRect, slotIndex }) => {
-                drawReviewMark(slotRect, seed + slotIndex * 19)
-              })
-            }
+            const reviewRect = unionRects(validSlotRects)
+            if (reviewRect) drawReviewMark(reviewRect, seed + 211)
           } else if (correct === true) {
             drawCheck(rect, seed)
           } else if (correct === false) {
@@ -4073,11 +4037,7 @@ function composeStudentAnnotatedImage(
           ctx.save()
 
           if (hasReview) {
-            items.forEach(({ crop, prediction }, slotIndex) => {
-              if (!prediction?.reviewNeeded) return
-              const slotRect = annotationRectForCrop(crop)
-              if (slotRect) drawReviewMark(slotRect, seed + slotIndex * 19)
-            })
+            drawReviewMark(rect, seed + 211)
           } else if (correctPredictions.length > 0) {
             if (correctPredictions.every((prediction) => prediction.correct === true)) drawCheck(rect, seed)
             else if (correctPredictions.some((prediction) => prediction.correct === false)) drawX(rect, seed)
@@ -4289,6 +4249,7 @@ function groupAnswerTextOverride(group, predictionById) {
 function groupHasRequiredSlotReview(group, ids, predictionById) {
   if (groupAnswerTextOverride(group, predictionById)) return false
   if (!Array.isArray(ids) || ids.length === 0) return true
+  if (ids.every((id) => predictionById.get(id)?.manualCorrected === true)) return false
   const expectedDigitCount = answerDigitCount(group?.answer)
   const hasMissingPrediction = ids.some((id) => !predictionById.get(id))
   if (hasMissingPrediction) return true
@@ -4306,6 +4267,7 @@ function slotNeedsReview(group, ids, slotIndex, predictionById) {
   if (!Array.isArray(ids) || slotIndex < 0 || slotIndex >= ids.length) return true
   const id = ids[slotIndex]
   const prediction = predictionById.get(id)
+  if (prediction?.manualCorrected === true) return false
   if (prediction?.reviewNeeded) return true
   const expectedDigitCount = answerDigitCount(group?.answer)
   if (expectedDigitCount < ids.length) return false
@@ -9209,7 +9171,7 @@ onUnmounted(() => {
 
 <style scoped>
 .camera-capture {
-  --teacher-highlighter-rgb: 253, 255, 50;
+  --teacher-highlighter-rgb: 255, 255, 28;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -9379,49 +9341,13 @@ onUnmounted(() => {
   animation: progressive-write-stroke var(--progressive-stroke-duration, 500ms) cubic-bezier(0.2, 0.72, 0.26, 1) var(--progressive-stroke-delay, 0ms) forwards;
 }
 
-.progressive-marking-status {
-  position: absolute;
-  left: 50%;
-  bottom: 12px;
-  z-index: 4;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  max-width: calc(100% - 24px);
-  padding: 8px 13px;
-  border: 1px solid rgba(224, 210, 139, 0.78);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #202124;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.13);
-  font-size: 13px;
-  line-height: 1.1;
-  font-weight: 800;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.progressive-marking-pen {
-  color: #245aa4;
-  font-size: 18px;
-  line-height: 1;
-  animation: progressive-pen-motion 720ms ease-in-out infinite alternate;
-}
-
 @keyframes progressive-write-stroke {
   from { stroke-dashoffset: 1; }
   to { stroke-dashoffset: 0; }
 }
 
-@keyframes progressive-pen-motion {
-  from { transform: rotate(-10deg) translateX(-2px); }
-  to { transform: rotate(2deg) translateX(3px); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .progressive-marking-stroke,
-  .progressive-marking-pen {
+  .progressive-marking-stroke {
     animation: none;
   }
 
@@ -9640,8 +9566,8 @@ onUnmounted(() => {
   width: 44px;
   height: 12px;
   border-radius: 999px;
-  background: rgba(var(--teacher-highlighter-rgb), 0.76);
-  mix-blend-mode: multiply;
+  background: rgba(var(--teacher-highlighter-rgb), 0.58);
+  mix-blend-mode: normal;
   transform-origin: left center;
   animation: highlighter-swipe 1.15s ease-in-out infinite;
 }
@@ -10057,6 +9983,30 @@ onUnmounted(() => {
   text-align: center;
   font-size: 22px;
   line-height: 1.1;
+}
+
+.student-correction-panel--image .student-correction-manual {
+  margin-top: 6px;
+}
+
+.student-correction-blank-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.student-correction-blank-actions .btn,
+.student-correction-no-answer {
+  min-width: 0;
+  padding: 7px 5px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.student-correction-no-answer {
+  width: 100%;
+  margin-top: 4px;
 }
 
 .student-correction-panel--image.student-correction-panel--double .student-correction-manual input {

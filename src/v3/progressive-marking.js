@@ -41,6 +41,19 @@ function pathData(points) {
 }
 
 function teacherStrokePaths(status, rect, seed, width, height) {
+  if (status === 'review') {
+    const y = rect.y + rect.h * (0.54 + jitter(seed + 207, 0.025))
+    return [{
+      d: pathData([
+        [rect.x - rect.w * 0.08, y],
+        [rect.x + rect.w * 0.28, y + jitter(seed + 43, rect.h * 0.075)],
+        [rect.x + rect.w * 0.7, y + jitter(seed + 47, rect.h * 0.075)],
+        [rect.x + rect.w * 1.08, y + jitter(seed + 59, rect.h * 0.03)],
+      ]),
+      durationMs: 540,
+      delayMs: 0,
+    }]
+  }
   const { x, y, size } = indicatorAnchor(rect, seed, width, height)
   if (status === 'correct') {
     const angle = jitter(seed + 101, 0.22)
@@ -112,12 +125,24 @@ export function progressiveMarkingSteps(answerGroups = [], annotationRegions = [
       .map(Number)
       .filter(Number.isFinite)
   )
+  const excludeReview = options?.excludeReview === true
+  const onlyQuestionNums = new Set(
+    (Array.isArray(options?.onlyQuestionNums) ? options.onlyQuestionNums : [])
+      .map(Number)
+      .filter(Number.isFinite)
+  )
+  const revealAnswerQuestionNums = new Set(
+    (Array.isArray(options?.revealAnswerQuestionNums) ? options.revealAnswerQuestionNums : [])
+      .map(Number)
+      .filter(Number.isFinite)
+  )
   return answerGroups
     .map((group, groupIndex) => ({ group, groupIndex }))
     .filter(({ group }) => (
-      (group?.status === 'correct' || group?.status === 'incorrect') &&
-      group?.reviewNeeded !== true &&
-      !excludedQuestionNums.has(Number(group?.questionNum))
+      (group?.status === 'correct' || group?.status === 'incorrect' || (!excludeReview && group?.status === 'review')) &&
+      (group?.reviewNeeded !== true || group?.status === 'review') &&
+      !excludedQuestionNums.has(Number(group?.questionNum)) &&
+      (onlyQuestionNums.size === 0 || onlyQuestionNums.has(Number(group?.questionNum)))
     ))
     .map(({ group, groupIndex }) => {
       const questionNum = Number(group.questionNum)
@@ -148,13 +173,31 @@ export function progressiveMarkingSteps(answerGroups = [], annotationRegions = [
       const y = Math.max(0, rect.y - padY)
       const right = Math.min(width, rect.x + rect.w + padX)
       const bottom = Math.min(height, rect.y + rect.h + padY)
+      const markingStrokes = teacherStrokePaths(group.status, focusRect, seed, width, height)
+      const revealAnswer = revealAnswerQuestionNums.has(questionNum)
+      const answerRevealStroke = revealAnswer
+        ? [{
+            d: pathData([
+              [focusRect.x - focusRect.w * 0.04, focusRect.y + focusRect.h * 0.5],
+              [focusRect.x + focusRect.w * 1.04, focusRect.y + focusRect.h * 0.5],
+            ]),
+            width: Math.max(22, focusRect.h * 1.12),
+            durationMs: 320,
+            delayMs: 0,
+          }]
+        : []
+      const delayedMarkingStrokes = revealAnswer
+        ? markingStrokes.map((stroke) => ({ ...stroke, delayMs: stroke.delayMs + 260 }))
+        : markingStrokes
       return {
         key: `mark-question-${questionNum}`,
         questionNum,
         status: group.status,
         seed,
-        strokeWidth: Math.max(12, indicatorAnchor(focusRect, seed, width, height).size * 0.3),
-        strokes: teacherStrokePaths(group.status, focusRect, seed, width, height),
+        strokeWidth: group.status === 'review'
+          ? Math.max(24, focusRect.h * 0.96)
+          : Math.max(12, indicatorAnchor(focusRect, seed, width, height).size * 0.3),
+        strokes: [...answerRevealStroke, ...delayedMarkingStrokes],
         x,
         y,
         w: Math.max(1, right - x),
