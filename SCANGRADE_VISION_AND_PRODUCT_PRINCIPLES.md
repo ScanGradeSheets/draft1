@@ -300,6 +300,20 @@ Earn credibility first.
 
 ## TPT And Marketing Principles
 
+### Founder-Approved Launch Business Model — Locked 2026-07-18
+
+ScanGrade launches first as an **auto-grading printable worksheet brand**, not as a software subscription.
+
+- Sell ScanGrade-authored worksheet packs through TPT at prices comparable to other high-quality math worksheet products.
+- Make grading at `https://scangrade.io/` free and available without an account or sign-in.
+- At launch, the grader supports ScanGrade-authored worksheets rather than arbitrary third-party worksheets.
+- Keep recognition local-first and avoid storing student work as the default public contract.
+- Treat the free grader as a companion benefit and acquisition engine for the paid worksheet catalog.
+- Do not add subscription billing, class accounts, rosters, scan history, analytics, or arbitrary-worksheet support before buyers demonstrate demand for them.
+- A later optional paid software layer is permitted only as an evidence-led extension; it is not required for the worksheet business to launch.
+
+This direction is founder-approved and should not be changed without Tony's explicit approval. Durable implementation and validation details live in `docs/SCANGRADE_LOCKED_TPT_WORKSHEET_BUSINESS_STRATEGY_20260718.md`.
+
 ### First Customer
 
 The likely first customer is an elementary classroom teacher, especially one who still relies heavily on paper workflows.
@@ -514,7 +528,7 @@ Always require Tony's approval for:
 5. Class dashboard design.
 6. TPT product roadmap order.
 7. Branding system and visual identity.
-8. Monetization model.
+8. Optional post-launch premium features, only if worksheet buyers demonstrate demand.
 9. Classroom testing plan.
 10. Long-term marketplace strategy.
 11. Detailed worksheet design philosophy.

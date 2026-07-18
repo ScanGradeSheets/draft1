@@ -4961,3 +4961,12 @@ Next action:
 - Only answers already sent to review expose blank-position controls. When a teacher types one digit for a two-slot reviewed answer, the panel now shows direct visual choices such as `9_`, `_9`, and `__`; the teacher never types an underscore. Choosing one immediately saves, regrades, closes the panel, and uses the correction animation.
 - Verification: 163/163 repository tests, production and pruned builds, and the complete mobile WebKit correction flow pass. The live browser mounted the exact Beta 12 label with zero errors. Production and immutable HTML match the release artifact byte-for-byte.
 - Deployment QA caught and superseded two non-final uploads: `49470d19` nested several worksheet assets one directory too deep, and `e7684c4b` corrected the paths but carried an incorrectly expanded commit hash. Final deployment `192b81e5` has correct QR asset paths and exact commit metadata.
+
+### 2026-07-18 locked TPT worksheet-first business strategy
+
+- Tony explicitly approved and locked the launch model: ScanGrade is first sold as competitively priced, ScanGrade-authored printable math worksheet packs on TPT. Automatic grading at `https://scangrade.io/` remains a free, anonymous companion benefit with no account required.
+- Launch does not require a software subscription, authentication, rosters, persistent scan history, analytics, arbitrary third-party worksheets, district sales, or a public Mac Mini/cloud fallback.
+- The public grader should remain local-first and limited to ScanGrade worksheet contracts. The paid value is the curated, attractive, curriculum-useful worksheet catalog; the free grader is the differentiator and acquisition loop.
+- Catalog expansion can become low marginal effort only after a worksheet-family structure is proven. Every new family must still pass curriculum QA, layout-contract audit, answer-key/metadata agreement, QR routing, visual QA, device capture replay, handwriting-truth safety, and listing QA.
+- Initial catalog scope remains Grade 1. Grades 2–6 are an expansion reservoir, not a launch promise. Advance by proven worksheet families rather than generating a large unvalidated catalog.
+- Durable decision record: `docs/SCANGRADE_LOCKED_TPT_WORKSHEET_BUSINESS_STRATEGY_20260718.md`. Do not change this launch business model without Tony's explicit approval.
