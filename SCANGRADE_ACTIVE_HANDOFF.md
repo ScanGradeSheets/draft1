@@ -5007,3 +5007,13 @@ Next action:
 - Public production: `https://scangrade.io/`; final immutable deployment: `https://bf5e2107.scangrade.pages.dev/`. Beta 14 remains at `https://f8045360.scangrade.pages.dev/` and Beta 13 remains at `https://835fb701.scangrade.pages.dev/` for immediate rollback.
 - Production, immutable, local release, and `/api/submissions` are byte-identical static HTML at SHA-256 `066cbefaab33d823d4968aca171c7ab4d39b715022c55a7e3285ae517ff1e4de`. Live JavaScript matches at SHA-256 `75feabb21fc7b1ae9a995267eaffb01d017786caad15a12b3cae18164c371335`.
 - Durable release record: `docs/SCANGRADE_FIXED_VIEWPORT_PUBLIC_BETA14_1_20260718.md`.
+### 2026-07-18 slot-correction public Beta 15
+
+- Tony's live Dot Collections screenshots exposed a teacher-correction rendering defect: correcting only the uncertain right slot of `13` or `12` repainted the complete answer inside that one physical slot. Blank corrections could also paint an unnecessary white correction strip.
+- Beta 15 stores whether a correction is a true multi-digit answer in one physical box. Ordinary slot-level corrections now draw only that slot's digit; intentional blanks draw no replacement strip.
+- A worksheet-semantic optional-blank rule now clears an unused box only when the layout explicitly permits a one-digit response in either of two boxes, exactly one slot is independently strong, and the other slot looks like an artifact. It never uses the correct mathematical digit and refuses to act when both slots may contain handwriting.
+- Manual review now opens with the numeric field focused. For a one-slot correction, typing one digit applies it automatically after a short debounce; suggestions remain one-tap choices. Multi-digit corrections still wait for explicit Save.
+- Recognition, capture, crop, confidence, grading, and answer-key separation policies were not changed.
+- Verification: all 177 repository tests and the root-domain production build pass. Production, immutable, API-fallback, health-fallback, and local HTML are byte-identical at SHA-256 `a6322becb43ac52176c864b76f37e9c70de6ce7ce795375bae83d09a2614b822`; production JavaScript matches the release at SHA-256 `9920da26e4d6320a2d62d2238bf24144af27507bcd9122e974341de78f450dc2`.
+- Source commit: `0d50ebd0c50789aad60630ee5e7246fbe6b60291`. Public production: `https://scangrade.io/`. Immutable deployment: `https://ae4f7e48.scangrade.pages.dev/`. Beta 14.1 rollback remains `https://bf5e2107.scangrade.pages.dev/`.
+- Public marking animation remains presentation-only: the public domain uses browser-local OCR and does not call the Mac Mini or a strong cloud model by default. Confident marks therefore remain in worksheet order; yellow answers are not secretly being re-read during the animation.
