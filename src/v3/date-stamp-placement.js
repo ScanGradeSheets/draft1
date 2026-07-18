@@ -50,13 +50,13 @@ export function dateStampSpecForLayout(layout, width, height, seed = 1, date = n
   const text = `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()}`
   const stampSeed = Number.isFinite(Number(seed)) ? Number(seed) + 701 : 702
   const naturalFontSize = Math.max(36, Math.min(52, Number(width) * 0.026))
-  const naturalSpacing = Math.max(2.2, naturalFontSize * 0.18)
+  const naturalSpacing = Math.max(2.2, naturalFontSize * 0.14)
   const naturalWidth = text.length * naturalFontSize * 0.62 + (text.length - 1) * naturalSpacing
-  const fitScale = Math.min(1, (rect.w * 0.92) / naturalWidth, (rect.h * 0.65) / naturalFontSize)
+  const fitScale = Math.min(1, (rect.w * 0.98) / naturalWidth, (rect.h * 0.72) / naturalFontSize)
   const fontSize = naturalFontSize * fitScale
   const spacing = naturalSpacing * fitScale
   const estimatedWidth = naturalWidth * fitScale
-  if (fontSize < 22 || estimatedWidth > rect.w * 0.94) return null
+  if (fontSize < 22 || estimatedWidth > rect.w * 0.99) return null
   return {
     rect,
     text,

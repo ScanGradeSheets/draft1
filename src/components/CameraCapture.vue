@@ -95,6 +95,18 @@
             :mask="`url(#progressive-mask-${step.questionNum})`"
           />
         </svg>
+        <div
+          v-if="showRecognitionOverlay && recognitionOverlayItems.length"
+          class="recognition-read-overlay"
+          aria-label="What ScanGrade saw"
+        >
+          <span
+            v-for="item in recognitionOverlayItems"
+            :key="item.key"
+            class="recognition-read-label"
+            :style="item.style"
+          >{{ item.text }}</span>
+        </div>
         <button
           v-for="region in correctionRegions"
           :key="region.key"
@@ -386,7 +398,7 @@
     </div>
 
     <!-- Student Mode: show grade outcome or teacher-review outcome, never a dead-end "all set" screen -->
-    <div v-if="studentMode && ocrResult" class="student-result" :class="studentResultClass">
+    <div v-if="studentMode && ocrResult && liveOcrDebugExportEnabled" class="student-result" :class="studentResultClass">
       <p v-if="ocrResult.error" class="student-result-message">Try again</p>
       <p v-if="ocrResult.error && studentOcrResultErrorHint" class="student-result-subtext">
         {{ studentOcrResultErrorHint }}
@@ -618,6 +630,7 @@ import { progressiveMarkingSteps } from '../v3/progressive-marking.js'
 import { correctionPanelPlacementForRegion } from '../v3/correction-panel-placement.js'
 import { fluorescentHighlighterGeometry } from '../v3/highlighter-stroke.js'
 import { dateStampSpecForLayout, declaredDateStampRect } from '../v3/date-stamp-placement.js'
+import { recognitionOverlayItemsForAnswers } from '../v3/recognition-overlay.js'
 import {
   manualCorrectionContract,
   manualCorrectionNeedsExplicitPosition,
@@ -632,7 +645,8 @@ const props = defineProps({
   studentMode: { type: Boolean, default: false },
   captureEnabled: { type: Boolean, default: true },
   captureBlockedReason: { type: String, default: '' },
-  autoStart: { type: Boolean, default: false }
+  autoStart: { type: Boolean, default: false },
+  showRecognitionOverlay: { type: Boolean, default: false }
 })
 const DEFAULT_LAYOUT_URL = publicUrl('layouts/sg-10-box-v1.json')
 const MISSING_QR_FALLBACK_SEED_LAYOUT_ID = 'g2-mixed-within-50-v1'
@@ -1495,6 +1509,11 @@ const allAnnotationRegions = computed(() => (
     ? ocrResult.value.annotationRegions
     : []
 ))
+
+const recognitionOverlayItems = computed(() => {
+  if (!props.showRecognitionOverlay || !studentAnswerGroups.value.length) return []
+  return recognitionOverlayItemsForAnswers(studentAnswerGroups.value, allAnnotationRegions.value)
+})
 
 const correctionRegions = computed(() => {
   const regions = Array.isArray(ocrResult.value?.annotationRegions)
@@ -9314,6 +9333,9 @@ onUnmounted(() => {
   align-items: center;
   width: 100%;
   max-width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .preview-area {
@@ -9331,11 +9353,11 @@ onUnmounted(() => {
 /* Student Mode: large portrait stage = same 8.5x11 region that capture/analysis uses */
 .camera-capture--student .preview-area--portrait {
   aspect-ratio: 8.5 / 11;
-  width: min(100%, calc(72vh * 8.5 / 11));
+  width: min(100%, calc((100dvh - 218px) * 8.5 / 11));
   height: auto;
-  max-height: 72vh;
-  max-width: min(100%, calc(72vh * 8.5 / 11));
-  margin-bottom: 16px;
+  max-height: calc(100dvh - 218px);
+  max-width: min(100%, calc((100dvh - 218px) * 8.5 / 11));
+  margin-bottom: 7px;
   border-radius: 8px;
   flex: none;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
@@ -9472,6 +9494,30 @@ onUnmounted(() => {
   dominant-baseline: middle;
   opacity: 0;
   animation: date-stamp-ink-land 340ms cubic-bezier(0.18, 0.84, 0.24, 1.08) 90ms forwards;
+}
+
+.recognition-read-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.recognition-read-label {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  min-width: 1.15em;
+  padding: 0 2px 1px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #245aa4;
+  font-family: inherit;
+  font-size: clamp(9px, 1.65vw, 14px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .progressive-marking-reveal {
@@ -9641,10 +9687,10 @@ onUnmounted(() => {
 
 @media (max-width: 640px) {
   .camera-capture--student .preview-area--portrait {
-    width: min(100%, calc(62svh * 8.5 / 11));
-    max-width: min(100%, calc(62svh * 8.5 / 11));
-    max-height: 62svh;
-    margin-bottom: 8px;
+    width: min(100%, calc((100dvh - 208px) * 8.5 / 11));
+    max-width: min(100%, calc((100dvh - 208px) * 8.5 / 11));
+    max-height: calc(100dvh - 208px);
+    margin-bottom: 6px;
   }
 
   .controls--student {

@@ -1,6 +1,6 @@
 <template>
-  <div class="scan-grade" :class="{ 'scan-grade--student': isStudentMode }">
-    <header class="header">
+  <div class="scan-grade" :class="{ 'scan-grade--student': isStudentMode, 'scan-grade--capture': showStudentCaptureUi }">
+    <header class="header" :class="{ 'header--capture': showStudentCaptureUi }">
       <img :src="publicUrl('scangrade-logo-transparent.png')" alt="ScanGrade logo" class="brand-logo" />
       <h1><span class="brand-name">ScanGrade</span><span class="brand-domain">.io</span></h1>
       <p class="build-label">Build {{ APP_BUILD_LABEL }}</p>
@@ -106,10 +106,27 @@
         :class="{ 'camera-wrapper--student': isStudentMode }"
         ref="cameraWrapper"
       >
+        <CameraCapture
+          :key="cameraKey"
+          :student-mode="isStudentMode"
+          :capture-enabled="!isStudentMode || studentView === 'capture'"
+          :capture-blocked-reason="studentCaptureBlockedReason"
+          :auto-start="isStudentMode && studentView === 'capture'"
+          :show-recognition-overlay="showRecognitionOverlay"
+          @image-captured="handleImageCaptured"
+          @ocr-complete="handleOCRComplete"
+          @processing-change="handleCameraProcessingChange"
+          @student-stage-change="handleStudentStageChange"
+          @student-done="handleStudentDone"
+          ref="cameraRef"
+        />
         <div
           v-if="showStudentCaptureUi"
           class="student-scan-bar"
-          :class="{ 'student-scan-bar--grading': studentScanStage }"
+          :class="{
+            'student-scan-bar--grading': studentScanStage,
+            'student-scan-bar--has-result': ocrResult
+          }"
         >
           <div v-if="studentScanStage" class="student-scan-grading" aria-live="polite">
             <span class="student-scan-grading-word">{{ studentScanStage === 'grading' ? 'Grading' : 'Scanning' }}</span>
@@ -120,6 +137,17 @@
             </button>
             <button type="button" class="student-scan-identity" @click="beginStudentSignIn">
               <strong>{{ activeStudentSession?.mode === 'named' ? activeStudentSession.studentName : 'Login' }}</strong>
+            </button>
+            <button
+              v-if="ocrResult && !ocrResult.error"
+              type="button"
+              class="student-recognition-toggle"
+              :class="{ 'student-recognition-toggle--active': showRecognitionOverlay }"
+              :aria-expanded="showRecognitionOverlay"
+              :aria-label="showRecognitionOverlay ? 'Hide what ScanGrade saw' : 'Show what ScanGrade saw'"
+              @click="showRecognitionOverlay = !showRecognitionOverlay"
+            >
+              <span aria-hidden="true">{{ showRecognitionOverlay ? '⌄' : '⌃' }}</span>
             </button>
             <div class="student-scan-actions">
               <button
@@ -133,19 +161,6 @@
             </div>
           </template>
         </div>
-        <CameraCapture
-          :key="cameraKey"
-          :student-mode="isStudentMode"
-          :capture-enabled="!isStudentMode || studentView === 'capture'"
-          :capture-blocked-reason="studentCaptureBlockedReason"
-          :auto-start="isStudentMode && studentView === 'capture'"
-          @image-captured="handleImageCaptured"
-          @ocr-complete="handleOCRComplete"
-          @processing-change="handleCameraProcessingChange"
-          @student-stage-change="handleStudentStageChange"
-          @student-done="handleStudentDone"
-          ref="cameraRef"
-        />
         <canvas v-if="showAnnotationLayer && showTeacherUi" ref="annotationCanvas" class="annotation-layer"></canvas>
       </div>
 
@@ -358,7 +373,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.18-single-slot-review-beta-13'
+const APP_BUILD_LABEL = '2026.07.18-fixed-workspace-beta-14'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -396,6 +411,7 @@ const showStudentCaptureUi = computed(() => isStudentMode.value && studentView.v
 const ocrResult = ref(null)
 const studentCameraProcessing = ref(false)
 const studentScanStage = ref('')
+const showRecognitionOverlay = ref(false)
 const studentScanKey = ref(0)
 const cameraKey = computed(() => isStudentMode.value ? `student-camera-${studentScanKey.value}` : 'teacher-camera')
 const classRoster = ref([])
@@ -506,6 +522,7 @@ const syncRosterDraft = () => {
 
 const clearActiveScanResult = () => {
   ocrResult.value = null
+  showRecognitionOverlay.value = false
   showAnnotationLayer.value = false
   studentCameraProcessing.value = false
   studentScanStage.value = ''
@@ -1130,6 +1147,14 @@ onMounted(() => {
   padding-top: max(56px, calc(env(safe-area-inset-top, 0px) + 18px));
 }
 
+.scan-grade--capture {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding: max(8px, env(safe-area-inset-top, 0px)) 14px max(8px, env(safe-area-inset-bottom, 0px));
+}
+
 .header {
   text-align: center;
   margin-bottom: 30px;
@@ -1156,6 +1181,27 @@ onMounted(() => {
 .scan-grade--student .header h1 {
   font-size: 24px;
   margin-bottom: 0;
+}
+
+.scan-grade--capture .header--capture {
+  flex: 0 0 auto;
+  margin-bottom: 5px;
+}
+
+.scan-grade--capture .header--capture .brand-logo {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 1px;
+}
+
+.scan-grade--capture .header--capture h1 {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.scan-grade--capture .header--capture .build-label {
+  margin-top: 2px;
+  font-size: 8px;
 }
 
 .header h1 {
@@ -1739,11 +1785,17 @@ onMounted(() => {
   gap: 10px;
   width: min(100%, calc(72vh * 8.5 / 11));
   max-width: min(100%, calc(72vh * 8.5 / 11));
-  margin: 0 auto 10px;
+  flex: 0 0 auto;
+  margin: 7px auto 0;
   padding: 8px;
   border: 1px solid #d2d2d7;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
+}
+
+.student-scan-bar--has-result:not(.student-scan-bar--grading) {
+  grid-template-columns: minmax(50px, 0.8fr) minmax(58px, 1fr) 40px minmax(82px, 1.2fr);
+  gap: 5px;
 }
 
 .student-scan-bar--grading {
@@ -1835,6 +1887,32 @@ onMounted(() => {
   min-width: 76px;
 }
 
+.student-recognition-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: #245aa4;
+  font: inherit;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.student-recognition-toggle:hover,
+.student-recognition-toggle:focus-visible,
+.student-recognition-toggle--active {
+  border-color: rgba(36, 90, 164, 0.22);
+  background: rgba(36, 90, 164, 0.08);
+  outline: none;
+}
+
 .student-scan-link {
   min-height: 36px;
   border: 1px solid transparent;
@@ -1884,21 +1962,31 @@ onMounted(() => {
   padding-bottom: 20px;
 }
 
+.scan-grade--capture .main--student {
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
 .main--student .camera-wrapper--student {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
-  padding: 0 12px;
+  padding: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 640px) {
   .scan-grade--student {
     padding: 44px 14px 10px;
     padding-top: max(44px, calc(env(safe-area-inset-top, 0px) + 14px));
+  }
+
+  .scan-grade--capture {
+    padding: max(6px, env(safe-area-inset-top, 0px)) 10px max(6px, env(safe-area-inset-bottom, 0px));
   }
 
   .scan-grade--student .header {
@@ -1943,7 +2031,7 @@ onMounted(() => {
   }
 
   .student-scan-bar {
-    margin-bottom: 8px;
+    margin-top: 6px;
     padding: 7px 8px;
   }
 

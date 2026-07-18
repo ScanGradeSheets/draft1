@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { declaredDateStampRect } from '../src/v3/date-stamp-placement.js'
+import { dateStampSpecForLayout, declaredDateStampRect } from '../src/v3/date-stamp-placement.js'
 
 const LAUNCH_LAYOUT_IDS = [
   'sg-g1-lw-01-add-1digit',
@@ -41,4 +41,20 @@ test('frozen launch IDs recover the approved zone from older QR-linked layout co
   assert.ok(rect)
   assert.ok(rect.x > 143.95)
   assert.equal(declaredDateStampRect({ layout_id: 'third-party-sheet' }, 215.9, 279.4), null)
+})
+
+test('the larger iPad date remains inside the declared safe zone', () => {
+  const spec = dateStampSpecForLayout(
+    { layout_id: 'sg-g1-lw-06-ten-frames' },
+    2000,
+    2588,
+    9,
+    new Date('2026-07-18T12:00:00Z'),
+  )
+  assert.ok(spec)
+  assert.ok(spec.fontSize >= 40)
+  assert.ok(spec.x >= spec.rect.x)
+  assert.ok(spec.x + spec.estimatedWidth <= spec.rect.x + spec.rect.w)
+  assert.ok(spec.y >= spec.rect.y)
+  assert.ok(spec.y <= spec.rect.y + spec.rect.h)
 })
