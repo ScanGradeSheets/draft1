@@ -1,8 +1,8 @@
 # ScanGrade correction-integrity public Beta 10
 
-Date: 2026-07-18  
-Source commit: `fa651edd5a1c2dc07842b96208b3e3266b8a6131`  
-Build: `2026.07.18-correction-integrity-beta-10`
+- Date: 2026-07-18
+- Source commit: `fa651edd5a1c2dc07842b96208b3e3266b8a6131`
+- Build: `2026.07.18-correction-integrity-beta-10`
 
 ## Live release
 
