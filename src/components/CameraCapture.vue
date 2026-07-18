@@ -10110,7 +10110,7 @@ onUnmounted(() => {
 
 .student-correction-panel--image {
   position: absolute;
-  z-index: 4;
+  z-index: 8;
   box-sizing: border-box;
   min-width: 128px;
   max-width: calc(100% - 12px);
