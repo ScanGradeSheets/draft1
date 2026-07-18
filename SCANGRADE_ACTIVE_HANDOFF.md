@@ -4954,9 +4954,10 @@ Next action:
 - Post-deploy verification: exact Beta 11 label, zero browser console errors, valid HTTP-to-HTTPS redirect, JavaScript MIME type, QR layout JSON availability, and static-only `/api/submissions` plus `/review-model/health` behavior all pass. Durable record: `docs/SCANGRADE_NATURAL_REVIEW_PUBLIC_BETA11_20260718.md`.
 - A first successful upload at `188541ac` had correct files but incorrect expanded commit metadata. It was immediately superseded by the byte-identical `ea1d3e0a` deployment carrying the correct full source hash.
 
-### 2026-07-18 local post-Beta-11 blank-position correction refinement
+### 2026-07-18 visual blank-position review public Beta 12
 
-- This refinement is local and not deployed. Public production remains Beta 11.
+- This refinement is deployed publicly at `https://scangrade.io/`. Final immutable deployment: `https://192b81e5.scangrade.pages.dev/`; exact source commit: `5d67c7464e6fb67b38f632a53bc2d54929f6e759`.
 - A confidently empty worksheet-declared optional slot remains ordinary recognition evidence: it is stored as blank with `reviewNeeded: false`, receives no yellow highlight or blank-position prompt, and the complete answer receives only its normal check/X after grading. A regression assertion now explicitly protects this behavior.
 - Only answers already sent to review expose blank-position controls. When a teacher types one digit for a two-slot reviewed answer, the panel now shows direct visual choices such as `9_`, `_9`, and `__`; the teacher never types an underscore. Choosing one immediately saves, regrades, closes the panel, and uses the correction animation.
-- Focused recognition/annotation tests pass 18/18. The complete mobile WebKit correction flow also passes, including visual blank-position choices and teacher-confirmed all-blank handling.
+- Verification: 163/163 repository tests, production and pruned builds, and the complete mobile WebKit correction flow pass. The live browser mounted the exact Beta 12 label with zero errors. Production and immutable HTML match the release artifact byte-for-byte.
+- Deployment QA caught and superseded two non-final uploads: `49470d19` nested several worksheet assets one directory too deep, and `e7684c4b` corrected the paths but carried an incorrectly expanded commit hash. Final deployment `192b81e5` has correct QR asset paths and exact commit metadata.
