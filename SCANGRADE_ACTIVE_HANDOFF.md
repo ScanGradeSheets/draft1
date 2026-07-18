@@ -4971,7 +4971,7 @@ Next action:
 - Initial catalog scope remains Grade 1. Grades 2–6 are an expansion reservoir, not a launch promise. Advance by proven worksheet families rather than generating a large unvalidated catalog.
 - Durable decision record: `docs/SCANGRADE_LOCKED_TPT_WORKSHEET_BUSINESS_STRATEGY_20260718.md`. Do not change this launch business model without Tony's explicit approval.
 
-### 2026-07-18 single-slot review Beta 13 local candidate
+### 2026-07-18 single-slot review public Beta 13
 
 - Live Beta 12 testing on a two-box mixed addition/subtraction answer exposed an over-broad correction rule: although only the right physical digit was yellow, the panel asked the teacher to reconfirm full answers such as `15`, `19`, and `75`, and placed a small `Blank answer` text action at the bottom.
 - Root cause: Beta 10's correction-integrity repair intentionally forced every multi-slot review into complete-answer mode so a hidden wrong OCR digit could not survive a partial correction. Beta 13 narrows the interface while preserving the integrity mechanism.
@@ -4980,4 +4980,6 @@ Next action:
 - The iPadOS Cut/Copy/Look Up bar was traced to calling `select()` on input focus. Beta 13 instead places a collapsed caret at the end, so tapping the field opens the numeric keyboard without deliberately invoking text selection.
 - Red X animation is now strictly sequential: top-left to bottom-right for 270 ms, then—after that stroke is complete—top-right to bottom-left. The second stroke delay increased from 210 ms to 300 ms.
 - Verification: all 164 repository tests pass, including explicit X direction/non-overlap timing and the single-yellow-slot review contract; production build passes. Recognition, capture, crops, confidence policy, answer-key separation, and automatic acceptance behavior are unchanged.
-- Candidate label: `2026.07.18-single-slot-review-beta-13`. This entry records a local candidate only; it is not public until a later deployment record says otherwise.
+- Release label: `2026.07.18-single-slot-review-beta-13`. Implementation commit `c66839d` is pushed to `origin/autobuild/safe-20260223`.
+- Public production: `https://scangrade.io/`; immutable deployment: `https://835fb701.scangrade.pages.dev/`. The upload contained 219 application files plus `_headers` and no Pages Function, Worker, route manifest, Tailscale host, or Mac Mini endpoint.
+- Production HTML, immutable HTML, local release HTML, `/api/submissions`, and `/review-model/health` are byte-identical at SHA-256 `c68bf8077b99d79d6beffb278c1abc992cd8faeca798867c8d544e2f11c7ffc7`, confirming that the two backend-looking paths remain static SPA fallbacks. The live JavaScript is served as `application/javascript`, contains the exact Beta 13 label, and matches the local release at SHA-256 `2e3ffa827351820b5128e86bc5d29bf90341a8c3cb2d0a7b4114d8ab64e5f4c2`.
