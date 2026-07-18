@@ -124,15 +124,27 @@ try {
   await page.setInputFiles('input[type=file]', source.file)
   await page.waitForFunction(() => ['compact-ready', 'complete', 'unavailable']
     .includes(window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.status))
-  await page.waitForTimeout(900)
+  await page.waitForFunction(() => !!document.querySelector('mask[id^="progressive-mask-"]'))
+  await page.waitForTimeout(180)
 
   const during = await page.evaluate(() => ({
     status: document.querySelector('.progressive-marking-status')?.textContent?.trim() || '',
-    revealQuestionNums: [...document.querySelectorAll('clipPath[id^="progressive-clip-"]')]
-      .map((node) => Number(node.id.replace('progressive-clip-', ''))),
+    revealQuestionNums: [...document.querySelectorAll('mask[id^="progressive-mask-"]')]
+      .map((node) => Number(node.id.replace('progressive-mask-', ''))),
+    revealedStrokeCounts: [...document.querySelectorAll('mask[id^="progressive-mask-"]')]
+      .map((node) => node.querySelectorAll('.progressive-marking-stroke').length),
     pendingQuestionNums: window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.pendingReviewQuestionNums || [],
     finalImageVisible: document.querySelector('.captured-image')?.getAttribute('src') === window.__SCANGRADE_LIVE_OCR_DEBUG?.markedSheetDataUrl,
   }))
+
+  await page.waitForFunction(() => [...document.querySelectorAll('mask[id^="progressive-mask-"]')]
+    .some((node) => node.querySelectorAll('.progressive-marking-stroke').length === 1))
+  const singleStrokeCheckPresent = await page.evaluate(() => [...document.querySelectorAll('mask[id^="progressive-mask-"]')]
+    .some((node) => node.querySelectorAll('.progressive-marking-stroke').length === 1))
+  await page.screenshot({
+    path: path.join(ROOT, 'private-evidence/reports/progressive-marking-webkit-20260717.png'),
+    fullPage: true,
+  })
 
   await page.waitForFunction(() => ['complete', 'unavailable'].includes(window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.status))
   await page.waitForFunction(() => !document.querySelector('.progressive-marking-status'))
@@ -149,6 +161,9 @@ try {
     after,
     gates: {
       earlySettledMarkVisible: during.revealQuestionNums.length > 0,
+      teacherStrokeStructure: during.revealedStrokeCounts.length > 0 &&
+        during.revealedStrokeCounts.every((count) => count === 1 || count === 2),
+      singleStrokeCheckPresent,
       pendingQuestionsNotRevealed: overlap.length === 0,
       provisionalFinalImageHidden: during.finalImageVisible === false,
       strongReviewCompleted: after.shadowStatus === 'complete',

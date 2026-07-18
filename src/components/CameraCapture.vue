@@ -31,13 +31,33 @@
           aria-hidden="true"
         >
           <defs>
-            <clipPath
+            <mask
               v-for="step in revealedProgressiveMarkingSteps"
-              :id="`progressive-clip-${step.questionNum}`"
-              :key="`clip-${step.questionNum}`"
+              :id="`progressive-mask-${step.questionNum}`"
+              :key="`mask-${step.questionNum}`"
+              maskUnits="userSpaceOnUse"
+              x="0"
+              y="0"
+              :width="progressiveMarkingDimensions.width"
+              :height="progressiveMarkingDimensions.height"
             >
-              <rect :x="step.x" :y="step.y" :width="step.w" :height="step.h" rx="18" ry="18" />
-            </clipPath>
+              <path
+                v-for="(stroke, strokeIndex) in step.strokes"
+                :key="`${step.key}-stroke-${strokeIndex}`"
+                class="progressive-marking-stroke"
+                :d="stroke.d"
+                fill="none"
+                stroke="white"
+                :stroke-width="step.strokeWidth"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                pathLength="1"
+                :style="{
+                  '--progressive-stroke-duration': `${stroke.durationMs}ms`,
+                  '--progressive-stroke-delay': `${stroke.delayMs}ms`,
+                }"
+              />
+            </mask>
           </defs>
           <image
             v-for="step in revealedProgressiveMarkingSteps"
@@ -49,7 +69,7 @@
             :height="progressiveMarkingDimensions.height"
             preserveAspectRatio="none"
             :href="progressiveAnnotatedImage"
-            :clip-path="`url(#progressive-clip-${step.questionNum})`"
+            :mask="`url(#progressive-mask-${step.questionNum})`"
           />
         </svg>
         <div v-if="progressiveMarkingActive" class="progressive-marking-status" role="status" aria-live="polite">
@@ -9350,7 +9370,13 @@ onUnmounted(() => {
 }
 
 .progressive-marking-reveal {
-  animation: progressive-ink-reveal 480ms cubic-bezier(0.2, 0.7, 0.25, 1) both;
+  opacity: 1;
+}
+
+.progressive-marking-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: progressive-write-stroke var(--progressive-stroke-duration, 500ms) cubic-bezier(0.2, 0.72, 0.26, 1) var(--progressive-stroke-delay, 0ms) forwards;
 }
 
 .progressive-marking-status {
@@ -9383,9 +9409,9 @@ onUnmounted(() => {
   animation: progressive-pen-motion 720ms ease-in-out infinite alternate;
 }
 
-@keyframes progressive-ink-reveal {
-  from { opacity: 0; transform: translate(-5px, 3px); }
-  to { opacity: 1; transform: translate(0, 0); }
+@keyframes progressive-write-stroke {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
 }
 
 @keyframes progressive-pen-motion {
@@ -9394,9 +9420,13 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .progressive-marking-reveal,
+  .progressive-marking-stroke,
   .progressive-marking-pen {
     animation: none;
+  }
+
+  .progressive-marking-stroke {
+    stroke-dashoffset: 0;
   }
 }
 

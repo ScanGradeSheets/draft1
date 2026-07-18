@@ -3,6 +3,97 @@ function finite(value) {
   return Number.isFinite(number) ? number : null
 }
 
+function seededUnit(seed) {
+  const x = Math.sin(seed * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function jitter(seed, amount) {
+  return (seededUnit(seed) - 0.5) * 2 * amount
+}
+
+function transformLocalPoints(cx, cy, size, points, angle, scaleX = 1, scaleY = 1) {
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  return points.map(([px, py]) => {
+    const sx = px * size * scaleX
+    const sy = py * size * scaleY
+    return [
+      cx + sx * cos - sy * sin,
+      cy + sx * sin + sy * cos,
+    ]
+  })
+}
+
+function indicatorAnchor(rect, seed, width, height) {
+  const size = Math.max(30, Math.min(rect.h * 1.02, width * 0.058))
+  let x = rect.x + rect.w + size * (0.48 + seededUnit(seed + 71) * 0.08) + jitter(seed + 79, size * 0.045)
+  let y = rect.y + rect.h * (0.52 + jitter(seed + 73, 0.025)) + jitter(seed + 83, size * 0.025)
+  const rightLimit = width - size * 0.72
+  if (x > rightLimit) x = rightLimit + jitter(seed + 89, size * 0.025)
+  y = Math.max(size * 0.65, Math.min(height - size * 0.65, y))
+  return { x, y, size }
+}
+
+function pathData(points) {
+  if (!Array.isArray(points) || points.length < 2) return ''
+  return points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' ')
+}
+
+function teacherStrokePaths(status, rect, seed, width, height) {
+  const { x, y, size } = indicatorAnchor(rect, seed, width, height)
+  if (status === 'correct') {
+    const angle = jitter(seed + 101, 0.22)
+    const scaleX = 0.86 + seededUnit(seed + 103) * 0.32
+    const scaleY = 0.84 + seededUnit(seed + 107) * 0.28
+    const points = transformLocalPoints(
+      x,
+      y,
+      size,
+      [
+        [-0.4 + jitter(seed + 1, 0.03), 0.06 + jitter(seed + 2, 0.06)],
+        [-0.25 + jitter(seed + 3, 0.04), 0.18 + jitter(seed + 4, 0.045)],
+        [-0.11 + jitter(seed + 5, 0.04), 0.32 + jitter(seed + 6, 0.055)],
+        [0.12 + jitter(seed + 7, 0.05), -0.01 + jitter(seed + 8, 0.04)],
+        [0.48 + jitter(seed + 9, 0.055), -0.41 + jitter(seed + 10, 0.055)],
+      ],
+      angle,
+      scaleX,
+      scaleY,
+    )
+    // A teacher's checkmark is one uninterrupted left-to-right pen stroke.
+    return [{ d: pathData(points), durationMs: 500, delayMs: 0 }]
+  }
+
+  const angle = jitter(seed + 131, 0.12)
+  const first = transformLocalPoints(
+    x,
+    y,
+    size,
+    [
+      [-0.35 + jitter(seed + 1, 0.035), -0.31 + jitter(seed + 2, 0.04)],
+      [0.02 + jitter(seed + 3, 0.04), -0.01 + jitter(seed + 4, 0.03)],
+      [0.29 + jitter(seed + 5, 0.04), 0.3 + jitter(seed + 6, 0.04)],
+    ],
+    angle,
+  )
+  const second = transformLocalPoints(
+    x,
+    y,
+    size,
+    [
+      [0.3 + jitter(seed + 7, 0.04), -0.34 + jitter(seed + 8, 0.04)],
+      [-0.02 + jitter(seed + 9, 0.035), 0.01 + jitter(seed + 10, 0.035)],
+      [-0.32 + jitter(seed + 11, 0.04), 0.31 + jitter(seed + 12, 0.04)],
+    ],
+    angle + jitter(seed + 133, 0.05),
+  )
+  return [
+    { d: pathData(first), durationMs: 270, delayMs: 0 },
+    { d: pathData(second), durationMs: 270, delayMs: 210 },
+  ]
+}
+
 function union(rects) {
   const valid = rects.filter(Boolean)
   if (!valid.length) return null
@@ -22,16 +113,17 @@ export function progressiveMarkingSteps(answerGroups = [], annotationRegions = [
       .filter(Number.isFinite)
   )
   return answerGroups
-    .filter((group) => (
+    .map((group, groupIndex) => ({ group, groupIndex }))
+    .filter(({ group }) => (
       (group?.status === 'correct' || group?.status === 'incorrect') &&
       group?.reviewNeeded !== true &&
       !excludedQuestionNums.has(Number(group?.questionNum))
     ))
-    .map((group) => {
+    .map(({ group, groupIndex }) => {
       const questionNum = Number(group.questionNum)
-      const rect = union(annotationRegions
+      const matchingRegions = annotationRegions
         .filter((region) => Number(region?.questionNum) === questionNum)
-        .map((region) => {
+      const rect = union(matchingRegions.map((region) => {
           const x = finite(region?.x)
           const y = finite(region?.y)
           const w = finite(region?.w)
@@ -39,6 +131,14 @@ export function progressiveMarkingSteps(answerGroups = [], annotationRegions = [
           return x == null || y == null || w == null || h == null ? null : { x, y, w, h }
         }))
       if (!rect) return null
+      const focusRect = union(matchingRegions.map((region) => {
+        const x = finite(region?.focusX)
+        const y = finite(region?.focusY)
+        const w = finite(region?.focusW)
+        const h = finite(region?.focusH)
+        return x == null || y == null || w == null || h == null ? null : { x, y, w, h }
+      })) || rect
+      const seed = (groupIndex + 1) * 131
       // The natural check/X is deliberately drawn just outside the answer box.
       // Give the reveal mask a small margin without allowing it to expose marks
       // belonging to another question.
@@ -52,6 +152,9 @@ export function progressiveMarkingSteps(answerGroups = [], annotationRegions = [
         key: `mark-question-${questionNum}`,
         questionNum,
         status: group.status,
+        seed,
+        strokeWidth: Math.max(12, indicatorAnchor(focusRect, seed, width, height).size * 0.3),
+        strokes: teacherStrokePaths(group.status, focusRect, seed, width, height),
         x,
         y,
         w: Math.max(1, right - x),
