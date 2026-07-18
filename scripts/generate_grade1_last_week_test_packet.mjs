@@ -648,6 +648,9 @@ function buildLayout(sheet) {
       marker_size_mm: marker.size,
       classroom_test_packet: true,
       classroom_test_packet_date: '2026-06-17',
+      annotation_zones: {
+        date_stamp: { x: 0.695, y: 0.17, width: 0.175, height: 0.07 },
+      },
       grading_policy: {
         answer_slots_per_question: uniqueSlotCounts.length === 1 ? uniqueSlotCounts[0] : 'variable',
         answer_slot_counts: slotCounts,

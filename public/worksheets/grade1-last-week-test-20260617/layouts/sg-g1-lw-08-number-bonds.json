@@ -424,6 +424,9 @@
     "marker_size_mm": 11.4,
     "classroom_test_packet": true,
     "classroom_test_packet_date": "2026-06-17",
+    "annotation_zones": {
+      "date_stamp": { "x": 0.695, "y": 0.17, "width": 0.175, "height": 0.07 }
+    },
     "grading_policy": {
       "answer_slots_per_question": "variable",
       "answer_slot_counts": [

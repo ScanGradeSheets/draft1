@@ -1,3 +1,5 @@
+import { fluorescentHighlighterGeometry } from './highlighter-stroke.js'
+
 function finite(value) {
   const number = Number(value)
   return Number.isFinite(number) ? number : null
@@ -42,14 +44,9 @@ function pathData(points) {
 
 function teacherStrokePaths(status, rect, seed, width, height) {
   if (status === 'review') {
-    const y = rect.y + rect.h * (0.54 + jitter(seed + 207, 0.025))
+    const geometry = fluorescentHighlighterGeometry(rect, seed)
     return [{
-      d: pathData([
-        [rect.x - rect.w * 0.08, y],
-        [rect.x + rect.w * 0.28, y + jitter(seed + 43, rect.h * 0.075)],
-        [rect.x + rect.w * 0.7, y + jitter(seed + 47, rect.h * 0.075)],
-        [rect.x + rect.w * 1.08, y + jitter(seed + 59, rect.h * 0.03)],
-      ]),
+      d: pathData(geometry.centerline),
       durationMs: 540,
       delayMs: 0,
     }]
@@ -146,8 +143,12 @@ export function progressiveMarkingSteps(answerGroups = [], annotationRegions = [
     ))
     .map(({ group, groupIndex }) => {
       const questionNum = Number(group.questionNum)
-      const matchingRegions = annotationRegions
+      const allMatchingRegions = annotationRegions
         .filter((region) => Number(region?.questionNum) === questionNum)
+      const reviewedRegions = group.status === 'review'
+        ? allMatchingRegions.filter((region) => region?.reviewNeeded === true)
+        : []
+      const matchingRegions = reviewedRegions.length > 0 ? reviewedRegions : allMatchingRegions
       const rect = union(matchingRegions.map((region) => {
           const x = finite(region?.x)
           const y = finite(region?.y)
@@ -195,7 +196,7 @@ export function progressiveMarkingSteps(answerGroups = [], annotationRegions = [
         status: group.status,
         seed,
         strokeWidth: group.status === 'review'
-          ? Math.max(24, focusRect.h * 0.96)
+          ? Math.max(24, fluorescentHighlighterGeometry(focusRect, seed).width)
           : Math.max(12, indicatorAnchor(focusRect, seed, width, height).size * 0.3),
         strokes: [...answerRevealStroke, ...delayedMarkingStrokes],
         x,

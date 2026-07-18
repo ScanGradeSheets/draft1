@@ -122,6 +122,21 @@ try {
   await page.waitForFunction(() => !!window.cv?.Mat)
   await page.evaluate((value) => window.__SCANGRADE_SET_V3_BURST_FRAMES?.(value), frames)
   await page.setInputFiles('input[type=file]', source.file)
+  try {
+    await page.waitForFunction(() => !!document.querySelector('.scanning-date-stamp'), null, { timeout: 20_000 })
+  } catch (error) {
+    console.error('[webkit] scanning date debug', await page.evaluate(() => window.__SCANGRADE_SCANNING_DATE_DEBUG || null))
+    throw error
+  }
+  await page.waitForTimeout(300)
+  const scanningDate = await page.evaluate(() => {
+    const stamp = document.querySelector('.scanning-date-stamp')
+    return {
+      visible: !!stamp && getComputedStyle(stamp).opacity !== '0',
+      status: document.querySelector('.student-scan-grading-word')?.textContent?.trim() || '',
+      text: stamp?.textContent?.trim() || '',
+    }
+  })
   await page.waitForFunction(() => ['compact-ready', 'complete', 'unavailable']
     .includes(window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.status))
   await page.waitForFunction(() => !!document.querySelector('mask[id^="progressive-mask-"]'))
@@ -184,7 +199,7 @@ try {
     return {
       above,
       below,
-      inputFocused: document.activeElement === input,
+    keyboardDeferred: document.activeElement !== input,
       arrowInsideActiveHotspot:
         arrowPoint.x >= hotspotRect.left && arrowPoint.x <= hotspotRect.right &&
         arrowPoint.y >= hotspotRect.top - 16 && arrowPoint.y <= hotspotRect.bottom + 16,
@@ -267,7 +282,7 @@ try {
   })
 
   await page.locator('.annotation-hotspot').filter({ hasText: /^A/ }).last().click({ force: true })
-  await page.getByRole('button', { name: 'No answer' }).click()
+  await page.getByRole('button', { name: 'All blank' }).click()
   await page.waitForFunction(() => !document.querySelector('.student-correction-panel--image'))
   await page.waitForFunction(() => !document.querySelector('.student-scan-grading-word'))
   console.log('[webkit] no-answer correction complete')
@@ -291,6 +306,7 @@ try {
   report = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
+    scanningDate,
     during,
     after,
     correctionInteraction: {
@@ -303,6 +319,10 @@ try {
     },
     gates: {
       earlySettledMarkVisible: during.revealQuestionNums.length > 0,
+      scanningDateAppearsDuringScanning:
+        scanningDate.visible === true &&
+        scanningDate.status === 'Scanning' &&
+        /^\d{2} [A-Z]{3} \d{4}$/.test(scanningDate.text),
       teacherStrokeStructure: during.revealedStrokeCounts.length > 0 &&
         during.revealedStrokeCounts.every((count) => count === 1 || count === 2),
       singleStrokeCheckPresent,
@@ -313,7 +333,7 @@ try {
       correctionArrowAnchored: correctionOpen?.arrowInsideActiveHotspot === true,
       correctionPanelDoesNotCoverAnswer: correctionOpen?.panelOverlapsActiveAnswer === false,
       correctionUsesVerticalArrow: correctionOpen?.above === true || correctionOpen?.below === true,
-      manualInputFocused: correctionOpen?.inputFocused === true,
+      keyboardDeferredUntilManualEntry: correctionOpen?.keyboardDeferred === true,
       outsideTapClosed,
       oneTapChoiceClosed,
       manualWholeAnswerCorrection:

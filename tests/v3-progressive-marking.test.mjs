@@ -78,6 +78,24 @@ test('a settled review answer uses one left-to-right highlighter swipe', () => {
   assert.ok(step.strokes[0].d.startsWith('M '))
 })
 
+test('a two-slot answer highlights only its uncertain slot, or both with one swipe when both are uncertain', () => {
+  const dimensions = { width: 240, height: 120 }
+  const group = [{ questionNum: 2, status: 'review', reviewNeeded: true }]
+  const left = { questionNum: 2, slotIndex: 0, reviewNeeded: true, x: 40, y: 30, w: 42, h: 30, focusX: 44, focusY: 34, focusW: 34, focusH: 22 }
+  const right = { questionNum: 2, slotIndex: 1, reviewNeeded: false, x: 82, y: 30, w: 42, h: 30, focusX: 86, focusY: 34, focusW: 34, focusH: 22 }
+  const [singleSlot] = progressiveMarkingSteps(group, [left, right], dimensions)
+  const singleXs = [...singleSlot.strokes[0].d.matchAll(/[ML] (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g)]
+    .map((match) => Number(match[1]))
+  assert.ok(Math.max(...singleXs) < right.focusX)
+
+  const [bothSlots] = progressiveMarkingSteps(group, [left, { ...right, reviewNeeded: true }], dimensions)
+  const bothXs = [...bothSlots.strokes[0].d.matchAll(/[ML] (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g)]
+    .map((match) => Number(match[1]))
+  assert.equal(bothSlots.strokes.length, 1)
+  assert.ok(Math.min(...bothXs) < left.focusX)
+  assert.ok(Math.max(...bothXs) > right.focusX + right.focusW)
+})
+
 test('a manual correction reveals the replacement answer before drawing its new mark', () => {
   const steps = progressiveMarkingSteps(
     [{ questionNum: 2, status: 'correct', reviewNeeded: false }],

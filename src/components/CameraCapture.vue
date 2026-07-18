@@ -29,6 +29,24 @@
           alt="Captured worksheet"
         >
         <svg
+          v-if="scanningDateStampSpec"
+          class="scanning-date-layer"
+          :viewBox="`0 0 ${scanningAnnotationPreview.width} ${scanningAnnotationPreview.height}`"
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden="true"
+        >
+          <text
+            class="scanning-date-stamp"
+            :x="scanningDateStampSpec.x"
+            :y="scanningDateStampSpec.y"
+            :font-size="scanningDateStampSpec.fontSize"
+            :letter-spacing="scanningDateStampSpec.spacing"
+            :textLength="scanningDateStampSpec.estimatedWidth"
+            lengthAdjust="spacingAndGlyphs"
+            :transform="`rotate(${scanningDateStampSpec.rotation * 180 / Math.PI} ${scanningDateStampSpec.x} ${scanningDateStampSpec.y})`"
+          >{{ scanningDateStampSpec.text }}</text>
+        </svg>
+        <svg
           v-if="progressiveMarkingActive && progressiveAnnotatedImage"
           class="progressive-marking-layer"
           :viewBox="`0 0 ${progressiveMarkingDimensions.width} ${progressiveMarkingDimensions.height}`"
@@ -95,6 +113,7 @@
         </button>
         <div
           v-if="activeCorrectionQuestion"
+          ref="correctionPanelRef"
           class="student-correction-panel student-correction-panel--image"
           :class="correctionPanelClass"
           :style="correctionPanelStyle"
@@ -139,6 +158,7 @@
               :maxlength="activeCorrectionMaxLength"
               :placeholder="activeCorrectionPlaceholder"
               @input="normalizeManualCorrectionInput"
+              @focus="handleManualCorrectionFocus"
               @keydown.enter.prevent="applyManualCorrectionText"
             >
             <button type="button" class="btn btn-primary student-correction-save" @click="applyManualCorrectionText">
@@ -152,9 +172,17 @@
             <button type="button" class="btn btn-secondary" @click="setManualCorrectionBlankSlot(1)">
               Right blank
             </button>
+            <button type="button" class="btn btn-secondary" @click="applyNoAnswerCorrection">
+              All blank
+            </button>
           </div>
-          <button type="button" class="btn btn-secondary student-correction-no-answer" @click="applyNoAnswerCorrection">
-            No answer
+          <button
+            v-else
+            type="button"
+            class="student-correction-blank-link"
+            @click="applyNoAnswerCorrection"
+          >
+            Blank
           </button>
           <button
             v-if="showLocalFirstStrongFallback"
@@ -556,6 +584,8 @@ import { annotationSeedForResult } from '../v3/annotation-seed.js'
 import { annotationRectForCrop } from '../v3/annotation-geometry.js'
 import { progressiveMarkingSteps } from '../v3/progressive-marking.js'
 import { correctionPanelPlacementForRegion } from '../v3/correction-panel-placement.js'
+import { fluorescentHighlighterGeometry } from '../v3/highlighter-stroke.js'
+import { dateStampSpecForLayout, declaredDateStampRect } from '../v3/date-stamp-placement.js'
 import {
   manualCorrectionContract,
   manualCorrectionNeedsExplicitPosition,
@@ -1282,6 +1312,7 @@ const modelSanityRunning = ref(false)
 const modelSanityResults = ref(null)
 const capturedImageWrapRef = ref(null)
 const manualCorrectionInputRef = ref(null)
+const correctionPanelRef = ref(null)
 const activeCorrectionQuestion = ref(null)
 const manualCorrectionText = ref('')
 const manualCorrectionClearedForSession = ref(false)
@@ -1293,6 +1324,7 @@ const progressiveMarkingComplete = ref(false)
 const progressiveMarkingSessionKey = ref('')
 const progressiveCorrectionQuestionNum = ref(null)
 const progressiveBaseImageOverride = ref('')
+const scanningAnnotationPreview = ref(null)
 let progressiveMarkingTimer = null
 let progressiveMarkingEarliestFinish = 0
 let digitModelWarmupStarted = false
@@ -1373,8 +1405,16 @@ const progressiveMarkingActive = computed(() => (
   && !progressiveMarkingComplete.value
 ))
 
+const scanningDateStampSpec = computed(() => {
+  const preview = scanningAnnotationPreview.value
+  if (!props.studentMode || !processing.value || !preview) return null
+  return dateStampSpecForLayout(preview.layout, preview.width, preview.height, 1)
+})
+
 const displayedResultImage = computed(() =>
-  progressiveMarkingActive.value
+  processing.value && scanningAnnotationPreview.value?.imageUrl
+    ? scanningAnnotationPreview.value.imageUrl
+    : progressiveMarkingActive.value
     ? (progressiveBaseImageOverride.value || ocrResult.value?.annotationBaseUrl || capturedImage.value)
     : showAnnotatedResultImage.value && ocrResult.value?.annotatedImageUrl
     ? ocrResult.value.annotatedImageUrl
@@ -1796,7 +1836,6 @@ function openCorrection(region) {
   manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
   correctionError.value = ''
-  focusManualCorrectionInput()
 }
 
 function openCorrectionByGroupSlot(group, slotIndex = null) {
@@ -1827,19 +1866,26 @@ function openCorrectionByGroupSlot(group, slotIndex = null) {
   nextTick(() => {
     capturedImageWrapRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
   })
-  focusManualCorrectionInput()
 }
 
-function focusManualCorrectionInput() {
-  nextTick(() => {
-    const input = manualCorrectionInputRef.value
-    if (!input) return
-    try {
-      input.focus({ preventScroll: true })
-    } catch {
-      input.focus()
-    }
-    input.select()
+function keepCorrectionPanelAboveKeyboard() {
+  const panel = correctionPanelRef.value
+  if (!panel || typeof window === 'undefined') return
+  const viewport = window.visualViewport
+  const viewportTop = viewport?.offsetTop || 0
+  const viewportBottom = viewportTop + (viewport?.height || window.innerHeight)
+  const rect = panel.getBoundingClientRect()
+  const overflow = rect.bottom - (viewportBottom - 14)
+  if (overflow > 0) {
+    window.scrollBy({ top: overflow + 18, behavior: 'smooth' })
+  }
+}
+
+function handleManualCorrectionFocus(event) {
+  event?.target?.select?.()
+  const keyboardSettleDelays = [40, 180, 360]
+  keyboardSettleDelays.forEach((delay) => {
+    window.setTimeout(keepCorrectionPanelAboveKeyboard, delay)
   })
 }
 
@@ -3609,36 +3655,26 @@ function composeStudentAnnotatedImage(
       }
 
       const drawReviewMark = (rect, seed) => {
-        const x0 = rect.x - rect.w * (0.018 + seededUnit(seed + 211) * 0.012)
-        const x1 = rect.x + rect.w * (1.018 + seededUnit(seed + 213) * 0.012)
-        const centerY = rect.y + rect.h * (0.51 + jitter(seed + 207, 0.012))
-        const highlighter = 'rgb(255, 255, 28)'
-        const baseWidth = Math.max(24, rect.h * 0.94)
+        const geometry = fluorescentHighlighterGeometry(rect, seed)
+        const highlighter = 'rgb(255, 250, 0)'
 
         ctx.save()
         ctx.globalCompositeOperation = 'source-over'
-        ctx.lineCap = 'butt'
-        ctx.lineJoin = 'round'
-        for (let pass = 0; pass < 2; pass++) {
-          const passSeed = seed + pass * 97
-          const passY = centerY + jitter(passSeed + 41, rect.h * 0.018)
-          const curveA = passY + jitter(passSeed + 43, rect.h * 0.025)
-          const curveB = passY + jitter(passSeed + 47, rect.h * 0.025)
+        const drawPolygon = (points, alpha) => {
           ctx.beginPath()
-          ctx.moveTo(x0 + jitter(passSeed + 37, rect.w * 0.018), passY)
-          ctx.bezierCurveTo(
-            rect.x + rect.w * 0.28,
-            curveA,
-            rect.x + rect.w * 0.7,
-            curveB,
-            x1 + jitter(passSeed + 53, rect.w * 0.018),
-            passY + jitter(passSeed + 59, rect.h * 0.035)
-          )
-          ctx.strokeStyle = highlighter
-          ctx.globalAlpha = pass === 0 ? 0.18 : 0.07
-          ctx.lineWidth = baseWidth * (pass === 0 ? 1 : 0.84)
-          ctx.stroke()
+          ctx.moveTo(points[0][0], points[0][1])
+          points.slice(1).forEach(([px, py]) => ctx.lineTo(px, py))
+          ctx.closePath()
+          ctx.fillStyle = highlighter
+          ctx.globalAlpha = alpha
+          ctx.fill()
         }
+        drawPolygon(geometry.polygon, 0.40)
+        const inner = geometry.polygon.map(([px, py]) => [
+          px + jitter(seed + Math.round(px) + 307, rect.w * 0.004),
+          py + jitter(seed + Math.round(py) + 311, rect.h * 0.025),
+        ])
+        drawPolygon(inner, 0.035)
         ctx.restore()
       }
 
@@ -3746,40 +3782,13 @@ function composeStudentAnnotatedImage(
         }
       }
 
-      const drawDateStamp = (questionRects) => {
-        if (!Array.isArray(questionRects) || questionRects.length === 0) return
-        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-        const now = new Date()
-        const text = `${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()}`
-        const topQuestionY = Math.min(...questionRects.map((rect) => rect.y))
-        const stampSeed = annotationJitterSeed + 701
-        const fontSize = Math.max(36, Math.min(52, warpedW * 0.026))
-        const spacing = Math.max(2.2, fontSize * 0.18)
-        const estimatedW = text.length * fontSize * 0.62 + (text.length - 1) * spacing
-        const topRightAnchor = Array.isArray(layout?.homography?.anchors)
-          ? layout.homography.anchors.find((anchor) => anchor?.id === 'tr')
-          : null
-        const markerSize = Number.isFinite(layout?.homography?.marker_size) ? layout.homography.marker_size : 0.08
-        const markerCenterX = topRightAnchor ? topRightAnchor.x * warpedW : null
-        const markerCenterY = topRightAnchor ? topRightAnchor.y * warpedH : null
-        const markerLeft = topRightAnchor ? markerCenterX - markerSize * warpedW * 0.72 : null
-        const markerBottom = topRightAnchor ? markerCenterY + markerSize * warpedH * 0.64 : null
-        const safeRight = topRightAnchor
-          ? Math.min(markerLeft - warpedW * 0.038, warpedW - warpedW * 0.06)
-          : warpedW - warpedW * 0.055
-        const safeLeft = warpedW * 0.635
-        const desiredX = safeRight - estimatedW - warpedW * (0.012 + seededUnit(stampSeed + 5) * 0.028)
-        const xMax = Math.max(safeLeft, safeRight - estimatedW)
-        const x = Math.max(safeLeft, Math.min(desiredX, xMax))
-        const yMin = topRightAnchor
-          ? Math.max(markerBottom + fontSize * 0.8, warpedH * 0.18)
-          : warpedH * 0.18
-        const yMax = Math.max(yMin, Math.min(topQuestionY - fontSize * 1.45, warpedH * 0.242))
-        const targetStampY = yMin + (yMax - yMin) * (0.3 + seededUnit(stampSeed + 13) * 0.52)
-        const y = Math.min(yMax, Math.max(yMin, targetStampY))
+      const drawDateStamp = () => {
+        const spec = dateStampSpecForLayout(layout, warpedW, warpedH, 1)
+        if (!spec) return
+        const { text, stampSeed, fontSize, spacing, x, y, rotation } = spec
         ctx.save()
-        ctx.translate(x + jitter(stampSeed + 17, 2.8), y + jitter(stampSeed + 19, 2.1))
-        ctx.rotate(-0.052 + jitter(stampSeed + 23, 0.024))
+        ctx.translate(x, y)
+        ctx.rotate(rotation)
         ctx.font = `500 ${fontSize}px "Courier New", "Lucida Console", Menlo, Monaco, monospace`
         ctx.textAlign = 'left'
         ctx.textBaseline = 'middle'
@@ -3967,7 +3976,7 @@ function composeStudentAnnotatedImage(
       const questionRects = questionRectsByIndex.filter(Boolean)
 
       if (questionGroups.length > 0) {
-        drawDateStamp(questionRects)
+        drawDateStamp()
         questionGroups.forEach((group, index) => {
           const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
           const rect = questionRectsByIndex[index]
@@ -4008,7 +4017,9 @@ function composeStudentAnnotatedImage(
             drawManualAnswer(correctedEntries.map((entry) => entry.rect), displayCells, seed + 47)
           }
           if (hasReview) {
-            const validSlotRects = slotRects.filter(Boolean)
+            const validSlotRects = reviewSlotRects.length > 0
+              ? reviewSlotRects.map((slot) => slot.slotRect).filter(Boolean)
+              : slotRects.filter(Boolean)
             const reviewRect = unionRects(validSlotRects)
             if (reviewRect) drawReviewMark(reviewRect, seed + 211)
           } else if (correct === true) {
@@ -5082,6 +5093,24 @@ function buildSourceAnnotationContext(rawCrops, sourceAnchors, layout, warpedW, 
             width: sourceQrRect.w / sourceW,
             height: sourceQrRect.h / sourceH
           }
+        }
+      }
+    }
+    const approvedDateRect = declaredDateStampRect(layout, warpedW, warpedH)
+    if (approvedDateRect) {
+      const sourceDateRect = transformRect(approvedDateRect)
+      if (sourceDateRect) {
+        sourceLayout.metadata = {
+          ...(sourceLayout.metadata || {}),
+          annotation_zones: {
+            ...(sourceLayout.metadata?.annotation_zones || {}),
+            date_stamp: {
+              x: sourceDateRect.x / sourceW,
+              y: sourceDateRect.y / sourceH,
+              width: sourceDateRect.w / sourceW,
+              height: sourceDateRect.h / sourceH,
+            },
+          },
         }
       }
     }
@@ -7375,6 +7404,8 @@ async function withDigitEngineTimeout(promise, label, timeoutMs = DIGIT_ENGINE_O
 
 const runRealOCR = async () => {
   processing.value = true
+  let scanningDateEarliestFinish = 0
+  scanningAnnotationPreview.value = null
   ocrResult.value = null
   activeCorrectionQuestion.value = null
   manualCorrectionText.value = ''
@@ -7636,6 +7667,30 @@ const runRealOCR = async () => {
     const annotationBaseMode = sourceAnnotationContext ? 'source-capture' : 'warped-sheet'
     const annotationGeometry = buildAnnotationGeometry(annotationCrops, annotationWidth, annotationHeight, null)
     const layoutSnapshot = buildLayoutSnapshot(annotationLayout)
+    if (props.studentMode) {
+      const scanningBaseUrl = annotationBaseImageUrl || matToDataURL(warpedImage, 'scanning-preview')
+      scanningAnnotationPreview.value = scanningBaseUrl ? {
+        imageUrl: scanningBaseUrl,
+        width: annotationWidth,
+        height: annotationHeight,
+        layout: annotationLayout,
+      } : null
+      if (scanningAnnotationPreview.value && dateStampSpecForLayout(annotationLayout, annotationWidth, annotationHeight, 1)) {
+        // Let the small ink-landing animation finish before the interface moves
+        // from Scanning to Grading. This is capped and applies only to layouts
+        // with an explicitly approved date safe zone.
+        scanningDateEarliestFinish = performance.now() + 900
+      }
+      if (typeof window !== 'undefined') {
+        window.__SCANGRADE_SCANNING_DATE_DEBUG = {
+          layoutId: annotationLayout?.layout_id || annotationLayout?.id || null,
+          width: annotationWidth,
+          height: annotationHeight,
+          declaredRect: declaredDateStampRect(annotationLayout, annotationWidth, annotationHeight),
+          spec: dateStampSpecForLayout(annotationLayout, annotationWidth, annotationHeight, 1),
+        }
+      }
+    }
     partialDebug.stage = 'preparing OCR crops'
     const cropQuality = processedTensors.map((proc) => bestTensorInkQuality(proc))
     partialDebug.cropQuality = cropQuality
@@ -9012,6 +9067,10 @@ const runRealOCR = async () => {
       totalTime: (performance.now() - start).toFixed(2)
     }
   } finally {
+    const scanningDateWait = Math.max(0, scanningDateEarliestFinish - performance.now())
+    if (scanningDateWait > 0) {
+      await new Promise((resolve) => window.setTimeout(resolve, scanningDateWait))
+    }
     processing.value = false
     emit('ocr-complete', ocrResult.value)
   }
@@ -9331,6 +9390,24 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+.scanning-date-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.scanning-date-stamp {
+  fill: #245aa4;
+  font-family: "Courier New", "Lucida Console", Menlo, Monaco, monospace;
+  font-weight: 500;
+  dominant-baseline: middle;
+  opacity: 0;
+  animation: date-stamp-ink-land 340ms cubic-bezier(0.18, 0.84, 0.24, 1.08) 90ms forwards;
+}
+
 .progressive-marking-reveal {
   opacity: 1;
 }
@@ -9346,6 +9423,21 @@ onUnmounted(() => {
   to { stroke-dashoffset: 0; }
 }
 
+@keyframes date-stamp-ink-land {
+  0% {
+    opacity: 0;
+    filter: blur(0.9px);
+  }
+  58% {
+    opacity: 0.76;
+    filter: blur(0.22px);
+  }
+  100% {
+    opacity: 0.72;
+    filter: blur(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .progressive-marking-stroke {
     animation: none;
@@ -9353,6 +9445,11 @@ onUnmounted(() => {
 
   .progressive-marking-stroke {
     stroke-dashoffset: 0;
+  }
+
+  .scanning-date-stamp {
+    opacity: 0.72;
+    animation: none;
   }
 }
 
@@ -9991,22 +10088,31 @@ onUnmounted(() => {
 
 .student-correction-blank-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   margin-top: 5px;
 }
 
-.student-correction-blank-actions .btn,
-.student-correction-no-answer {
+.student-correction-blank-actions .btn {
   min-width: 0;
-  padding: 7px 5px;
-  font-size: 11px;
+  padding: 6px 3px;
+  font-size: 10px;
   font-weight: 750;
 }
 
-.student-correction-no-answer {
-  width: 100%;
-  margin-top: 4px;
+.student-correction-blank-link {
+  display: block;
+  width: auto;
+  margin: 4px 0 0 auto;
+  padding: 1px 2px;
+  border: 0;
+  background: transparent;
+  color: #6e6e73;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .student-correction-panel--image.student-correction-panel--double .student-correction-manual input {
