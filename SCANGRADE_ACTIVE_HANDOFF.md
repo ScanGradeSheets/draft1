@@ -4914,4 +4914,8 @@ Next action:
 - Recognition, grading, confidence policy, crops, capture, strong-review routing, and final annotation geometry are unchanged.
 - Reduced-motion behavior remains immediate. A check finishes in 500 ms; an X uses two 270 ms strokes with the second beginning after 210 ms. The existing 620 ms per-question cadence therefore never advances before the mark is complete.
 - Focused unit tests prove a check contains exactly one continuous path and an X exactly two. Production build passes. The real WebKit/mobile delayed-review test passed all gates, including single-stroke check presence, pending-question concealment, final-image concealment, and clean completion. Evidence: `private-evidence/reports/progressive-marking-webkit-20260717.json` and `.png`.
-- Candidate label: `2026.07.18-teacher-pen-strokes-beta-9-candidate`. It is not deployed, committed, or pushed yet.
+- Release label: `2026.07.18-teacher-pen-strokes-beta-9`.
+- Implementation commit `0b7d4c0` was pushed to `autobuild/safe-20260223`. A clean archive of that commit was built with root-domain base `/` and the deploy-only public asset prune.
+- The final upload was performed from a directory containing only the static `dist` files. The first upload was superseded immediately because Wrangler detected the repository's dormant Functions folder beside `dist`; direct checks showed no active submission endpoint, but the static-only upload removed the ambiguity entirely.
+- Static-only deployment URL: `https://3b81af69.scangrade.pages.dev/`; custom production domain: `https://scangrade.io/`.
+- Live browser smoke mounted the ScanGrade home screen with the Beta 9 label. `/api/submissions` and `/review-model/health` returned files byte-identical to the static homepage (SHA-256 `7bca9ed742417780a435f30a30cebf7eccf736d148e7f5d2a5a320a2dea0a4c8`), confirming that neither a backend nor the Mac Mini was exposed.
