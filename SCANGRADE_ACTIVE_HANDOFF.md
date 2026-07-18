@@ -4995,3 +4995,15 @@ Next action:
 - Public production: `https://scangrade.io/`; final immutable deployment: `https://f8045360.scangrade.pages.dev/`. Production, immutable, and local release HTML are byte-identical at SHA-256 `375c930e152d49e84e7f19d87233b66e5fb557cc84df2fb1cc0726e2664e4be4`; live JavaScript matches the release at SHA-256 `4e7daafe8c12b875d2fe08cd8d664103223f1aba721496d069f1ab1085849493`.
 - Final deployment is static-only: `/api/submissions` and `/review-model/health` return the identical SPA file, and there is no public Worker, Pages Function, D1 binding, Tailscale host, or Mac Mini route. An initial upload at `83eaca76` was immediately superseded before handoff after Wrangler discovered dormant repository Functions; final `f8045360` was uploaded from an isolated 221-file static directory and contains no Functions bundle.
 - Durable release record: `docs/SCANGRADE_FIXED_WORKSPACE_PUBLIC_BETA14_20260718.md`.
+
+### 2026-07-18 fixed-viewport public Beta 14.1
+
+- Tony's immediate live test found that Beta 14 still allowed vertical Safari scrolling and that the logo moved slightly between landing and capture. This was real: the app root was height-constrained, but HTML/body remained scrollable, and capture used a separate compact header rule.
+- Beta 14.1 toggles a document-level capture lock on HTML/body while the scanner is open: fixed body, hidden overflow, exact viewport height, and overscroll disabled. The lock is removed when leaving capture or unmounting.
+- Landing and capture now share the same compact student header geometry; the logo does not move or resize after Start Scan.
+- Browser measurement passed at 390×844 phone and 768×1024 older-iPad sizes. In both, document height exactly equals viewport height, the bottom bar stays inside the viewport, and the logo coordinates/dimensions are identical before and after opening the scanner.
+- Verification: 171/171 repository tests, production build, exact-commit pruned build, live phone viewport measurement, and live static-route checks pass. OCR, capture, crop, confidence, grading, answer-key separation, corrections, and annotation behavior are unchanged.
+- Release label: `2026.07.18-fixed-workspace-beta-14-1`; source commit: `f4a75ef74a70422bb15cf6543662aaafe7790951`.
+- Public production: `https://scangrade.io/`; final immutable deployment: `https://bf5e2107.scangrade.pages.dev/`. Beta 14 remains at `https://f8045360.scangrade.pages.dev/` and Beta 13 remains at `https://835fb701.scangrade.pages.dev/` for immediate rollback.
+- Production, immutable, local release, and `/api/submissions` are byte-identical static HTML at SHA-256 `066cbefaab33d823d4968aca171c7ab4d39b715022c55a7e3285ae517ff1e4de`. Live JavaScript matches at SHA-256 `75feabb21fc7b1ae9a995267eaffb01d017786caad15a12b3cae18164c371335`.
+- Durable release record: `docs/SCANGRADE_FIXED_VIEWPORT_PUBLIC_BETA14_1_20260718.md`.
