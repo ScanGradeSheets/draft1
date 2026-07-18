@@ -5017,3 +5017,10 @@ Next action:
 - Verification: all 177 repository tests and the root-domain production build pass. Production, immutable, API-fallback, health-fallback, and local HTML are byte-identical at SHA-256 `a6322becb43ac52176c864b76f37e9c70de6ce7ce795375bae83d09a2614b822`; production JavaScript matches the release at SHA-256 `9920da26e4d6320a2d62d2238bf24144af27507bcd9122e974341de78f450dc2`.
 - Source commit: `0d50ebd0c50789aad60630ee5e7246fbe6b60291`. Public production: `https://scangrade.io/`. Immutable deployment: `https://ae4f7e48.scangrade.pages.dev/`. Beta 14.1 rollback remains `https://bf5e2107.scangrade.pages.dev/`.
 - Public marking animation remains presentation-only: the public domain uses browser-local OCR and does not call the Mac Mini or a strong cloud model by default. Confident marks therefore remain in worksheet order; yellow answers are not secretly being re-read during the animation.
+### 2026-07-18 overlay-layering public Beta 15.1
+
+- Tony's screenshot showed blue recognition labels rendering above the teacher suggestion/correction panel. The recognition overlay was at layer 6 while the correction panel was at layer 4.
+- Beta 15.1 raises only the correction panel to layer 8. Blue diagnostic labels remain available over the worksheet but cannot cover the active teacher controls.
+- Added a regression test that requires the correction layer to remain above the recognition layer. All 178 repository tests and the production build pass.
+- Public production: `https://scangrade.io/`; immutable deployment: `https://120d691c.scangrade.pages.dev/`; build label: `2026.07.18-overlay-layering-beta-15-1`; source commit: `366caa6`.
+- Tony's comparison screenshot was definitely Beta 14.1 because its visible build label was `2026.07.18-fixed-workspace-beta-14-1`. Use `https://scangrade.io/?build=15-1` or reload/close the old Safari tab to force the updated application document.
