@@ -1,6 +1,6 @@
 <template>
   <div class="scan-grade" :class="{ 'scan-grade--student': isStudentMode, 'scan-grade--capture': showStudentCaptureUi }">
-    <header class="header" :class="{ 'header--capture': showStudentCaptureUi }">
+    <header class="header">
       <img :src="publicUrl('scangrade-logo-transparent.png')" alt="ScanGrade logo" class="brand-logo" />
       <h1><span class="brand-name">ScanGrade</span><span class="brand-domain">.io</span></h1>
       <p class="build-label">Build {{ APP_BUILD_LABEL }}</p>
@@ -360,7 +360,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import CameraCapture from './components/CameraCapture.vue'
 import { publicUrl } from './public-paths.js'
 import {
@@ -373,7 +373,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.18-fixed-workspace-beta-14'
+const APP_BUILD_LABEL = '2026.07.18-fixed-workspace-beta-14-1'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -1126,8 +1126,19 @@ const runPipelineTest = async () => {
   pipelineTestRunning.value = false
 }
 
+const setCaptureViewportLock = (active) => {
+  document.documentElement.classList.toggle('scan-grade-capture-lock', active)
+  document.body.classList.toggle('scan-grade-capture-lock', active)
+}
+
+watch(showStudentCaptureUi, setCaptureViewportLock, { immediate: true })
+
 onMounted(() => {
   loadTeacherData()
+})
+
+onUnmounted(() => {
+  setCaptureViewportLock(false)
 })
 </script>
 
@@ -1141,10 +1152,10 @@ onMounted(() => {
 
 .scan-grade--student {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 56px 20px 20px;
-  padding-top: max(56px, calc(env(safe-area-inset-top, 0px) + 18px));
+  padding: max(6px, env(safe-area-inset-top, 0px)) 10px max(6px, env(safe-area-inset-bottom, 0px));
 }
 
 .scan-grade--capture {
@@ -1152,7 +1163,20 @@ onMounted(() => {
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
-  padding: max(8px, env(safe-area-inset-top, 0px)) 14px max(8px, env(safe-area-inset-bottom, 0px));
+}
+
+:global(html.scan-grade-capture-lock),
+:global(body.scan-grade-capture-lock),
+:global(body.scan-grade-capture-lock #app) {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+:global(body.scan-grade-capture-lock) {
+  position: fixed;
+  inset: 0;
 }
 
 .header {
@@ -1169,37 +1193,23 @@ onMounted(() => {
 }
 
 .scan-grade--student .header {
-  margin-bottom: 12px;
-}
-
-.scan-grade--student .brand-logo {
-  width: 58px;
-  height: 58px;
-  margin-bottom: 6px;
-}
-
-.scan-grade--student .header h1 {
-  font-size: 24px;
-  margin-bottom: 0;
-}
-
-.scan-grade--capture .header--capture {
   flex: 0 0 auto;
   margin-bottom: 5px;
 }
 
-.scan-grade--capture .header--capture .brand-logo {
+.scan-grade--student .brand-logo {
   width: 44px;
   height: 44px;
   margin-bottom: 1px;
 }
 
-.scan-grade--capture .header--capture h1 {
+.scan-grade--student .header h1 {
   font-size: 20px;
   line-height: 1;
+  margin-bottom: 0;
 }
 
-.scan-grade--capture .header--capture .build-label {
+.scan-grade--student .build-label {
   margin-top: 2px;
   font-size: 8px;
 }
@@ -1981,26 +1991,21 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .scan-grade--student {
-    padding: 44px 14px 10px;
-    padding-top: max(44px, calc(env(safe-area-inset-top, 0px) + 14px));
-  }
-
-  .scan-grade--capture {
     padding: max(6px, env(safe-area-inset-top, 0px)) 10px max(6px, env(safe-area-inset-bottom, 0px));
   }
 
   .scan-grade--student .header {
-    margin-bottom: 8px;
+    margin-bottom: 5px;
   }
 
   .scan-grade--student .brand-logo {
-    width: 50px;
-    height: 50px;
-    margin-bottom: 4px;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 1px;
   }
 
   .scan-grade--student .header h1 {
-    font-size: 23px;
+    font-size: 20px;
   }
 
   .build-label {
