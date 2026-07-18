@@ -4983,3 +4983,15 @@ Next action:
 - Release label: `2026.07.18-single-slot-review-beta-13`. Implementation commit `c66839d` is pushed to `origin/autobuild/safe-20260223`.
 - Public production: `https://scangrade.io/`; immutable deployment: `https://835fb701.scangrade.pages.dev/`. The upload contained 219 application files plus `_headers` and no Pages Function, Worker, route manifest, Tailscale host, or Mac Mini endpoint.
 - Production HTML, immutable HTML, local release HTML, `/api/submissions`, and `/review-model/health` are byte-identical at SHA-256 `c68bf8077b99d79d6beffb278c1abc992cd8faeca798867c8d544e2f11c7ffc7`, confirming that the two backend-looking paths remain static SPA fallbacks. The live JavaScript is served as `application/javascript`, contains the exact Beta 13 label, and matches the local release at SHA-256 `2e3ffa827351820b5128e86bc5d29bf90341a8c3cb2d0a7b4114d8ab64e5f4c2`.
+
+### 2026-07-18 fixed-workspace public Beta 14
+
+- Tony approved this as a reversible layout experiment and requested that Beta 13 remain available for immediate rollback. Beta 13's immutable rollback URL is `https://835fb701.scangrade.pages.dev/`.
+- The sheet now sits directly below a compact logo/header; the Home, Login, optional recognition-view toggle, and New Scan controls sit below the sheet. Normal scanning/results use a fixed app-like viewport instead of expanding a second results section. Debug Scan intentionally retains its detailed result/export card.
+- After a result, the minimal blue toggle reveals what ScanGrade read directly above each physical answer slot. Two-slot answers receive separate per-digit labels and a detected empty slot displays `_`. This is a read-only explanation layer and cannot change OCR, grading, confidence, or corrections.
+- The date stamp is modestly larger for iPad readability while remaining inside the worksheet-declared safe zone. Unknown layouts still omit the date rather than guess.
+- Verification: 170/170 repository tests and the exact-commit deploy-pruned build pass. Recognition, capture, crop, confidence, grading, answer-key separation, and correction integrity remain unchanged.
+- Release label: `2026.07.18-fixed-workspace-beta-14`; implementation commit: `0ff92a4a32f389c251dfcaf87470ebee7e8d0f37`.
+- Public production: `https://scangrade.io/`; final immutable deployment: `https://f8045360.scangrade.pages.dev/`. Production, immutable, and local release HTML are byte-identical at SHA-256 `375c930e152d49e84e7f19d87233b66e5fb557cc84df2fb1cc0726e2664e4be4`; live JavaScript matches the release at SHA-256 `4e7daafe8c12b875d2fe08cd8d664103223f1aba721496d069f1ab1085849493`.
+- Final deployment is static-only: `/api/submissions` and `/review-model/health` return the identical SPA file, and there is no public Worker, Pages Function, D1 binding, Tailscale host, or Mac Mini route. An initial upload at `83eaca76` was immediately superseded before handoff after Wrangler discovered dormant repository Functions; final `f8045360` was uploaded from an isolated 221-file static directory and contains no Functions bundle.
+- Durable release record: `docs/SCANGRADE_FIXED_WORKSPACE_PUBLIC_BETA14_20260718.md`.
