@@ -631,6 +631,11 @@ import { correctionPanelPlacementForRegion } from '../v3/correction-panel-placem
 import { fluorescentHighlighterGeometry } from '../v3/highlighter-stroke.js'
 import { dateStampSpecForLayout, declaredDateStampRect } from '../v3/date-stamp-placement.js'
 import { recognitionOverlayItemsForAnswers } from '../v3/recognition-overlay.js'
+import { selectFlexibleOneDigitBlankSlots } from '../v3/flexible-one-digit-blank.js'
+import {
+  manualCorrectionDisplayCells,
+  shouldAutoApplySingleDigitCorrection,
+} from '../v3/manual-correction-render.js'
 import {
   manualCorrectionContract,
   manualCorrectionNeedsExplicitPosition,
@@ -1372,6 +1377,7 @@ const progressiveCorrectionQuestionNum = ref(null)
 const progressiveBaseImageOverride = ref('')
 const scanningAnnotationPreview = ref(null)
 let progressiveMarkingTimer = null
+let manualCorrectionAutoApplyTimer = null
 let progressiveMarkingEarliestFinish = 0
 let digitModelWarmupStarted = false
 let activeScanSessionId = null
@@ -1900,11 +1906,11 @@ function openCorrection(region) {
         ? region.slotIndex
         : preferredCorrectionSlotIndex(group, region)
   }
-  const currentText = activeCorrectionCurrentText.value
-  manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
+  manualCorrectionText.value = ''
   manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
   correctionError.value = ''
+  focusManualCorrectionInput()
 }
 
 function openCorrectionByGroupSlot(group, slotIndex = null) {
@@ -1929,13 +1935,22 @@ function openCorrectionByGroupSlot(group, slotIndex = null) {
     correct: group.correct
   }
   activeCorrectionQuestion.value = { ...region, slotIndex: selectedSlotIndex, openedAtMs: performance.now() }
-  const currentText = activeCorrectionCurrentText.value
-  manualCorrectionText.value = currentText === 'blank' || currentText === 'not sure' ? '' : currentText
+  manualCorrectionText.value = ''
   manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
   correctionError.value = ''
   nextTick(() => {
     capturedImageWrapRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+  })
+  focusManualCorrectionInput()
+}
+
+function focusManualCorrectionInput() {
+  nextTick(() => {
+    const input = manualCorrectionInputRef.value
+    if (!input) return
+    input.focus({ preventScroll: true })
+    handleManualCorrectionFocus({ target: input })
   })
 }
 
@@ -1972,6 +1987,11 @@ function handleCorrectionOutsideClick(event) {
 }
 
 function cancelCorrection() {
+  if (manualCorrectionAutoApplyTimer != null) {
+    window.clearTimeout(manualCorrectionAutoApplyTimer)
+    manualCorrectionAutoApplyTimer = null
+  }
+  manualCorrectionInputRef.value?.blur?.()
   activeCorrectionQuestion.value = null
   manualCorrectionText.value = ''
   manualCorrectionClearedForSession.value = false
@@ -2050,6 +2070,19 @@ function normalizeManualCorrectionInput(event) {
   if (event?.target && event.target.value !== normalized) event.target.value = normalized
   manualCorrectionText.value = normalized
   if (correctionError.value) correctionError.value = ''
+  if (shouldAutoApplySingleDigitCorrection({
+    eventType: event?.type,
+    maxLength: activeCorrectionMaxLength.value,
+    text: normalized,
+  })) {
+    if (manualCorrectionAutoApplyTimer != null) window.clearTimeout(manualCorrectionAutoApplyTimer)
+    manualCorrectionAutoApplyTimer = window.setTimeout(() => {
+      manualCorrectionAutoApplyTimer = null
+      if (activeCorrectionQuestion.value && manualCorrectionText.value === normalized) {
+        void applyManualCorrectionText()
+      }
+    }, 70)
+  }
 }
 
 async function applyManualCorrectionCells(cells, { slotIndex = null, correctionSource = 'manual', oneTap = false } = {}) {
@@ -2158,6 +2191,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
       text: answerText,
       correctedSlots: Array.from(correctedSlots).sort((a, b) => a - b),
       correctionSource,
+      overflowSinglePhysicalBox,
       oneTap: Boolean(oneTap),
       reviewDurationMs: Number.isFinite(activeCorrectionQuestion.value?.openedAtMs)
         ? Math.max(0, Math.round(performance.now() - activeCorrectionQuestion.value.openedAtMs))
@@ -3946,8 +3980,12 @@ function composeStudentAnnotatedImage(
       }
 
       const drawManualAnswer = (rects, cells, seed) => {
-        const validRects = rects.filter(Boolean)
-        if (!validRects.length || !Array.isArray(cells)) return
+        if (!Array.isArray(rects) || !Array.isArray(cells)) return
+        const visibleEntries = rects
+          .map((rect, index) => ({ rect, cell: cells[index] }))
+          .filter(({ rect, cell }) => rect && cell !== null && cell !== undefined && cell !== '')
+        const validRects = visibleEntries.map(({ rect }) => rect)
+        if (!validRects.length) return
         ctx.save()
         const tapeX0 = Math.min(...validRects.map((rect) => rect.x))
         const tapeY0 = Math.min(...validRects.map((rect) => rect.y))
@@ -4009,9 +4047,7 @@ function composeStudentAnnotatedImage(
         }
         ctx.restore()
 
-        validRects.forEach((rect, index) => {
-          const digit = cells[index]
-          if (digit === null || digit === undefined || digit === '') return
+        visibleEntries.forEach(({ rect, cell: digit }, index) => {
           const digitText = String(digit)
           const widthScale = digitText.length > 1 ? 0.58 : 1.05
           const minimumSize = digitText.length > 1 ? 30 : 38
@@ -4095,10 +4131,7 @@ function composeStudentAnnotatedImage(
             const correctedEntries = correctedSlots
               .map((slotIndex) => ({ rect: slotRects[slotIndex], cell: correction.cells[slotIndex] }))
               .filter((entry) => entry.rect)
-            const correctedText = String(correction.text || '').replace(/\D/g, '')
-            const displayCells = correctedEntries.length === 1 && correctedText.length > 1
-              ? [correctedText]
-              : correctedEntries.map((entry) => entry.cell)
+            const displayCells = manualCorrectionDisplayCells(correction, correctedEntries)
             drawManualAnswer(correctedEntries.map((entry) => entry.rect), displayCells, seed + 47)
           }
           if (hasReview) {
@@ -4739,12 +4772,12 @@ function applyOptionalSingleDigitBlankOverrides(questionGroups, boxes, predictio
     }))
     if (slots.some((slot) => !slot.prediction)) continue
 
-    const plausibleSlots = slots.filter((slot) => plausibleSingleDigitResponseSlot(slot.prediction, slot.quality))
-    if (plausibleSlots.length !== 1) continue
-    const matchedSlot = plausibleSlots[0]
-    const blankSlot = slots.find((slot) => slot.slotIndex !== matchedSlot.slotIndex)
-    if (!blankSlot) continue
-    if (!optionalBlankSlotLooksLikeArtifact(blankSlot.prediction, blankSlot.quality)) continue
+    const decision = selectFlexibleOneDigitBlankSlots(group, slots, {
+      isStrongDigit: (slot) => oneDigitResponseSlotCanAutoGrade(slot.prediction, slot.quality),
+      isBlankArtifact: (slot) => optionalBlankSlotLooksLikeArtifact(slot.prediction, slot.quality),
+    })
+    if (!decision) continue
+    const { matchedSlot, blankSlot } = decision
 
     const matchedPrediction = matchedSlot.prediction
     const blankPrediction = blankSlot.prediction
