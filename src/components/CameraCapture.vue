@@ -4773,7 +4773,7 @@ function applyOptionalSingleDigitBlankOverrides(questionGroups, boxes, predictio
     if (slots.some((slot) => !slot.prediction)) continue
 
     const decision = selectFlexibleOneDigitBlankSlots(group, slots, {
-      isStrongDigit: (slot) => oneDigitResponseSlotCanAutoGrade(slot.prediction, slot.quality),
+      isWrittenDigit: (slot) => plausibleSingleDigitResponseSlot(slot.prediction, slot.quality),
       isBlankArtifact: (slot) => optionalBlankSlotLooksLikeArtifact(slot.prediction, slot.quality),
     })
     if (!decision) continue

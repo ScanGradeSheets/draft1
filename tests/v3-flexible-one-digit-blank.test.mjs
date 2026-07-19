@@ -24,7 +24,7 @@ test('clears only one artifact slot beside one independently strong digit', () =
     { slotIndex: 1, kind: 'blank-artifact' },
   ]
   const decision = selectFlexibleOneDigitBlankSlots(flexibleGroup, slots, {
-    isStrongDigit: (slot) => slot.kind === 'strong-digit',
+    isWrittenDigit: (slot) => slot.kind === 'strong-digit',
     isBlankArtifact: (slot) => slot.kind === 'blank-artifact',
   })
   assert.equal(decision.matchedSlot.slotIndex, 0)
@@ -37,7 +37,7 @@ test('does not erase a possible second written digit or act on a two-digit contr
     { slotIndex: 1, kind: 'strong-digit' },
   ]
   const options = {
-    isStrongDigit: (slot) => slot.kind === 'strong-digit',
+    isWrittenDigit: (slot) => slot.kind === 'strong-digit',
     isBlankArtifact: (slot) => slot.kind === 'blank-artifact',
   }
   assert.equal(selectFlexibleOneDigitBlankSlots(flexibleGroup, twoDigits, options), null)
@@ -46,4 +46,18 @@ test('does not erase a possible second written digit or act on a two-digit contr
     [{ slotIndex: 0, kind: 'strong-digit' }, { slotIndex: 1, kind: 'blank-artifact' }],
     options,
   ), null)
+})
+
+test('clears an optional blank even when the written digit still needs review', () => {
+  const slots = [
+    { slotIndex: 0, kind: 'written-review' },
+    { slotIndex: 1, kind: 'blank-artifact' },
+  ]
+  const decision = selectFlexibleOneDigitBlankSlots(flexibleGroup, slots, {
+    isWrittenDigit: (slot) => slot.kind === 'written-review',
+    isBlankArtifact: (slot) => slot.kind === 'blank-artifact',
+  })
+
+  assert.equal(decision?.matchedSlot.slotIndex, 0)
+  assert.equal(decision?.blankSlot.slotIndex, 1)
 })

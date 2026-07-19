@@ -25,12 +25,12 @@ export function supportsEitherSlotForOneDigit(group) {
 export function selectFlexibleOneDigitBlankSlots(
   group,
   slots,
-  { isStrongDigit = () => false, isBlankArtifact = () => false } = {},
+  { isWrittenDigit = () => false, isBlankArtifact = () => false } = {},
 ) {
   if (!supportsEitherSlotForOneDigit(group) || !Array.isArray(slots) || slots.length !== 2) return null
-  const strongDigits = slots.filter(isStrongDigit)
-  if (strongDigits.length !== 1) return null
-  const matchedSlot = strongDigits[0]
+  const writtenDigits = slots.filter((slot) => isWrittenDigit(slot) && !isBlankArtifact(slot))
+  if (writtenDigits.length !== 1) return null
+  const matchedSlot = writtenDigits[0]
   const blankSlot = slots.find((slot) => slot.slotIndex !== matchedSlot.slotIndex)
   if (!blankSlot || !isBlankArtifact(blankSlot)) return null
   return { matchedSlot, blankSlot }
