@@ -5030,3 +5030,9 @@ Next action:
 - Root cause: blank-slot suppression was coupled to the neighboring written digit meeting the stricter automatic-grading threshold. A correctly empty optional slot therefore stayed yellow whenever the real digit itself still needed review.
 - Beta 15.2 separates those decisions. On layouts explicitly permitting a one-digit response in either slot, a slot with blank/artifact evidence is cleared independently; the written digit remains yellow unless it independently passes the unchanged recognition policy. Two plausible written digits and two-digit worksheet contracts are never collapsed.
 - All 179 repository tests and the production build pass. Public production: `https://scangrade.io/`; immutable deployment: `https://d55e444b.scangrade.pages.dev/`; source commit: `6235608`; label: `2026.07.18-optional-blank-beta-15-2`.
+### 2026-07-18 empty-save public Beta 15.3
+
+- Tony's screenshots showed the manual field's grey `8`/`37` placeholder being mistaken for entered text and asked for empty Save to mean blank. Both screenshots were still Beta 15.1, so they did not exercise Beta 15.2's optional-blank fix.
+- Beta 15.3 removes numeric ghost placeholders and the redundant whole-answer Blank link. Saving an empty field explicitly records the active slot—or the whole answer—as blank.
+- For a two-slot one-digit correction, typing one digit now auto-positions it only when the current key-blind recognition state already contains exactly one occupied slot and one blank slot. If both slots look occupied or both look blank, the existing explicit `_ 9` / `9 _` choices remain; ScanGrade does not guess and erase possible student writing.
+- All 180 repository tests and the production build pass. Public production: `https://scangrade.io/`; immutable deployment: `https://51df88af.scangrade.pages.dev/`; source commit: `ff09cae`; label: `2026.07.18-empty-save-beta-15-3`.
