@@ -5024,3 +5024,9 @@ Next action:
 - Added a regression test that requires the correction layer to remain above the recognition layer. All 178 repository tests and the production build pass.
 - Public production: `https://scangrade.io/`; immutable deployment: `https://120d691c.scangrade.pages.dev/`; build label: `2026.07.18-overlay-layering-beta-15-1`; source commit: `366caa6`.
 - Tony's comparison screenshot was definitely Beta 14.1 because its visible build label was `2026.07.18-fixed-workspace-beta-14-1`. Use `https://scangrade.io/?build=15-1` or reload/close the old Safari tab to force the updated application document.
+### 2026-07-18 optional-blank public Beta 15.2
+
+- Tony's live Mixed Addition/Subtraction screenshots proved that unused halves of two-slot one-digit answers were still highlighted yellow.
+- Root cause: blank-slot suppression was coupled to the neighboring written digit meeting the stricter automatic-grading threshold. A correctly empty optional slot therefore stayed yellow whenever the real digit itself still needed review.
+- Beta 15.2 separates those decisions. On layouts explicitly permitting a one-digit response in either slot, a slot with blank/artifact evidence is cleared independently; the written digit remains yellow unless it independently passes the unchanged recognition policy. Two plausible written digits and two-digit worksheet contracts are never collapsed.
+- All 179 repository tests and the production build pass. Public production: `https://scangrade.io/`; immutable deployment: `https://d55e444b.scangrade.pages.dev/`; source commit: `6235608`; label: `2026.07.18-optional-blank-beta-15-2`.
