@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  inferSingleDigitSlot,
   manualCorrectionContract,
   manualCorrectionNeedsExplicitPosition,
   manualCorrectionTextWithBlank,
@@ -13,6 +14,13 @@ test('one digit entered for one flexible box stays that digit', () => {
     correctionCells: [9],
     answerText: '9',
   })
+})
+
+test('infers a one-digit correction position only when exactly one physical slot is occupied', () => {
+  assert.equal(inferSingleDigitSlot([9, null], 2), 0)
+  assert.equal(inferSingleDigitSlot([null, 9], 2), 1)
+  assert.equal(inferSingleDigitSlot([1, 9], 2), null)
+  assert.equal(inferSingleDigitSlot([null, null], 2), null)
 })
 
 test('two digits entered for one flexible box remain one answer token', () => {

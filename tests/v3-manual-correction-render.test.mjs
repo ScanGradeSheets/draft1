@@ -18,6 +18,12 @@ test('a true multi-digit answer in one physical box still paints the complete an
 test('one typed digit can apply immediately, while multi-digit answers still wait for Save', () => {
   assert.equal(shouldAutoApplySingleDigitCorrection({ eventType: 'input', maxLength: 1, text: '3' }), true)
   assert.equal(shouldAutoApplySingleDigitCorrection({ eventType: 'input', maxLength: 2, text: '3' }), false)
+  assert.equal(shouldAutoApplySingleDigitCorrection({
+    eventType: 'input',
+    maxLength: 2,
+    text: '3',
+    inferredSingleDigitSlotIndex: 1,
+  }), true)
   assert.equal(shouldAutoApplySingleDigitCorrection({ eventType: 'change', maxLength: 1, text: '3' }), false)
   assert.equal(shouldAutoApplySingleDigitCorrection({ eventType: 'input', maxLength: 1, text: '' }), false)
 })

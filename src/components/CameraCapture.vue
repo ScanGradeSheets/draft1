@@ -213,22 +213,6 @@
             </button>
           </div>
           <button
-            v-else-if="activeCorrectionSlotIndex == null && activeCorrectionPhysicalSlotCount === 2"
-            type="button"
-            class="student-correction-blank-link"
-            @click="applyNoAnswerCorrection"
-          >
-            Blank answer
-          </button>
-          <button
-            v-else-if="activeCorrectionSlotIndex == null"
-            type="button"
-            class="student-correction-blank-link"
-            @click="applyNoAnswerCorrection"
-          >
-            Blank
-          </button>
-          <button
             v-if="showLocalFirstStrongFallback"
             type="button"
             class="btn btn-secondary local-first-none-btn"
@@ -638,6 +622,7 @@ import {
 } from '../v3/manual-correction-render.js'
 import {
   manualCorrectionContract,
+  inferSingleDigitSlot,
   manualCorrectionNeedsExplicitPosition,
   manualCorrectionTextWithBlank,
 } from '../v3/manual-correction-contract.js'
@@ -1697,9 +1682,14 @@ const showManualCorrectionPositionChoices = computed(() => (
   !!manualCorrectionPositionDigit.value
 ))
 
-const activeCorrectionPlaceholder = computed(() =>
-  activeCorrectionMaxLength.value > 1 ? '37' : '8'
-)
+const activeCorrectionPlaceholder = computed(() => '')
+
+const inferredSingleDigitSlotIndex = computed(() => inferSingleDigitSlot(
+  activeCorrectionPredictions.value.map((prediction) => (
+    prediction?.blank === true || prediction?.empty === true ? null : prediction?.digit
+  )),
+  activeCorrectionPhysicalSlotCount.value,
+))
 
 const activeCorrectionQuestionLetter = computed(() =>
   scantronAnswerLabel(activeCorrectionQuestion.value?.label)
@@ -2009,7 +1999,27 @@ async function applyCorrectionChoice(choice) {
 async function applyManualCorrectionText() {
   normalizeManualCorrectionInput()
   const group = activeCorrectionGroup.value
+  if (!manualCorrectionText.value) {
+    await applyNoAnswerCorrection()
+    return
+  }
   if (manualCorrectionNeedsExplicitPosition(manualCorrectionText.value, activeCorrectionPhysicalSlotCount.value)) {
+    const inferredSlotIndex = inferredSingleDigitSlotIndex.value
+    if (Number.isInteger(inferredSlotIndex)) {
+      const positionedText = manualCorrectionTextWithBlank(
+        manualCorrectionText.value,
+        inferredSlotIndex === 0 ? 1 : 0,
+        activeCorrectionPhysicalSlotCount.value,
+      )
+      const positionedCells = parseManualAnswerText(positionedText, activeCorrectionPhysicalSlotCount.value)
+      if (positionedCells) {
+        await applyManualCorrectionCells(positionedCells, {
+          correctionSource: 'manual-keypad-inferred-position',
+          oneTap: true,
+        })
+        return
+      }
+    }
     const digit = manualCorrectionPositionDigit.value || 'digit'
     correctionError.value = `Choose “${digit} _” or “_ ${digit}” so the digit stays where the student wrote it.`
     return
@@ -2074,6 +2084,7 @@ function normalizeManualCorrectionInput(event) {
     eventType: event?.type,
     maxLength: activeCorrectionMaxLength.value,
     text: normalized,
+    inferredSingleDigitSlotIndex: inferredSingleDigitSlotIndex.value,
   })) {
     if (manualCorrectionAutoApplyTimer != null) window.clearTimeout(manualCorrectionAutoApplyTimer)
     manualCorrectionAutoApplyTimer = window.setTimeout(() => {

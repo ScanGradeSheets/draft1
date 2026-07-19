@@ -7,6 +7,13 @@ export function manualCorrectionDisplayCells(correction, correctedEntries = []) 
   return correctedEntries.map((entry) => entry?.cell ?? null)
 }
 
-export function shouldAutoApplySingleDigitCorrection({ eventType, maxLength, text } = {}) {
-  return eventType === 'input' && Number(maxLength) === 1 && /^\d$/.test(String(text || ''))
+export function shouldAutoApplySingleDigitCorrection({
+  eventType,
+  maxLength,
+  text,
+  inferredSingleDigitSlotIndex = null,
+} = {}) {
+  if (eventType !== 'input' || !/^\d$/.test(String(text || ''))) return false
+  if (Number(maxLength) === 1) return true
+  return Number(maxLength) === 2 && Number.isInteger(inferredSingleDigitSlotIndex)
 }

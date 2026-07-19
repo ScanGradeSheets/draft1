@@ -52,3 +52,12 @@ export function manualCorrectionTextWithBlank(text, blankSlotIndex, physicalSlot
   }
   return cells.join('')
 }
+
+export function inferSingleDigitSlot(cells = [], physicalSlotCount = 2) {
+  const count = Math.max(1, Number(physicalSlotCount) || 1)
+  if (count !== 2 || !Array.isArray(cells) || cells.length !== count) return null
+  const occupied = cells
+    .map((cell, slotIndex) => ({ cell: normalizedCell(cell), slotIndex }))
+    .filter(({ cell }) => cell !== null)
+  return occupied.length === 1 ? occupied[0].slotIndex : null
+}
