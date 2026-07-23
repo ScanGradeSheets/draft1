@@ -1,5 +1,21 @@
 # ScanGrade Active Handoff
 
+## 2026-07-23 Beta 7 safety failure / Beta 15.3 interface freeze (current)
+
+- Independently replayed the frozen predecessor and Beta 7 on identical retained evidence for every canonical multi-frame packet with hand-labelled truth: P02, P03, P05, P08, and P09 (50 sheets, 350 locations, 345 scorable answers).
+- Beta 7 scored 273/345 automatic (79.1%), with 253 correct, **20 confident transcription errors**, and 72 yellow (20.9%). The predecessor scored 315/345 automatic (91.3%), with the same 20 errors and 30 yellow.
+- The repair therefore fails both hard gates: it did not reach zero known confident errors and it materially regressed every packet except P05, both layout families, both answer lengths, and every capture-quality group.
+- Identical-input replay was deterministic; both policies reproduced 350/350 saved decisions; no selected-evidence duplicates were found; no answer-key or truth fields entered either policy.
+- Visually inspected all 42 changed decisions and all 20 confident errors. The 42 changes were correct automatic reads unnecessarily demoted to yellow. The 20 errors were genuine transcription errors concentrated in P05, not truth-label or answer-key disagreements.
+- Root cause: the broad display veto fires even after a safe promotion, while already-automatic browser reads bypass the promotion safety lane. Narrow next experiment: remove the post-success display veto and add a risk-triggered, demotion-only second-reader veto for already-automatic conflicts. Validate prospectively.
+- **Do not deploy Beta 7.** No recognition production behavior was changed.
+- Tested public Beta 15.3 on current-phone and five-year-old-iPad viewports with saved worksheets. Optional blanks, empty correction, empty+Save, physical slot correction, overlay layering, mark placement, fixed workspace, and active-answer visibility all passed.
+- Focused checks 35/35, complete suite 180/180, production build pass, public build pass, and live-site smoke pass. Beta 15.3 is frozen as the correction-interface control; physical old-iPad repeated-camera endurance remains unproven.
+- Built an initial worksheet-first Teachers Pay Teachers package: catalog plan, teacher instructions, preview copy, reliability language, and a visually verified six-page beta preview PDF. Marketing must describe teacher review as part of the workflow and make no accuracy percentage or error-free claim.
+- Preserve all remaining untouched packets. September classroom work is the decisive prospective validation. The 84 MB whole-answer model remains a later second-reader experiment and must not block the small worksheet beta.
+- Full gate: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
+- Interface freeze: `docs/SCANGRADE_BETA15_3_INTERFACE_FREEZE_20260723.md`.
+
 ## 2026-07-16 browser-local stronger-reader checkpoint (current)
 
 - Built a ScanGrade-adapted TrOCR-small whole-answer model that reads preserved stitched grayscale answers and receives no answer key. Four packet-held-out folds scored **244/275 (88.7%)**: rows 149/160, non-rows 95/115, one digit 92/100, two digits 152/175, number bonds 12/22.
