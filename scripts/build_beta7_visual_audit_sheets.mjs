@@ -6,14 +6,14 @@ import { fileURLToPath } from 'node:url'
 import { createCanvas, loadImage } from 'canvas'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const AUDIT_PATH = path.join(
+const AUDIT_PATH = path.resolve(process.argv[2] || path.join(
   ROOT,
   'private-evidence/reports/beta7-independent-safety-audit-20260723.json',
-)
-const OUTPUT_DIR = path.join(
+))
+const OUTPUT_DIR = path.resolve(process.argv[3] || path.join(
   ROOT,
   'private-evidence/reports/beta7-independent-safety-audit-visual-20260723',
-)
+))
 const DEBUG_SCAN_ROOT = path.join(ROOT, 'private-evidence/debug-scans')
 
 function findOriginalScan(row) {
@@ -120,10 +120,12 @@ async function buildSheet(rows, name, title, columns = 4) {
     ctx.font = 'bold 15px sans-serif'
     wrapLabel(ctx, row.uid, x + 12, y + 21, cardWidth - gutter - 24, 18)
     ctx.font = '15px sans-serif'
-    const oldRead = row.predecessor?.read ?? '—'
-    const newRead = row.beta7?.read ?? '—'
+    const oldPolicy = row.noBroadVeto || row.predecessor
+    const newPolicy = row.repaired || row.beta7
+    const oldRead = oldPolicy?.read ?? '—'
+    const newRead = newPolicy?.read ?? '—'
     ctx.fillText(
-      `Truth: ${row.truthText}   predecessor: ${oldRead}${row.predecessor?.automatic ? ' auto' : ' yellow'}   Beta 7: ${newRead}${row.beta7?.automatic ? ' auto' : ' yellow'}`,
+      `Truth: ${row.truthText}   before: ${oldRead}${oldPolicy?.automatic ? ' auto' : ' yellow'}   after: ${newRead}${newPolicy?.automatic ? ' auto' : ' yellow'}`,
       x + 12,
       y + 51,
     )
@@ -137,8 +139,10 @@ async function buildSheet(rows, name, title, columns = 4) {
     manifest.push({
       uid: row.uid,
       truthText: row.truthText,
-      predecessor: row.predecessor,
-      beta7: row.beta7,
+      before: oldPolicy,
+      after: newPolicy,
+      route: row.route || null,
+      safety: row.safety || null,
       sourceImage: path.relative(ROOT, crop.imagePath),
     })
   }
@@ -155,11 +159,11 @@ const audit = JSON.parse(fs.readFileSync(AUDIT_PATH, 'utf8'))
 await buildSheet(
   audit.changedRows,
   'changed-decisions',
-  'Beta 7 visual audit — every changed decision',
+  'Safety-policy visual audit — every changed decision',
 )
 await buildSheet(
   audit.confidentErrorRows,
   'confident-errors',
-  'Beta 7 visual audit — every confident transcription error',
+  'Safety-policy visual audit — every remaining confident transcription error',
 )
 console.log(path.relative(ROOT, OUTPUT_DIR))

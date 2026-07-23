@@ -60,9 +60,10 @@ test('forces display review only for safety vetoes or two independent readers ag
       { questionNum: 4, promote: false, reason: 'high-risk-browser-and-near-certain-compact-conflict' },
       { questionNum: 5, promote: false, reason: 'insufficient-three-frame-consensus' },
       { questionNum: 6, promote: true, reason: 'independent-three-frame-and-compact-consensus' },
+      { questionNum: 7, promote: true, reason: 'independent-three-frame-and-compact-consensus' },
     ],
   })
-  assert.deepEqual(result, [1, 4, 7])
+  assert.deepEqual(result, [1, 4])
 })
 
 test('promotes exact three-frame grayscale consensus supported by compact top choice', () => {

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Key-blind suspicious-accepted-answer routing scout; never grades or auto-corrects.",
+  "height": 64,
+  "slotWidth": 96,
+  "metadata": [
+    "one physical slot",
+    "two physical slots",
+    "row layout",
+    "number-bond layout",
+    "other non-row layout"
+  ],
+  "selectedDecoder": "whole",
+  "heldOutPacket": "P05",
+  "trainingPackets": [
+    "P02",
+    "P03",
+    "P08",
+    "P09"
+  ],
+  "answerKeyProvidedToModel": false,
+  "includeWholeResidual": true
+}

@@ -630,6 +630,15 @@ import {
   browserLocalStrongShadowConfig,
   requestBrowserLocalStrongShadow,
 } from '../v3/trocr-small-shadow-client.js'
+import {
+  applyAcceptedAnswerSafetyVetoes,
+  acceptedAnswerSafetyDecision,
+  acceptedAnswerSafetyRoute,
+} from '../v3/accepted-answer-safety.js'
+import {
+  requestWholeSlotScout,
+  wholeSlotScoutShadowConfig,
+} from '../v3/whole-slot-scout-client.js'
 
 const props = defineProps({
   studentMode: { type: Boolean, default: false },
@@ -8492,6 +8501,231 @@ const runRealOCR = async () => {
 
     ocrResult.value = payload
 
+    let primaryV3Completed = false
+    let resolvePrimaryV3Completion
+    const primaryV3Completion = new Promise((resolve) => {
+      resolvePrimaryV3Completion = () => {
+        if (primaryV3Completed) return
+        primaryV3Completed = true
+        resolve()
+      }
+    })
+    let primaryV3Started = false
+
+    // Beta 15.3 safety-repair shadow. The small local scout examines accepted
+    // reads, routes only suspicious ones to two key-blind grayscale views, and
+    // records whether the accepted browser text should have remained yellow.
+    // Until prospective device validation passes, this is evidence-only and
+    // cannot change grading, annotations, or the correction interface.
+    const acceptedSafetyConfig = wholeSlotScoutShadowConfig()
+    if (hybridV3Enabled() && acceptedSafetyConfig.requested) {
+      const acceptedQuestionSet = new Set((payload.answerGroups || [])
+        .filter((group) => group?.reviewNeeded !== true)
+        .map((group) => Number(group?.questionNum)))
+      const acceptedFlags = layout.question_groups.map((group) =>
+        acceptedQuestionSet.has(Number(group?.question_num)))
+      const acceptedStitchedItems = browserLocalStrongShadowItems(
+        layout.question_groups,
+        acceptedFlags,
+        rawCrops,
+        layout,
+      ).map((item) => ({
+        ...item,
+        slotCount: item.contract?.physicalSlotCount,
+        layoutFamily: item.contract?.layoutFamily,
+      }))
+      payload.v3AcceptedAnswerSafetyShadow = {
+        status: 'pending',
+        affectsGrade: false,
+        acceptedAnswerCount: acceptedStitchedItems.length,
+      }
+      requestWholeSlotScout(acceptedStitchedItems, acceptedSafetyConfig)
+        .then(async (scoutResult) => {
+          const scoutByQuestion = new Map((scoutResult.results || [])
+            .map((item) => [Number(item.questionNum), item]))
+          const predictionsByQuestion = new Map()
+          for (const prediction of predictions || []) {
+            const questionNum = Number(prediction?.questionNum)
+            if (!predictionsByQuestion.has(questionNum)) predictionsByQuestion.set(questionNum, [])
+            predictionsByQuestion.get(questionNum).push(prediction)
+          }
+          const groupByQuestion = new Map((payload.answerGroups || [])
+            .map((group) => [Number(group?.questionNum), group]))
+          const itemByQuestion = new Map(acceptedStitchedItems
+            .map((item) => [Number(item.questionNum), item]))
+          const routes = [...acceptedQuestionSet].map((questionNum) => {
+            const answerGroup = groupByQuestion.get(questionNum)
+            const item = itemByQuestion.get(questionNum)
+            return {
+              questionNum,
+              ...acceptedAnswerSafetyRoute({
+                currentAutomatic: answerGroup?.reviewNeeded !== true,
+                currentRead: answerGroup?.answerText || '',
+                predictions: predictionsByQuestion.get(questionNum) || [],
+                scout: scoutByQuestion.get(questionNum) || null,
+                layoutId: layout.layout_id || layout.id || '',
+              }),
+              slotCount: item?.slotCount || null,
+            }
+          })
+          const routedQuestionSet = new Set(routes
+            .filter((route) => route.route)
+            .map((route) => Number(route.questionNum)))
+          const continuousItems = (partialDebug.v3AnswerZones || [])
+            .filter((zone) => routedQuestionSet.has(Number(zone.questionNum)) && zone.imageDataUrl)
+            .map((zone) => ({
+              id: `question-${zone.questionNum}-accepted-safety-continuous`,
+              questionNum: Number(zone.questionNum),
+              cropVariant: 'accepted-safety-continuous',
+              imageDataUrl: zone.imageDataUrl,
+              reviewOnly: true,
+            }))
+          const stitchedItems = acceptedStitchedItems
+            .filter((item) => routedQuestionSet.has(Number(item.questionNum)))
+            .map((item) => ({
+              ...item,
+              id: `question-${item.questionNum}-accepted-safety-stitched`,
+              cropVariant: 'accepted-safety-stitched',
+              reviewOnly: true,
+            }))
+          const strongReads = routedQuestionSet.size
+            ? await requestWholeAnswerReviewSuggestions(
+                layout.question_groups,
+                layout.question_groups.map((group) =>
+                  routedQuestionSet.has(Number(group?.question_num))),
+                rawCrops,
+                [...continuousItems, ...stitchedItems],
+              )
+            : []
+          const readsByQuestion = new Map()
+          for (const read of strongReads) {
+            const questionNum = Number(read?.questionNum)
+            if (!readsByQuestion.has(questionNum)) readsByQuestion.set(questionNum, {})
+            const entry = readsByQuestion.get(questionNum)
+            if (read?.cropVariant === 'accepted-safety-continuous') entry.continuous = read
+            if (read?.cropVariant === 'accepted-safety-stitched') entry.stitched = read
+          }
+          const decisions = routes.map((route) => {
+            const questionNum = Number(route.questionNum)
+            const answerGroup = groupByQuestion.get(questionNum)
+            const item = itemByQuestion.get(questionNum)
+            const reads = readsByQuestion.get(questionNum) || {}
+            return {
+              questionNum,
+              route,
+              decision: acceptedAnswerSafetyDecision({
+                routed: route.route,
+                currentRead: answerGroup?.answerText || '',
+                continuous: reads.continuous || null,
+                stitched: reads.stitched || null,
+                scout: scoutByQuestion.get(questionNum) || null,
+                predictions: predictionsByQuestion.get(questionNum) || [],
+                slotCount: item?.slotCount || null,
+                layoutId: layout.layout_id || layout.id || '',
+              }),
+            }
+          })
+          let safetyApplication = { predictions, applied: [] }
+          if (acceptedSafetyConfig.apply && decisions.some((item) => item.decision?.veto === true)) {
+            // The ordinary V3 promotion/review pass owns the first asynchronous
+            // update. Apply this final safety-only downgrade afterwards so a
+            // later promotion cannot overwrite it.
+            await primaryV3Completion
+            safetyApplication = applyAcceptedAnswerSafetyVetoes(predictions, decisions)
+            predictions = safetyApplication.predictions
+            const safeQuestionCorrect = buildQuestionCorrect(layout.question_groups, predictions)
+            const safeQuestionReview = buildQuestionReviewFlags(
+              layout.question_groups,
+              predictions,
+              safeQuestionCorrect,
+            )
+            const safeAnswerGroups = buildAnswerGroups(
+              layout.question_groups,
+              predictions,
+              safeQuestionCorrect,
+              layout.id,
+            )
+            const safeAnnotationRegions = buildAnnotationRegions(
+              layout.question_groups,
+              annotationGeometry,
+              predictions,
+              safeQuestionCorrect,
+            )
+            payload.digits = predictions.map((prediction) => prediction.digit)
+            payload.confidences = predictions.map((prediction) => prediction.confidence)
+            payload.predictions = predictions
+            payload.questionCorrect = safeQuestionCorrect
+            payload.questionCount = safeQuestionCorrect.length
+            payload.questionScore = safeQuestionCorrect.filter(Boolean).length
+            payload.questionReview = safeQuestionReview
+            payload.questionReviewCount = safeQuestionReview.filter(Boolean).length
+            payload.answerGroups = safeAnswerGroups
+            payload.annotationRegions = safeAnnotationRegions
+            payload.needsReview = true
+            partialDebug.predictions = predictions
+            partialDebug.questionCorrect = safeQuestionCorrect
+            partialDebug.questionReview = safeQuestionReview
+            partialDebug.answerGroups = safeAnswerGroups
+            partialDebug.annotationRegions = safeAnnotationRegions
+            try {
+              if (payload.annotationBaseUrl) {
+                payload.annotatedImageUrl = await composeStudentAnnotatedImage(
+                  payload.annotationBaseUrl,
+                  annotationWidth,
+                  annotationHeight,
+                  predictions,
+                  annotationCrops,
+                  annotationLayout,
+                  safeQuestionCorrect,
+                  payload.manualCorrections,
+                  payload.annotationSeed,
+                )
+              }
+            } catch (error) {
+              console.warn('[ScanGrade] accepted-answer safety annotation refresh failed:', error)
+            }
+          }
+          const result = {
+            status: 'complete',
+            affectsGrade: safetyApplication.applied.length > 0,
+            scout: scoutResult,
+            acceptedAnswerCount: acceptedStitchedItems.length,
+            routedAnswerCount: routedQuestionSet.size,
+            strongReadCount: strongReads.length,
+            vetoCount: decisions.filter((item) => item.decision?.veto === true).length,
+            applied: safetyApplication.applied,
+            decisions,
+          }
+          payload.v3AcceptedAnswerSafetyShadow = result
+          partialDebug.v3AcceptedAnswerSafetyShadow = result
+          if (lastLiveOcrDebug.value) {
+            lastLiveOcrDebug.value.v3AcceptedAnswerSafetyShadow = result
+            if (safetyApplication.applied.length) {
+              lastLiveOcrDebug.value.predictions = payload.predictions
+              lastLiveOcrDebug.value.questionCorrect = payload.questionCorrect
+              lastLiveOcrDebug.value.questionReview = payload.questionReview
+              lastLiveOcrDebug.value.questionReviewCount = payload.questionReviewCount
+              lastLiveOcrDebug.value.answerGroups = payload.answerGroups
+              lastLiveOcrDebug.value.annotationRegions = payload.annotationRegions
+              lastLiveOcrDebug.value.markedSheetDataUrl = payload.annotatedImageUrl || null
+            }
+            void uploadLiveOcrDebug(lastLiveOcrDebug.value, 'accepted-answer-safety-shadow-complete')
+          }
+          if (safetyApplication.applied.length) ocrResult.value = { ...payload }
+        })
+        .catch((error) => {
+          const result = {
+            status: 'error',
+            affectsGrade: false,
+            error: String(error?.message || error),
+            decisions: [],
+          }
+          payload.v3AcceptedAnswerSafetyShadow = result
+          partialDebug.v3AcceptedAnswerSafetyShadow = result
+          if (lastLiveOcrDebug.value) lastLiveOcrDebug.value.v3AcceptedAnswerSafetyShadow = result
+        })
+    }
+
     // Experimental browser-local larger-grayscale reader. It is deliberately
     // detached from grading and review promotion: a disposable worker reads
     // only current yellow answers, records evidence, then terminates. Candidate
@@ -8531,6 +8765,7 @@ const runRealOCR = async () => {
     const v3LargeModelUrl = optionalWholeAnswerReviewUrl()
     const v3CompactModelUrl = optionalV3CompactModelUrl()
     if (hybridV3Enabled() && (v3LargeModelUrl || v3CompactModelUrl) && v3SequenceItems.length) {
+      primaryV3Started = true
       const localFirstMode = v3LocalFirstReviewEnabled()
       // This evidence is prepared locally but is sent only after a teacher
       // opens an unresolved yellow answer and asks for another reader. It is
@@ -9087,6 +9322,7 @@ const runRealOCR = async () => {
             void uploadLiveOcrDebug(lastLiveOcrDebug.value, 'v3-shadow-complete')
           }
           if (localFirstMode || v3ConsensusPromotionEnabled()) ocrResult.value = { ...payload }
+          resolvePrimaryV3Completion()
         },
         onError: (e) => {
           payload.v3Shadow = {
@@ -9094,10 +9330,12 @@ const runRealOCR = async () => {
             error: String(e?.message || e)
           }
           partialDebug.v3Shadow = payload.v3Shadow
+          resolvePrimaryV3Completion()
         },
       })
       void v3Run.shadow
     }
+    if (!primaryV3Started) resolvePrimaryV3Completion()
 
     if (!props.studentMode && ocrDebugEnabled.value) {
       const thumb = matToThumbnailDataURL(warpedImage, 520)

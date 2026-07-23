@@ -43,14 +43,23 @@ export function coreCropReviewEligibleQuestionNums(decisions = []) {
  */
 export function consensusReviewVetoQuestionNums({ shadowDecisions = [], promotionDecisions = [] } = {}) {
   const questions = new Set()
+  const successfullyPromoted = new Set((promotionDecisions || [])
+    .filter((decision) => decision?.promote === true)
+    .map((decision) => Number(decision?.questionNum))
+    .filter(Number.isFinite))
   for (const decision of shadowDecisions || []) {
+    const questionNum = Number(decision?.questionNum)
+    // A successful promotion already passed the full consensus policy. Do not
+    // re-yellow it merely because the same independent evidence disagreed with
+    // the original browser read; that conflict is why the promotion exists.
+    if (successfullyPromoted.has(questionNum)) continue
     const slot = normalizeTranscription(decision?.slotRead)
     const sequence = normalizeTranscription(decision?.sequenceRead)
     const compact = normalizeTranscription(decision?.compactRead)
     if (
       slot && sequence && compact &&
       sequence === compact && sequence !== slot
-    ) questions.add(Number(decision.questionNum))
+    ) questions.add(questionNum)
   }
   for (const decision of promotionDecisions || []) {
     if (decision?.promote !== true && CONSENSUS_REVIEW_VETO_REASONS.has(decision?.reason)) {
