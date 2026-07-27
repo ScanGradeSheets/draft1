@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import {
   buildTeacherScoreInkPlan,
   buildTeacherScoreStrokePlan,
+  teacherScorePlacement,
   teacherScoreSmoothPathD,
 } from '../src/v3/teacher-score-plan.js'
 import { TEACHER_GREEN_PEN_PASSES } from '../src/v3/teacher-ink-style.js'
@@ -74,6 +75,26 @@ test('felt-pen passes preserve human stroke timing and final geometry', () => {
   )
 })
 
+test('animated and settled score use one answer-box-based placement', () => {
+  const options = {
+    width: 1200,
+    height: 1600,
+    layout: {
+      metadata: {
+        qr_position: { x: 0.43, y: 0.82, width: 0.12, height: 0.1 },
+      },
+    },
+    questionRects: [
+      { x: 200, y: 400, w: 80, h: 70 },
+      { x: 760, y: 990, w: 92, h: 76 },
+    ],
+  }
+  const live = teacherScorePlacement(options)
+  const settled = teacherScorePlacement({ ...options, questionRects: options.questionRects.map((rect) => ({ ...rect })) })
+  assert.deepEqual(live, settled)
+  assert.equal(live.y, Math.min(0.82 * 1600 - 0.025 * 1600, Math.max(1066 + 0.09 * 1600, 0.82 * 1600 - 0.045 * 1600)))
+})
+
 test('CameraCapture draws live score ink directly instead of revealing a completed score through a mask', () => {
   const source = fs.readFileSync(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
   const calls = source.match(/buildTeacherScoreStrokePlan\s*\(/g) || []
@@ -81,6 +102,7 @@ test('CameraCapture draws live score ink directly instead of revealing a complet
   assert.match(source, /progressive-score-ink/)
   assert.doesNotMatch(source, /progressive-score-mask/)
   assert.match(source, /buildTeacherScoreInkPlan\s*\(/)
+  assert.equal((source.match(/teacherScorePlacement\s*\(/g) || []).length, 2)
   assert.doesNotMatch(source, /const scoreGlyphs\s*=/)
   assert.doesNotMatch(source, /const scoreGlyphAlternates\s*=/)
 })

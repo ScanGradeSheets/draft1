@@ -39,6 +39,39 @@ export function teacherScoreSmoothPathD(points) {
   return commands.join(' ')
 }
 
+export function teacherScorePlacement({
+  width,
+  height,
+  layout,
+  questionRects = [],
+}) {
+  const pageWidth = Math.max(1, Number(width) || 1)
+  const pageHeight = Math.max(1, Number(height) || 1)
+  const rects = (Array.isArray(questionRects) ? questionRects : []).filter((rect) => (
+    rect &&
+    Number.isFinite(Number(rect.y)) &&
+    Number.isFinite(Number(rect.h))
+  ))
+  const maxQuestionBottom = rects.length
+    ? Math.max(...rects.map((rect) => Number(rect.y) + Number(rect.h)))
+    : pageHeight * 0.56
+  const qr = layout?.metadata?.qr_position
+  const hasQr = qr && Number.isFinite(qr.x) && Number.isFinite(qr.y)
+  const qrTop = hasQr ? qr.y * pageHeight : pageHeight * 0.8
+  const qrRight = hasQr && Number.isFinite(qr.width)
+    ? (qr.x + qr.width) * pageWidth
+    : pageWidth * 0.57
+  return Object.freeze({
+    centerX: hasQr
+      ? Math.min(pageWidth * 0.735, Math.max(qrRight + pageWidth * 0.075, pageWidth * 0.675))
+      : pageWidth * 0.67,
+    y: hasQr
+      ? Math.min(qrTop - pageHeight * 0.025, Math.max(maxQuestionBottom + pageHeight * 0.09, qrTop - pageHeight * 0.045))
+      : Math.min(pageHeight * 0.82, Math.max(maxQuestionBottom + pageHeight * 0.08, pageHeight * 0.59)),
+    fontSize: Math.max(58, Math.min(96, pageWidth * 0.052)),
+  })
+}
+
 export function buildTeacherScoreStrokePlan({
   text,
   centerX,

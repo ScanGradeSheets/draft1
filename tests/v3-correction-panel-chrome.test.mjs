@@ -23,9 +23,12 @@ test('correction entry is drawn on the sheet and uses a number-only custom keypa
   assert.match(source, /\.on-sheet-correction-focus\s*\{[^}]*border:\s*2px solid rgba\(36,\s*90,\s*164,\s*0\.72\)/s)
   assert.match(source, /\.on-sheet-correction-focus\s*\{[^}]*border-radius:\s*3px/s)
   assert.doesNotMatch(source, /\.on-sheet-correction-focus\s*\{[^}]*border-radius:\s*999px/s)
-  assert.match(source, /\.on-sheet-correction-focus--entered\s*\{[^}]*background:\s*rgba\(251,\s*250,\s*244,\s*0\.97\)/s)
+  assert.match(template, /class="on-sheet-correction-ink"/)
+  assert.match(template, /:src="activeCorrectionInkPreviewUrl"/)
+  assert.match(source, /\.on-sheet-correction-ink\s*\{[^}]*object-fit:\s*contain/s)
+  assert.match(source, /\.on-sheet-correction-focus--entered\s*\{[^}]*background:\s*transparent/s)
   assert.match(template, /'on-sheet-correction-focus--entered': manualCorrectionText/)
-  assert.match(source, /\.on-sheet-correction-entry\s*\{[^}]*color:\s*#171717/s)
+  assert.doesNotMatch(template, /class="on-sheet-correction-entry"/)
 })
 
 test('a completed correction advances directly to the next yellow question', () => {

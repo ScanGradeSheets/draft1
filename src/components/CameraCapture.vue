@@ -145,22 +145,20 @@
         >
           <span>{{ region.label }}</span>
         </button>
+        <img
+          v-if="activeCorrectionInkPreviewUrl"
+          :src="activeCorrectionInkPreviewUrl"
+          class="on-sheet-correction-ink"
+          alt=""
+          aria-hidden="true"
+        >
         <div
           v-if="activeCorrectionQuestion"
           class="on-sheet-correction-focus"
           :class="{ 'on-sheet-correction-focus--entered': manualCorrectionText }"
           :style="activeCorrectionFocusStyle"
           aria-live="polite"
-        >
-          <span
-            v-for="(cell, cellIndex) in activeCorrectionPreviewCells"
-            :key="`correction-preview-${cellIndex}`"
-            class="on-sheet-correction-entry"
-            :class="{ 'on-sheet-correction-entry--empty': !cell }"
-          >
-            {{ cell }}
-          </span>
-        </div>
+        ></div>
       </div>
 
       <div v-else class="placeholder">
@@ -599,6 +597,7 @@ import {
   manualCorrectionDisplayCells,
   shouldAutoApplySingleDigitCorrection,
 } from '../v3/manual-correction-render.js'
+import { drawManualCorrectionInk } from '../v3/manual-correction-ink.js'
 import {
   STUDENT_AUTO_CAPTURE_FINAL_FOCUS_MIN,
   STUDENT_AUTO_CAPTURE_STABILITY_HOLD_MS,
@@ -610,6 +609,7 @@ import {
 import {
   buildTeacherScoreInkPlan,
   buildTeacherScoreStrokePlan,
+  teacherScorePlacement,
 } from '../v3/teacher-score-plan.js'
 import {
   TEACHER_GREEN_INK,
@@ -1584,6 +1584,49 @@ const activeCorrectionGroup = computed(() => {
   ) || null
 })
 
+const activeCorrectionInkPreviewUrl = computed(() => {
+  if (
+    !manualCorrectionText.value ||
+    !activeCorrectionQuestion.value ||
+    !activeCorrectionGroup.value ||
+    typeof document === 'undefined'
+  ) return ''
+  const geometry = ocrResult.value?.annotationGeometry
+  const width = Math.max(1, Number(geometry?.warpedW) || 1)
+  const height = Math.max(1, Number(geometry?.warpedH) || 1)
+  const crops = Array.isArray(geometry?.crops) ? geometry.crops : []
+  const cropById = new Map(crops.map((crop, index) => [crop.id ?? index, crop]))
+  const ids = Array.isArray(activeCorrectionGroup.value?.digit_box_ids)
+    ? activeCorrectionGroup.value.digit_box_ids
+    : []
+  const slotRects = ids.map((id) => annotationRectForCrop(cropById.get(id)))
+  const selectedSlot = activeCorrectionQuestion.value?.slotIndex
+  let rects
+  let cells
+  if (Number.isInteger(selectedSlot) && selectedSlot >= 0 && selectedSlot < slotRects.length) {
+    rects = [slotRects[selectedSlot]]
+    cells = [activeCorrectionPreviewCells.value[0]]
+  } else if (slotRects.length === 1) {
+    rects = slotRects
+    cells = [activeCorrectionPreviewCells.value.filter(Boolean).join('')]
+  } else {
+    rects = slotRects
+    cells = activeCorrectionPreviewCells.value
+  }
+  if (!rects.some(Boolean) || !cells.some((cell) => cell !== null && cell !== undefined && cell !== '')) return ''
+  const groups = Array.isArray(ocrResult.value?.layoutSnapshot?.question_groups)
+    ? ocrResult.value.layoutSnapshot.question_groups
+    : []
+  const groupIndex = Math.max(0, groups.findIndex((group) => group === activeCorrectionGroup.value))
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return ''
+  drawManualCorrectionInk(ctx, rects, cells, (groupIndex + 1) * 131 + 47)
+  return canvas.toDataURL('image/png')
+})
+
 const activeCorrectionPredictions = computed(() => {
   const group = activeCorrectionGroup.value
   if (!group) return []
@@ -1804,22 +1847,28 @@ function progressiveScoreRevealStep({ result, dimensions, annotationRegions }) {
   const total = correct.length
   const scoreText = `${correct.filter(Boolean).length}/${total}`
   const rects = (annotationRegions || [])
-    .map((region) => ({ x: Number(region?.x), y: Number(region?.y), h: Number(region?.h) }))
-    .filter((rect) => Number.isFinite(rect.x) && Number.isFinite(rect.y) && Number.isFinite(rect.h))
-  const maxQuestionBottom = rects.length
-    ? Math.max(...rects.map((rect) => rect.y + rect.h))
-    : height * 0.56
-  const qr = result?.layoutSnapshot?.metadata?.qr_position
-  const hasQr = qr && Number.isFinite(qr.x) && Number.isFinite(qr.y)
-  const qrTop = hasQr ? qr.y * height : height * 0.8
-  const qrRight = hasQr && Number.isFinite(qr.width) ? (qr.x + qr.width) * width : width * 0.57
-  const centerX = hasQr
-    ? Math.min(width * 0.735, Math.max(qrRight + width * 0.075, width * 0.675))
-    : width * 0.67
-  const y = hasQr
-    ? Math.min(qrTop - height * 0.025, Math.max(maxQuestionBottom + height * 0.09, qrTop - height * 0.045))
-    : Math.min(height * 0.82, Math.max(maxQuestionBottom + height * 0.08, height * 0.59))
-  const fontSize = Math.max(58, Math.min(96, width * 0.052))
+    .map((region) => ({
+      x: Number(region?.focusX),
+      y: Number(region?.focusY),
+      w: Number(region?.focusW),
+      h: Number(region?.focusH),
+    }))
+    .filter((rect) => (
+      Number.isFinite(rect.x) &&
+      Number.isFinite(rect.y) &&
+      Number.isFinite(rect.w) &&
+      Number.isFinite(rect.h)
+    ))
+  const {
+    centerX,
+    y,
+    fontSize,
+  } = teacherScorePlacement({
+    width,
+    height,
+    layout: result?.layoutSnapshot,
+    questionRects: rects,
+  })
   const seed = Number.isFinite(Number(result?.annotationSeed)) ? Number(result.annotationSeed) + 9001 : 9002
   const scorePlan = buildTeacherScoreStrokePlan({
     text: scoreText,
@@ -4257,7 +4306,7 @@ function composeStudentAnnotatedImage(
                 .map((slotIndex) => ({ rect: slotRects[slotIndex], cell: correction.cells[slotIndex] }))
                 .filter((entry) => entry.rect)
               const displayCells = manualCorrectionDisplayCells(correction, correctedEntries)
-              drawManualAnswer(correctedEntries.map((entry) => entry.rect), displayCells, seed + 47)
+              drawManualCorrectionInk(ctx, correctedEntries.map((entry) => entry.rect), displayCells, seed + 47)
             }
             if (hasReview) {
               const validSlotRects = reviewSlotRects.map((slot) => slot.slotRect).filter(Boolean)
@@ -4315,23 +4364,15 @@ function composeStudentAnnotatedImage(
           }
           const ratio = score / total
           const scoreText = `${score}/${total}`
-          const maxQuestionBottom = questionRects.length
-            ? Math.max(...questionRects.map((rect) => rect.y + rect.h))
-            : warpedH * 0.56
-          const qr = layout?.metadata?.qr_position
-          const hasQr = qr && Number.isFinite(qr.x) && Number.isFinite(qr.y)
-          const qrTop = hasQr ? qr.y * warpedH : warpedH * 0.8
-          const qrRight = hasQr && Number.isFinite(qr.width) ? (qr.x + qr.width) * warpedW : warpedW * 0.57
-          const x = hasQr
-            ? Math.min(warpedW * 0.735, Math.max(qrRight + warpedW * 0.075, warpedW * 0.675))
-            : warpedW * 0.67
-          const y = hasQr
-            ? Math.min(qrTop - warpedH * 0.025, Math.max(maxQuestionBottom + warpedH * 0.09, qrTop - warpedH * 0.045))
-            : Math.min(warpedH * 0.82, Math.max(maxQuestionBottom + warpedH * 0.08, warpedH * 0.59))
-          const fontSize = Math.max(58, Math.min(96, warpedW * 0.052))
-          drawScoreMark(scoreText, x, y, {
+          const placement = teacherScorePlacement({
+            width: warpedW,
+            height: warpedH,
+            layout,
+            questionRects,
+          })
+          drawScoreMark(scoreText, placement.centerX, placement.y, {
             color: ratio >= 0.7 ? TEACHER_INK.green : ratio >= 0.5 ? TEACHER_INK.amber : TEACHER_INK.red,
-            fontSize,
+            fontSize: placement.fontSize,
             seed: annotationJitterSeed + 9001
           })
         }
@@ -10636,37 +10677,25 @@ onUnmounted(() => {
     box-shadow 90ms ease-out;
 }
 
-.on-sheet-correction-focus--entered {
-  overflow: hidden;
-  border-color: rgba(36, 90, 164, 0.18);
-  border-radius: 3px;
-  background: rgba(251, 250, 244, 0.97);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-.on-sheet-correction-entry {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
+.on-sheet-correction-ink {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: block;
+  width: 100%;
   height: 100%;
-  padding: 0;
-  border-radius: 1px;
-  background: transparent;
-  color: #171717;
-  font-family: "Marker Felt", "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif;
-  font-size: clamp(22px, 7vw, 42px);
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: 0;
-  text-align: center;
-  text-shadow:
-    0.35px 0.25px 0 rgba(23, 23, 23, 0.22),
-    -0.25px 0.2px 0 rgba(23, 23, 23, 0.12);
+  object-fit: contain;
+  pointer-events: none;
 }
 
-.on-sheet-correction-entry--empty {
+.on-sheet-correction-focus--entered {
+  overflow: visible;
+  border-color: rgba(36, 90, 164, 0.28);
+  border-radius: 3px;
   background: transparent;
+  box-shadow:
+    0 0 0 2px rgba(176, 224, 255, 0.1),
+    0 0 6px rgba(36, 90, 164, 0.12);
 }
 
 .correction-keypad {

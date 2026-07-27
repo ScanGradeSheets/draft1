@@ -1,5 +1,31 @@
 # ScanGrade Active Handoff
 
+## 2026-07-27 transition-locked ink Beta 15.33
+
+- Tony observed a small shift between the live blue-focus correction entry and
+  the settled black correction, plus one non-reproducing score jump after an
+  `8/8` finished writing.
+- The live correction and settled worksheet now use the same Canvas renderer,
+  physical slot rectangles, deterministic seed, tape geometry, font sizing,
+  offsets, and rotation. The blue frame is only focus chrome; the black entry
+  beneath it is already the exact settled ink, so advancing focus cannot
+  re-typeset or reposition the number.
+- The score jump had a concrete coordinate mismatch: the live writer placed
+  the score from padded review regions while the settled Canvas used the raw
+  answer-box rectangles. Both now call one shared `teacherScorePlacement`
+  function with the raw physical answer boxes. Stroke geometry and placement
+  are therefore identical before and after the final image swap.
+- These are presentation-only changes. OCR, confidence, grading, capture,
+  homography, answer placement, and correction semantics are unchanged.
+- Focused transition tests pass **9/9**; the complete repository passes
+  **335/335** and the pruned production build passes. Build label:
+  `2026.07.27-transition-locked-ink-beta-15-33`.
+- The isolated 222-file static build is deployed at
+  `https://efaf7a50.scangrade.pages.dev/` and `https://scangrade.io/`.
+  Production serves the tested `index-bsmFV8i1.js` and
+  `index-CJo54A8l.css`; `/api/submissions` is byte-identical to the static app
+  shell, confirming that no Pages Function or Mac Mini route was deployed.
+
 ## 2026-07-27 human score strokes Beta 15.32
 
 - The completed-raster score mask was fundamentally unsafe for self-crossing
