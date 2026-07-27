@@ -2143,6 +2143,14 @@ export function cropBoxes(warped, layout, options = {}) {
       : ((refinedCandidate?.trustedPhysicalAnswerFrame === true || answerRectLooksLocal(refinedCandidate, expectedRect))
         ? refinedCandidate
         : expectedRect);
+    // Teacher ink may follow a locally detected printed frame only when the
+    // complete page/frame assignment established independent structural trust.
+    // A merely nearby contour is still useful to OCR, but is not authoritative
+    // enough to place visible marks (especially around number bonds).
+    const trustedPhysicalAnnotationRect = usesVirtualDigitBoxes
+      ? detectedRect?.trustedPhysicalDigitBox === true
+      : detectedRect?.trustedPhysicalAnswerFrame === true;
+    const annotationRect = trustedPhysicalAnnotationRect ? refinedRect : expectedRect;
     const ocrRect = refinedRect;
     const digitIndex = Number.isFinite(box?.digit_index) ? Number(box.digit_index) : null;
     const slotCount = slotCountByBoxId.get(box.id) || 1;
@@ -2373,6 +2381,10 @@ export function cropBoxes(warped, layout, options = {}) {
       slotCount,
       expectedRect: roundDebugRect(expectedRect),
       refinedRect: roundDebugRect(refinedRect),
+      annotationRect: roundDebugRect(annotationRect),
+      annotationRectSource: trustedPhysicalAnnotationRect
+        ? 'trusted-physical-frame'
+        : 'page-registration',
       ocrRect,
       isVirtualDigitBox: usesVirtualDigitBoxes,
       variantImages
@@ -3661,6 +3673,8 @@ export function processWorksheet(input, layout, options = {}) {
       slotCount: c.slotCount,
       expectedRect: c.expectedRect,
       refinedRect: c.refinedRect,
+      annotationRect: c.annotationRect,
+      annotationRectSource: c.annotationRectSource,
       isVirtualDigitBox: c.isVirtualDigitBox === true
     })),
     processedTensors: processed,

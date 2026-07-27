@@ -1,7 +1,18 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 
 import { progressiveMarkingSteps } from '../src/v3/progressive-marking.js'
+
+const cameraSource = await readFile(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
+
+test('the scanning date remains mounted throughout progressive grading', () => {
+  assert.match(
+    cameraSource,
+    /!processing\.value\s*&&\s*!progressiveMarkingActive\.value/,
+  )
+  assert.match(cameraSource, /v-if="scanningDateStampSpec"/)
+})
 
 test('progressive marking reveals only settled answers in worksheet order', () => {
   const groups = [
@@ -124,4 +135,30 @@ test('a manual correction reveals the replacement answer before drawing its new 
   assert.ok(steps[0].strokes[0].width > steps[0].strokeWidth)
   assert.equal(steps[0].strokes[0].delayMs, 0)
   assert.ok(steps[0].strokes[1].delayMs >= 260)
+})
+
+test('runtime manual correction keeps the settled black answer in its animation base', () => {
+  assert.match(
+    cameraSource,
+    /manualCorrectionAnimationBase\(\s*previousAnnotatedImageUrl,\s*annotatedImageUrl,\s*correctedQuestionNum/,
+  )
+  assert.match(
+    cameraSource,
+    /context\.drawImage\(\s*completed,\s*clearRect\.x,[\s\S]*?clearRect\.h,\s*\)/,
+  )
+  assert.match(cameraSource, /revealAnswerQuestionNums:\s*\[\]/)
+  assert.ok(
+    cameraSource.indexOf('const correctionAnimationBaseUrl = await manualCorrectionAnimationBase') <
+      cameraSource.indexOf('ocrResult.value = nextResult'),
+    'the stable correction base must exist before the displayed result switches',
+  )
+})
+
+test('grading pen strokes remain animated when the device requests reduced motion', () => {
+  assert.equal(
+    cameraSource.includes('prefers-reduced-motion'),
+    false,
+    'device motion settings must not silently replace the grading sequence with instant marks',
+  )
+  assert.match(cameraSource, /animation:\s*progressive-write-stroke/)
 })

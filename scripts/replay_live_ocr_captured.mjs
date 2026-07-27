@@ -1468,7 +1468,9 @@ async function loadDebugPayload(file) {
 }
 
 function replayFileLabel(file) {
-  return path.basename(file) === 'debug.json' ? path.basename(path.dirname(file)) : path.basename(file);
+  return /^(?:ocr-)?debug\.json$/.test(path.basename(file))
+    ? path.basename(path.dirname(file))
+    : path.basename(file);
 }
 
 function parseArgs() {
@@ -2095,9 +2097,14 @@ for (const file of files) {
     const cropRects = processed.rawCrops.map((crop) => ({
       id: crop.id,
       questionNum: crop.questionNum,
+      digitIndex: crop.digitIndex,
       cropRect: crop.cropRect,
       boxRect: crop.boxRect,
       layoutBoxRect: crop.layoutBoxRect,
+      expectedRect: crop.expectedRect,
+      refinedRect: crop.refinedRect,
+      annotationRect: crop.annotationRect,
+      annotationRectSource: crop.annotationRectSource,
       slotCount: crop.slotCount,
       isVirtualDigitBox: crop.isVirtualDigitBox
     }));

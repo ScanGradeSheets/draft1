@@ -56,8 +56,8 @@
           <defs>
             <mask
               v-for="step in revealedProgressiveMarkingSteps"
-              :id="`progressive-mask-${step.questionNum}`"
-              :key="`mask-${step.questionNum}`"
+              :id="`progressive-mask-${step.key}`"
+              :key="`mask-${step.key}`"
               maskUnits="userSpaceOnUse"
               x="0"
               y="0"
@@ -81,6 +81,32 @@
                 }"
               />
             </mask>
+            <mask
+              v-if="progressiveScoreRevealed && progressiveScoreStep"
+              id="progressive-score-mask"
+              maskUnits="userSpaceOnUse"
+              x="0"
+              y="0"
+              :width="progressiveMarkingDimensions.width"
+              :height="progressiveMarkingDimensions.height"
+            >
+              <path
+                v-for="(stroke, strokeIndex) in progressiveScoreStep.strokes"
+                :key="`score-mask-${strokeIndex}`"
+                class="progressive-marking-stroke"
+                :d="stroke.d"
+                fill="none"
+                stroke="white"
+                :stroke-width="stroke.width || progressiveScoreStep.strokeWidth"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                pathLength="1"
+                :style="{
+                  '--progressive-stroke-duration': `${stroke.durationMs}ms`,
+                  '--progressive-stroke-delay': `${stroke.delayMs}ms`,
+                }"
+              />
+            </mask>
           </defs>
           <image
             v-for="step in revealedProgressiveMarkingSteps"
@@ -92,7 +118,18 @@
             :height="progressiveMarkingDimensions.height"
             preserveAspectRatio="none"
             :href="progressiveAnnotatedImage"
-            :mask="`url(#progressive-mask-${step.questionNum})`"
+            :mask="`url(#progressive-mask-${step.key})`"
+          />
+          <image
+            v-if="progressiveScoreRevealed && progressiveScoreStep"
+            class="progressive-marking-reveal"
+            x="0"
+            y="0"
+            :width="progressiveMarkingDimensions.width"
+            :height="progressiveMarkingDimensions.height"
+            preserveAspectRatio="none"
+            :href="progressiveAnnotatedImage"
+            mask="url(#progressive-score-mask)"
           />
         </svg>
         <div
@@ -125,106 +162,19 @@
         </button>
         <div
           v-if="activeCorrectionQuestion"
-          ref="correctionPanelRef"
-          class="student-correction-panel student-correction-panel--image"
-          :class="correctionPanelClass"
-          :style="correctionPanelStyle"
-          @click.stop
+          class="on-sheet-correction-focus"
+          :class="{ 'on-sheet-correction-focus--entered': manualCorrectionText }"
+          :style="activeCorrectionFocusStyle"
+          aria-live="polite"
         >
-          <div class="student-correction-title">
-            <span class="scantron-letter-bubble student-correction-label" :aria-label="activeCorrectionQuestion.label">
-              {{ scantronAnswerLabel(activeCorrectionQuestion.label) }}
-            </span>
-            <button
-              type="button"
-              class="student-correction-close"
-              aria-label="Close"
-              @click="cancelCorrection"
-            >
-              &times;
-            </button>
-          </div>
-          <div v-if="activeCorrectionChoices.length || activeCorrectionSlotIndex != null" class="student-correction-choices">
-            <button
-              v-for="choice in activeCorrectionChoices"
-              :key="choice.key"
-              type="button"
-              class="btn btn-secondary correction-choice-btn"
-              @click="applyCorrectionChoice(choice)"
-            >
-              {{ choice.text }}
-            </button>
-            <button
-              v-if="activeCorrectionSlotIndex != null"
-              type="button"
-              class="btn btn-secondary correction-choice-btn student-correction-empty-choice"
-              :aria-label="`Leave ${activeCorrectionSlotLabel} blank`"
-              @click="applyNoAnswerCorrection"
-            >
-              _
-            </button>
-          </div>
-          <div class="student-correction-manual">
-            <input
-              ref="manualCorrectionInputRef"
-              v-model="manualCorrectionText"
-              type="text"
-              :aria-label="activeCorrectionInputLabel"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              enterkeyhint="done"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              :maxlength="activeCorrectionMaxLength"
-              :placeholder="activeCorrectionPlaceholder"
-              @input="normalizeManualCorrectionInput"
-              @focus="handleManualCorrectionFocus"
-              @keydown.enter.prevent="applyManualCorrectionText"
-            >
-            <button type="button" class="btn btn-primary student-correction-save" @click="applyManualCorrectionText">
-              Save
-            </button>
-          </div>
-          <div v-if="showManualCorrectionPositionChoices" class="student-correction-blank-actions">
-            <button
-              type="button"
-              class="btn btn-secondary student-correction-position-choice"
-              :aria-label="`Put ${manualCorrectionPositionDigit} in left box and leave right box blank`"
-              @click="applyManualCorrectionPositionChoice(1)"
-            >
-              <span>{{ manualCorrectionPositionDigit }}</span><span class="student-correction-empty-slot">_</span>
-            </button>
-            <button
-              type="button"
-              class="btn btn-secondary student-correction-position-choice"
-              :aria-label="`Leave left box blank and put ${manualCorrectionPositionDigit} in right box`"
-              @click="applyManualCorrectionPositionChoice(0)"
-            >
-              <span class="student-correction-empty-slot">_</span><span>{{ manualCorrectionPositionDigit }}</span>
-            </button>
-            <button
-              type="button"
-              class="btn btn-secondary student-correction-position-choice"
-              aria-label="Leave both boxes blank"
-              @click="applyNoAnswerCorrection"
-            >
-              <span class="student-correction-empty-slot">_</span><span class="student-correction-empty-slot">_</span>
-            </button>
-          </div>
-          <button
-            v-if="showLocalFirstStrongFallback"
-            type="button"
-            class="btn btn-secondary local-first-none-btn"
-            :disabled="localFirstStrongLoading"
-            @click="requestStrongChoicesForActiveQuestion"
+          <span
+            v-for="(cell, cellIndex) in activeCorrectionPreviewCells"
+            :key="`correction-preview-${cellIndex}`"
+            class="on-sheet-correction-entry"
+            :class="{ 'on-sheet-correction-entry--empty': !cell }"
           >
-            {{ localFirstStrongButtonLabel }}
-          </button>
-          <p v-if="localFirstStrongMessage" class="local-first-strong-message">
-            {{ localFirstStrongMessage }}
-          </p>
-          <p v-if="correctionError" class="student-correction-error">{{ correctionError }}</p>
+            {{ cell }}
+          </span>
         </div>
       </div>
 
@@ -240,6 +190,44 @@
       </label>
     </div>
 
+    <div
+      v-if="studentMode && activeCorrectionQuestion"
+      class="correction-keypad"
+      role="group"
+      :aria-label="activeCorrectionInputLabel"
+      @click.stop
+    >
+      <button
+        v-for="key in correctionKeypadKeys"
+        :key="key"
+        type="button"
+        class="correction-keypad-key"
+        :class="{
+          'correction-keypad-key--blank': key === '_',
+          'correction-keypad-key--backspace': key === 'backspace'
+        }"
+        :aria-label="key === '_' ? 'Blank' : key === 'backspace' ? 'Delete' : `Enter ${key}`"
+        :disabled="correctionKeypadSubmitting"
+        @click="pressCorrectionKey(key)"
+      >
+        <span v-if="key === 'backspace'" aria-hidden="true">⌫</span>
+        <span v-else>{{ key }}</span>
+      </button>
+      <button
+        v-if="showLocalFirstStrongFallback"
+        type="button"
+        class="correction-keypad-check-again"
+        :disabled="localFirstStrongLoading || correctionKeypadSubmitting"
+        @click="requestStrongChoicesForActiveQuestion"
+      >
+        {{ localFirstStrongButtonLabel }}
+      </button>
+      <p v-if="localFirstStrongMessage" class="correction-keypad-message">
+        {{ localFirstStrongMessage }}
+      </p>
+      <p v-if="correctionError" class="correction-keypad-error">{{ correctionError }}</p>
+    </div>
+
     <div class="controls" :class="{ 'controls--student': studentMode }">
       <button
         v-if="!streamActive && !capturedImage"
@@ -251,7 +239,7 @@
       </button>
 
       <button
-        v-if="streamActive"
+        v-if="streamActive && !studentMode"
         @click="capturePhoto"
         class="btn btn-primary"
         :disabled="!captureEnabled || !cameraReady"
@@ -260,7 +248,7 @@
       </button>
 
       <button
-        v-if="capturedImage && !(studentMode && ocrResult)"
+        v-if="capturedImage && !studentMode"
         @click="retake"
         class="btn btn-secondary"
       >
@@ -268,7 +256,7 @@
       </button>
 
       <label
-        v-if="showFilePicker"
+        v-if="showFilePicker && !studentMode"
         class="btn btn-secondary file-btn"
         :class="{ 'file-btn--disabled': !captureEnabled, 'file-btn--student': studentMode }"
       >
@@ -595,6 +583,7 @@ import {
 import {
   displayedYellowQuestionNumbers,
   filterItemsToYellowQuestions,
+  nextYellowReviewGroup,
   reviewSuggestionDisplayEligible,
   wholeAnswerReviewModeEligible,
   yellowQuestionNumbers,
@@ -609,27 +598,58 @@ import { applyConsensusPromotionsToPredictions } from '../v3/consensus-applicati
 import { consensusFeatureEnabled, consensusModelEndpoint } from '../v3/production-runtime.js'
 import { decodeFrameDataUrlInWorker, frameDecodeWorkerSupported } from '../v3/frame-preparation.js'
 import { annotationSeedForResult } from '../v3/annotation-seed.js'
-import { annotationRectForCrop } from '../v3/annotation-geometry.js'
+import {
+  annotationLayoutReference,
+  annotationRectForCrop,
+  transformAnnotationCrop,
+} from '../v3/annotation-geometry.js'
 import { progressiveMarkingSteps } from '../v3/progressive-marking.js'
-import { correctionPanelPlacementForRegion } from '../v3/correction-panel-placement.js'
 import { fluorescentHighlighterGeometry } from '../v3/highlighter-stroke.js'
 import { dateStampSpecForLayout, declaredDateStampRect } from '../v3/date-stamp-placement.js'
 import { recognitionOverlayItemsForAnswers } from '../v3/recognition-overlay.js'
 import { selectFlexibleOneDigitBlankSlots } from '../v3/flexible-one-digit-blank.js'
+import { acceptedResponsesForSlotContract } from '../v3/answer-placement-contract.js'
 import {
+  manualCorrectionClearRect,
   manualCorrectionDisplayCells,
   shouldAutoApplySingleDigitCorrection,
 } from '../v3/manual-correction-render.js'
 import {
+  STUDENT_AUTO_CAPTURE_FINAL_FOCUS_MIN,
+  STUDENT_AUTO_CAPTURE_STABILITY_HOLD_MS,
+  STUDENT_AUTO_CAPTURE_TRIGGER_FOCUS_MIN,
+  STUDENT_MANUAL_CAPTURE_FOCUS_MIN,
+  studentCaptureFocusDecision,
+  studentSheetAppearanceDecision,
+} from '../v3/student-capture-policy.js'
+import { buildTeacherScoreStrokePlan } from '../v3/teacher-score-plan.js'
+import {
+  TEACHER_GREEN_INK,
+  TEACHER_GREEN_PEN_PASSES,
+  teacherScoreRevealMaskWidth,
+} from '../v3/teacher-ink-style.js'
+import {
   manualCorrectionContract,
-  inferSingleDigitSlot,
-  manualCorrectionNeedsExplicitPosition,
-  manualCorrectionTextWithBlank,
 } from '../v3/manual-correction-contract.js'
 import {
+  CORRECTION_KEYPAD_KEYS,
+  correctionKeypadEntry,
+  correctionKeypadEntryComplete,
+  correctionPreviewCells,
+} from '../v3/correction-keypad.js'
+import {
   browserLocalStrongShadowConfig,
+  requestBrowserLocalStrongPersistentShadow,
   requestBrowserLocalStrongShadow,
 } from '../v3/trocr-small-shadow-client.js'
+import { browserLocalCandidateRuntimeConfig } from '../v3/browser-local-candidate-runtime.js'
+import { browserLocalStrongTier } from '../v3/browser-local-strong-capability.js'
+import { browserLocalCandidateDecision } from '../v3/browser-local-candidate.js'
+import { applyBrowserLocalCandidateToPredictions } from '../v3/browser-local-candidate-application.js'
+import { browserLocalCoPrimaryEvidencePlan } from '../v3/browser-local-co-primary-planner.js'
+import { browserLocalCoPrimaryCandidate7Decision } from '../v3/browser-local-co-primary-candidate7.js'
+import { browserLocalThreeFrameConsensus } from '../v3/browser-local-frame-consensus.js'
+import { browserUniformAnswerViews } from '../v3/uniform-answer-view-browser.js'
 import {
   applyAcceptedAnswerSafetyVetoes,
   acceptedAnswerSafetyDecision,
@@ -762,7 +782,7 @@ const DEBUG_REAL_WORKSHEET_EXPECTED = Object.freeze([8, 4, 1, 9, 2, 7, 0, 5, 3, 
 
 // Auto-capture: layered page-present gate (variance pre-filter + contour) + stability hold
 const STABILITY_HOLD_MS = 1500
-const STABILITY_HOLD_MS_PORTRAIT = 375
+const STABILITY_HOLD_MS_PORTRAIT = STUDENT_AUTO_CAPTURE_STABILITY_HOLD_MS
 const CHECK_INTERVAL_MS = 300
 const SAMPLE_W = 48
 const SAMPLE_H = 36
@@ -770,9 +790,9 @@ const SAD_THRESHOLD = 48 * 36 * 20
 // Pre-filter: reject obviously blank (variance alone not sufficient for page)
 const VARIANCE_PREFILTER_MIN = 50
 const VARIANCE_PREFILTER_MIN_PORTRAIT = 8
-const FOCUS_SCORE_MIN_PORTRAIT = 340
-const AUTO_GATE_FOCUS_SCORE_MIN_PORTRAIT = 300
-const AUTO_CAPTURE_FINAL_FOCUS_SCORE_MIN_PORTRAIT = 650
+const FOCUS_SCORE_MIN_PORTRAIT = STUDENT_MANUAL_CAPTURE_FOCUS_MIN
+const AUTO_GATE_FOCUS_SCORE_MIN_PORTRAIT = STUDENT_AUTO_CAPTURE_TRIGGER_FOCUS_MIN
+const AUTO_CAPTURE_FINAL_FOCUS_SCORE_MIN_PORTRAIT = STUDENT_AUTO_CAPTURE_FINAL_FOCUS_MIN
 const AUTO_CAPTURE_BURST_FRAMES = 8
 const AUTO_CAPTURE_BURST_DELAY_MS = 110
 const HYBRID_BURST_EVIDENCE_FRAMES = 3
@@ -1356,15 +1376,15 @@ const modelInfoSnapshot = ref(null)
 const modelSanityRunning = ref(false)
 const modelSanityResults = ref(null)
 const capturedImageWrapRef = ref(null)
-const manualCorrectionInputRef = ref(null)
-const correctionPanelRef = ref(null)
 const activeCorrectionQuestion = ref(null)
 const manualCorrectionText = ref('')
 const manualCorrectionClearedForSession = ref(false)
+const correctionKeypadSubmitting = ref(false)
 const correctionError = ref('')
 const localFirstStrongStatusByQuestion = ref({})
 const localFirstStrongContext = ref(null)
 const progressiveRevealedQuestionNums = ref([])
+const progressiveScoreRevealed = ref(false)
 const progressiveMarkingComplete = ref(false)
 const progressiveMarkingSessionKey = ref('')
 const progressiveCorrectionQuestionNum = ref(null)
@@ -1407,6 +1427,12 @@ const progressiveMarkingDimensions = computed(() => ({
   height: Math.max(1, Number(ocrResult.value?.annotationGeometry?.warpedH) || 1),
 }))
 
+const progressiveScoreStep = computed(() => progressiveScoreRevealStep({
+  result: ocrResult.value,
+  dimensions: progressiveMarkingDimensions.value,
+  annotationRegions: allAnnotationRegions.value,
+}))
+
 const progressiveMarkingStepList = computed(() => progressiveMarkingSteps(
   studentAnswerGroups.value,
   allAnnotationRegions.value,
@@ -1422,9 +1448,10 @@ const progressiveMarkingStepList = computed(() => progressiveMarkingSteps(
     onlyQuestionNums: progressiveCorrectionQuestionNum.value != null && Number.isFinite(Number(progressiveCorrectionQuestionNum.value))
       ? [Number(progressiveCorrectionQuestionNum.value)]
       : [],
-    revealAnswerQuestionNums: progressiveCorrectionQuestionNum.value != null && Number.isFinite(Number(progressiveCorrectionQuestionNum.value))
-      ? [Number(progressiveCorrectionQuestionNum.value)]
-      : [],
+    // A manual answer is already baked into the correction-animation base.
+    // Do not reveal it through a second mask: that made the black digit vanish
+    // between the editor and its final mark.
+    revealAnswerQuestionNums: [],
   },
 ))
 
@@ -1453,7 +1480,11 @@ const progressiveMarkingActive = computed(() => (
 
 const scanningDateStampSpec = computed(() => {
   const preview = scanningAnnotationPreview.value
-  if (!props.studentMode || !processing.value || !preview) return null
+  if (
+    !props.studentMode ||
+    (!processing.value && !progressiveMarkingActive.value) ||
+    !preview
+  ) return null
   return dateStampSpecForLayout(preview.layout, preview.width, preview.height, 1)
 })
 
@@ -1537,37 +1568,23 @@ const activeCorrectionRegion = computed(() => {
   ) || question
 })
 
-const correctionPanelStyle = computed(() => {
-  const placement = correctionPanelPlacement.value
-  if (!placement) return {}
-  return {
-    left: `${placement.left}%`,
-    top: `${placement.top}%`,
-    width: `${placement.width}%`,
-    transform: placement.transform,
-    '--correction-arrow-x': `${placement.arrowX}%`,
-    '--correction-arrow-y': `${placement.arrowY}%`
-  }
-})
-
-const correctionPanelPlacement = computed(() => {
+const activeCorrectionFocusStyle = computed(() => {
   const region = activeCorrectionRegion.value
-  const wholeAnswer = activeCorrectionSlotIndex.value == null && activeCorrectionMaxLength.value > 1
-  return correctionPanelPlacementForRegion(region, {
-    panelWidthPct: wholeAnswer ? 43 : 40,
-    estimatedPanelHeightPct: wholeAnswer ? 27 : 25,
-  })
+  if (!region) return {}
+  return {
+    left: `${region.focusLeftPct ?? region.leftPct}%`,
+    top: `${region.focusTopPct ?? region.topPct}%`,
+    width: `${region.focusWidthPct ?? region.widthPct}%`,
+    height: `${region.focusHeightPct ?? region.heightPct}%`,
+    '--correction-preview-slots': String(activeCorrectionMaxLength.value),
+  }
 })
 
-const correctionPanelClass = computed(() => {
-  const placement = correctionPanelPlacement.value?.placement
-  const classes = []
-  if (placement) classes.push(`student-correction-panel--${placement}`)
-  if (activeCorrectionSlotIndex.value == null && activeCorrectionMaxLength.value > 1) {
-    classes.push('student-correction-panel--double')
-  }
-  return classes.join(' ')
-})
+const correctionKeypadKeys = CORRECTION_KEYPAD_KEYS
+
+const activeCorrectionPreviewCells = computed(() =>
+  correctionPreviewCells(manualCorrectionText.value, activeCorrectionMaxLength.value)
+)
 
 const activeCorrectionGroup = computed(() => {
   const question = activeCorrectionQuestion.value
@@ -1635,8 +1652,9 @@ const activeCorrectionChoices = computed(() => {
   }
   const group = activeCorrectionGroup.value
   if (!group) return []
-  const maxChoices = v3LocalFirstReviewEnabled() && activeLocalFirstStrongStatus.value === 'complete' ? 7 : 6
-  return topAnswerChoicesForGroup(group, ocrResult.value?.predictions || [], maxChoices)
+  // A phone correction panel has room for three decisive choices. Everything
+  // else belongs in the numeric field, not in a dense, hard-to-tap grid.
+  return topAnswerChoicesForGroup(group, ocrResult.value?.predictions || [], 3)
 })
 
 const activeCorrectionQuestionNum = computed(() => Number(activeCorrectionGroup.value?.question_num))
@@ -1679,26 +1697,6 @@ const activeCorrectionPhysicalSlotCount = computed(() => {
     : []
   return Math.max(1, ids.length)
 })
-
-const manualCorrectionPositionDigit = computed(() => {
-  const digits = String(manualCorrectionText.value || '').match(/\d/g) || []
-  return digits.length === 1 ? digits[0] : ''
-})
-
-const showManualCorrectionPositionChoices = computed(() => (
-  activeCorrectionPhysicalSlotCount.value === 2 &&
-  manualCorrectionNeedsExplicitPosition(manualCorrectionText.value, 2) &&
-  !!manualCorrectionPositionDigit.value
-))
-
-const activeCorrectionPlaceholder = computed(() => '')
-
-const inferredSingleDigitSlotIndex = computed(() => inferSingleDigitSlot(
-  activeCorrectionPredictions.value.map((prediction) => (
-    prediction?.blank === true || prediction?.empty === true ? null : prediction?.digit
-  )),
-  activeCorrectionPhysicalSlotCount.value,
-))
 
 const activeCorrectionQuestionLetter = computed(() =>
   scantronAnswerLabel(activeCorrectionQuestion.value?.label)
@@ -1806,6 +1804,54 @@ const studentResultClass = computed(() => {
   return 'student-result--success'
 })
 
+// The final score is already rendered into the saved worksheet image. This
+// matching mask exposes that ink in the order a teacher would write it rather
+// than letting a completed "7/8" suddenly appear after the last correction.
+function progressiveScoreRevealStep({ result, dimensions, annotationRegions }) {
+  const correct = Array.isArray(result?.questionCorrect) ? result.questionCorrect : []
+  const hasReview = result?.predictions?.some((item) => item?.reviewNeeded) ||
+    (Array.isArray(result?.questionReview) && result.questionReview.some(Boolean))
+  if (!correct.length || hasReview) return null
+  const width = Math.max(1, Number(dimensions?.width) || 1)
+  const height = Math.max(1, Number(dimensions?.height) || 1)
+  const total = correct.length
+  const scoreText = `${correct.filter(Boolean).length}/${total}`
+  const rects = (annotationRegions || [])
+    .map((region) => ({ x: Number(region?.x), y: Number(region?.y), h: Number(region?.h) }))
+    .filter((rect) => Number.isFinite(rect.x) && Number.isFinite(rect.y) && Number.isFinite(rect.h))
+  const maxQuestionBottom = rects.length
+    ? Math.max(...rects.map((rect) => rect.y + rect.h))
+    : height * 0.56
+  const qr = result?.layoutSnapshot?.metadata?.qr_position
+  const hasQr = qr && Number.isFinite(qr.x) && Number.isFinite(qr.y)
+  const qrTop = hasQr ? qr.y * height : height * 0.8
+  const qrRight = hasQr && Number.isFinite(qr.width) ? (qr.x + qr.width) * width : width * 0.57
+  const centerX = hasQr
+    ? Math.min(width * 0.735, Math.max(qrRight + width * 0.075, width * 0.675))
+    : width * 0.67
+  const y = hasQr
+    ? Math.min(qrTop - height * 0.025, Math.max(maxQuestionBottom + height * 0.09, qrTop - height * 0.045))
+    : Math.min(height * 0.82, Math.max(maxQuestionBottom + height * 0.08, height * 0.59))
+  const fontSize = Math.max(58, Math.min(96, width * 0.052))
+  const seed = Number.isFinite(Number(result?.annotationSeed)) ? Number(result.annotationSeed) + 9001 : 9002
+  const scorePlan = buildTeacherScoreStrokePlan({
+    text: scoreText,
+    centerX,
+    y,
+    fontSize,
+    seed,
+  })
+  const strokes = scorePlan.strokes.map((stroke) => ({
+    ...stroke,
+    width: teacherScoreRevealMaskWidth(stroke.inkWidth),
+  }))
+  return strokes.length ? {
+    key: 'final-score',
+    strokes,
+    strokeWidth: teacherScoreRevealMaskWidth(fontSize * 0.07),
+  } : null
+}
+
 function correctionHotspotStyle(region) {
   return {
     left: `${region.leftPct}%`,
@@ -1909,7 +1955,7 @@ function openCorrection(region) {
   manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
   correctionError.value = ''
-  focusManualCorrectionInput()
+  correctionKeypadSubmitting.value = false
 }
 
 function openCorrectionByGroupSlot(group, slotIndex = null) {
@@ -1938,50 +1984,13 @@ function openCorrectionByGroupSlot(group, slotIndex = null) {
   manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
   correctionError.value = ''
-  nextTick(() => {
-    capturedImageWrapRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
-  })
-  focusManualCorrectionInput()
-}
-
-function focusManualCorrectionInput() {
-  nextTick(() => {
-    const input = manualCorrectionInputRef.value
-    if (!input) return
-    input.focus({ preventScroll: true })
-    handleManualCorrectionFocus({ target: input })
-  })
-}
-
-function keepCorrectionPanelAboveKeyboard() {
-  const panel = correctionPanelRef.value
-  if (!panel || typeof window === 'undefined') return
-  const viewport = window.visualViewport
-  const viewportTop = viewport?.offsetTop || 0
-  const viewportBottom = viewportTop + (viewport?.height || window.innerHeight)
-  const rect = panel.getBoundingClientRect()
-  const overflow = rect.bottom - (viewportBottom - 14)
-  if (overflow > 0) {
-    window.scrollBy({ top: overflow + 18, behavior: 'smooth' })
-  }
-}
-
-function handleManualCorrectionFocus(event) {
-  const input = event?.target
-  const caret = String(input?.value || '').length
-  // Selecting the whole value opens iPadOS's black Cut/Copy/Look Up menu and
-  // obscures the correction card. Keep a collapsed caret at the end instead.
-  input?.setSelectionRange?.(caret, caret)
-  const keyboardSettleDelays = [40, 180, 360]
-  keyboardSettleDelays.forEach((delay) => {
-    window.setTimeout(keepCorrectionPanelAboveKeyboard, delay)
-  })
+  correctionKeypadSubmitting.value = false
 }
 
 function handleCorrectionOutsideClick(event) {
   if (!activeCorrectionQuestion.value) return
   const target = event?.target
-  if (target instanceof Element && target.closest('.student-correction-panel, .annotation-hotspot')) return
+  if (target instanceof Element && target.closest('.correction-keypad, .annotation-hotspot, .on-sheet-correction-focus')) return
   cancelCorrection()
 }
 
@@ -1990,11 +1999,37 @@ function cancelCorrection() {
     window.clearTimeout(manualCorrectionAutoApplyTimer)
     manualCorrectionAutoApplyTimer = null
   }
-  manualCorrectionInputRef.value?.blur?.()
   activeCorrectionQuestion.value = null
   manualCorrectionText.value = ''
   manualCorrectionClearedForSession.value = false
+  correctionKeypadSubmitting.value = false
   correctionError.value = ''
+}
+
+function pressCorrectionKey(key) {
+  if (!activeCorrectionQuestion.value || correctionKeypadSubmitting.value) return
+  if (manualCorrectionAutoApplyTimer != null) {
+    window.clearTimeout(manualCorrectionAutoApplyTimer)
+    manualCorrectionAutoApplyTimer = null
+  }
+  manualCorrectionText.value = correctionKeypadEntry(
+    manualCorrectionText.value,
+    key,
+    activeCorrectionMaxLength.value,
+  )
+  correctionError.value = ''
+  if (!correctionKeypadEntryComplete(manualCorrectionText.value, activeCorrectionMaxLength.value)) return
+  correctionKeypadSubmitting.value = true
+  manualCorrectionAutoApplyTimer = window.setTimeout(() => {
+    manualCorrectionAutoApplyTimer = null
+    if (!activeCorrectionQuestion.value) {
+      correctionKeypadSubmitting.value = false
+      return
+    }
+    void applyManualCorrectionText().finally(() => {
+      correctionKeypadSubmitting.value = false
+    })
+  }, 90)
 }
 
 async function applyCorrectionChoice(choice) {
@@ -2012,27 +2047,6 @@ async function applyManualCorrectionText() {
     await applyNoAnswerCorrection()
     return
   }
-  if (manualCorrectionNeedsExplicitPosition(manualCorrectionText.value, activeCorrectionPhysicalSlotCount.value)) {
-    const inferredSlotIndex = inferredSingleDigitSlotIndex.value
-    if (Number.isInteger(inferredSlotIndex)) {
-      const positionedText = manualCorrectionTextWithBlank(
-        manualCorrectionText.value,
-        inferredSlotIndex === 0 ? 1 : 0,
-        activeCorrectionPhysicalSlotCount.value,
-      )
-      const positionedCells = parseManualAnswerText(positionedText, activeCorrectionPhysicalSlotCount.value)
-      if (positionedCells) {
-        await applyManualCorrectionCells(positionedCells, {
-          correctionSource: 'manual-keypad-inferred-position',
-          oneTap: true,
-        })
-        return
-      }
-    }
-    const digit = manualCorrectionPositionDigit.value || 'digit'
-    correctionError.value = `Choose “${digit} _” or “_ ${digit}” so the digit stays where the student wrote it.`
-    return
-  }
   const slotCount = activeCorrectionSlotIndex.value != null
     ? 1
     : maxHandwrittenDigitsForGroup(group)
@@ -2047,25 +2061,6 @@ async function applyManualCorrectionText() {
     slotIndex: activeCorrectionSlotIndex.value,
     correctionSource: 'manual-keypad',
     oneTap: false,
-  })
-}
-
-async function applyManualCorrectionPositionChoice(blankSlotIndex) {
-  const positionedText = manualCorrectionTextWithBlank(
-    manualCorrectionText.value,
-    blankSlotIndex,
-    activeCorrectionPhysicalSlotCount.value,
-  )
-  const cells = parseManualAnswerText(positionedText, activeCorrectionPhysicalSlotCount.value)
-  if (!cells) {
-    correctionError.value = 'Enter one digit before choosing its box.'
-    return
-  }
-  manualCorrectionText.value = positionedText
-  correctionError.value = ''
-  await applyManualCorrectionCells(cells, {
-    correctionSource: 'manual-keypad-position',
-    oneTap: true,
   })
 }
 
@@ -2093,7 +2088,6 @@ function normalizeManualCorrectionInput(event) {
     eventType: event?.type,
     maxLength: activeCorrectionMaxLength.value,
     text: normalized,
-    inferredSingleDigitSlotIndex: inferredSingleDigitSlotIndex.value,
   })) {
     if (manualCorrectionAutoApplyTimer != null) window.clearTimeout(manualCorrectionAutoApplyTimer)
     manualCorrectionAutoApplyTimer = window.setTimeout(() => {
@@ -2108,6 +2102,7 @@ function normalizeManualCorrectionInput(event) {
 async function applyManualCorrectionCells(cells, { slotIndex = null, correctionSource = 'manual', oneTap = false } = {}) {
   const result = ocrResult.value
   const group = activeCorrectionGroup.value
+  const correctedQuestionNum = Number(group?.question_num ?? activeCorrectionQuestion.value?.questionNum)
   const layoutSnapshot = result?.layoutSnapshot
   const questionGroups = Array.isArray(layoutSnapshot?.question_groups) ? layoutSnapshot.question_groups : []
   const annotationGeometry = result?.annotationGeometry
@@ -2287,8 +2282,16 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   if (Array.isArray(result.correct) && result.correct.length === nextPredictions.length) {
     nextResult.correct = nextPredictions.map((prediction) => prediction.correct)
   }
+  // Prepare the settled correction before switching result images. The
+  // transition then removes only the blue focus treatment; the black teacher
+  // entry never falls back to the pre-correction worksheet for one frame.
+  const correctionAnimationBaseUrl = await manualCorrectionAnimationBase(
+    previousAnnotatedImageUrl,
+    annotatedImageUrl,
+    correctedQuestionNum,
+  )
   ocrResult.value = nextResult
-  startManualCorrectionAnimation(group.question_num ?? activeCorrectionQuestion.value?.questionNum, previousAnnotatedImageUrl)
+  startManualCorrectionAnimation(correctedQuestionNum, correctionAnimationBaseUrl)
   if (lastLiveOcrDebug.value) {
     lastLiveOcrDebug.value = {
       ...lastLiveOcrDebug.value,
@@ -2318,7 +2321,16 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     }
     uploadLiveOcrDebug(correctionTelemetry, 'manual-correction')
   }
-  cancelCorrection()
+  const nextReviewGroup = nextYellowReviewGroup(
+    answerGroups,
+    questionReview,
+    correctedQuestionNum,
+  )
+  if (nextReviewGroup) {
+    openCorrectionByGroupSlot(nextReviewGroup)
+  } else {
+    cancelCorrection()
+  }
   emit('ocr-complete', nextResult)
 }
 
@@ -2421,21 +2433,16 @@ function validateStudentSheetAppearance(canvas, markers) {
   const reader = getCanvasPixelReader(canvas)
   const markerSide = Math.max(7, Math.min(reader.width, reader.height) * 0.075)
   const markerStats = markers.map((marker) => measureMarkerPatch(reader, marker, markerSide))
-  const darkMarkerCount = markerStats.filter((stat) =>
-    stat.darkFraction >= 0.12 && stat.mean <= 190
-  ).length
   const paperStats = measurePaperPatch(reader, markers)
-  const paperLooksBright =
-    paperStats.mean >= 125 &&
-    paperStats.brightFraction >= 0.52 &&
-    paperStats.darkFraction <= 0.20
-  if (darkMarkerCount < 4) {
-    return { ok: false, status: 'Find all 4 black squares', markerStats, paperStats }
+  const decision = studentSheetAppearanceDecision({ markerStats, paperStats })
+  return {
+    ok: decision.accepted,
+    preferred: decision.preferred,
+    status: decision.status,
+    darkMarkerCount: decision.darkMarkerCount,
+    markerStats,
+    paperStats,
   }
-  if (!paperLooksBright) {
-    return { ok: false, status: 'Find the worksheet page', markerStats, paperStats }
-  }
-  return { ok: true, status: 'Hold steady', markerStats, paperStats }
 }
 
 /**
@@ -2915,17 +2922,11 @@ function scoreStudentCaptureCandidate(frame, index) {
   score -= Math.abs((stats.mean || 0) - 155) * 1.5
   const appearance = sheetCheck?.appearance
   const paper = appearance?.paperStats
-  const markerStats = appearance?.markerStats
   if (paper) {
     score += Math.min(Math.max((paper.brightFraction || 0) - 0.45, 0), 0.4) * 500
     score -= Math.max((paper.darkFraction || 0) - 0.18, 0) * 800
   }
-  if (Array.isArray(markerStats)) {
-    const darkMarkerCount = markerStats.filter((marker) =>
-      (marker?.darkFraction || 0) >= 0.12 && (marker?.mean || 255) <= 190
-    ).length
-    score += darkMarkerCount * 80
-  }
+  score += Number(appearance?.darkMarkerCount || 0) * 80
   return {
     ...frame,
     index,
@@ -2976,7 +2977,10 @@ async function captureBestStudentFrame(video, source) {
       sheetStatus: candidate.sampleSheetCheck?.status || null,
       blank: candidate.blank
     })
-    if (!best || candidate.score > best.score) {
+    // A later burst frame can be sharper than the frame that opened the gate
+    // (for example, if the sheet has been moved away). It must still be a
+    // confirmed ScanGrade worksheet before it is eligible to win.
+    if (candidate.sampleSheetCheck?.ok === true && (!best || candidate.score > best.score)) {
       best = candidate
     }
   }
@@ -3015,6 +3019,16 @@ async function captureBestStudentFrame(video, source) {
     }
   }
   return best
+}
+
+function hasUsableScanGradeQr(payload) {
+  if (!payload || typeof payload !== 'object') return false
+  return Boolean(
+    payload.layout_id ||
+    payload.template_id ||
+    payload.sheet_instance_id ||
+    payload.sheet_lookup_code
+  )
 }
 
 async function waitForDrawableVideoFrame(video, timeoutMs = 5000) {
@@ -3156,6 +3170,20 @@ async function doCapture({ source = 'manual' } = {}) {
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
+    // The public product grades ScanGrade-authored QR worksheets. Require a
+    // real, decodable ScanGrade QR before an automatic capture is committed.
+    // This is an independent guard against patterned fabrics or other dark
+    // objects accidentally resembling four corner markers.
+    const captureQrPayload = decodeQrFromCanvas(canvas)
+    if (!hasUsableScanGradeQr(captureQrPayload)) {
+      recordCaptureGate('qr-gate', source)
+      studentAutoStatus.value = 'Keep the QR code visible'
+      error.value = source === 'manual'
+        ? 'Keep the ScanGrade QR code visible and try again.'
+        : null
+      if (streamActive.value) startAutoCaptureLoop()
+      return
+    }
     if (
       source === 'auto' &&
       strictPerspectiveCaptureEnabled() &&
@@ -3167,9 +3195,8 @@ async function doCapture({ source = 'manual' } = {}) {
       if (streamActive.value) startAutoCaptureLoop()
       return
     }
-    const focusThreshold = source === 'auto'
-      ? AUTO_CAPTURE_FINAL_FOCUS_SCORE_MIN_PORTRAIT
-      : FOCUS_SCORE_MIN_PORTRAIT
+    const focusDecision = studentCaptureFocusDecision({ source, focusScore })
+    const focusThreshold = focusDecision.threshold
     const captureQuality = {
       cropW,
       cropH,
@@ -3186,6 +3213,8 @@ async function doCapture({ source = 'manual' } = {}) {
       autoFinalFocusThreshold: AUTO_CAPTURE_FINAL_FOCUS_SCORE_MIN_PORTRAIT,
       sheetOk: sheetCheck.ok === true,
       sheetStatus: sheetCheck.status || null,
+      qrGatePassed: true,
+      captureQrDecodeSource: captureQrPayload.qr_decode_source || null,
       sheetGeometry: sheetCheck.geometry || null,
       burstFrameCount,
       burstSelectedIndex: capture.index,
@@ -3201,7 +3230,7 @@ async function doCapture({ source = 'manual' } = {}) {
       source,
       capturedAt: new Date().toISOString()
     }
-    if (focusScore < focusThreshold) {
+    if (!focusDecision.accepted) {
       recordCaptureGate('focus-gate', source, {
         focusScore: Math.round(focusScore),
         focusThreshold: Math.round(focusThreshold),
@@ -3430,12 +3459,21 @@ function advanceProgressiveMarking() {
     progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 320)
     return
   }
+  if (progressiveScoreStep.value && !progressiveScoreRevealed.value) {
+    progressiveScoreRevealed.value = true
+    clearProgressiveMarkingTimer()
+    const lastStroke = progressiveScoreStep.value.strokes.at(-1)
+    const duration = Number(lastStroke?.delayMs || 0) + Number(lastStroke?.durationMs || 0) + 220
+    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, duration)
+    return
+  }
   finishProgressiveMarkingSoon()
 }
 
 function resetProgressiveMarking() {
   clearProgressiveMarkingTimer()
   progressiveRevealedQuestionNums.value = []
+  progressiveScoreRevealed.value = false
   progressiveMarkingComplete.value = false
   progressiveMarkingSessionKey.value = ''
   progressiveCorrectionQuestionNum.value = null
@@ -3443,13 +3481,112 @@ function resetProgressiveMarking() {
   progressiveMarkingEarliestFinish = 0
 }
 
-function startManualCorrectionAnimation(questionNum, previousAnnotatedImageUrl) {
+function manualCorrectionFocusRect(questionNum) {
+  const regions = allAnnotationRegions.value
+    .filter((region) => Number(region?.questionNum) === Number(questionNum))
+    .map((region) => ({
+      x: Number(region?.focusX),
+      y: Number(region?.focusY),
+      w: Number(region?.focusW),
+      h: Number(region?.focusH),
+    }))
+    .filter((rect) => (
+      Number.isFinite(rect.x) && Number.isFinite(rect.y) &&
+      Number.isFinite(rect.w) && rect.w > 0 &&
+      Number.isFinite(rect.h) && rect.h > 0
+    ))
+  if (!regions.length) return null
+  const x = Math.min(...regions.map((rect) => rect.x))
+  const y = Math.min(...regions.map((rect) => rect.y))
+  const right = Math.max(...regions.map((rect) => rect.x + rect.w))
+  const bottom = Math.max(...regions.map((rect) => rect.y + rect.h))
+  return { x, y, w: right - x, h: bottom - y }
+}
+
+function imageElementFromUrl(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('annotation image failed to load'))
+    image.src = url
+  })
+}
+
+// Keep the worksheet's already-settled marks visible during a manual fix. Only
+// replace the old yellow review ink inside the answer area with the clean page
+// beneath it, then copy the settled black correction into that same patch.
+// The following animation therefore adds only the check/X; the entered answer
+// remains continuously visible.
+async function manualCorrectionAnimationBase(
+  previousAnnotatedImageUrl,
+  completedAnnotatedImageUrl,
+  questionNum,
+) {
+  const cleanBaseUrl = ocrResult.value?.annotationBaseUrl || capturedImage.value
+  const rect = manualCorrectionFocusRect(questionNum)
+  const { width, height } = progressiveMarkingDimensions.value
+  if (!previousAnnotatedImageUrl || !cleanBaseUrl || !rect || !width || !height) {
+    return previousAnnotatedImageUrl || cleanBaseUrl || ''
+  }
+  try {
+    const [previous, clean, completed] = await Promise.all([
+      imageElementFromUrl(previousAnnotatedImageUrl),
+      imageElementFromUrl(cleanBaseUrl),
+      imageElementFromUrl(completedAnnotatedImageUrl),
+    ])
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+    if (!context) return previousAnnotatedImageUrl
+    context.drawImage(previous, 0, 0, width, height)
+    const questionGroups = Array.isArray(ocrResult.value?.layoutSnapshot?.question_groups)
+      ? ocrResult.value.layoutSnapshot.question_groups
+      : []
+    const groupIndex = questionGroups.findIndex((group, index) =>
+      Number(group?.question_num ?? index + 1) === Number(questionNum)
+    )
+    const reviewSeed = (Math.max(0, groupIndex) + 1) * 131 + 211
+    const clearRect = manualCorrectionClearRect(rect, reviewSeed, { width, height })
+    if (!clearRect) return previousAnnotatedImageUrl
+    context.drawImage(
+      clean,
+      clearRect.x,
+      clearRect.y,
+      clearRect.w,
+      clearRect.h,
+      clearRect.x,
+      clearRect.y,
+      clearRect.w,
+      clearRect.h,
+    )
+    context.drawImage(
+      completed,
+      clearRect.x,
+      clearRect.y,
+      clearRect.w,
+      clearRect.h,
+      clearRect.x,
+      clearRect.y,
+      clearRect.w,
+      clearRect.h,
+    )
+    // Lossless encoding keeps the settled correction pixel-identical while
+    // focus chrome disappears and its check/X begins drawing.
+    return canvas.toDataURL('image/png')
+  } catch (error) {
+    console.warn('[ScanGrade] manual correction animation base failed:', error)
+    return previousAnnotatedImageUrl
+  }
+}
+
+function startManualCorrectionAnimation(questionNum, correctionAnimationBaseUrl) {
   if (typeof window === 'undefined' || !props.studentMode) return
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true) return
   clearProgressiveMarkingTimer()
   progressiveCorrectionQuestionNum.value = Number(questionNum)
-  progressiveBaseImageOverride.value = previousAnnotatedImageUrl || ocrResult.value?.annotationBaseUrl || capturedImage.value
+  progressiveBaseImageOverride.value = correctionAnimationBaseUrl || ''
   progressiveRevealedQuestionNums.value = []
+  progressiveScoreRevealed.value = false
   progressiveMarkingComplete.value = false
   progressiveMarkingEarliestFinish = Date.now() + 900
   progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 90)
@@ -3469,12 +3606,6 @@ watch(
       resetProgressiveMarking()
       progressiveMarkingSessionKey.value = sessionKey
       progressiveMarkingEarliestFinish = Date.now() + 2200
-      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true
-      if (reduceMotion) {
-        progressiveRevealedQuestionNums.value = progressiveMarkingStepList.value.map((step) => Number(step.questionNum))
-        progressiveMarkingComplete.value = true
-        return
-      }
       progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 360)
       return
     }
@@ -3638,14 +3769,30 @@ function composeStudentAnnotatedImage(
   annotationSeed = Date.now()
 ) {
   return new Promise((resolve, reject) => {
+    let settled = false
+    const settle = (callback, value) => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(annotationRenderTimeout)
+      callback(value)
+    }
+    const finish = (value) => settle(resolve, value)
+    const fail = (error) => settle(
+      reject,
+      error instanceof Error ? error : new Error(String(error || 'annotation render failed'))
+    )
+    const annotationRenderTimeout = window.setTimeout(() => {
+      fail(new Error('Annotation render timed out'))
+    }, 8000)
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = warpedW
-      canvas.height = warpedH
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(img, 0, 0, warpedW, warpedH)
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = warpedW
+        canvas.height = warpedH
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, warpedW, warpedH)
 
       const seededUnit = (seed) => {
         const x = Math.sin(seed * 12.9898) * 43758.5453
@@ -3656,7 +3803,7 @@ function composeStudentAnnotatedImage(
       const annotationJitterSeed = Number.isFinite(Number(annotationSeed)) ? Number(annotationSeed) : 1
 
       const TEACHER_INK = {
-        green: '#207a4d',
+        green: TEACHER_GREEN_INK,
         red: '#b33d35',
         amber: '#c66f22',
         blue: '#245aa4'
@@ -3795,7 +3942,9 @@ function composeStudentAnnotatedImage(
 
       const drawReviewMark = (rect, seed) => {
         const geometry = fluorescentHighlighterGeometry(rect, seed)
-        const highlighter = 'rgb(255, 250, 0)'
+        // Match the shared Sharpie-style fluorescent yellow used in the
+        // interface. The transparency preserves the child's pencil work.
+        const highlighter = 'rgb(238, 255, 0)'
 
         ctx.save()
         ctx.globalCompositeOperation = 'source-over'
@@ -3808,18 +3957,20 @@ function composeStudentAnnotatedImage(
           ctx.globalAlpha = alpha
           ctx.fill()
         }
-        drawPolygon(geometry.polygon, 0.40)
+        // Keep the Sharpie lemon-yellow hue, but let the pencil answer remain
+        // clearly legible while a teacher decides what to enter.
+        drawPolygon(geometry.polygon, 0.22)
         const inner = geometry.polygon.map(([px, py]) => [
           px + jitter(seed + Math.round(px) + 307, rect.w * 0.004),
           py + jitter(seed + Math.round(py) + 311, rect.h * 0.025),
         ])
-        drawPolygon(inner, 0.035)
+        drawPolygon(inner, 0.02)
         ctx.restore()
       }
 
       const drawCheck = (rect, seed) => {
         const { x, y, size } = indicatorAnchor(rect, seed)
-        const color = varyInk(TEACHER_INK.green, seed + 17, 20)
+        const color = varyInk(TEACHER_INK.green, seed + 17, 10)
         const angle = jitter(seed + 101, 0.22)
         const scaleX = 0.86 + seededUnit(seed + 103) * 0.32
         const scaleY = 0.84 + seededUnit(seed + 107) * 0.28
@@ -3838,18 +3989,13 @@ function composeStudentAnnotatedImage(
           scaleX,
           scaleY
         )
-        drawHandStroke(
+        drawSmoothHandStroke(
           [points],
           {
             color,
             width: Math.max(3.8, size * (0.092 + seededUnit(seed + 109) * 0.03)),
             seed,
-            passes: [
-              { alpha: 0.08, widthScale: 1.9, spread: 0.34 },
-              { alpha: 0.17, widthScale: 1.34, spread: 0.22 },
-              { alpha: 0.58, widthScale: 0.92, spread: 0.13 },
-              { alpha: 0.2, widthScale: 0.42, spread: 0.06 }
-            ]
+            passes: TEACHER_GREEN_PEN_PASSES,
           }
         )
       }
@@ -3937,66 +4083,19 @@ function composeStudentAnnotatedImage(
         ctx.restore()
       }
 
-      const scoreGlyphs = {
-        '0': [[[-0.04, -0.43], [-0.2, -0.38], [-0.3, -0.22], [-0.31, 0], [-0.26, 0.24], [-0.11, 0.4], [0.08, 0.42], [0.24, 0.29], [0.31, 0.05], [0.27, -0.22], [0.12, -0.39], [-0.04, -0.43]]],
-        '1': [[[-0.16, -0.22], [0.03, -0.39], [0.02, 0.39]], [[-0.12, 0.4], [0.18, 0.39]]],
-        '2': [[[-0.23, -0.27], [-0.08, -0.42], [0.14, -0.4], [0.28, -0.24], [0.18, -0.04], [-0.12, 0.18], [-0.25, 0.39], [0.28, 0.38]]],
-        '3': [[[-0.22, -0.32], [-0.03, -0.43], [0.2, -0.32], [0.1, -0.08], [-0.04, -0.01], [0.15, 0.04], [0.25, 0.25], [0.05, 0.42], [-0.22, 0.32]]],
-        '4': [[[0.18, -0.42], [-0.23, 0.1], [0.25, 0.08]], [[0.16, -0.39], [0.13, 0.42]]],
-        '5': [[[0.24, -0.39], [-0.17, -0.38], [-0.22, -0.05], [-0.04, -0.11], [0.19, -0.02], [0.26, 0.23], [0.07, 0.41], [-0.22, 0.33]]],
-        '6': [[[0.18, -0.34], [-0.05, -0.39], [-0.25, -0.12], [-0.22, 0.21], [0, 0.43], [0.25, 0.27], [0.2, 0.04], [-0.03, -0.03], [-0.21, 0.12]]],
-        '7': [[[-0.25, -0.36], [0.29, -0.37], [0.02, 0.05], [-0.13, 0.43]]],
-        '8': [[[-0.02, -0.42], [-0.22, -0.31], [-0.19, -0.09], [0.03, -0.01], [0.23, -0.13], [0.19, -0.34], [-0.02, -0.42]], [[0.03, -0.01], [-0.22, 0.09], [-0.22, 0.31], [0.01, 0.43], [0.24, 0.31], [0.21, 0.09], [0.03, -0.01]]],
-        '9': [[[0.19, 0.38], [0.12, 0.03], [0.24, -0.23], [0.04, -0.42], [-0.19, -0.34], [-0.24, -0.1], [-0.04, 0.05], [0.16, -0.02]]],
-        '/': [[[0.2, -0.44], [-0.18, 0.46]]]
-      }
-
       const drawScoreMark = (text, centerX, y, { color, fontSize, seed }) => {
-        const chars = Array.from(text)
-        const advances = chars.map((ch) => ch === '/' ? fontSize * 0.34 : fontSize * 0.48)
-        const spacing = fontSize * 0.07
-        const totalWidth = advances.reduce((sum, width) => sum + width, 0) + spacing * Math.max(0, chars.length - 1)
-        let cursor = -totalWidth / 2
-        const baseAngle = -0.11 + jitter(seed + 1, 0.045)
-        ctx.save()
-        ctx.translate(centerX + jitter(seed + 3, fontSize * 0.14), y + jitter(seed + 5, fontSize * 0.08))
-        ctx.rotate(baseAngle)
-        chars.forEach((ch, index) => {
-          const glyph = scoreGlyphs[ch]
-          const advance = advances[index]
-          if (!glyph) {
-            cursor += advance + spacing
-            return
-          }
-          const charSeed = seed + index * 53
-          const charCenterX = cursor + advance / 2 + jitter(charSeed + 7, fontSize * 0.045)
-          const charCenterY = jitter(charSeed + 9, fontSize * 0.055)
-          const charAngle = jitter(charSeed + 11, 0.08)
-          const scaleX = ch === '/' ? 0.82 : 0.92 + seededUnit(charSeed + 13) * 0.18
-          const scaleY = 0.9 + seededUnit(charSeed + 17) * 0.16
-          const segments = glyph.map((segment, segmentIndex) => transformLocalPoints(
-            charCenterX + jitter(charSeed + segmentIndex * 7, fontSize * 0.01),
-            charCenterY + jitter(charSeed + segmentIndex * 11, fontSize * 0.012),
-            fontSize,
-            segment,
-            charAngle,
-            scaleX,
-            scaleY
-          ))
-          drawSmoothHandStroke(segments, {
-            color: varyInk(color, charSeed + 19, color === TEACHER_INK.green ? 18 : 12),
-            width: Math.max(4, fontSize * (0.074 + seededUnit(charSeed + 23) * 0.016)),
-            seed: charSeed,
-            passes: [
-              { alpha: 0.06, widthScale: 1.82, spread: 0.2 },
-              { alpha: 0.18, widthScale: 1.2, spread: 0.12 },
-              { alpha: 0.58, widthScale: 0.84, spread: 0.065 },
-              { alpha: 0.18, widthScale: 0.42, spread: 0.04 }
-            ]
+        const plan = buildTeacherScoreStrokePlan({ text, centerX, y, fontSize, seed })
+        plan.strokes.forEach((stroke) => {
+          const charSeed = seed + stroke.charIndex * 53
+          drawSmoothHandStroke([stroke.points], {
+            color: varyInk(color, charSeed + 19, color === TEACHER_INK.green ? 10 : 12),
+            width: stroke.inkWidth,
+            seed: charSeed + stroke.segmentIndex * 101,
+            // Keep the same physical pen texture for green, amber, and red
+            // scores; only the teacher-ink color changes with the grade.
+            passes: TEACHER_GREEN_PEN_PASSES,
           })
-          cursor += advance + spacing
         })
-        ctx.restore()
       }
 
       const drawManualAnswer = (rects, cells, seed) => {
@@ -4104,137 +4203,144 @@ function composeStudentAnnotatedImage(
         return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
       }
 
-      const cropById = new Map(rawCrops.map((crop, index) => [crop.id ?? index, crop]))
-      const predictionById = new Map(predictions.map((prediction, index) => [prediction.id ?? index, prediction]))
-      const questionGroups = Array.isArray(layout?.question_groups) ? layout.question_groups : []
-      const questionRectsByIndex = questionGroups.map((group) => {
-        const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-        return unionRects(ids.map((id) => {
-          const crop = cropById.get(id)
-          return annotationRectForCrop(crop)
-        }))
-      })
-      const questionRects = questionRectsByIndex.filter(Boolean)
-
-      if (questionGroups.length > 0) {
-        drawDateStamp()
-        questionGroups.forEach((group, index) => {
+        const cropById = new Map(rawCrops.map((crop, index) => [crop.id ?? index, crop]))
+        const predictionById = new Map(predictions.map((prediction, index) => [prediction.id ?? index, prediction]))
+        const questionGroups = Array.isArray(layout?.question_groups) ? layout.question_groups : []
+        const questionRectsByIndex = questionGroups.map((group) => {
           const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-          const rect = questionRectsByIndex[index]
-          if (!rect) return
-          const slotRects = ids.map((id) => {
+          return unionRects(ids.map((id) => {
             const crop = cropById.get(id)
             return annotationRectForCrop(crop)
+          }))
+        })
+        const questionRects = questionRectsByIndex.filter(Boolean)
+
+        if (questionGroups.length > 0) {
+          drawDateStamp()
+          questionGroups.forEach((group, index) => {
+            const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+            const rect = questionRectsByIndex[index]
+            if (!rect) return
+            const slotRects = ids.map((id) => {
+              const crop = cropById.get(id)
+              return annotationRectForCrop(crop)
+            })
+            const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
+            const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
+            const hasReview = questionRequiresTeacherReview(group, ids, predictionById)
+            const correction = manualCorrections[String(group?.question_num ?? index + 1)]
+            const reviewSlotRects = slotRects
+              .map((slotRect, slotIndex) => ({
+                slotRect,
+                slotIndex,
+                // Once a teacher has corrected a physical slot, its former
+                // yellow review ink must never survive underneath the blue
+                // correction. Other genuinely unresolved slots still remain
+                // yellow and reviewable.
+                needsReview: slotNeedsReview(group, ids, slotIndex, predictionById) &&
+                  !correction?.correctedSlots?.includes(slotIndex)
+              }))
+              .filter((slot) => slot.slotRect && slot.needsReview)
+            const seed = (index + 1) * 131
+
+            ctx.save()
+            if (correction?.cells) {
+              const correctedSlots = Array.isArray(correction.correctedSlots)
+                ? correction.correctedSlots.filter((slotIndex) =>
+                    Number.isInteger(slotIndex) &&
+                    slotIndex >= 0 &&
+                    slotIndex < slotRects.length
+                  )
+                : correction.cells.map((_, slotIndex) => slotIndex)
+              const correctedEntries = correctedSlots
+                .map((slotIndex) => ({ rect: slotRects[slotIndex], cell: correction.cells[slotIndex] }))
+                .filter((entry) => entry.rect)
+              const displayCells = manualCorrectionDisplayCells(correction, correctedEntries)
+              drawManualAnswer(correctedEntries.map((entry) => entry.rect), displayCells, seed + 47)
+            }
+            if (hasReview) {
+              const validSlotRects = reviewSlotRects.map((slot) => slot.slotRect).filter(Boolean)
+              const reviewRect = unionRects(validSlotRects)
+              if (reviewRect) drawReviewMark(reviewRect, seed + 211)
+            } else if (correct === true) {
+              drawCheck(rect, seed)
+            } else if (correct === false) {
+              drawX(rect, seed)
+            }
+            ctx.restore()
           })
-          const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
-          const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
-          const hasReview = questionRequiresTeacherReview(group, ids, predictionById)
-          const reviewSlotRects = slotRects
-            .map((slotRect, slotIndex) => ({
-              slotRect,
-              slotIndex,
-              needsReview: slotNeedsReview(group, ids, slotIndex, predictionById)
-            }))
-            .filter((slot) => slot.slotRect && slot.needsReview)
-          const seed = (index + 1) * 131
-          const correction = manualCorrections[String(group?.question_num ?? index + 1)]
+        } else {
+          const grouped = new Map()
+          rawCrops.forEach((crop, index) => {
+            const prediction = predictions[index]
+            const questionNum = crop.questionNum ?? prediction?.questionNum ?? index + 1
+            if (!grouped.has(questionNum)) grouped.set(questionNum, [])
+            grouped.get(questionNum).push({ crop, prediction, index })
+          })
+          Array.from(grouped.entries()).forEach(([questionNum, items], groupIndex) => {
+            const rect = unionRects(items.map(({ crop }) => annotationRectForCrop(crop)))
+            const groupPredictions = items.map(({ prediction }) => prediction).filter(Boolean)
+            if (!rect || !groupPredictions.length) return
+            const numericQuestionNum = Number(questionNum)
+            const seed = (groupIndex + 1) * 97 + (Number.isFinite(numericQuestionNum) ? numericQuestionNum : 0)
+            const hasReview = groupPredictions.some((prediction) => prediction.reviewNeeded)
+            const correctPredictions = groupPredictions.filter((prediction) => typeof prediction.correct === 'boolean')
+            ctx.save()
 
-          ctx.save()
-          if (correction?.cells) {
-            const correctedSlots = Array.isArray(correction.correctedSlots)
-              ? correction.correctedSlots.filter((slotIndex) =>
-                  Number.isInteger(slotIndex) &&
-                  slotIndex >= 0 &&
-                  slotIndex < slotRects.length
-                )
-              : correction.cells.map((_, slotIndex) => slotIndex)
-            const correctedEntries = correctedSlots
-              .map((slotIndex) => ({ rect: slotRects[slotIndex], cell: correction.cells[slotIndex] }))
-              .filter((entry) => entry.rect)
-            const displayCells = manualCorrectionDisplayCells(correction, correctedEntries)
-            drawManualAnswer(correctedEntries.map((entry) => entry.rect), displayCells, seed + 47)
-          }
-          if (hasReview) {
-            const validSlotRects = reviewSlotRects.length > 0
-              ? reviewSlotRects.map((slot) => slot.slotRect).filter(Boolean)
-              : slotRects.filter(Boolean)
-            const reviewRect = unionRects(validSlotRects)
-            if (reviewRect) drawReviewMark(reviewRect, seed + 211)
-          } else if (correct === true) {
-            drawCheck(rect, seed)
-          } else if (correct === false) {
-            drawX(rect, seed)
-          }
-          ctx.restore()
-        })
-      } else {
-        const grouped = new Map()
-        rawCrops.forEach((crop, index) => {
-          const prediction = predictions[index]
-          const questionNum = crop.questionNum ?? prediction?.questionNum ?? index + 1
-          if (!grouped.has(questionNum)) grouped.set(questionNum, [])
-          grouped.get(questionNum).push({ crop, prediction, index })
-        })
-        Array.from(grouped.entries()).forEach(([questionNum, items], groupIndex) => {
-          const rect = unionRects(items.map(({ crop }) => annotationRectForCrop(crop)))
-          const groupPredictions = items.map(({ prediction }) => prediction).filter(Boolean)
-          if (!rect || !groupPredictions.length) return
-          const numericQuestionNum = Number(questionNum)
-          const seed = (groupIndex + 1) * 97 + (Number.isFinite(numericQuestionNum) ? numericQuestionNum : 0)
-          const hasReview = groupPredictions.some((prediction) => prediction.reviewNeeded)
-          const correctPredictions = groupPredictions.filter((prediction) => typeof prediction.correct === 'boolean')
-          ctx.save()
-
-          if (hasReview) {
-            drawReviewMark(rect, seed + 211)
-          } else if (correctPredictions.length > 0) {
-            if (correctPredictions.every((prediction) => prediction.correct === true)) drawCheck(rect, seed)
-            else if (correctPredictions.some((prediction) => prediction.correct === false)) drawX(rect, seed)
-          }
-          ctx.restore()
-        })
-      }
-
-      if (Array.isArray(questionCorrect) && questionCorrect.length > 0) {
-        const score = questionCorrect.filter(Boolean).length
-        const total = questionCorrect.length
-        const reviewCount = questionGroups.length > 0
-          ? questionGroups.filter((group) => {
-              const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-              return ids.some((id) => predictionById.get(id)?.reviewNeeded)
-            }).length
-          : 0
-        const tooUncertainForScore = reviewCount >= Math.ceil(total * 0.7) && score <= Math.floor(total * 0.3)
-        if (tooUncertainForScore) {
-          resolve(canvas.toDataURL('image/jpeg', 0.92))
-          return
+            if (hasReview) {
+              drawReviewMark(rect, seed + 211)
+            } else if (correctPredictions.length > 0) {
+              if (correctPredictions.every((prediction) => prediction.correct === true)) drawCheck(rect, seed)
+              else if (correctPredictions.some((prediction) => prediction.correct === false)) drawX(rect, seed)
+            }
+            ctx.restore()
+          })
         }
-        const ratio = score / total
-        const scoreText = `${score}/${total}`
-        const maxQuestionBottom = questionRects.length
-          ? Math.max(...questionRects.map((rect) => rect.y + rect.h))
-          : warpedH * 0.56
-        const qr = layout?.metadata?.qr_position
-        const hasQr = qr && Number.isFinite(qr.x) && Number.isFinite(qr.y)
-        const qrTop = hasQr ? qr.y * warpedH : warpedH * 0.8
-        const qrRight = hasQr && Number.isFinite(qr.width) ? (qr.x + qr.width) * warpedW : warpedW * 0.57
-        const x = hasQr
-          ? Math.min(warpedW * 0.735, Math.max(qrRight + warpedW * 0.075, warpedW * 0.675))
-          : warpedW * 0.67
-        const y = hasQr
-          ? Math.min(qrTop - warpedH * 0.025, Math.max(maxQuestionBottom + warpedH * 0.09, qrTop - warpedH * 0.045))
-          : Math.min(warpedH * 0.82, Math.max(maxQuestionBottom + warpedH * 0.08, warpedH * 0.59))
-        const fontSize = Math.max(58, Math.min(96, warpedW * 0.052))
-        drawScoreMark(scoreText, x, y, {
-          color: ratio >= 0.7 ? TEACHER_INK.green : ratio >= 0.5 ? TEACHER_INK.amber : TEACHER_INK.red,
-          fontSize,
-          seed: annotationJitterSeed + 9001
-        })
-      }
 
-      resolve(canvas.toDataURL('image/jpeg', 0.92))
+        if (Array.isArray(questionCorrect) && questionCorrect.length > 0) {
+          const score = questionCorrect.filter(Boolean).length
+          const total = questionCorrect.length
+          const reviewCount = questionGroups.length > 0
+            ? questionGroups.filter((group) => {
+                const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+                return ids.some((id) => predictionById.get(id)?.reviewNeeded)
+              }).length
+            : 0
+          // A score is a teacher's final mark, not a provisional estimate. Keep
+          // the page free of one until every yellow answer has been resolved.
+          if (reviewCount > 0) {
+            finish(canvas.toDataURL('image/jpeg', 0.92))
+            return
+          }
+          const ratio = score / total
+          const scoreText = `${score}/${total}`
+          const maxQuestionBottom = questionRects.length
+            ? Math.max(...questionRects.map((rect) => rect.y + rect.h))
+            : warpedH * 0.56
+          const qr = layout?.metadata?.qr_position
+          const hasQr = qr && Number.isFinite(qr.x) && Number.isFinite(qr.y)
+          const qrTop = hasQr ? qr.y * warpedH : warpedH * 0.8
+          const qrRight = hasQr && Number.isFinite(qr.width) ? (qr.x + qr.width) * warpedW : warpedW * 0.57
+          const x = hasQr
+            ? Math.min(warpedW * 0.735, Math.max(qrRight + warpedW * 0.075, warpedW * 0.675))
+            : warpedW * 0.67
+          const y = hasQr
+            ? Math.min(qrTop - warpedH * 0.025, Math.max(maxQuestionBottom + warpedH * 0.09, qrTop - warpedH * 0.045))
+            : Math.min(warpedH * 0.82, Math.max(maxQuestionBottom + warpedH * 0.08, warpedH * 0.59))
+          const fontSize = Math.max(58, Math.min(96, warpedW * 0.052))
+          drawScoreMark(scoreText, x, y, {
+            color: ratio >= 0.7 ? TEACHER_INK.green : ratio >= 0.5 ? TEACHER_INK.amber : TEACHER_INK.red,
+            fontSize,
+            seed: annotationJitterSeed + 9001
+          })
+        }
+
+        finish(canvas.toDataURL('image/jpeg', 0.92))
+      } catch (error) {
+        fail(error)
+      }
     }
-    img.onerror = reject
+    img.onerror = () => fail(new Error('Annotation base image failed to load'))
     img.src = baseUrl
   })
 }
@@ -4369,17 +4475,6 @@ function normalizeGradingDigit(value) {
   return Number.isInteger(digit) && digit >= 0 && digit <= 9 ? digit : undefined
 }
 
-function normalizeGradingCells(cells) {
-  if (!Array.isArray(cells)) return null
-  const out = []
-  for (const cell of cells) {
-    const normalized = normalizeGradingDigit(cell)
-    if (normalized === undefined) return null
-    out.push(normalized)
-  }
-  return out
-}
-
 function answerDigitCount(answer) {
   if (answer == null) return 0
   const text = String(answer).trim()
@@ -4494,34 +4589,12 @@ function scantronAnswerLabel(label) {
   return text.replace(/[).:]/g, '').trim() || '?'
 }
 
-function acceptedResponsesFromAnswer(answer, slotCount) {
-  if (answer == null) return []
-  const text = String(answer).trim()
-  if (!/^\d+$/.test(text)) return []
-  const digits = text.split('').map((digit) => Number(digit))
-  if (slotCount === 2 && digits.length === 1) {
-    const digit = digits[0]
-    return [
-      [null, digit],
-      [digit, null],
-      [0, digit]
-    ]
-  }
-  if (digits.length === slotCount) return [digits]
-  if (digits.length < slotCount) {
-    return [Array(slotCount - digits.length).fill(null).concat(digits)]
-  }
-  return []
-}
-
 function acceptedResponsesForGroup(group, slotCount) {
-  const configured = Array.isArray(group?.accepted_digit_responses)
-    ? group.accepted_digit_responses
-      .map((response) => normalizeGradingCells(Array.isArray(response) ? response : response?.digits))
-      .filter(Boolean)
-    : []
-  if (configured.length > 0) return configured
-  return acceptedResponsesFromAnswer(group?.answer, slotCount)
+  return acceptedResponsesForSlotContract({
+    answer: group?.answer,
+    acceptedDigitResponses: group?.accepted_digit_responses,
+    slotCount,
+  })
 }
 
 function predictionCellsForIds(ids, byId) {
@@ -4747,7 +4820,6 @@ function optionalBlankSlotLooksLikeArtifact(prediction, quality) {
     prediction.structuralReview === true ||
     prediction.preprocessDisagreement === true ||
     reason.length > 0
-  const weakModel = confidence < 0.72 || topGap < 0.35
   const weakInk =
     !quality?.ok ||
     quality?.allVariantsWeak === true ||
@@ -4765,12 +4837,25 @@ function optionalBlankSlotLooksLikeArtifact(prediction, quality) {
       reason.includes('guide') ||
       reason.includes('two-digit')
     )
+  const weakGuideLineOne =
+    prediction.digit === 1 &&
+    numberOrZero(quality?.weakVariantRatio) >= 0.50 &&
+    numberOrZero(quality?.artifactVariantRatio) >= 0.15
   const strongExtraDigit =
     confidence >= 0.93 &&
     topGap >= 0.82 &&
     prediction.reviewNeeded !== true &&
     !weakInk
-  return !strongExtraDigit && (guideLineOne || (reviewSignal && (weakModel || weakInk)))
+  // A weak digit classifier is not evidence that a physical slot is blank.
+  // The written digit can itself be hard to classify (for example a light 6)
+  // while still containing substantial ink. Require weak/artifact-like image
+  // evidence before erasing an optional slot. This lets the relative two-slot
+  // contract keep the inkier written digit and discard a guide-line fragment
+  // that several preprocessing variants misread as 1.
+  return !strongExtraDigit && (
+    weakGuideLineOne ||
+    (reviewSignal && weakInk)
+  )
 }
 
 function applyOptionalSingleDigitBlankOverrides(questionGroups, boxes, predictions, cropQuality) {
@@ -4947,9 +5032,23 @@ function layoutUrlForId(layoutId) {
 }
 
 async function fetchLayoutJson(layoutUrl) {
-  const response = await fetch(layoutUrl)
-  if (!response.ok) return null
-  return response.json()
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+  let timer = null
+  try {
+    if (controller) {
+      timer = window.setTimeout(() => controller.abort(), 9000)
+    }
+    const response = await fetch(layoutUrl, controller ? { signal: controller.signal } : undefined)
+    if (!response.ok) return null
+    return response.json()
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error('Worksheet layout took too long to load. Check your connection and scan again.')
+    }
+    throw error
+  } finally {
+    if (timer != null) window.clearTimeout(timer)
+  }
 }
 
 function createQrPayloadForKnownLayout(match) {
@@ -5194,13 +5293,12 @@ function buildSourceAnnotationContext(rawCrops, sourceAnchors, layout, warpedW, 
       return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
     }
 
-    const transformCrop = (crop) => ({
-      ...crop,
-      cropRect: transformRect(crop.cropRect) || cloneRect(crop.cropRect),
-      boxRect: transformRect(crop.boxRect) || cloneRect(crop.boxRect),
-      expectedRect: transformRect(crop.expectedRect) || cloneRect(crop.expectedRect),
-      refinedRect: transformRect(crop.refinedRect) || cloneRect(crop.refinedRect)
-    })
+    const layoutRectsById = layoutBoxRectMap(layout, warpedW, warpedH)
+    const transformCrop = (crop) => transformAnnotationCrop(
+      crop,
+      transformRect,
+      layoutRectsById.get(crop?.id),
+    )
 
     const sourceLayout = clonePlain(layout)
     sourceLayout.homography = {
@@ -5331,7 +5429,9 @@ function buildAnnotationGeometry(rawCrops, warpedW, warpedH, layout = null) {
       boxRect: cloneRect(crop.boxRect),
       expectedRect: cloneRect(crop.expectedRect),
       refinedRect: cloneRect(crop.refinedRect),
-      layoutBoxRect: cloneRect(expectedById.get(crop.id ?? index))
+      annotationRect: cloneRect(crop.annotationRect),
+      annotationRectSource: crop.annotationRectSource || null,
+      layoutBoxRect: annotationLayoutReference(crop, expectedById.get(crop.id ?? index))
     }))
   }
 }
@@ -7563,6 +7663,10 @@ const runRealOCR = async () => {
   const start = performance.now()
   activeScanSessionId = newScanSessionId()
   const evaluationMetadata = prospectiveEvaluationMetadata()
+  const browserLocalCandidateConfig = browserLocalCandidateRuntimeConfig()
+  // Assigned only by the private co-primary path and awaited in `finally`
+  // before the completion event is emitted.
+  let candidatePresentationPromise = null
   const partialDebug = {
     stage: 'starting',
     scanSessionId: activeScanSessionId,
@@ -7580,6 +7684,15 @@ const runRealOCR = async () => {
     v3ContextAnswerZones: [],
     v3GeometryRescue: null,
     v3Shadow: null,
+    v3BrowserLocalCandidate: {
+      status: browserLocalCandidateConfig.requested
+        ? (browserLocalCandidateConfig.enabled ? 'configured' : 'unavailable')
+        : 'not-requested',
+      affectsGrade: false,
+      unavailableReason: browserLocalCandidateConfig.unavailableReason || null,
+      noUploads: true,
+    },
+    v3UniformAnswerViews: [],
     tensors: [],
     preprocessStats: [],
     predictions: [],
@@ -7903,7 +8016,7 @@ const runRealOCR = async () => {
     }
     let selectedCoreCropSequenceItems = []
     let selectedAlternateCropSequenceItems = []
-    if (hybridV3Enabled()) {
+    if (hybridV3Enabled() || browserLocalCandidateConfig.enabled) {
       let zones = []
       try {
         zones = extractContinuousAnswerZones(warpedImage, layout, v3AnswerZoneOptions(rawCrops, layout))
@@ -8283,6 +8396,30 @@ const runRealOCR = async () => {
     }
     partialDebug.wholeAnswerReviewSuggestions = wholeAnswerReviewSuggestions
     const answerGroups = buildAnswerGroups(layout.question_groups, predictions, questionCorrect, layout.id)
+    if (browserLocalCandidateConfig.enabled) {
+      try {
+        // Materialize the cheap, key-blind layout view for every question.
+        // The planner still decides which views receive expensive inference,
+        // but suspicious accepted answers must not be unable to request this
+        // evidence merely because Beta 15.3 initially marked them automatic.
+        const candidateQuestionNums = new Set((answerGroups || [])
+          .map((group) => Number(group?.questionNum)))
+        partialDebug.v3UniformAnswerViews = browserUniformAnswerViews({
+          layout,
+          zones: partialDebug.v3AnswerZones,
+          warpedImage,
+          sourceCanvas: canvas,
+          cv,
+          questionNums: candidateQuestionNums,
+        })
+      } catch (error) {
+        // The optional lane is fail-open. Existing browser OCR remains the
+        // entire result if geometry materialization is unavailable.
+        console.warn('[ScanGrade] browser-local uniform view preparation failed:', error)
+        partialDebug.v3UniformAnswerViews = []
+        partialDebug.v3UniformAnswerViewError = String(error?.message || error)
+      }
+    }
     const annotationRegions = buildAnnotationRegions(
       layout.question_groups,
       annotationGeometry,
@@ -8450,6 +8587,8 @@ const runRealOCR = async () => {
         v3AnswerZones: partialDebug.v3AnswerZones || [],
         v3ContextAnswerZones: partialDebug.v3ContextAnswerZones || [],
         v3GeometryRescue: partialDebug.v3GeometryRescue || null,
+        v3UniformAnswerViews: partialDebug.v3UniformAnswerViews || [],
+        v3BrowserLocalCandidate: partialDebug.v3BrowserLocalCandidate || null,
         v3Shadow: partialDebug.v3Shadow || null,
         confidenceSafetyVetoes: partialDebug.confidenceSafetyVetoes || [],
         confidenceClearanceVetoes: partialDebug.confidenceClearanceVetoes || [],
@@ -8499,7 +8638,17 @@ const runRealOCR = async () => {
       lastLiveOcrDebug.value = null
     }
 
-    ocrResult.value = payload
+    // A private co-primary candidate must finish before any of its accepted
+    // marks are presented. Showing Beta 15.3 first and revising it later would
+    // turn a pre-acceptance safety reader into a silent post-acceptance change.
+    const holdBrowserLocalCandidatePresentation =
+      browserLocalCandidateConfig.requested === true &&
+      browserLocalCandidateConfig.enabled === true &&
+      Array.isArray(layout?.question_groups) &&
+      layout.question_groups.length > 0
+    if (!holdBrowserLocalCandidatePresentation) {
+      ocrResult.value = payload
+    }
 
     let primaryV3Completed = false
     let resolvePrimaryV3Completion
@@ -8512,13 +8661,580 @@ const runRealOCR = async () => {
     })
     let primaryV3Started = false
 
+    // Explicit private candidate: the 7.7 MiB scout and routed 61.1 MiB
+    // reader run entirely in this browser. It starts from the frozen Beta 15.3
+    // transcription, never sends page pixels anywhere, and never sees the
+    // answer key. It may preserve/demote an accepted browser read; an
+    // originally yellow answer may clear only through separately tested local
+    // agreement rules. Every incomplete/slow/error path leaves Beta 15.3
+    // untouched.
+    if (browserLocalCandidateConfig.requested) {
+      const allQuestionItems = browserLocalStrongShadowItems(
+        layout.question_groups,
+        layout.question_groups.map(() => true),
+        rawCrops,
+        layout,
+      ).map((item) => ({
+        ...item,
+        slotCount: item.contract?.physicalSlotCount,
+        layoutFamily: item.contract?.layoutFamily,
+      }))
+      const itemByQuestion = new Map(allQuestionItems
+        .map((item) => [Number(item.questionNum), item]))
+      const initialGroupByQuestion = new Map((payload.answerGroups || [])
+        .map((group) => [Number(group?.questionNum), group]))
+      const predictionsByQuestion = new Map()
+      for (const prediction of predictions || []) {
+        const questionNum = Number(prediction?.questionNum)
+        if (!predictionsByQuestion.has(questionNum)) predictionsByQuestion.set(questionNum, [])
+        predictionsByQuestion.get(questionNum).push(prediction)
+      }
+      const continuousByQuestion = new Map((partialDebug.v3AnswerZones || [])
+        .map((zone) => [Number(zone.questionNum), zone]))
+      const uniformByQuestion = new Map((partialDebug.v3UniformAnswerViews || [])
+        .map((view) => [Number(view.questionNum), view]))
+      payload.v3BrowserLocalCandidate = {
+        status: browserLocalCandidateConfig.enabled ? 'pending' : 'unavailable',
+        affectsGrade: false,
+        unavailableReason: browserLocalCandidateConfig.unavailableReason || null,
+        noUploads: true,
+      }
+      partialDebug.v3BrowserLocalCandidate = payload.v3BrowserLocalCandidate
+      if (lastLiveOcrDebug.value) {
+        lastLiveOcrDebug.value.v3BrowserLocalCandidate =
+          payload.v3BrowserLocalCandidate
+      }
+
+      if (browserLocalCandidateConfig.enabled && allQuestionItems.length) {
+        const candidateStarted = performance.now()
+        const selectedBurstFrame = pendingHybridBurstFrames.find((frame) => frame.selected) ||
+          pendingHybridBurstFrames[0] ||
+          null
+        const candidateBurstFrames = [
+          selectedBurstFrame,
+          ...pendingHybridBurstFrames.filter((frame) => frame !== selectedBurstFrame),
+        ].filter(Boolean).slice(0, 3).map((frame) => ({ ...frame }))
+        const requireComplete = (result, expected, stage) => {
+          if (
+            result?.status !== 'complete' ||
+            Number(result?.completed) !== Number(expected) ||
+            (result?.results || []).some((row) => row?.status !== 'complete')
+          ) {
+            throw new Error(`${stage} incomplete; preserving Beta 15.3`)
+          }
+          return result.results || []
+        }
+        const strongResultByQuestion = (rows) => new Map((rows || [])
+          .map((row) => [Number(row.questionNum), row]))
+        const strongItemsForQuestions = (questionNums, source, cropVariant) =>
+          [...questionNums].map((questionNum) => {
+            const base = itemByQuestion.get(Number(questionNum))
+            const view = source.get(Number(questionNum))
+            const imageDataUrl = view?.imageDataUrl
+            if (!base || !imageDataUrl) return null
+            return {
+              ...base,
+              id: `question-${questionNum}-${cropVariant}`,
+              cropVariant,
+              imageDataUrl,
+            }
+          }).filter(Boolean)
+
+        candidatePresentationPromise = requestWholeSlotScout(allQuestionItems, {
+          enabled: true,
+          modelUrl: publicUrl('models/v3-whole-slot-scout.onnx'),
+          timeoutMs: 30000,
+        }).then(async (scoutResult) => {
+          if (
+            scoutResult?.status !== 'complete' ||
+            (scoutResult.results || []).length !== allQuestionItems.length
+          ) throw new Error('scout incomplete; preserving Beta 15.3')
+          const scoutByQuestion = strongResultByQuestion(scoutResult.results)
+          const descriptors = allQuestionItems.map((item) => {
+            const questionNum = Number(item.questionNum)
+            const group = initialGroupByQuestion.get(questionNum)
+            const groupPredictions = predictionsByQuestion.get(questionNum) || []
+            const initiallyAutomatic = group?.reviewNeeded !== true
+            const currentRead = String(group?.answerText || '')
+            const route = acceptedAnswerSafetyRoute({
+              currentAutomatic: initiallyAutomatic,
+              currentRead,
+              predictions: groupPredictions,
+              scout: scoutByQuestion.get(questionNum) || null,
+              layoutId: layout.layout_id || layout.id || '',
+            })
+            return {
+              questionNum,
+              initiallyAutomatic,
+              currentRead,
+              optionalSlotIndices: item.contract?.optionalSlotIndices || [],
+              route,
+              highRiskMismatchReview: groupPredictions.some((prediction) =>
+                prediction?.highRiskMismatchReview === true),
+            }
+          })
+          const preStrongDecisions = descriptors.map((item) => ({
+            ...item,
+            decision: browserLocalCandidateDecision({
+              currentAutomatic: item.initiallyAutomatic,
+              currentRead: item.currentRead,
+              scout: scoutByQuestion.get(item.questionNum),
+              stitched: null,
+              continuous: null,
+              uniform: null,
+              layoutId: layout.layout_id || layout.id || '',
+              optionalSlotIndices: item.optionalSlotIndices,
+              routeReasons: item.route.reasons,
+              highRiskMismatchReview: item.highRiskMismatchReview,
+            }),
+          }))
+          const stitchedQuestionNums = new Set(preStrongDecisions
+            .filter((item) => Number(item.decision?.stitchedReaderCalls || 0) > 0)
+            .map((item) => item.questionNum))
+          const stitchedItems = allQuestionItems
+            .filter((item) => stitchedQuestionNums.has(Number(item.questionNum)))
+            .map((item) => ({
+              ...item,
+              id: `question-${item.questionNum}-candidate-stitched`,
+              cropVariant: 'candidate-stitched',
+            }))
+
+          let stitchedRows = []
+          let capability = {
+            enabled: true,
+            tier: 'scout-only-no-strong-calls',
+            reason: 'no-strong-reader-call-required',
+          }
+          if (stitchedItems.length) {
+            const firstRun = await requestBrowserLocalStrongPersistentShadow(
+              stitchedItems.slice(0, 1),
+              browserLocalCandidateConfig,
+            )
+            const firstRows = requireComplete(firstRun, 1, 'first strong-reader check')
+            const first = firstRows[0]
+            capability = browserLocalStrongTier({
+              wasmSimdSupported: first?.wasmSimdEnabled === true,
+              loadStatus: 'complete',
+              initializationMs: Number(first?.initializationMs || 0),
+              firstInferenceMs: Number(first?.inferenceMs || 0),
+              deviceMemoryGb: typeof navigator !== 'undefined'
+                ? navigator.deviceMemory
+                : null,
+              maximumFirstCheckMs: browserLocalCandidateConfig.maximumFirstCheckMs,
+            })
+            if (!capability.enabled) {
+              throw new Error(`capability gate failed: ${capability.reason}`)
+            }
+            stitchedRows.push(...firstRows)
+            if (stitchedItems.length > 1) {
+              const remainingRun = await requestBrowserLocalStrongPersistentShadow(
+                stitchedItems.slice(1),
+                browserLocalCandidateConfig,
+              )
+              stitchedRows.push(...requireComplete(
+                remainingRun,
+                stitchedItems.length - 1,
+                'remaining stitched reads',
+              ))
+            }
+          }
+          const stitchedByQuestion = strongResultByQuestion(stitchedRows)
+          const preliminary = descriptors.map((item) => ({
+            ...item,
+            decision: browserLocalCandidateDecision({
+              currentAutomatic: item.initiallyAutomatic,
+              currentRead: item.currentRead,
+              scout: scoutByQuestion.get(item.questionNum),
+              stitched: stitchedByQuestion.get(item.questionNum),
+              continuous: null,
+              uniform: null,
+              layoutId: layout.layout_id || layout.id || '',
+              optionalSlotIndices: item.optionalSlotIndices,
+              routeReasons: item.route.reasons,
+              highRiskMismatchReview: item.highRiskMismatchReview,
+            }),
+          }))
+          const continuousQuestionNums = new Set([
+            ...stitchedQuestionNums,
+            ...preliminary
+            .filter((item) => Number(item.decision?.continuousReaderCalls || 0) > 0)
+            .map((item) => item.questionNum),
+          ])
+          const continuousItems = strongItemsForQuestions(
+            continuousQuestionNums,
+            continuousByQuestion,
+            'candidate-continuous',
+          )
+          if (continuousItems.length !== continuousQuestionNums.size) {
+            throw new Error('continuous crop unavailable; preserving Beta 15.3')
+          }
+          const continuousRows = continuousItems.length
+            ? requireComplete(
+                await requestBrowserLocalStrongPersistentShadow(
+                  continuousItems,
+                  browserLocalCandidateConfig,
+                ),
+                continuousItems.length,
+                'continuous reads',
+              )
+            : []
+          const continuousReadByQuestion = strongResultByQuestion(continuousRows)
+
+          const withoutUniform = descriptors.map((item) => ({
+            ...item,
+            decision: browserLocalCandidateDecision({
+              currentAutomatic: item.initiallyAutomatic,
+              currentRead: item.currentRead,
+              scout: scoutByQuestion.get(item.questionNum),
+              stitched: stitchedByQuestion.get(item.questionNum),
+              continuous: continuousReadByQuestion.get(item.questionNum),
+              uniform: null,
+              layoutId: layout.layout_id || layout.id || '',
+              optionalSlotIndices: item.optionalSlotIndices,
+              routeReasons: item.route.reasons,
+              highRiskMismatchReview: item.highRiskMismatchReview,
+            }),
+          }))
+          const uniformQuestionNums = new Set([
+            ...stitchedQuestionNums,
+            ...withoutUniform
+              .filter((item) => item.decision.automatic === false)
+              .map((item) => item.questionNum),
+          ])
+          const uniformItems = strongItemsForQuestions(
+            uniformQuestionNums,
+            uniformByQuestion,
+            'candidate-uniform',
+          )
+          if (uniformItems.length !== uniformQuestionNums.size) {
+            throw new Error('uniform crop unavailable; preserving Beta 15.3')
+          }
+          const uniformRows = uniformItems.length
+            ? requireComplete(
+                await requestBrowserLocalStrongPersistentShadow(
+                  uniformItems,
+                  browserLocalCandidateConfig,
+                ),
+                uniformItems.length,
+                'uniform reads',
+              )
+            : []
+          const uniformReadByQuestion = strongResultByQuestion(uniformRows)
+
+          const strictDecisions = descriptors.map((item) => {
+            const groupPredictions = predictionsByQuestion.get(item.questionNum) || []
+            const blockingSafetyVeto = !item.initiallyAutomatic &&
+              groupPredictions.some((prediction) =>
+                Boolean(
+                  prediction?.forcedReviewReason ||
+                  prediction?.structuralReview ||
+                  prediction?.consensusReviewVeto ||
+                  prediction?.acceptedAnswerSafetyVeto,
+                ))
+            return {
+              ...item,
+              blockingSafetyVeto,
+              decision: browserLocalCandidateDecision({
+                currentAutomatic: item.initiallyAutomatic,
+                currentRead: item.currentRead,
+                scout: scoutByQuestion.get(item.questionNum),
+                stitched: stitchedByQuestion.get(item.questionNum),
+                continuous: continuousReadByQuestion.get(item.questionNum),
+                uniform: uniformReadByQuestion.get(item.questionNum),
+                layoutId: layout.layout_id || layout.id || '',
+                optionalSlotIndices: item.optionalSlotIndices,
+                routeReasons: item.route.reasons,
+                highRiskMismatchReview: item.highRiskMismatchReview,
+                blockingSafetyVeto,
+              }),
+            }
+          })
+          const coPrimaryInput = (item, frame = null) => ({
+            initiallyAutomatic: item.initiallyAutomatic,
+            candidateDecision: item.decision,
+            browser: { read: item.currentRead },
+            scout: scoutByQuestion.get(item.questionNum),
+            stitched: stitchedByQuestion.get(item.questionNum),
+            continuous: continuousReadByQuestion.get(item.questionNum),
+            uniform: uniformReadByQuestion.get(item.questionNum),
+            frame,
+            layoutId: layout.layout_id || layout.id || '',
+            optionalSlotIndices: item.optionalSlotIndices,
+            routeReasons: item.route.reasons,
+            highRiskMismatchReview: item.highRiskMismatchReview,
+            blockingSafetyVeto: item.blockingSafetyVeto,
+          })
+          const frameQuestionNums = new Set(strictDecisions
+            .filter((item) => {
+              const input = coPrimaryInput(item)
+              const noFrame = browserLocalCoPrimaryCandidate7Decision(input)
+              if (noFrame.decision.automatic) return false
+              const read = (value) => String(
+                value?.text ?? value?.read ?? '',
+              ).trim()
+              const stitchedRead = read(input.stitched)
+              const continuousRead = read(input.continuous)
+              const uniformRead = read(input.uniform)
+              const browserRead = read(input.browser)
+              const scoutRead = read(input.scout)
+              const couldCompleteFourView =
+                stitchedRead &&
+                stitchedRead === continuousRead &&
+                stitchedRead === uniformRead
+              const couldCompleteMultifamilyFrame =
+                browserRead &&
+                browserRead === scoutRead &&
+                browserRead === stitchedRead
+              return (
+                couldCompleteFourView ||
+                couldCompleteMultifamilyFrame ||
+                browserLocalCoPrimaryEvidencePlan(input)
+                  .requests.includes('frame')
+              )
+            })
+            .map((item) => item.questionNum))
+          let frameRows = []
+          let framePreparation = { frames: [], sequenceItems: [] }
+          if (frameQuestionNums.size && candidateBurstFrames.length >= 3) {
+            const selectedFrameItems = (partialDebug.v3AnswerZones || [])
+              .filter((zone) => frameQuestionNums.has(Number(zone.questionNum)))
+              .map((zone) => {
+                const base = itemByQuestion.get(Number(zone.questionNum))
+                return {
+                  ...base,
+                  id: `question-${zone.questionNum}-candidate-frame-selected`,
+                  questionNum: Number(zone.questionNum),
+                  frameIndex: candidateBurstFrames[0]?.index ?? null,
+                  cropVariant: 'candidate-frame-continuous',
+                  imageDataUrl: zone.imageDataUrl,
+                }
+              })
+            framePreparation = await buildV3BurstShadowItems({
+              questionGroups: layout.question_groups,
+              layout,
+              qrLocation: qrPayload?.qr_location || null,
+              selectedSequenceItems: selectedFrameItems,
+              selectedCompactItems: [],
+              selectedZones: partialDebug.v3AnswerZones,
+              selectedRawCrops: [],
+              selectedSourceAnchors: null,
+              selectedAlternateItems: [],
+              burstFrames: candidateBurstFrames,
+              reviewQuestionNums: [...frameQuestionNums],
+              includeCompactItems: false,
+            })
+            const frameItems = (framePreparation.sequenceItems || [])
+              .map((frameItem) => ({
+                ...frameItem,
+                contract: itemByQuestion.get(Number(frameItem.questionNum))?.contract || {},
+              }))
+            if (frameItems.length) {
+              const frameRun = await requestBrowserLocalStrongPersistentShadow(
+                frameItems,
+                {
+                  ...browserLocalCandidateConfig,
+                  limit: Math.max(browserLocalCandidateConfig.limit, frameItems.length),
+                },
+              )
+              frameRows = frameRun?.results || []
+            }
+          }
+          const frameRowsByQuestion = new Map()
+          for (const row of frameRows) {
+            const questionNum = Number(row.questionNum)
+            if (!frameRowsByQuestion.has(questionNum)) {
+              frameRowsByQuestion.set(questionNum, [])
+            }
+            frameRowsByQuestion.get(questionNum).push(row)
+          }
+          const frameByQuestion = new Map([...frameQuestionNums].map((questionNum) => [
+            questionNum,
+            browserLocalThreeFrameConsensus(
+              frameRowsByQuestion.get(questionNum) || [],
+            ),
+          ]))
+          const decisions = strictDecisions.map((item) => ({
+            ...item,
+            strictDecision: item.decision,
+            decision: browserLocalCoPrimaryCandidate7Decision(
+              coPrimaryInput(item, frameByQuestion.get(item.questionNum) || {
+                available: false,
+                threeOfThree: false,
+              }),
+            ).decision,
+          }))
+          const application = applyBrowserLocalCandidateToPredictions({
+            questionGroups: layout.question_groups,
+            predictions,
+            decisions,
+          })
+          predictions = application.predictions
+          const candidateQuestionCorrect = buildQuestionCorrect(
+            layout.question_groups,
+            predictions,
+          )
+          const candidateQuestionReview = buildQuestionReviewFlags(
+            layout.question_groups,
+            predictions,
+            candidateQuestionCorrect,
+          )
+          const candidateAnswerGroups = buildAnswerGroups(
+            layout.question_groups,
+            predictions,
+            candidateQuestionCorrect,
+            layout.id,
+          )
+          const candidateAnnotationRegions = buildAnnotationRegions(
+            layout.question_groups,
+            annotationGeometry,
+            predictions,
+            candidateQuestionCorrect,
+          )
+          payload.digits = predictions.map((prediction) => prediction.digit)
+          payload.confidences = predictions.map((prediction) => prediction.confidence)
+          payload.predictions = predictions
+          delete payload.correct
+          payload.questionCorrect = candidateQuestionCorrect
+          payload.questionCount = candidateQuestionCorrect?.length || 0
+          payload.questionScore = candidateQuestionCorrect?.filter(Boolean).length || 0
+          payload.questionReview = candidateQuestionReview
+          payload.questionReviewCount = candidateQuestionReview?.filter(Boolean).length || 0
+          payload.answerGroups = candidateAnswerGroups
+          payload.annotationRegions = candidateAnnotationRegions
+          payload.needsReview = !!forcedFallbackReviewReason || baseNeedsReview ||
+            predictions.some((prediction) => prediction.reviewNeeded) ||
+            candidateQuestionReview?.some(Boolean)
+          if (
+            application.demoted.length ||
+            application.promoted.length ||
+            application.replaced.length
+          ) {
+            try {
+              if (payload.annotationBaseUrl) {
+                payload.annotatedImageUrl = await composeStudentAnnotatedImage(
+                  payload.annotationBaseUrl,
+                  annotationWidth,
+                  annotationHeight,
+                  predictions,
+                  annotationCrops,
+                  annotationLayout,
+                  candidateQuestionCorrect,
+                  payload.manualCorrections,
+                  payload.annotationSeed,
+                )
+              }
+            } catch (error) {
+              console.warn('[ScanGrade] browser-local candidate annotation refresh failed:', error)
+            }
+          }
+          const result = {
+            status: 'complete',
+            affectsGrade:
+              application.demoted.length > 0 ||
+              application.promoted.length > 0 ||
+              application.replaced.length > 0,
+            noUploads: true,
+            elapsedMs: performance.now() - candidateStarted,
+            capability,
+            scout: {
+              status: scoutResult.status,
+              elapsedMs: scoutResult.elapsedMs,
+              completed: scoutResult.results.length,
+            },
+            workload: {
+              scoutReads: allQuestionItems.length,
+              stitchedReads: stitchedRows.length,
+              continuousReads: continuousRows.length,
+              uniformReads: uniformRows.length,
+              frameReads: frameRows.length,
+              frameQuestions: frameQuestionNums.size,
+            },
+            modelRuntime: {
+              initializationMs: Number(stitchedRows[0]?.initializationMs || 0),
+              firstInferenceMs: Number(stitchedRows[0]?.inferenceMs || 0),
+              sessionReusedCount: [...stitchedRows, ...continuousRows, ...uniformRows, ...frameRows]
+                .filter((row) => row?.sessionReused === true).length,
+              inferenceMs: [...stitchedRows, ...continuousRows, ...uniformRows, ...frameRows]
+                .map((row) => Number(row?.inferenceMs || 0)),
+            },
+            readerEvidence: descriptors.map((item) => {
+              const scout = scoutByQuestion.get(item.questionNum)
+              const stitched = stitchedByQuestion.get(item.questionNum)
+              const continuous = continuousReadByQuestion.get(item.questionNum)
+              const uniform = uniformReadByQuestion.get(item.questionNum)
+              const frame = frameByQuestion.get(item.questionNum)
+              const summarize = (row) => row
+                ? {
+                    read: String(row.text ?? row.read ?? ''),
+                    minTokenProbability: Number(row.minTokenProbability ?? row.probability ?? 0),
+                  }
+                : null
+              return {
+                questionNum: item.questionNum,
+                scout: summarize(scout),
+                stitched: summarize(stitched),
+                continuous: summarize(continuous),
+                uniform: summarize(uniform),
+                frame: frame || null,
+              }
+            }),
+            framePreparation: {
+              frames: framePreparation.frames || [],
+              requestedQuestions: [...frameQuestionNums],
+            },
+            demoted: application.demoted,
+            promoted: application.promoted,
+            replaced: application.replaced,
+            decisions,
+          }
+          payload.v3BrowserLocalCandidate = result
+          partialDebug.v3BrowserLocalCandidate = result
+          partialDebug.predictions = predictions
+          partialDebug.questionCorrect = candidateQuestionCorrect
+          partialDebug.questionReview = candidateQuestionReview
+          partialDebug.answerGroups = candidateAnswerGroups
+          partialDebug.annotationRegions = candidateAnnotationRegions
+          if (lastLiveOcrDebug.value) {
+            lastLiveOcrDebug.value.v3BrowserLocalCandidate = result
+            lastLiveOcrDebug.value.predictions = predictions
+            lastLiveOcrDebug.value.questionCorrect = candidateQuestionCorrect
+            lastLiveOcrDebug.value.questionReview = candidateQuestionReview
+            lastLiveOcrDebug.value.answerGroups = candidateAnswerGroups
+            lastLiveOcrDebug.value.annotationRegions = candidateAnnotationRegions
+            lastLiveOcrDebug.value.markedSheetDataUrl = payload.annotatedImageUrl || null
+          }
+          ocrResult.value = { ...payload }
+        }).catch((error) => {
+          const result = {
+            status: 'fail-open',
+            affectsGrade: false,
+            noUploads: true,
+            elapsedMs: performance.now() - candidateStarted,
+            error: String(error?.message || error),
+          }
+          payload.v3BrowserLocalCandidate = result
+          partialDebug.v3BrowserLocalCandidate = result
+          if (lastLiveOcrDebug.value) lastLiveOcrDebug.value.v3BrowserLocalCandidate = result
+          ocrResult.value = { ...payload }
+        })
+      } else if (holdBrowserLocalCandidatePresentation) {
+        // Extraction produced no usable whole-answer items. Fail open to the
+        // unchanged Beta 15.3 result instead of leaving the UI unresolved.
+        ocrResult.value = { ...payload }
+      }
+    }
+
     // Beta 15.3 safety-repair shadow. The small local scout examines accepted
     // reads, routes only suspicious ones to two key-blind grayscale views, and
     // records whether the accepted browser text should have remained yellow.
     // Until prospective device validation passes, this is evidence-only and
     // cannot change grading, annotations, or the correction interface.
     const acceptedSafetyConfig = wholeSlotScoutShadowConfig()
-    if (hybridV3Enabled() && acceptedSafetyConfig.requested) {
+    if (
+      hybridV3Enabled() &&
+      acceptedSafetyConfig.requested &&
+      !browserLocalCandidateConfig.requested
+    ) {
       const acceptedQuestionSet = new Set((payload.answerGroups || [])
         .filter((group) => group?.reviewNeeded !== true)
         .map((group) => Number(group?.questionNum)))
@@ -8731,7 +9447,11 @@ const runRealOCR = async () => {
     // only current yellow answers, records evidence, then terminates. Candidate
     // 6 remains byte-for-byte authoritative even if this times out or crashes.
     const browserLocalStrongConfig = browserLocalStrongShadowConfig()
-    if (hybridV3Enabled() && browserLocalStrongConfig.requested) {
+    if (
+      hybridV3Enabled() &&
+      browserLocalStrongConfig.requested &&
+      !browserLocalCandidateConfig.requested
+    ) {
       const shadowQuestionNums = displayedYellowQuestionNumbers(
         layout.question_groups,
         questionReview,
@@ -8764,7 +9484,12 @@ const runRealOCR = async () => {
 
     const v3LargeModelUrl = optionalWholeAnswerReviewUrl()
     const v3CompactModelUrl = optionalV3CompactModelUrl()
-    if (hybridV3Enabled() && (v3LargeModelUrl || v3CompactModelUrl) && v3SequenceItems.length) {
+    if (
+      hybridV3Enabled() &&
+      !browserLocalCandidateConfig.requested &&
+      (v3LargeModelUrl || v3CompactModelUrl) &&
+      v3SequenceItems.length
+    ) {
       primaryV3Started = true
       const localFirstMode = v3LocalFirstReviewEnabled()
       // This evidence is prepared locally but is sent only after a teacher
@@ -9434,6 +10159,12 @@ const runRealOCR = async () => {
       totalTime: (performance.now() - start).toFixed(2)
     }
   } finally {
+    if (candidatePresentationPromise) {
+      // The candidate promise handles all of its own failures by restoring
+      // Beta 15.3. Awaiting it here only orders the completion event after
+      // that final, pre-acceptance result is available.
+      await candidatePresentationPromise
+    }
     const scanningDateWait = Math.max(0, scanningDateEarliestFinish - performance.now())
     if (scanningDateWait > 0) {
       await new Promise((resolve) => window.setTimeout(resolve, scanningDateWait))
@@ -9597,7 +10328,7 @@ onUnmounted(() => {
 
 <style scoped>
 .camera-capture {
-  --teacher-highlighter-rgb: 255, 255, 28;
+  --teacher-highlighter-rgb: 238, 255, 0;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -9618,6 +10349,7 @@ onUnmounted(() => {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+  justify-content: center;
 }
 
 .preview-area {
@@ -9639,7 +10371,7 @@ onUnmounted(() => {
   height: auto;
   max-height: calc(100dvh - 218px);
   max-width: min(100%, calc((100dvh - 218px) * 8.5 / 11));
-  margin-bottom: 7px;
+  margin: 0;
   border-radius: 8px;
   flex: none;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
@@ -9832,21 +10564,6 @@ onUnmounted(() => {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .progressive-marking-stroke {
-    animation: none;
-  }
-
-  .progressive-marking-stroke {
-    stroke-dashoffset: 0;
-  }
-
-  .scanning-date-stamp {
-    opacity: 0.72;
-    animation: none;
-  }
-}
-
 .video-preview, .captured-image {
   display: block;
   width: 100%;
@@ -9871,7 +10588,12 @@ onUnmounted(() => {
 
 .annotation-hotspot:hover,
 .annotation-hotspot--active {
-  background: rgba(240, 199, 68, 0.08);
+  background: transparent;
+}
+
+.annotation-hotspot--active {
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .annotation-hotspot:focus-visible {
@@ -9885,6 +10607,131 @@ onUnmounted(() => {
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
+}
+
+.on-sheet-correction-focus {
+  position: absolute;
+  z-index: 9;
+  display: grid;
+  grid-template-columns: repeat(var(--correction-preview-slots, 1), minmax(0, 1fr));
+  align-items: stretch;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 2px solid rgba(36, 90, 164, 0.48);
+  border-radius: 4px;
+  background: rgba(251, 250, 244, 0.95);
+  box-shadow:
+    0 0 0 3px rgba(176, 224, 255, 0.16),
+    0 1px 4px rgba(36, 90, 164, 0.10);
+  pointer-events: none;
+}
+
+.on-sheet-correction-entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border-radius: 1px;
+  background: transparent;
+  color: #171717;
+  font-family: "Marker Felt", "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif;
+  font-size: clamp(22px, 7vw, 42px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-align: center;
+  text-shadow:
+    0.35px 0.25px 0 rgba(23, 23, 23, 0.22),
+    -0.25px 0.2px 0 rgba(23, 23, 23, 0.12);
+}
+
+.on-sheet-correction-entry--empty {
+  background: transparent;
+}
+
+.correction-keypad {
+  position: fixed;
+  z-index: 30;
+  left: 50%;
+  bottom: max(76px, calc(env(safe-area-inset-bottom, 0px) + 68px));
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+  width: min(94vw, 390px);
+  box-sizing: border-box;
+  padding: 7px;
+  border: 1px solid rgba(36, 90, 164, 0.24);
+  border-radius: 13px;
+  background: rgba(247, 248, 250, 0.94);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.22);
+  font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.correction-keypad-key {
+  appearance: none;
+  min-width: 0;
+  height: 43px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.98);
+  color: #1d1d1f;
+  font: inherit;
+  font-size: 21px;
+  line-height: 1;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.correction-keypad-key:active {
+  transform: scale(0.95);
+  background: #e9eef6;
+}
+
+.correction-keypad-key--blank {
+  color: #245aa4;
+  font-weight: 800;
+}
+
+.correction-keypad-key--backspace {
+  color: #55565a;
+  font-size: 20px;
+}
+
+.correction-keypad-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b42318;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.correction-keypad-check-again {
+  grid-column: 1 / -1;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #e8e8ed;
+  color: #1d1d1f;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.correction-keypad-message {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #694f20;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: center;
 }
 
 .placeholder {
@@ -9972,7 +10819,7 @@ onUnmounted(() => {
     width: min(100%, calc((100dvh - 208px) * 8.5 / 11));
     max-width: min(100%, calc((100dvh - 208px) * 8.5 / 11));
     max-height: calc(100dvh - 208px);
-    margin-bottom: 6px;
+    margin: 0;
   }
 
   .controls--student {
@@ -10361,7 +11208,7 @@ onUnmounted(() => {
   position: absolute;
   z-index: 8;
   box-sizing: border-box;
-  min-width: 128px;
+  min-width: 156px;
   max-width: calc(100% - 12px);
   max-height: min(56%, 174px);
   overflow: visible;
@@ -10371,7 +11218,7 @@ onUnmounted(() => {
 }
 
 .student-correction-panel--image.student-correction-panel--double {
-  min-width: 150px;
+  min-width: 170px;
 }
 
 .student-correction-panel--image::after {
@@ -10422,21 +11269,6 @@ onUnmounted(() => {
   filter: drop-shadow(1px -1px 0 rgba(240, 199, 68, 0.72));
 }
 
-.student-correction-panel--image .student-correction-title {
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 5px;
-  font-size: 12px;
-}
-
-.student-correction-panel--image .student-correction-close {
-  margin-left: auto;
-  font-size: 16px;
-}
-
 .student-correction-panel--image .student-correction-choices,
 .student-correction-panel--image .student-correction-actions {
   gap: 4px;
@@ -10483,7 +11315,7 @@ onUnmounted(() => {
 }
 
 .student-correction-panel--image .student-correction-manual {
-  margin-top: 6px;
+  margin-top: 0;
 }
 
 .student-correction-blank-actions {
@@ -10622,7 +11454,8 @@ onUnmounted(() => {
 
 .student-correction-manual {
   display: grid;
-  grid-template-columns: 44px 64px;
+  grid-template-columns: 22px 44px 64px;
+  align-items: center;
   gap: 4px;
   margin: 0;
   color: #1d1d1f;
@@ -10631,7 +11464,7 @@ onUnmounted(() => {
 }
 
 .student-correction-panel--image.student-correction-panel--double .student-correction-manual {
-  grid-template-columns: 58px 64px;
+  grid-template-columns: 22px 58px 64px;
 }
 
 .student-correction-manual input {

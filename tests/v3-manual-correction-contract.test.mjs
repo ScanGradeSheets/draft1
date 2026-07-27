@@ -2,10 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  inferSingleDigitSlot,
   manualCorrectionContract,
-  manualCorrectionNeedsExplicitPosition,
-  manualCorrectionTextWithBlank,
 } from '../src/v3/manual-correction-contract.js'
 
 test('one digit entered for one flexible box stays that digit', () => {
@@ -14,13 +11,6 @@ test('one digit entered for one flexible box stays that digit', () => {
     correctionCells: [9],
     answerText: '9',
   })
-})
-
-test('infers a one-digit correction position only when exactly one physical slot is occupied', () => {
-  assert.equal(inferSingleDigitSlot([9, null], 2), 0)
-  assert.equal(inferSingleDigitSlot([null, 9], 2), 1)
-  assert.equal(inferSingleDigitSlot([1, 9], 2), null)
-  assert.equal(inferSingleDigitSlot([null, null], 2), null)
 })
 
 test('two digits entered for one flexible box remain one answer token', () => {
@@ -50,15 +40,4 @@ test('two-slot teacher corrections preserve complete answers used for grading an
     correctionCells: [4, 9],
     answerText: '49',
   })
-})
-
-test('a one-digit entry in two boxes requires the teacher to preserve its position', () => {
-  assert.equal(manualCorrectionNeedsExplicitPosition('9', 2), true)
-  assert.equal(manualCorrectionNeedsExplicitPosition('_9', 2), false)
-  assert.equal(manualCorrectionNeedsExplicitPosition('9_', 2), false)
-  assert.equal(manualCorrectionNeedsExplicitPosition('19', 2), false)
-  assert.equal(manualCorrectionTextWithBlank('9', 0, 2), '_9')
-  assert.equal(manualCorrectionTextWithBlank('9', 1, 2), '9_')
-  assert.equal(manualCorrectionTextWithBlank('19', 0, 2), '_9')
-  assert.equal(manualCorrectionTextWithBlank('19', 1, 2), '1_')
 })

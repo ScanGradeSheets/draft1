@@ -4,6 +4,8 @@ import { decodeNumericTrocrTokens, inferBlankOptionalSlots } from '../v3/trocr-n
 const SIZE = 384
 const START_TOKEN = 2
 const EOS_TOKEN = 2
+let cachedSessionKey = ''
+let cachedSessionPromise = null
 
 function isWasmSimdSupported() {
   if (typeof WebAssembly === 'undefined' || typeof WebAssembly.validate !== 'function') return false
@@ -63,31 +65,60 @@ async function imageTensor(imageDataUrl, pixelValues = null) {
   }
 }
 
-async function recognize({ imageDataUrl, pixelValues, encoderUrl, decoderUrl, wasmPaths, contract = {}, forceNoSimd = false }) {
-  ort.env.wasm.numThreads = 1
-  ort.env.wasm.simd = !forceNoSimd && isWasmSimdSupported()
-  ort.env.wasm.wasmPaths = wasmPaths
-  const initStarted = performance.now()
-  const [encoder, decoder] = await Promise.all([
-    ort.InferenceSession.create(encoderUrl, { executionProviders: ['wasm'] }),
-    ort.InferenceSession.create(decoderUrl, { executionProviders: ['wasm'] }),
-  ])
-  const initializationMs = performance.now() - initStarted
-  const pixels = await imageTensor(imageDataUrl, pixelValues)
-  const inferenceStarted = performance.now()
-  const encoded = await encoder.run({ pixel_values: pixels })
+async function modelSessions({ encoderUrl, decoderUrl, wasmPaths, forceNoSimd }) {
+  const simd = !forceNoSimd && isWasmSimdSupported()
+  const key = JSON.stringify({ encoderUrl, decoderUrl, wasmPaths, simd })
+  const reused = cachedSessionKey === key && cachedSessionPromise != null
+  if (!reused) {
+    ort.env.wasm.numThreads = 1
+    ort.env.wasm.simd = simd
+    ort.env.wasm.wasmPaths = wasmPaths
+    cachedSessionKey = key
+    cachedSessionPromise = (async () => {
+      const started = performance.now()
+      const [encoder, decoder] = await Promise.all([
+        ort.InferenceSession.create(encoderUrl, { executionProviders: ['wasm'] }),
+        ort.InferenceSession.create(decoderUrl, { executionProviders: ['wasm'] }),
+      ])
+      return { encoder, decoder, initializationMs: performance.now() - started }
+    })().catch((error) => {
+      cachedSessionKey = ''
+      cachedSessionPromise = null
+      throw error
+    })
+  }
+  const sessions = await cachedSessionPromise
+  return {
+    ...sessions,
+    initializationMs: reused ? 0 : sessions.initializationMs,
+    sessionReused: reused,
+  }
+}
+
+async function decodeEncodedAnswer(decoder, encoderHiddenStates, contract = {}) {
   const tokens = [START_TOKEN]
   const tokenProbabilities = []
   for (let step = 0; step < 4; step += 1) {
     const ids = new BigInt64Array(tokens.map(BigInt))
-    const decoded = await decoder.run({
-      input_ids: new ort.Tensor('int64', ids, [1, tokens.length]),
-      encoder_hidden_states: encoded.encoder_hidden_states,
-    })
-    const next = argmaxWithProbability(decoded.logits.data, tokens.length, decoded.logits.dims[2])
-    tokens.push(next.token)
-    tokenProbabilities.push(next.probability)
-    if (next.token === EOS_TOKEN) break
+    const inputIds = new ort.Tensor('int64', ids, [1, tokens.length])
+    let decoderOutputs = null
+    try {
+      decoderOutputs = await decoder.run({
+        input_ids: inputIds,
+        encoder_hidden_states: encoderHiddenStates,
+      })
+      const next = argmaxWithProbability(
+        decoderOutputs.logits.data,
+        tokens.length,
+        decoderOutputs.logits.dims[2],
+      )
+      tokens.push(next.token)
+      tokenProbabilities.push(next.probability)
+      if (next.token === EOS_TOKEN) break
+    } finally {
+      inputIds.dispose?.()
+      for (const tensor of Object.values(decoderOutputs || {})) tensor?.dispose?.()
+    }
   }
   const maximumDigits = Math.min(4, Math.max(1, Number(contract.maxHandwrittenDigits) || 4))
   const decoded = decodeNumericTrocrTokens(tokens, { maximumDigits })
@@ -106,9 +137,6 @@ async function recognize({ imageDataUrl, pixelValues, encoderUrl, decoderUrl, wa
     meanTokenProbability: tokenProbabilities.length
       ? tokenProbabilities.reduce((sum, value) => sum + value, 0) / tokenProbabilities.length
       : 0,
-    initializationMs,
-    inferenceMs: performance.now() - inferenceStarted,
-    wasmSimdEnabled: ort.env.wasm.simd === true,
     contract: {
       layoutFamily: String(contract.layoutFamily || 'unknown'),
       physicalSlotCount,
@@ -119,10 +147,111 @@ async function recognize({ imageDataUrl, pixelValues, encoderUrl, decoderUrl, wa
   }
 }
 
+async function recognize({ imageDataUrl, pixelValues, encoderUrl, decoderUrl, wasmPaths, contract = {}, forceNoSimd = false }) {
+  const {
+    encoder,
+    decoder,
+    initializationMs,
+    sessionReused,
+  } = await modelSessions({ encoderUrl, decoderUrl, wasmPaths, forceNoSimd })
+  const pixels = await imageTensor(imageDataUrl, pixelValues)
+  const inferenceStarted = performance.now()
+  let encoded = null
+  try {
+    encoded = await encoder.run({ pixel_values: pixels })
+    const decoded = await decodeEncodedAnswer(
+      decoder,
+      encoded.encoder_hidden_states,
+      contract,
+    )
+    return {
+      ...decoded,
+      initializationMs,
+      sessionReused,
+      inferenceMs: performance.now() - inferenceStarted,
+      wasmSimdEnabled: ort.env.wasm.simd === true,
+    }
+  } finally {
+    pixels.dispose?.()
+    for (const tensor of Object.values(encoded || {})) tensor?.dispose?.()
+  }
+}
+
+async function recognizeBatch({
+  pixelValuesBatch,
+  batchSize,
+  encoderUrl,
+  decoderUrl,
+  wasmPaths,
+  contracts = [],
+  forceNoSimd = false,
+}) {
+  const count = Math.max(1, Number(batchSize) || 1)
+  if (
+    !(pixelValuesBatch instanceof Float32Array) ||
+    pixelValuesBatch.length !== count * 3 * SIZE * SIZE
+  ) {
+    throw new Error('invalid batch tensor')
+  }
+  const {
+    encoder,
+    decoder,
+    initializationMs,
+    sessionReused,
+  } = await modelSessions({ encoderUrl, decoderUrl, wasmPaths, forceNoSimd })
+  const pixels = new ort.Tensor(
+    'float32',
+    pixelValuesBatch,
+    [count, 3, SIZE, SIZE],
+  )
+  const started = performance.now()
+  let encoded = null
+  try {
+    encoded = await encoder.run({ pixel_values: pixels })
+    const allHidden = encoded.encoder_hidden_states
+    if (allHidden.dims[0] !== count || allHidden.data.length % count !== 0) {
+      throw new Error('encoder batch output shape mismatch')
+    }
+    const rowLength = allHidden.data.length / count
+    const rowDims = [1, ...allHidden.dims.slice(1)]
+    const results = []
+    for (let index = 0; index < count; index += 1) {
+      const rowData = new Float32Array(rowLength)
+      rowData.set(allHidden.data.subarray(index * rowLength, (index + 1) * rowLength))
+      const rowHidden = new ort.Tensor('float32', rowData, rowDims)
+      const rowStarted = performance.now()
+      try {
+        results.push({
+          ...await decodeEncodedAnswer(
+            decoder,
+            rowHidden,
+            contracts[index] || {},
+          ),
+          decoderMs: performance.now() - rowStarted,
+        })
+      } finally {
+        rowHidden.dispose?.()
+      }
+    }
+    return {
+      results,
+      initializationMs,
+      sessionReused,
+      inferenceMs: performance.now() - started,
+      wasmSimdEnabled: ort.env.wasm.simd === true,
+    }
+  } finally {
+    pixels.dispose?.()
+    for (const tensor of Object.values(encoded || {})) tensor?.dispose?.()
+  }
+}
+
 self.onmessage = async (event) => {
   const request = event.data || {}
   try {
-    const result = await recognize(request)
+    const result = request.batch === true
+      ? await recognizeBatch(request)
+      : await recognize(request)
     self.postMessage({ id: request.id, result })
   } catch (error) {
     self.postMessage({ id: request.id, error: String(error?.stack || error?.message || error) })

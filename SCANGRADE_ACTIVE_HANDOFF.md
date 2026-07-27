@@ -1,5 +1,307 @@
 # ScanGrade Active Handoff
 
+## 2026-07-27 physical-box-anchored review Beta 15.30
+
+- Tony's physical Beta 15.29 screenshots showed the remaining placement limit:
+  page registration could align most of a wrinkled sheet while an individual
+  printed answer frame had moved locally. Highlights on a ten-frame answer and
+  a single-digit right-column answer could therefore remain displaced.
+- Visible teacher ink now follows the actually detected printed answer frame
+  only when the complete page assignment establishes coherent structural
+  trust. Partial detections, number-bond circles/lines, and isolated contours
+  cannot acquire that authority and retain the page-registration fallback.
+  OCR crops, recognition, confidence, grading, capture, homography, and
+  answer-key handling are unchanged.
+- The four-packet saved-camera replay processed the same **40 captures / 480
+  answer slots** with unchanged OCR results. It selected trusted physical
+  frames for 440 slots and the registration fallback for 40. All 32
+  number-bond slots remained on fallback; no two-slot answer received mixed
+  anchoring. Visual overlays of the largest corrections confirmed the green
+  physical rectangles coincide with the printed boxes while the prior
+  registration rectangles can be roughly one slot away on locally distorted
+  pages.
+- Manual correction focus no longer uses a filled blue layer. The active answer
+  is the same opaque white correction tape used by the settled correction,
+  plus only a thin muted-blue edge and very soft halo. Completed corrections
+  remain white tape; advancing focus changes the subtle edge without replacing
+  the tape or black entry.
+- Focused placement/correction regressions pass; the complete repository passes
+  **331/331** and the pruned production build passes. Build label:
+  `2026.07.27-physical-box-anchored-review-beta-15-30`.
+- The verified 222-file static build is deployed at
+  `https://f41ee5d8.scangrade.pages.dev/` and `https://scangrade.io/`.
+  Production HTML/JavaScript are byte-identical to the tested build
+  (`index-27DDhp1W.js`), and `/api/submissions` remains the static app shell.
+  Physical iPhone verification of the same single-digit and ten-frame cases is
+  the remaining presentation check.
+
+## 2026-07-27 registration-locked annotations Beta 15.29
+
+- Tony's Beta 15.28 ten-frame screenshot showed question F's yellow review
+  swipe displaced roughly one digit slot to the right of the printed answer
+  frame. The manual black correction also disappeared for a moment between
+  keypad entry and the new check/X animation.
+- Root cause of the placement defect: the OCR/page-registration pipeline and
+  the annotation pipeline held two rectangles for each answer. OCR used the
+  rectangle calculated in the warp's authoritative registration coordinate
+  system; annotation later recalculated normalized layout coordinates against
+  the pristine canvas's slightly different dimensions. The latter can shift
+  a mark even though recognition used the correct box.
+- The page-registration rectangle is now the single annotation anchor carried
+  through source-photo projection. The separately scaled layout rectangle is
+  retained only as a missing-data fallback. This does not alter capture, OCR
+  crops, transcription, confidence, grading, or answer-key handling.
+- A geometry audit of the existing four-packet replay covered 480 answer slots.
+  Relative to the independently detected printed frame, the median centre
+  discrepancy falls from 0.399 slot widths to 0.115. The ten-frame median
+  falls from 0.280 to 0.079; number bonds from 0.408 to 0.060; dot collections
+  from 0.599 to 0.215. This comparison is a placement diagnostic, not an OCR
+  accuracy claim.
+- Manual correction animation now prepares a lossless base containing the
+  settled black correction before the displayed result switches. Only the blue
+  focus treatment disappears; the correction remains mounted while the new
+  check/X draws. The redundant answer-reveal mask was removed.
+- Direct geometry/continuity regressions pass; the complete repository passes
+  **330/330** and the pruned production build passes. Build label:
+  `2026.07.27-registration-locked-annotations-beta-15-29`.
+- The final release was uploaded from an isolated non-git directory containing
+  only the 222 built static files. Immutable deployment:
+  `https://bb55143a.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`. Public HTML and JavaScript are byte-identical to the
+  tested build (`index-C0kYCy0t.js`). `/api/submissions` is byte-identical to
+  the static app shell, confirming that no storage/API route was exposed.
+
+## 2026-07-27 slot-faithful correction preview Beta 15.28
+
+- Tony's Beta 15.26 phone screenshots exposed a manual-entry presentation mismatch: the in-progress keypad text used a separate small/blue-looking preview before the permanent black correction appeared, and the first digit of a two-slot answer was centred across the complete box before moving when the second digit arrived.
+- The on-sheet preview now uses the same black marker-style type family as the saved correction and renders one cell per physical answer slot. A two-slot entry therefore progresses `[2][ ]` to `[2][0]`; `_9` and `9_` preserve their physical blank side. There is no intermediate blue digit layer.
+- Added a pure `correctionPreviewCells` helper and direct regressions for empty, partial, complete, and explicitly blank one-/two-slot entries.
+- Recognition, OCR, confidence, grading, capture, homography, crop selection, answer-key handling, and final correction semantics are unchanged.
+- Focused correction/layering verification passes **10/10**; the complete repository passes **328/328**; the pruned production build passes. Build label is `2026.07.27-slot-faithful-correction-preview-beta-15-28`.
+- The verified isolated static build is deployed at `https://b49acf5a.scangrade.pages.dev/` and `https://scangrade.io/`. Production serves `index-BgUOh6Um.js`, which contains the exact Beta 15.28 build and physical-cell preview code; `/api/submissions` remains the static app shell.
+
+## 2026-07-27 anchored source-photo annotations Beta 15.27
+
+- Tony's live Beta 15.26 screenshots showed two remaining presentation defects: checks/highlights could still land far from their answer boxes on wrinkled or perspective-heavy source photos, and the date appeared during Scanning, disappeared during progressive Grading, then returned in the completed raster.
+- Root cause of the placement defect: source-photo crop rectangles had already been transformed through the page homography, but `annotationRectForCrop` could apply the locally detected contour again in source space. Perspective axis-aligned bounds, bond lines, nearby circles, and wrinkles could turn that second adjustment into visible displacement.
+- Source-photo teacher ink now uses only the transformed marker-derived printed-box anchor. OCR retains all refined/detected crops; recognition, confidence, grading, capture, homography, and answer-key handling are unchanged. Warped-sheet/debug annotation paths still retain bounded local correction.
+- The scanning date SVG now remains mounted throughout progressive grading, so the date cannot vanish between its initial ink landing and the completed annotated raster.
+- Direct source-projection and date-lifecycle regressions pass; the complete repository passes **327/327**; the pruned production build passes. Build label is `2026.07.27-anchored-photo-annotations-beta-15-27`.
+- A repository-root Pages upload briefly detected dormant Functions and was immediately superseded by the isolated static-only deployment `https://8548a588.scangrade.pages.dev/`. Production `https://scangrade.io/` serves `index-DRwg2yAe.js`; `/api/submissions` is byte-identical to the static app shell, confirming no active backend.
+
+## 2026-07-27 number-bond entry contract Beta 15.26
+
+- Tony's physical-phone test of Beta 15.23 exposed a worksheet-contract mismatch: the number-bond layout printed one physical answer box for A/B/D/F, but its correction metadata still allowed two handwritten digits. The custom keypad therefore waited for a second key instead of completing the one-box correction and advancing.
+- Corrected both shipped SG-G1-LW-08 layout copies to match the printed worksheet: A/B/D/F accept one keypad entry; the genuinely divided two-box answers C/E still require two explicit entries. This rule comes only from physical worksheet structure, never the mathematical answer key.
+- Added direct contract regressions proving A completes after one digit while C does not. Recognition, transcription, confidence, grading, crops, capture, homography, and answer-key handling are unchanged.
+- The first production verification also found stale app-shell and layout responses still pinned by browser/CDN caching. Added explicit no-cache response rules for HTML and mutable worksheet layout JSON while leaving hashed assets immutable.
+- Verification: the complete repository passes **325/325**; the pruned production build passes. Build label is `2026.07.27-number-bond-entry-contract-beta-15-26`.
+- The isolated static build was deployed to `https://d4f7b2af.scangrade.pages.dev/` and `https://scangrade.io/`. Production serves `index-Cv5yFhQA.js`; root and layout responses now return revalidation/no-store policies and the live number-bond contract is `[1,1,2,1,2,1]`.
+
+## 2026-07-27 unified score strokes Beta 15.25
+
+- Tony's physical-phone testing showed that the final handwritten score (for example `8/8`) could reveal disconnected fragments, then materialize or shift when the animation completed.
+- Root cause: the SVG reveal mask and saved Canvas score independently rebuilt similar geometry. Canvas added segment offsets and smoothed curves while the SVG used unoffset straight lines, so the mask could expose the wrong portion of the already-rendered score.
+- Added one deterministic `buildTeacherScoreStrokePlan` used by both the animated SVG mask and final Canvas ink. It owns character shape, stroke order, seeded position, tilt, scale, segment offsets, smoothed path, pen width, and timing. The SVG now follows the same quadratic centreline used by Canvas; every stroke waits for the previous stroke to finish.
+- Reworked `8` as one continuous, ordinary handwritten figure-eight motion: start at the top, cross into the lower loop, return through the centre, and close the upper loop. It is not two separately appearing circles.
+- Recognition, crops, grading, confidence, capture, homography, correction behavior, and answer-key handling are unchanged.
+- Verification: focused stroke/ink/progressive tests pass **15/15**; the complete repository passes **324/324**; the pruned production build passes. Build label is `2026.07.27-unified-score-strokes-beta-15-25`.
+- The isolated static build was deployed to `https://26ba57d9.scangrade.pages.dev/` and `https://scangrade.io/`. Both serve `index-C39q831_.js`; the production bundle contains the exact Beta 15.25 label. Physical verification of a completed score containing `8` remains pending.
+
+## 2026-07-27 anchored review overlay Beta 15.24
+
+- Tony's physical iPhone screenshots of Beta 15.23 showed two independent geometry defects: the blue selected-answer ring surrounded the padded tap target instead of the printed answer box, and several yellow marks wandered far outside their boxes on the source-photo annotation path.
+- Root cause of the yellow displacement: source-photo projection transformed the detected crop rectangles but did not preserve a transformed deterministic layout rectangle. Without that reference, `annotationRectForCrop` had to accept even a badly displaced local contour. The source-photo projection now transforms and carries the layout rectangle with every crop, and annotation geometry preserves that precomputed source-space reference.
+- The active correction state now uses the exact `focus*Pct` answer-box geometry rather than the padded hotspot. The oversized circular ring and redundant question-letter bubble are removed. Selection is shown by a restrained translucent light-blue rectangle clipped to the printed answer box.
+- Keypad entry is black from its first rendered frame instead of flashing blue before the baked correction appears.
+- Recognition, OCR crops, confidence, grading, capture, homography, and answer-key handling are unchanged.
+- Verification: a direct source-projection regression reproduces a wildly displaced detected box and proves fallback to the transformed layout box; focused overlay tests pass **16/16**; the complete repository passes **321/321**; the pruned production build passes.
+- Build label: `2026.07.27-anchored-review-overlay-beta-15-24`. The verified pruned build was deployed from an isolated static directory to `https://47f23f65.scangrade.pages.dev/` and `https://scangrade.io/`. Production and immutable HTML both reference exact assets `index-C7c60W4A.js` and `index-BBZqiYoJ.css`; the production bundle contains the Beta 15.24 label. Physical phone/iPad verification remains pending.
+
+## 2026-07-25 continuous on-sheet review Beta 15.23
+
+- Replaced the floating correction card and native iOS numeric field with a compact ScanGrade-owned keypad. It contains only digits `0–9`, `_` for a physically blank slot, and delete; it uses the same Lexend face as the ScanGrade wordmark and cannot show iOS phone letters or the black selection menu.
+- The selected question is now identified directly on the worksheet by a blue focus outline and letter bubble. Teacher input appears in blue over the selected physical answer region as it is entered; there is no suggestion popup or Save button.
+- One unresolved slot commits after one key. When two physical slots are unresolved, two explicit entries are required, so `_9`, `9_`, and `__` preserve left blank, right blank, and no answer without guessing the physical placement.
+- After the teacher taps the first yellow, each completed correction automatically moves the worksheet focus to the next unresolved yellow while leaving the custom keypad available. It wraps in worksheet order, skips confidently wrong red answers, and closes only after the final yellow; the existing score-reveal gate then permits the handwritten score animation.
+- Recognition, capture, crop, confidence, grading, and annotation policy were not changed. The optional private local-reader fallback remains reachable from the keypad only when its existing feature flag is enabled.
+- Added deterministic keypad tests plus template/layering/continuous-advance contracts. Focused review verification passed 26/26, the complete repository passed **320/320**, and `npm run build` passed.
+- Build label is `2026.07.25-continuous-yellow-review-beta-15-23`. The verified pruned build was deployed from an isolated static directory to `https://b22f4f5c.scangrade.pages.dev/` and `https://scangrade.io/`. Production HTML points to the tested `index-DPRfsZpu.js` asset, whose bundle contains the exact Beta 15.23 label and correction-keypad code. Physical review on Tony's current phone and five-year-old iPad remains required.
+
+## 2026-07-24 whole-answer co-primary Candidate 2
+
+- A new goal is active to build a Mac-independent, upload-free, zero-cost browser candidate with at least 90% automatic transcription and zero known confident errors. Public deployment remains separately gated by prospective evidence and physical-device validation.
+- Added an isolated key-blind pre-acceptance coordinator in `src/v3/browser-local-co-primary.js`. It preserves the frozen 267/345 zero-error control, then allows only control yellows to clear through the existing 61.1 MiB preserved-grayscale reader. Answer-key, truth, mathematical-correctness, and teacher-correction fields fail closed.
+- Candidate 1 used structural vetoes for weak full-answer confidence, high-risk disagreement, place-value `1/4`, high-support conflicts, and blocking ambiguity. Exact replay produced **297/345 automatic (86.1%), 297/297 matching handwritten truth, zero known confident errors, and 48 yellow**.
+- A diagnostic audit of those 48 reviews found: 31 had a correct whole-answer proposal, five had a wrong proposal, 12 had no proposal, 47/48 contained the truth in at least one retained reader, and one P05 place-value answer was wrong in every retained reader. Blindly trusting the strong reader remains unsafe.
+- Candidate 2 adds one narrow multiview lane: stitched and continuous whole-answer views must agree at confidence `>=0.90`, and either the deterministic uniform view or an exact three-of-three retained-frame read must corroborate the same complete answer. Explicit blocking vetoes still dominate.
+- Exact 345-answer replay now produces **311/345 automatic (90.1%), 311/311 matching handwritten truth, zero known confident errors, 34 yellow**. Row coverage is 186/200 (93.0%); non-row is 125/145 (86.2%). P02/P03/P05/P08/P09 are 89.7%/100%/72.9%/95.7%/92.9%. No packet or layout family regresses from the frozen control.
+- All 44 newly automatic transcriptions were visually inspected from saved context and/or stitched/continuous grayscale evidence. Each visibly matches the stored handwriting label. The private contact sheets are in `private-evidence/reports/browser-local-co-primary-candidate2-visual-audit/`.
+- The decision boundary reproduced identically across 25 complete runs; SHA-256 is `3e1c6e0a435b6cabe03fcde21eef4a6b3cc1498d0e220d7aa8e2345a9dba8d06`.
+- Verification passes: 8/8 focused co-primary tests, 237/237 complete repository tests, and `npm run build`.
+- Added a production-shaped frozen-control/co-primary pipeline, a staged evidence planner, and an exact three-distinct-frame reducer. The pipeline reproduces all 345 frozen decisions exactly. A conservative planner gate requests three-frame inference only to corroborate an already repeated read, except for number bonds; it preserves exact parity and reduces frame-routed answers from 40 to 36. Weighted strong-model calls per 10-page corpus page are median 4, p90 17, maximum 30 when a frame check is counted as three inferences.
+- Wired Candidate 2 into the existing explicit private `v3BrowserLocalCandidate=1` path only. The public default remains unchanged. A real saved P05 number-bond page completed in headless WebKit with no non-read requests/uploads, persistent session reuse, exact expected decisions, 1.274 s model initialization, and 8.193 s for ten strong-reader views. The one-photo replay had no retained burst and correctly failed open for its one requested frame check.
+- Current verification after the integration: 251/251 repository tests pass, the production build passes, the 345-answer pipeline parity is exact, the 25-run determinism hash is unchanged, and the freeze verifier passes. The freeze is `private-evidence/reports/browser-local-co-primary-candidate2-freeze-20260724.json`; it explicitly says `publicDeploymentAuthorized: false`.
+- Tested dynamic four-answer encoder batching in real WebKit. It is rejected: elapsed time improved only from 3.498 s to 3.395 s, token probabilities drifted by as much as 0.0863, and one authentic answer changed from the correct `6` to `7`. Report: `private-evidence/reports/browser-local-batch-webkit-probe-20260724.json`. Do not batch this model.
+- Important live-integration gap: the explicit private candidate currently starts after the Beta payload is assigned to `ocrResult`, then may update it. That is not yet the required pre-acceptance architecture even if progressive animation often hides the delay. Before public consideration, routed answers must remain unsettled/yellow until their final local decision; an accepted mark must never be silently changed after presentation.
+- **Do not deploy this result yet.** The veto vocabulary and multiview lane were informed by the same five packets, the corroborating views share a model family, P05 remains materially worse, and sustained physical current-phone/five-year-old-iPad performance is still unmeasured. This is a successful retrospective research gate, not a launch claim.
+- Reproducers/reports: `scripts/evaluate_browser_local_co_primary.mjs`, `scripts/audit_browser_local_co_primary_residuals.mjs`, `scripts/verify_browser_local_co_primary_determinism.mjs`, `scripts/build_co_primary_candidate2_visual_audit.py`, `private-evidence/reports/browser-local-co-primary-candidate2-20260724.json`, and `private-evidence/reports/browser-local-co-primary-candidate1-residual-audit-20260724.json`.
+
+## 2026-07-24 browser-local 90% goal completion audit
+
+- Re-ran the authoritative exact-live uniform/frame union twice from the current worktree. Both runs reproduced **267/345 automatic (77.4%), 267/267 matching handwritten truth, zero known confident errors, 78 yellow**, with zero accepted transcriptions replaced and no answer-key use.
+- After removing only the timestamp, both reports had the identical SHA-256 `01bc798df020e3adbfcc9e29dd4123dcc350201e61f906911cea48575d0e57ad`.
+- Added an immutable v2 research freeze plus verifier because a fresh analyzer timestamp invalidated the earlier byte-level report hash even though all decisions were identical. `node scripts/verify_exact_live_union_freeze.mjs` now checks the exact report, timestamp-independent decision fingerprint, analyzer, diagnostic audit, metrics, no-replacement invariant, and answer-key blindness; every check passes.
+- Re-ran the complete repository test suite after adding the verifier: 229/229 passed. `npm run build` also passed.
+- Confirmed the tailnet physical-device probe is still reachable at `https://hobbes-mac-mini.tail9a3379.ts.net/local-model-probe/`.
+- Completed a requirement-by-requirement audit in `docs/SCANGRADE_BROWSER_LOCAL_90_GOAL_AUDIT_20260724.md`. The frozen lower frontier is recorded in `private-evidence/reports/exact-live-uniform-frame-union-policy-freeze-v2-20260724.json`.
+- The 90% gate remains failed. Public recognition must remain unchanged. The strongest lower zero-error frontier is research-only because it is retrospective, P02/P05 remain at 64.7%/61.4%, non-row coverage is 67.6%, and physical current-phone/old-iPad inference endurance is still missing.
+- Cheapest decisive next experiment: freeze current evidence, train/adapt a genuinely independent whole-answer model using historical development data only, freeze the selector before labels, and test prospectively on new September writers/packets. Do not continue threshold-searching the same 345 labels.
+
+## 2026-07-24 browser-local prospective gate (current continuation)
+
+- Added `docs/SCANGRADE_BROWSER_LOCAL_PROSPECTIVE_GATE_20260724.md`, a candidate-neutral protocol for a future browser-local reader. It freezes code/model/policy/frame identities before predictions or labels are opened; requires prediction-blinded double handwriting labels; preserves packet/student/template separation; and requires the 90%/zero-error gate again on final holdout material.
+- Added `scripts/freeze_browser_local_prospective_candidate.mjs` with `tests/freeze-browser-local-prospective-candidate.test.mjs`. It creates a write-once hash manifest for a declared browser-local candidate and fails closed on answer-key/truth/expected-value/correction-shaped input. It does not score, alter, or open packet evidence, and it always records `publicDeploymentAuthorized: false`.
+- It explicitly preserves the public Beta 15.3 interface while prohibiting the obsolete P05 private/Mac freeze from being reused as authority for a new browser-local candidate.
+- Focused safety tests passed 14/14 (`v3-browser-local-co-primary-candidate7`, flexible optional blank, and optional-slot scout). `npm run build` passed. This validates code health only; it does not raise the 77.4%/77.7% exact-live coverage or authorize a recognition deployment.
+- Repaired a private-candidate lifecycle ordering gap in `CameraCapture.vue`: the pre-acceptance whole-answer promise is now awaited before `ocr-complete` is emitted. The UI already withheld the provisional Beta result for this explicit private path; the completion event now cannot expose `null` or fire before the candidate's final decision/fail-open Beta result. `tests/v3-browser-local-preacceptance-lifecycle.test.mjs` locks the ordering. This does not change the public Beta 15.3 path or recognition decisions.
+- Extended the harmless fixed-image local-model device probe with persistent-session evidence and a deliberate missing-decoder recovery action. The phone/iPad order is now 8-answer cold run, 40-answer endurance run, then recovery; reports include transfer timing, init/reuse status, inference timing, parity, available memory proxy, and a no-upload marker. `tests/browser-local-device-probe-contract.test.mjs` locks the contract. It still requires the founder to run it physically; no student capture or public recognition behavior changed.
+- Added `scripts/score_browser_local_prospective_candidate.mjs` with `tests/score-browser-local-prospective-candidate.test.mjs`. It verifies the candidate freeze's exact source/model identities, requires prediction-blinded verified handwriting truth, keeps transcription separate from yellow/math/correction state, writes a single immutable report, and fails closed on answer-key/expected-value/correction-shaped input. It reports packet/student/template/layout/length/capture-quality strata and refuses overwrite. This replaces the obsolete P05-only scorer for any future browser-local candidate; it has not scored or opened any untouched packet.
+- Final post-infrastructure integrity pass: `node scripts/verify_exact_live_union_freeze.mjs` revalidated the authoritative 267/345 zero-error/no-silent-replacement/key-blind frontier. Complete repository regression passed **296/296** and `npm run build` passed. Therefore the prospective/device/pre-acceptance infrastructure did not change the frozen recognition control or authorize a deployment.
+- Remaining unopened student packets remain sealed. The next non-overfit recognition move is a genuinely independent reader trained/calibrated on declared historical partitions, frozen with this gate, then prospectively evaluated on new September writers/packets.
+
+## 2026-07-24 independent browser reader and exact-preservation audit
+
+- Classified all 78 yellows in the authoritative 267/345 exact-live union. At least one retained reader contains the labelled transcription for 77/78 and at least two do for 71/78; only one is unread correctly by every retained reader. The bottleneck is safe selection, not usually missing pixels. Capture quality still matters: the 78 reviews split into 27 poor, 29 fair, and 22 good captures.
+- Screened Texo FormulaNet as an external whole-answer reader. It is AGPL-3.0 and unsuitable for the planned commercial browser product without separate licensing; accuracy was also unusable: 43/345 (12.5%) on stitched answer evidence. Reject.
+- Screened the official Apache-2.0 PaddleOCR.js PP-OCRv6-small model in real Playwright WebKit, entirely browser-local with no image uploads. Its default detection-plus-recognition path read 224/345 (64.9%) correctly after about 4.18 seconds initialization. Feeding the preserved stitched answer directly into recognition improved raw top-one to 242/345 (70.1%) and reduced the 345-answer run to 25.5 seconds after about 4.34 seconds initialization. The text detector was a measurable loss, but the recognizer is still not a primary reader.
+- Direct PP-OCRv6 recognition and the 61.1 MiB stitched reader shared a confident `30→32` error (P09 number pattern Q5; PP-OCR score 0.986). Confidence or model-family agreement is not a safety proof. The standalone recognition archive is about 21.3 MB, so adding it to the 61.1 MiB reader is also expensive for the tiny legitimate gain.
+- Tested the cheapest credible PP-OCR adaptation without retraining its 21.2 MB visual model. Extracted its frozen 40-step blank/digit/non-digit probabilities for 923 authentic answer zones, then trained a tiny slot/layout-aware decoder on 328 historical development examples and selected it only on 136 historical validation examples. Historical holdout contained 114 examples; all 345 recent labels and all five recent packets were excluded from training and model selection.
+- The adaptation failed prospectively and reproducibly. Raw recent top-one was 233/345 (67.5%). A zero-error threshold selected on historical validation accepted 60/345 recent answers but made five confident errors, all above 0.99997. Exact agreement with TrOCR accepted 55/345 and still shared the P09 `30→32` error. Repeated runs produced the identical report SHA-256. Reject frozen-feature calibration and do not export or integrate it.
+- Critical integrity correction: a first second-reader analysis incorrectly compared against a reconstructed `evidence.browserRead` field. On some pages that differs from the exact live predecessor transcription. That produced an apparent 311/345 (90.1%) result by silently changing accepted reads and is invalid.
+- The corrected preservation-only evaluator uses `initialRead`, the exact transcription originally accepted by live WebKit. It restores only four answers, two of which are confident errors (`15` versus handwritten `5`, and `32` versus handwritten `30`). Result: 271/345 (78.6%) with two confident errors. The preservation repair fails and must not be integrated.
+- The strongest legitimate no-replacement candidate therefore remains **267/345 automatic (77.4%), 267/267 correct, zero known confident errors, 78 yellow**. A second reader may still demote suspicious accepts, but it cannot close the coverage gap while the initial browser transcription is weak.
+- The next architecture must make the 61.1 MiB preserved-grayscale model part of the initial transcription decision before a result is presented as accepted. That is not yet safe: stitched raw top-one is 325/345 (94.2%) with 20 errors; simple packet-held-out consensus is 255/345 with three P05 errors; the historical-only ambiguity head also made a P05 error. No recognition change was integrated, committed, pushed, or deployed.
+- New reports/reproducers: `private-evidence/reports/exact-live-uniform-frame-union-yellow-gap-20260724.json`, `private-evidence/reports/external-texo-formulanet-stitched-screen-20260724.json`, `private-evidence/reports/external-paddleocrv6-small-stitched-webkit-screen-20260724.json`, `private-evidence/reports/external-paddleocrv6-recognition-only-stitched-webkit-screen-20260724.json`, `private-evidence/reports/external-paddleocrv6-recognition-only-frontier-20260724.json`, `private-evidence/reports/paddle-digit-head-historical-only-20260724.json`, `private-evidence/reports/browser-preservation-second-reader-candidate-20260724.json`, `scripts/audit_exact_live_union_yellow_gap.mjs`, `scripts/analyze_external_paddleocr_frontier.mjs`, `scripts/evaluate_paddle_digit_head.py`, and `scripts/evaluate_browser_preservation_second_reader.mjs`.
+
+## 2026-07-23 retained three-frame browser-local consensus result
+
+- Reconstructed all three retained camera frames for every canonical P05 page through the unchanged browser crop pipeline, producing 210 independently cropped answer-frame views for 70 hand-labelled answers. The exact 61.1 MiB persistent deterministic WebKit reader completed 210/210 in 135.4 seconds. No image was uploaded and the mathematical answer key was not used for recognition.
+- This closes the decisive evidence gap in the earlier four-packet frame-consensus audit. Across all five packets, 169/345 labelled answers have equivalent three-frame evidence; 74 of those are yellow under the strongest legitimate exact-live candidate.
+- Critical eligibility repair: the first combined analyzer incorrectly allowed a browser-accepted transcription to become eligible for a different strong-model transcription after the safety cascade demoted it to yellow. That recreated the prohibited silent-replacement path. The report and analyzer now require the answer to have been yellow in the frozen browser predecessor before any alternate transcription may be promoted.
+- Under the repaired invariant, exact three-of-three text agreement at minimum token probability 0.90 produces the strongest zero-known-error frame frontier: **266/345 automatic (77.1%), 266/266 matching handwritten truth, zero known confident errors, and 79 yellow**. It adds only five legitimate original-yellow rescues. P05 gains none and remains 42/70 (60.0%).
+- The looser frame rule that looked safe on P02/P03/P08/P09 fails on P05 and also proposes prohibited replacements. Same-model agreement cannot be treated as independent evidence merely because the camera frame changed.
+- Combined the repaired frame lane with the uniform/full-box lane on the authoritative exact-live candidate. The union preserves every accepted transcription, promotes only original yellows, and reaches **267/345 automatic (77.4%), 267/267 correct, zero known confident errors, and 78 yellow**. It adds six answers total: five frame rescues plus one P05 number-bond uniform/continuous rescue.
+- Visually inspected all six legitimate changed decisions across stitched, continuous, and uniform evidence; all visibly support the selected transcription. Contact sheet: `private-evidence/reports/exact-live-uniform-frame-union-visual-audit-20260723.png`. Authoritative union report: `private-evidence/reports/exact-live-uniform-frame-union-20260723.json`.
+- Conclusion: once the no-silent-replacement product rule is enforced correctly, multi-frame and uniform evidence do not come close to 90%. The strongest legitimate exact-live union is 77.4%, research-only, repeatedly tuned on the same corpus, and not deployable. The decisive next evidence is a materially stronger independent primary recognizer plus new prospective writers/packets—not another same-corpus threshold search.
+- Reproducers: `scripts/replay_p05_burst_frames.mjs`, `scripts/build_p05_burst_stitched_manifest.py`, `scripts/analyze_all_packet_frame_consensus.mjs`, `scripts/analyze_exact_live_uniform_frame_union.mjs`, and `scripts/build_exact_live_union_contact_sheet.py`.
+
+## 2026-07-23 founder-approved two-box one-digit rule
+
+- Tony confirmed the classroom instruction: when a printed answer area has two digit boxes but the student's answer contains one digit, that digit is valid in either physical box.
+- The shared local contract now treats `_9` and `9_` as the same semantic transcription `9` for grading. The recognition and annotation layers still preserve which physical box the student actually used.
+- The default rule does **not** silently broaden `9` to `09`; a leading-zero form remains valid only when a worksheet explicitly declares it.
+- Genuine two-digit answers still require both digits in the correct order. OCR must still identify the written digit and may not use the answer key to choose it.
+- Verification: 228/228 repository tests passed, production build passed, 33 layouts audited with zero errors, and all 35 one-digit/two-box groups across the shipped launch-layout sources accepted both physical placements with zero contract violations.
+- This rule is verified locally but has not independently authorized deployment of the unfinished browser-local recognition candidate.
+
+## 2026-07-23 compact teacher-feature distillation conclusion
+
+- Extracted deterministic 768-dimensional encoder features from the exact 61.1 MiB stitched-view reader for 923 authentic answer crops (historical development/validation plus P02/P03/P05/P08/P09). Each recent packet was excluded from gradients in its held-out fold; historical validation selected epochs. Mathematical answer keys were never model inputs.
+- Teacher-feature distillation materially improved the 17 MiB MobileNetV3-Large whole-answer student from 249/345 (72.2%) to 281/345 (81.4%). Two bounded feature weights produced 286/345 (82.9%) and 285/345 (82.6%). The best result remained only 50/68 (73.5%) on P02, 52/70 (74.3%) on P05, and 112/145 (77.2%) on non-row layouts.
+- The best MobileNet student agreed with the strong stitched reader on 284 answers, but four shared readings were wrong: P02 number bond `6→7`, P05 place value `47→17`, P08 reversed `9→5`, and P09 number pattern `30→32`. The latter three included student confidences from 0.862 to 0.995. This model is not an independent ambiguity detector; confidence or agreement cannot make it safe.
+- Screened a genuinely different browser-sized ImageNet-pretrained EfficientNet-B0 backbone (4.14M inference parameters, roughly the same 16–17 MiB class). Before distillation it scored 254/345 (73.6%). Packet-held-out feature distillation reached 287/345 (83.2%) and improved non-row raw accuracy to 118/145 (81.4%), but P05 fell to 48/70 (68.6%). It shared seven wrong readings with the strong reader, including `49→14` at 0.998, `47→17` at 0.987, reversed `9→5` at 0.943, and `30→32` at 0.996.
+- Reject both compact backbones as primary readers and safety selectors. They demonstrate that teacher features help small models, but the remaining errors are correlated, confident, and packet-dependent. Do not export, wire, threshold-tune, or deploy either model.
+- Authoritative reports: `private-evidence/reports/v3-stitched-feature-distillation-crossfit-w010-seed97-20260723.json`, `private-evidence/reports/v3-stitched-feature-distillation-consensus-w010-seed97-20260723.json`, `private-evidence/reports/v3-efficientnet-b0-feature-distillation-crossfit-w010-seed97-20260723.json`, and `private-evidence/reports/v3-efficientnet-b0-feature-distillation-consensus-w010-seed97-20260723.json`. Reproducers: `scripts/extract_trocr_teacher_features.py`, `scripts/evaluate_v3_stitched_feature_distillation_crossfit.py`, and `scripts/analyze_v3_feature_distillation_consensus.py`.
+- Tested a tiny key-blind ambiguity head on the frozen strong-reader encoder representation, token confidence, predicted length, and row/non-row metadata. Leave-one-recent-packet-out crossfit found 67/345 strong reads at zero errors and would add 11 correct answers to the exact-live cascade (272/345, 78.8%), but that training boundary still learns from sibling recent packets. The stricter model trained only on historical development and selected only on historical validation accepted 37/345 recent reads (10.7%) and made one confident P05 dot-collection `8→6` error. Reject the head; the crossfit gain does not generalize prospectively.
+- Ambiguity-head reports/reproducers: `private-evidence/reports/trocr-embedding-ambiguity-crossfit-seed109-20260723.json`, `private-evidence/reports/trocr-embedding-ambiguity-historical-only-seed131-20260723.json`, `scripts/evaluate_trocr_embedding_ambiguity_crossfit.py`, and `scripts/evaluate_trocr_embedding_ambiguity_historical_holdout.py`.
+- The strongest legitimate actual-code candidate remains 261/345 automatic (75.7%), 261/261 correct, zero known confident errors, and 84 yellow. The 90% gate is still unmet; public recognition must remain unchanged. New authentic writers/packets are now more valuable than another compact-backbone or same-corpus threshold search.
+
+## 2026-07-23 exact-live primary-reader and scout conclusions
+
+- Reconstructed the exact live WebKit public-model baseline from all 50 saved pages / 345 hand-labelled answers. The current default digit-model pair initially accepts 293/345 (84.9%) but only 225/293 accepted reads match handwriting; 68 are confident transcription errors. This is a recognition/transcription comparison only and never uses mathematical correctness as handwriting truth.
+- Also replayed the older query-overridden lightweight digit pair that many historical scripts had used. It accepts 303/345 (87.8%) but has 80 confident errors. It is worse than the actual current default and must not be treated as a hidden upgrade. Authoritative report: `private-evidence/reports/browser-ocr-primary-pair-control-authoritative-20260723.json`.
+- Tested the 7.7 MiB whole-slot scout alone against the actual live WebKit outputs for every accepted browser answer. Requiring any scout agreement leaves 203/345 automatic (58.8%) and still five confident errors. No disagreement-only threshold reaches zero errors because the browser and scout share five wrong reads. Even a retrospectively optimized scout-confidence rule reaches only 93/345 (27.0%) at zero errors. The scout is a useful router but is conclusively not a safe standalone reader. Report/evaluator: `private-evidence/reports/exact-live-scout-only-frontier-20260723.json` and `scripts/analyze_exact_live_scout_only_frontier.mjs`.
+- The legitimate exact-live scout + routed 61.1 MiB strong-reader candidate remains 261/345 automatic (75.7%), 261/261 correct, zero known confident errors, and 84 yellow. It catches all 68 initial confident errors, introduces none, promotes 40 previously yellow answers, and never silently replaces a browser-accepted transcription. This remains the strongest implemented actual-code zero-error candidate.
+- Evaluated the 61.1 MiB larger-grayscale reader as a possible initial primary source on all 345 labels. Raw stitched top-1 is 325/345 (94.2%), so readable information exists, but it includes 20 errors, including errors at 0.997 confidence. Continuous is 286/345, uniform is 276/345, scout is 236/345, and raw browser text is 235/345.
+- Exhaustive simple key-blind voting across stitched, continuous, uniform, scout, and browser sources finds only 250/345 (72.5%) at zero errors, requiring unanimity among the three large-reader views. Leave-one-packet-out policy selection reaches 255/345 (73.9%) with three confident P05 errors. The raw model has a 94.2% oracle ceiling, but simple agreement/confidence cannot identify the safe subset. Report/evaluator: `private-evidence/reports/strong-primary-consensus-frontier-20260723.json` and `scripts/analyze_strong_primary_consensus_frontier.mjs`.
+- Runtime remains promising on capable WebKit. A new 40-answer sustained Playwright-WebKit run of the exact 61.1 MiB package passed token parity, initialized in 1.317 s, then ran at 0.630 s/answer (p90 0.634 s), completing in 25.21 s. Earlier two-call persistence initialized once and reused the session; forced missing-model failure returned no reads and recovered with a fresh correct session. Safari/WebKit does not expose a trustworthy memory counter, so physical phone and five-year-old-iPad peak-memory/endurance remain required. New report/harness: `private-evidence/reports/browser-local-trocr60-device-probe-40-webkit-20260723.json` and `scripts/run_trocr_device_probe_playwright.mjs`.
+- Ran the requested structurally different 15–30 MB preliminary model screen instead of repeating the weak 6–21 MB designs. An ImageNet-pretrained MobileNetV3-Large adapted to the whole grayscale answer zone has 4.33M parameters and a 17 MiB checkpoint. It scored 203/275 (73.8%) on P02/P03/P08/P09 and 46/70 (65.7%) on P05, or 249/345 (72.2%) overall. Exact agreement with the 61.1 MiB stitched reader retained only 249/345 and still shared six wrong reads, including reversed-`9`, `30→32`, and P05 place-value traps. Reject it as primary reader and ambiguity detector; packet-crossfit/export are not justified. Reports: `private-evidence/reports/v3-mobilenet-large-pretrained-seed83-20260723.json` and `private-evidence/reports/v3-mobilenet-large-pretrained-seed83-p05-20260723.json`.
+- The current strongest legitimate candidate therefore does **not** meet the 90% gate. Do not deploy a recognition-policy change. The next model experiment must be structurally different and packet-held-out—teacher feature/logit distillation on the successful stitched evidence or new September data—not another threshold search, the weak 7.7 MiB scout, or the already-falsified 21 MiB residual model.
+
+## 2026-07-23 critical correction — 93.6% frontier was invalid
+
+- The previously recorded 323/345 (93.6%) uniform-consensus frontier is **not a valid implementation candidate**. Its analyzer incorrectly passed the cascade's post-demotion state into a "yellow-only" promotion rule. That made browser-accepted answers eligible for a different local-model transcription after the safety cascade demoted them.
+- Twelve such decisions were silently replaced. Although all twelve happened to match the already-known labels, this violates the active goal and product principle: a second reader may demote a suspicious accepted browser transcription to teacher review, but it may not silently substitute a different transcription.
+- Repaired `scripts/analyze_browser_local_uniform_consensus_frontier.mjs` to use the frozen predecessor's automatic state. Under the correct invariant, the offline mixed-evidence frontier is 312/345 automatic (90.4%), 312/312 correct, but P05 is only 45/70 (64.3%) and therefore fails the no-material-packet-regression gate. It adds only one legitimate previously-yellow number-bond rescue.
+- More importantly, the authoritative exact-capture live WebKit replay of the actual integrated public-model baseline remains the controlling evidence: 261/345 automatic (75.7%), 261/261 correct, zero known confident errors, and 84 yellow. It contains no accepted silent replacements. Its initial browser replay had 68 confident transcription errors, so a preserve-or-demote second reader cannot mathematically reach 90% coverage without first making the primary recognizer materially stronger.
+- Do not integrate the generalized 12-answer offline lane, cite 93.6% as achieved, or deploy on that basis. The next technical route is a genuinely stronger primary browser-local recognizer/candidate selector, while preserving disagreement-to-review and all answer-key-blind safeguards.
+
+## 2026-07-23 two-box / one-digit placement rule (local, not deployed)
+
+- Tony confirmed the classroom rule: when a problem whose answer is one digit has two printed digit boxes, the response is correct whether the student writes that digit in the left or right box.
+- Added one shared answer-placement contract in `src/v3/answer-placement-contract.js`. It treats `_9` and `9_` as the same semantic transcription `9` for grading, while retaining the occupied physical slot for overlays and teacher correction. The default contract does not silently broaden `9` to written `09`; that requires explicit worksheet metadata.
+- The shared contract merges the rule with layout metadata, so incomplete/older metadata cannot accidentally make only one side valid. It does not use the answer's digit to choose an OCR reading; it only defines accepted physical placement for a known one-digit worksheet response.
+- Flexible blank cleanup now inherits the same contract, so the unused companion box may be cleared without highlighting when the other slot contains the independently detected written digit. True two-digit answers still require both ordered digits.
+- Verified all 35 one-digit/two-slot questions across the currently shipped layout directories: all 35 support either placement. The complete repository regression passes 228/228, the production build passes, and the 33-layout audit reports 0 errors.
+- This patch is local only. It has not been committed, pushed, or deployed; public `scangrade.io` remains unchanged while the larger browser-local candidate goal is active.
+
+## 2026-07-23 browser-local 90% goal — fourth checkpoint (superseded by critical correction above)
+
+- Corrected a device-dependent grading-animation inconsistency: `CameraCapture.vue` no longer suppresses the initial pen strokes or manual-correction stroke when iOS Reduce Motion is enabled. ScanGrade now uses the same one-question-at-a-time drawn marking sequence on both phones. Added a regression contract, bringing the suite to 200/200; production build passes. This UI-only change has not been deployed.
+- Generalized the uniform answer-key-blind crop path from number bonds to all ten frozen worksheet layouts and all 345 scorable labelled answers. For each page it generates clean simple-scale and saved-homography views and selects only by printed four-sided frame containment. It never uses OCR output, handwriting truth, or the mathematical answer to select pixels.
+- The exact 61.1 MiB persistent deterministic WebKit reader completed all 345 uniform views in 229.46 seconds and read 276/345 correctly as raw top-1. Raw accuracy is not the purpose; the view is used only as a routed independent crop check after the stitched and continuous views.
+- Frozen research rule: an existing yellow may clear only when the uniform and continuous reads agree at >=0.90 confidence and the stitched view gives the same text. For number bonds, where the stitched crop is known to clip handwriting, the repaired uniform and continuous views may agree at >=0.90 without stitched agreement. Answer-key-shaped fields are rejected, blocking safety vetoes dominate, and the lane never changes an already-automatic answer.
+- The originally recorded **323/345 automatic (93.6%)** result is invalid for implementation because the analyzer accidentally made safety-demoted browser answers eligible for silent replacement. See the critical correction at the top of this handoff.
+- The uniform view blocks both discovered consensus traps: P08's reversed `9` is read `9` instead of the other views' wrong `5`, and P09 number-pattern Q5 is read `30` instead of the other views' unanimous wrong `32`. This is why the full-box view is a safety source, not merely a way to promote more answers.
+- Visually inspected all 12 newly automatic decisions across stitched, continuous, and uniform views. Each proposed transcription is visibly supported; no answer-key reasoning is needed. Contact sheet: `/tmp/browser-local-uniform-consensus-changed-20260723.jpg`.
+- Identical-input determinism passes at both stages. A complete second crop-generation run reproduced 345/345 selected views and PNG SHA-256 hashes exactly. A second WebKit inference run reproduced all 12 changed texts and token probabilities exactly. Reports: `private-evidence/reports/browser-local-uniform-affine-reproducibility-20260723.json` and `private-evidence/reports/browser-local-trocr60-uniform-consensus-changed-replay-webkit-20260723.json`.
+- A routed implementation needs only 13 possible uniform-lane calls after cheaper gates, not 345. The predecessor cascade makes 224 strong-reader calls over 50 pages; this extra lane adds at most about 0.65 seconds for the small subset of pages that reach it on Mac WebKit SIMD. Initial browser results remain independent and can appear around the existing four-second target while checks run inside the grading animation.
+- Reproducers: `scripts/build_uniform_number_bond_affine_manifest.py` (now layout-parameterized), `scripts/merge_uniform_affine_manifests.mjs`, `scripts/analyze_browser_local_uniform_consensus_frontier.mjs`, `scripts/verify_uniform_affine_reproducibility.mjs`, and `scripts/build_uniform_consensus_contact_sheet.py`. Candidate policy module: `src/v3/uniform-local-consensus.js`; it is isolated and not wired into production.
+- Complete repository regression after the generalized rule and animation consistency repair passes 200/200 and the production build passes.
+- This is still retrospective and repeatedly examined data. It is not deployment authorization or a public reliability claim. Physical current-iPhone and five-year-old-iPad endurance, memory, and thermal results remain missing, and September work is the prospective falsification set. Public `scangrade.io` remains unchanged Beta 15.3.
+
+## 2026-07-23 browser-local 90% goal — third checkpoint (active, not deployable)
+
+- Built a uniform, answer-key-blind number-bond crop path across all 28 scorable number-bond answers in P02/P03/P05/P08/P09. It compares two deterministic clean views—the original capture scaled to worksheet coordinates and the saved-homography canonical view—using only four-sided printed-frame containment. It never uses handwriting truth, OCR output, or the mathematical answer to choose a view. Reproducer: `scripts/build_uniform_number_bond_affine_manifest.py`.
+- The exact 61.1 MiB persistent deterministic WebKit reader completed 28/28 new number-bond views in 19.07 seconds and read 21/28 correctly. The total is unchanged from the old stitched view, but all four previously visually unsafe promotions are now complete and legible and independently read correctly: P03 Q3 `14`, P08 Q3 `14`, P08 Q4 `6`, and P08 Q5 `17`.
+- A predeclared narrow geometry lane allows a yellow number-bond answer to clear only when the complete-box view and the existing continuous view agree and both have at least 0.90 confidence. It promotes exactly P05 Q3 `14` and Q4 `6`. The combined retrospective result is **313/345 automatic (90.7%), 313/313 correct, zero known confident errors, and 32 yellow**. P05 improves only to 46/70 (65.7%), so the aggregate target passes while the packet/generalization gate still fails. Reproducer: `scripts/analyze_uniform_number_bond_geometry_lane.mjs`; report: `private-evidence/reports/browser-local-number-bond-geometry-lane-20260723.json`.
+- A broader two-reader consensus is unsafe. It would accept P08 number-bond Q1 as `5` although the handwriting label is `9`; the uniform complete-box view correctly reads `9` and exposes the trap. Three-reader agreement is also not sufficient globally: P09 number-pattern Q5 is unanimously but wrongly read `32` instead of `30`. Do not add a broad consensus override merely to improve P05.
+- Exact 61.1 MiB persistence/recovery was rechecked in WebKit with correctly aligned P05 evidence. One two-call/four-answer run initialized once in 393 ms, reused the same session for the next three answers, completed all four correctly in 2.99 seconds, and inferred at about 0.63–0.67 seconds/answer. A forced missing-model load returned partial/zero completed reads, reset safely, and the next valid request recovered with a fresh correct session.
+- A forced no-SIMD eight-answer WebKit run completed 8/8 correctly but took 24.50 seconds: about 2.99 seconds per answer versus about 0.65 seconds with SIMD. This is too slow for the intended grading animation. Added an isolated fail-closed capability-tier candidate: no SIMD, reported memory below 4 GB, model error/timeout, or a first check above 2.5 seconds retains conservative browser OCR and more yellow; a measured fast SIMD runtime may use the persistent local reader. This module is not wired into production.
+- The 61.1 MiB cascade's routed workload is median four strong-reader calls/page, p90 eight, maximum 11. On the Mac WebKit SIMD path this is roughly 2.6 seconds median additional checking after a one-time ~0.4-second initialization, which can plausibly fit inside the grading animation; no-SIMD would be roughly 12 seconds median and must not be enabled.
+- After the uniform crop, geometry-lane, persistence, recovery, and capability-tier additions, the complete repository suite passes 195/195 and the production build passes. These remain isolated experiment paths; no production recognition policy or public deployment changed.
+- Physical current-iPhone and five-year-old-iPad endurance results remain required. The private probe remains `https://hobbes-mac-mini.tail9a3379.ts.net/local-model-probe/`. Until both device runs are saved and the P05/generalization concern is resolved prospectively, do not integrate, deploy, market, or claim the 90.7% retrospective result. Public `scangrade.io` remains Beta 15.3.
+
+## 2026-07-23 browser-local 90% goal — second checkpoint (active, not deployable)
+
+- Active goal: a Mac-independent, upload-free public candidate targeting at least 90% safe automatic coverage on all 345 scorable labels, with zero known confident transcription errors. Public Beta 15.3 remains unchanged.
+- The 7.7 MB scout alone is conclusively insufficient as a safety veto. On the 312 accepted answers produced after removing the over-broad Beta 7 veto, vetoing every scout disagreement left 218 automatic (63.2% overall coverage) and still five confident errors. Near 90% coverage it caught only two of 20 errors and left 18.
+- Ran the 84 MB FP16-encoder/int8-decoder browser-local TrOCR-small package from the Rugged-drive backup against all 70 P05 stitched answer images. Chromium completed 70/70 in 107.85 seconds with 56/70 top-1 reads matching handwriting (80.0%).
+- Repeated the same 70-answer run on the preserved continuous grayscale view. Chromium again completed 70/70 in 107.42 seconds with 56/70 top-1 accuracy, but 15 reads differed between the two views.
+- As a demotion-only safety reader on P05's 64 accepted browser answers, the stitched view caught 18/20 public confident errors while wrongly demoting five correct reads. Requiring both views to conflict caught 18/20 and demoted two correct reads. Treating a conflict from either view as unsafe caught all 20 errors, but demoted eight correct reads, leaving only 36/70 P05 answers automatic before any possible yellow rescue. This cannot support the 90% goal.
+- Important missed-error finding: stitched TrOCR agreed with the wrong browser read on P05 `sub-2digit Q7` (`11`, handwriting `16`) and `place-value Q6` (`17`, handwriting `47`). The continuous view disagreed on both (`14` and `47` respectively), which is why either-view conflict catches all 20. The place-value case can also be caught by the existing key-blind 1/4 rival signal; the repeated-`11` case remains the harder local safety problem.
+- Persistent-session loading now works in the test-only path. On all 70 P05 continuous images, Chromium fell from 107.42 seconds disposable to 51.18 seconds resident (2.10x faster) with 70/70 identical reads. Initialization was approximately 0.77 seconds once; the remaining 69 requests reused the session; median inference was approximately 0.718 seconds/answer.
+- WebKit also completed 70/70 resident requests without stalling in 52.59 seconds, but browser-native Canvas resizing caused seven cross-engine read differences on identical source images. Disabling SIMD did not change those differences and slowed the seven-case subset to approximately 2.49 seconds/answer in Chromium and 2.71 seconds/answer in WebKit.
+- A test-only deterministic bilinear resizer restored exact Chromium/WebKit parity on all seven disagreements, including probabilities, at normal SIMD speed. Full-P05 Chromium with that resizer completed 70/70 in 51.09 seconds and scored 55/70 top-1, one below browser-native continuous preprocessing. As a demotion-only check it caught all 20 P05 browser errors but demoted seven correct accepted reads, leaving 37/70 safe automatic before any yellow rescue. Determinism is repaired, but the 90% coverage gate remains far out of reach.
+- Completed persistent deterministic 84 MB replay on all 345 scorable labels. On the four earlier packets, stitched grayscale scored 268/275 (97.5%) in 198.82 seconds; continuous grayscale scored 232/275 (84.4%) in 199.92 seconds. On P05, stitched scored 56/70 (80.0%) in 51.59 seconds and continuous scored 55/70 (78.6%) in 51.09 seconds. The severe P05 generalization gap is real and is not explained by browser resizing alone.
+- Full deterministic P05 stitched replay produced 70/70 identical reads and probabilities in Chromium and WebKit. Chromium took 51.59 seconds and WebKit 51.97 seconds. Deterministic preprocessing fixes the earlier cross-engine discrepancy.
+- The experimental persistent client now keeps one resident worker across separate worksheet calls rather than only across answers inside one call. A four-answer/two-call WebKit test initialized once (1.42 s), reported session reuse on the next three answers, and completed in 4.40 s. A forced missing-model failure returned partial/no result, discarded the resident worker, then recovered with a fresh correct session. The disposable public control path is unchanged.
+- A key-blind retrospective scout + cascaded 84 MB selector reaches exactly 311/345 automatic (90.1%), 311/311 correct, zero known confident errors, and 34 yellow. The fast scout/browser signals route 155/312 accepted answers plus all 33 existing yellows to the stitched reader; only 39 unresolved cases continue to the continuous view. This is 227 84 MB inferences over 50 pages: median four/page, p90 eight, maximum 11. Packet results are P02 66/68, P03 65/67, P08 69/70, P09 68/70, but P05 only 43/70 (61.4%). It therefore passes the aggregate numerical target while failing the per-packet/generalization gate.
+- Treat the 90.1% result as a research frontier, not a public candidate. Two thresholds were inspected against the same five packets, no prospective student remains in this corpus, and physical phone/old-iPad memory and sustained runtime are still unmeasured. Do not deploy or market the aggregate result.
+- The required visual audit covered all 53 changed decisions. The cascade caught all 20 predecessor confident errors while sending seven correct predecessor reads to yellow; all 26 proposed yellow promotions match the stored handwriting labels. However, four promoted number-bond answers have already-frozen, truth-blind geometry-failure labels (`outside-zone` or `clipped`) and their model views visibly lack reliable handwriting evidence. Vetoing those four reduces the defensible frontier to 307/345 automatic (89.0%), still with zero known confident errors. The headline 90.1% is therefore not visually safe enough to ship.
+- Geometry repair can recover the missing information but is not yet a general selector. The repaired grayscale crops make all four handwriting samples visually legible. In deterministic WebKit the 84 MB reader got three of four repaired crops right (P08 `14`, `6`, and `17`) but read the P03 `14` as `6`; the independently shifted P03 view read `14`. A key-blind route applied to all nine currently promoted answers with suspicious or very-low-ink crops scored only 5/9 on the repaired view. This means the individual four cases can be explained, but a general rule cannot safely choose the right crop/view yet. Do not hard-code those examples.
+- A browser-compatible quantization reduced the strong-reader package from 84,063,346 bytes (about 80.2 MiB) to 64,086,224 bytes (about 61.1 MiB). The earlier 60 MB export failed to load in WebKit because it contained `ConvInteger`; the repaired export keeps the single patch convolution in FP32 and quantizes only 72 MatMul nodes. It completed all 345 stitched and all 345 continuous requests in deterministic persistent WebKit. Stitched accuracy was 268/275 on earlier packets and 57/70 on P05; continuous was 228/275 and 58/70. The unchanged cascade still produced 311/345 automatic, zero known confident errors, and the same visually defensible 307/345 (89.0%) after the four geometry-failure promotions are vetoed. Median inference fell to about 0.65 s and model initialization to about 0.40 s on Mac WebKit; real-device download/memory remain unmeasured.
+- The verified encoder is backed up as `encoder-matmul-int8-webkit.onnx` in the Rugged-drive model directory, SHA-256 `da158e8863477b81e2672dac48506333333edb599da711d0233e4fc578b9613a`. The retained decoder SHA-256 is `8a4d066c5cd2fb6924665fc85a2945fb96c5e42cc6bac3feb7d17fa987f8edb3`. Reproducible exporter: `scripts/export_trocr_webkit_matmul_int8.py`.
+- A tailnet-only physical-device probe is active at `https://hobbes-mac-mini.tail9a3379.ts.net/local-model-probe/`. It uses the exact 61.1 MiB candidate, deterministic preprocessing, one resident session, eight frozen P02 crops, and offers 8-answer and 40-answer runs. It records user agent, model initialization/download, per-answer and p90 timing, token parity, and memory when the browser exposes it; results stay in the device until copied/downloaded. The page and model routes were smoke-tested through the exact Tailscale URL in WebKit and passed. This is private Tailscale Serve, not Funnel/public access. Current server process is the local probe server on `127.0.0.1:8791`; the Tailscale route is `/local-model-probe`.
+- The only existing 15–30 MB-class model is the 21 MB / 5.47M-parameter sequence residual. Its retained report scored only 171/275 (62.2%) on the earlier packets, so it is rejected without spending browser/device testing. The 7.7 MB larger-grayscale slot/layout model scored 43/70 on P05 and is likewise not a primary recognizer. The new 61.1 MiB package is the smallest demonstrated strong reader; further reduction requires structural distillation or a different encoder, not more of the same dynamic quantization.
+- New authoritative research report: `private-evidence/reports/browser-local-scout-trocr84-safety-frontier-20260723.json`. Reproducible evaluator: `scripts/analyze_browser_local_safety_frontier.mjs`.
+- Regression state after resident-worker changes: 192/192 repository tests pass and production build passes. Nothing was deployed.
+- `scripts/browser-probes/serve_trocr_small_probe.mjs` now accepts a configurable manifest and stitched/continuous view. `scripts/test_trocr_shadow_candidate6_yellows.mjs` accepts a configurable manifest and all-answer scope. These are experiment-harness changes only; they do not change production recognition or grading.
+- Tony's observation that another phone displayed marks immediately was explained by the explicit `prefers-reduced-motion: reduce` branch in `CameraCapture.vue`: iOS Reduce Motion revealed all marks without pen-stroke animation. Tony explicitly chose a consistent grading experience, so the branch and CSS suppression were removed. Both normal and reduced-motion devices now use the full pen-stroke sequence; retain this as a regression contract.
+- Private reports: `private-evidence/reports/browser-local-trocr-p05-all-20260723.json` and `private-evidence/reports/browser-local-trocr-p05-continuous-all-20260723.json`.
+- Next action: build a physical-device sustained-runtime probe for the 84 MB persistent reader, then decide whether the current 84 MB package is viable on modern devices. The next smaller-model experiment must be a genuinely stronger 15–30 MB distillation design; the existing 21 MB model is already falsified. Physical current-phone/old-iPad memory remains unmeasured. Do not deploy.
+
 ## 2026-07-23 Beta 7 safety failure / Beta 15.3 interface freeze (current)
 
 - Independently replayed the frozen predecessor and Beta 7 on identical retained evidence for every canonical multi-frame packet with hand-labelled truth: P02, P03, P05, P08, and P09 (50 sheets, 350 locations, 345 scorable answers).
@@ -5066,3 +5368,273 @@ Next action:
 - Source commit `104fcf8` was pushed to `origin/autobuild/safe-20260223`; private student evidence and unrelated dirty files were excluded.
 - The private app and both local readers were restarted after the commit. `https://hobbes-mac-mini.tail9a3379.ts.net/`, `/v3-compact/health`, and `/review-model/health` all returned HTTP 200/healthy, and the served source contains the private-only safety default and 30-second old-device timeout.
 - No Cloudflare/public deployment was made. `https://scangrade.io/` remains the frozen public Beta 15.3 interface and recognition behavior.
+
+### 2026-07-24 browser-local 90% follow-up: do not deploy a selector
+
+- The current active goal remains a fully browser-local, Mac-independent path;
+  public `scangrade.io` is still frozen at Beta 15.3 and was not changed.
+- Important correction to the optimistic research screen: Candidate 7's
+  retrospective five-packet report showed 320/345 automatic (92.8%) with zero
+  observed errors, but an actual live WebKit replay of the saved captures
+  produced 268/345 automatic (77.7%), all 268 correct, and 77 yellow. This is
+  a research result only and does not pass the 90% gate.
+- The live model is deterministic when repeated against the same saved capture
+  and exact current code/model inputs. Earlier report mismatches arose across
+  frozen code/evidence states; future reports must record exact source and
+  model hashes before being compared.
+- A visual audit of live strict-veto cases explains why a consensus threshold
+  cannot safely bridge the gap. All larger views can agree confidently on the
+  same wrong handwriting (`18` as `14`; a child-written `8` as `6`). The
+  existing strict rule correctly leaves such conflicts yellow rather than
+  silently replacing the browser transcription.
+- Optional-slot work is real but narrow. The updated key-blind physical blank
+  rule identified 24 two-box one-digit cases; all 24 had one true handwritten
+  digit, so it did not remove a real second digit. Yet only 14/24 resulting
+  raw browser readings matched handwritten truth. A 7.7 MiB scout read the
+  true single digit in 18/24 but has no sufficient original-yellow rescue lane
+  under the no-replacement invariant. `src/v3/optional-slot-scout-rescue.js`
+  and its test are isolated research only; do not wire it into public UI.
+- Two one-page local WebKit probes were recorded under
+  `private-evidence/reports/browser-local-strict-live-all-saved-webkit-20260723-probe-strong-consensus-*.json`.
+  They make no uploads and retain zero confident errors by leaving conflicts
+  yellow. They also show the large local reader takes roughly 10.8–12.7 extra
+  seconds on hard pages, so it does not meet a practical browser-only launch
+  latency bar.
+- Complete audit and recommendation: `docs/SCANGRADE_BROWSER_LOCAL_90_GOAL_AUDIT_20260724.md`.
+  The next credible accuracy step is a genuinely independent model plus a
+  prospective packet/student evaluation frozen before labels are reviewed—not
+  another threshold change on P02/P03/P05/P08/P09. Preserve untouched packets
+  unless Tony explicitly authorizes their use as a locked prospective test.
+
+### 2026-07-25 capture/review/score polish public Beta 15.14
+
+- Tony's live phone testing found four presentation/capture issues after the
+  annotation-stall repair: automatic capture was too reluctant, a faint yellow
+  halo could remain during manual-correction animation, the completed score
+  shifted slightly after its pen animation, and every correction moved the
+  worksheet even when an upper answer already fit above the keyboard.
+- Automatic capture's final sharpness floor was reduced conservatively from
+  650 to 560. The four-corner ScanGrade-sheet gate, real decodable ScanGrade QR
+  requirement, blank/pattern rejection, live focus gate, perspective policy,
+  and eight-frame clearest-frame selection are unchanged. Manual capture keeps
+  its existing 340 sharpness floor.
+- The correction hotspot is now visually transparent. The manual animation
+  base clears the exact seeded highlighter polygon rather than an approximate
+  answer-box pad, so neither CSS focus tint nor prior raster overhang can leave
+  a yellow circle around a corrected answer.
+- The final score animation now reveals the exact final raster score through
+  an SVG pen mask. Animation completion no longer swaps an approximate vector
+  score for a slightly different raster position. The digit 8 is a single
+  continuous centre-crossing figure-eight stroke rather than two separately
+  drawn circles.
+- Keyboard motion is visibility-driven. An upper correction that already fits
+  produces zero scroll; a lower correction moves once and only far enough to
+  clear Safari's resized visual viewport and correction panel.
+- Verification: all 301 JavaScript repository tests pass, including new
+  capture-threshold, highlighter-footprint, figure-eight, and keyboard-motion
+  tests. The pruned production build passes. Live HTML and JavaScript at the
+  immutable deployment and `https://scangrade.io/` are byte-identical to the
+  tested build; a 390x844 mobile WebKit smoke test mounted `Start Scan` with
+  the exact build label and zero page/console errors.
+- Build label: `2026.07.25-capture-review-score-polish-beta-15-14`.
+  Static-only immutable deployment:
+  `https://6a6910be.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`.
+- Wrangler's first repository-root upload (`99b0d549`) detected dormant Pages
+  Functions. It was immediately superseded by the isolated static-only upload
+  above. `/api/submissions` is byte-identical to the static application HTML,
+  confirming the final public deployment exposes no active backend.
+
+### 2026-07-25 responsive auto-capture public Beta 15.15
+
+- Tony's immediate phone test found that Beta 15.14 still required too long a
+  perfect hold before beginning capture. The final accepted-image quality gate
+  was not the only constraint: the low-resolution live preview had to exceed a
+  300 focus score for three stable checks before the eight-frame burst began.
+- Beta 15.15 relaxes only that preliminary trigger. The preview focus trigger
+  is 240 instead of 300 and the stable hold is 150 ms instead of 375 ms, which
+  means two stable preview checks rather than three at the existing 300 ms
+  cadence. The eight-frame burst still chooses its sharpest valid sheet frame.
+- Final acceptance remains unchanged at focus score 560. The four-corner
+  ScanGrade-sheet gate, decodable ScanGrade QR requirement, blank/pattern
+  rejection, motion check, layout/homography path, and OCR pipeline are
+  unchanged. A too-blurry burst is rejected and the camera resumes.
+- Verification: 302/302 repository tests and the pruned production build pass.
+  The immutable deployment, `https://scangrade.io/`, and the local release
+  serve byte-identical HTML and JavaScript after propagation. Mobile WebKit
+  mounted the exact build with zero page/console errors.
+- Build: `2026.07.25-responsive-auto-capture-beta-15-15`. Static-only immutable
+  deployment: `https://eabb64d4.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`.
+
+### 2026-07-25 shadow-tolerant preliminary capture gate Beta 15.16
+
+- Tony's immediate Beta 15.15 phone screenshots showed two readable, complete
+  ScanGrade worksheets that still would not open the automatic burst. One
+  reported `Find the worksheet page`; the other reported `Find all 4 black
+  squares` despite all four squares being visibly present. These messages are
+  emitted only after four corner candidates have already been found.
+- The blocker was the preliminary appearance validator, not the final focus
+  floor. The displayed paper in the second screenshot averaged about 116/255
+  luma. The old live rule required mean >=125, at least 52% of sampled paper
+  pixels >=128, and no more than 20% below 80. Its intentionally oversized
+  marker patches also required >=12% dark pixels and mean <=190, which was
+  brittle under dim or soft live video.
+- Beta 15.16 introduces a pure, unit-tested preliminary appearance decision.
+  A sheet can enter the burst at mean >=105, bright fraction >=12%, and dark
+  fraction <=28%; each already-detected corner patch can count as black at
+  dark fraction >=6% and mean <=220. Four detected markers are still required.
+  Very dark scenes and missing-marker scenes remain blocked.
+- This does not accept the first dim preview frame as the graded image. The
+  old bright-paper rule is retained as a `preferred` signal, and the
+  eight-frame scorer still rewards bright paper, low dark fraction, sharpness,
+  contrast, and all four marker patches. The selected full-resolution frame
+  must still meet focus 560 and contain a decodable ScanGrade QR. Geometry,
+  perspective, motion, homography, OCR, and confidence policy are unchanged.
+- Verification: all 306 repository tests pass, including exact reproductions
+  of the two new preliminary failure classes, and the pruned production build
+  passes. The immutable HTTPS preview and `https://scangrade.io/` serve exact
+  copies of the tested HTML and JavaScript. Browser smoke mounted the exact
+  build label and public controls. `/api/submissions` is byte-identical to the
+  static HTML, confirming that the isolated deployment did not expose dormant
+  Pages Functions.
+- Build label: `2026.07.25-shadow-tolerant-capture-beta-15-16`.
+  Static-only immutable deployment:
+  `https://081de500.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`.
+
+### 2026-07-25 two-digit review integrity Beta 15.17
+
+- Tony's live Beta 15.16 scan found a genuine correction-integrity defect on
+  mixed-sheet H (`20 - 5`): both printed digit slots were yellow, but typing
+  the first digit of intended `15` immediately submitted `1`, replaced only
+  the second slot, and graded the incomplete transcription wrong.
+- Root cause: `shouldAutoApplySingleDigitCorrection` returned true for any
+  single typed digit whenever the editor allowed at least one digit, including
+  a whole-answer editor whose required maximum was two. The helper now submits
+  only when entered digit count equals the complete handwriting-length
+  contract. One unresolved slot still applies after one key; a two-digit
+  whole answer keeps the first key and applies after the second.
+- The same live test showed a lower correction panel obscured by Safari's
+  `scangrade.io` QuickType/domain strip. `visualViewport` reports that strip
+  as visible space. The pure viewport resolver now reserves 64 px at the
+  keyboard edge. Upper answers that already fit still produce zero movement;
+  lower answers make one larger bounded smooth move.
+- Verification: focused correction/viewport tests pass, all 307 repository
+  tests pass, and the pruned production build passes. The immutable preview
+  and cache-busted `https://scangrade.io/` serve exact copies of the tested
+  HTML and JavaScript; HTTPS browser smoke mounted the exact build label.
+  Static `/api/submissions` confirms no dormant Pages Function was exposed.
+- Build label: `2026.07.25-two-digit-review-fix-beta-15-17`.
+  Static-only immutable deployment:
+  `https://81da16ec.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`.
+
+### 2026-07-25 bounded annotation geometry Beta 15.18
+
+- Tony's live number-bond scan showed several yellow highlights displaced far
+  from the printed answer boxes. The layout contains six questions and eight
+  digit slots; the stored coordinates use the intended bottom-right convention
+  and match the worksheet SVG. The defect was not an alternate worksheet
+  layout.
+- Root cause: annotation placement had begun preferring an unconstrained
+  photographed `boxRect`. On number-bond pages, local contour detection can
+  mistake a bond line, circle, or neighbouring frame for the answer box.
+- Annotation placement now accepts a photographed box adjustment only when its
+  area remains plausible and it materially overlaps the known printed answer
+  box. Displaced and oversized detections fall back to the deterministic layout
+  rectangle. OCR crops, recognized digits, confidence, grading, homography, and
+  capture policy are unchanged.
+- Four direct geometry regressions reproduce displaced bond shapes, oversized
+  bond-line regions, modest legitimate page corrections, and safe fallbacks.
+  All 310 repository tests and the pruned production build pass.
+- The first production upload accidentally discovered the dormant repository
+  Pages Functions because deployment ran from the repository root. It was
+  immediately replaced from an isolated static directory. Final public
+  `index.html` and JavaScript hashes exactly match the tested build, and
+  `/api/submissions` is byte-identical to static `index.html`, confirming no
+  API or storage route is exposed.
+- Build label:
+  `2026.07.25-bounded-annotation-geometry-beta-15-18`.
+  Static-only immutable deployment:
+  `https://d2726924.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`.
+
+### 2026-07-25 unified teacher ink Beta 15.19
+
+- Tony requested darker checks matching the green New Scan button, the same
+  green on the landing-page Start Scan action, consistent felt-pen bleed and
+  variation between checks and scores, and removal of score fragments appearing
+  before their stroke was written.
+- Checks and green scores now share base ink `#126c39`, restrained seeded color
+  variation, one smooth felt-pen renderer, and the same four-pass pressure/bleed
+  recipe. Start Scan and New Scan render as the same `rgb(18, 108, 57)`.
+- Root cause of premature score fragments: the reveal mask was approximately
+  20–32 px wide, far broader than the final 4–7 px pen line, so one animated
+  stroke exposed nearby portions of future strokes. The mask is now derived
+  from actual ink width and is approximately 8–15 px, covering bleed without
+  uncovering neighbouring score geometry.
+- Two new direct pen-style/mask tests pass; all 312 repository tests and the
+  pruned build pass. Browser smoke confirms the rendered Start Scan color, not
+  only the source rule. Public HTML/JS hashes exactly match the tested build,
+  and `/api/submissions` remains identical to static HTML.
+- Build label: `2026.07.25-unified-teacher-ink-beta-15-19`.
+  Static-only immutable deployment:
+  `https://f97f0a24.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`.
+
+### 2026-07-25 clean review navigation and capture Beta 15.20
+
+- Tony's live dot-collection scan showed a yellow review swipe shifted roughly
+  one digit slot left/down from the printed C answer box. The earlier overlap
+  gate was insufficient: a neighbouring-slot detection could still overlap
+  enough to be treated as a legitimate photographed-box correction.
+- Annotation geometry now also limits detected-box centre drift to 35% of the
+  known layout slot in each axis. A direct regression reproduces a 50%-overlap
+  neighbouring-slot detection and confirms that it falls back to the layout
+  box; modest photographed-page corrections still pass.
+- The result bar now contains Home, a plain centred down/up disclosure arrow,
+  and New Scan. The arrow points down while recognition labels are closed and
+  up while open; it has no circular active treatment. Login was removed from
+  the bar, and the unfinished Sign In and Teacher Review entries were removed
+  from the landing page. Dormant implementation was preserved for later use.
+- Auto-capture opens its low-resolution preliminary burst at focus 220 after a
+  100 ms hold, down from 240/150. The accepted image still must pass the
+  unchanged full-resolution focus floor of 560, clearest-of-eight selection,
+  four-marker geometry, page appearance, QR decode, motion, and perspective
+  checks. This is a responsiveness change, not a reduction in accepted-frame
+  quality.
+- Verification: focused geometry/capture tests pass; all 313 repository tests
+  pass; the pruned production build passes. The immutable preview and
+  `https://scangrade.io/` serve the exact tested assets, and
+  `/api/submissions` serves the same static application shell. Live browser
+  smoke confirms the exact build label and a landing page containing only
+  Start Scan, Debug Scan, and Get Worksheets.
+- Build label: `2026.07.25-clean-review-capture-beta-15-20`.
+  Static-only immutable deployment:
+  `https://1b84b52f.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`.
+
+### 2026-07-25 aligned review editor Beta 15.21
+
+- A fresh Beta 15.20 dot-collection scan showed that C's yellow swipe was now
+  attached to the correct answer but remained visibly low. The 35%-of-slot
+  centre tolerance still allowed too much decorative movement inside a small
+  answer frame.
+- Teacher-ink geometry now permits at most 15% of a layout slot's width or
+  height as a photographed-box centre correction. A new regression reproduces
+  a smaller 20%-height drift and confirms fallback to the deterministic layout
+  box; the existing modest wrinkle correction remains accepted. OCR crops,
+  recognized text, confidence, grading, capture, and homography are unchanged.
+- The correction card's redundant X was removed because tapping outside already
+  closes it. Its separate title row was also removed: the worksheet-style
+  question bubble now sits immediately left of the numeric entry box, vertically
+  centred, followed by Save. The card is narrower and shorter.
+- Verification: focused correction/geometry tests pass; a new interface
+  contract prevents the X/title-row layout from returning; all 315 repository
+  tests pass; the pruned build passes. Immutable/public assets match, and the
+  static `/api/submissions` fallback remains the same app shell.
+- Build label: `2026.07.25-aligned-review-editor-beta-15-21`.
+  Static-only immutable deployment:
+  `https://5392b5a0.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`.

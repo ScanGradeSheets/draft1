@@ -403,5 +403,5 @@ export function extractContinuousAnswerZones(warpedImage, layout, options = {}) 
       quality: grayscaleQuality(gray, image.cols, image.rows),
       blankArtifact: analyzeBlankArtifact(gray, image.cols, image.rows),
     }
-  }).filter(Boolean)
+  })
 }

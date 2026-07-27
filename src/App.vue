@@ -9,22 +9,16 @@
     <main class="main" :class="{ 'main--student': isStudentMode }">
       <section v-if="isStudentMode && studentView === 'landing'" class="student-home">
         <div class="student-home-actions">
-          <button type="button" class="btn btn-primary student-home-btn" @click="beginGuestScan">
+          <button type="button" class="btn btn-primary student-home-btn student-home-scan-btn" @click="beginGuestScan">
             Start Scan
           </button>
           <button type="button" class="btn btn-secondary student-home-btn student-home-debug-btn" @click="beginDebugGuestScan">
             Debug Scan (exports)
           </button>
-          <button type="button" class="btn btn-secondary student-home-btn" @click="beginStudentSignIn">
-            Sign In
-          </button>
           <a class="btn btn-worksheet student-home-btn" :href="publicUrl('worksheets/')">
             Get Worksheets
           </a>
         </div>
-        <button type="button" class="teacher-link-btn" @click="enterTeacherMode">
-          Teacher Review
-        </button>
       </section>
 
       <section v-else-if="isStudentMode && studentView === 'identity'" class="student-roster">
@@ -52,7 +46,7 @@
           <button
             v-if="classRoster.length"
             type="button"
-            class="btn btn-primary student-home-btn"
+            class="btn btn-primary student-home-btn student-home-scan-btn"
             :disabled="!selectedStudentName"
             @click="startNamedScan"
           >
@@ -135,9 +129,6 @@
             <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
               Home
             </button>
-            <button type="button" class="student-scan-identity" @click="beginStudentSignIn">
-              <strong>{{ activeStudentSession?.mode === 'named' ? activeStudentSession.studentName : 'Login' }}</strong>
-            </button>
             <button
               v-if="ocrResult && !ocrResult.error"
               type="button"
@@ -147,7 +138,7 @@
               :aria-label="showRecognitionOverlay ? 'Hide what ScanGrade saw' : 'Show what ScanGrade saw'"
               @click="showRecognitionOverlay = !showRecognitionOverlay"
             >
-              <span aria-hidden="true">{{ showRecognitionOverlay ? '⌄' : '⌃' }}</span>
+              <span aria-hidden="true">{{ showRecognitionOverlay ? '⌃' : '⌄' }}</span>
             </button>
             <div class="student-scan-actions">
               <button
@@ -373,7 +364,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.18-empty-save-beta-15-3'
+const APP_BUILD_LABEL = '2026.07.27-physical-box-anchored-review-beta-15-30'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -1144,7 +1135,9 @@ onUnmounted(() => {
 
 <style scoped>
 .scan-grade {
-  --teacher-highlighter-rgb: 253, 255, 50;
+  /* Sharpie-style fluorescent yellow: lemon-bright with just enough green
+     cast to read as highlighter ink, never as a warm gold fill. */
+  --teacher-highlighter-rgb: 238, 255, 0;
   max-width: 800px;
   margin: 0 auto;
   color: #202124;
@@ -1272,6 +1265,16 @@ onUnmounted(() => {
 
 .student-home-btn {
   width: 100%;
+}
+
+button.student-home-scan-btn {
+  background: #126c39;
+  box-shadow: 0 2px 8px rgba(18, 108, 57, 0.24);
+}
+
+button.student-home-scan-btn:hover:not(:disabled),
+button.student-home-scan-btn:focus-visible {
+  background: #0f5d31;
 }
 
 .teacher-link-btn {
@@ -1796,6 +1799,8 @@ onUnmounted(() => {
   width: min(100%, calc(72vh * 8.5 / 11));
   max-width: min(100%, calc(72vh * 8.5 / 11));
   flex: 0 0 auto;
+  height: 60px;
+  box-sizing: border-box;
   margin: 7px auto 0;
   padding: 8px;
   border: 1px solid #d2d2d7;
@@ -1804,8 +1809,8 @@ onUnmounted(() => {
 }
 
 .student-scan-bar--has-result:not(.student-scan-bar--grading) {
-  grid-template-columns: minmax(50px, 0.8fr) minmax(58px, 1fr) 40px minmax(82px, 1.2fr);
-  gap: 5px;
+  grid-template-columns: minmax(82px, 1fr) 40px minmax(82px, 1fr);
+  gap: 8px;
 }
 
 .student-scan-bar--grading {
@@ -1904,8 +1909,8 @@ onUnmounted(() => {
   width: 38px;
   height: 38px;
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  border: 0;
+  border-radius: 0;
   background: transparent;
   color: #245aa4;
   font: inherit;
@@ -1918,8 +1923,8 @@ onUnmounted(() => {
 .student-recognition-toggle:hover,
 .student-recognition-toggle:focus-visible,
 .student-recognition-toggle--active {
-  border-color: rgba(36, 90, 164, 0.22);
-  background: rgba(36, 90, 164, 0.08);
+  background: transparent;
+  color: #173f73;
   outline: none;
 }
 

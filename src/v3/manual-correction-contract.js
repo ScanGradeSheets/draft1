@@ -30,34 +30,3 @@ export function manualCorrectionContract(cells = [], physicalSlotCount = 1) {
     answerText: correctionCells.filter((cell) => cell !== null).join(''),
   }
 }
-
-export function manualCorrectionNeedsExplicitPosition(text, physicalSlotCount = 1) {
-  const cleaned = String(text || '').replace(/[^\d_]/g, '')
-  return Number(physicalSlotCount) === 2 && /^\d$/.test(cleaned)
-}
-
-export function manualCorrectionTextWithBlank(text, blankSlotIndex, physicalSlotCount = 2) {
-  const count = Math.max(1, Number(physicalSlotCount) || 1)
-  if (!Number.isInteger(blankSlotIndex) || blankSlotIndex < 0 || blankSlotIndex >= count) return String(text || '')
-  const cleaned = String(text || '').replace(/[^\d_]/g, '').slice(0, count)
-  const digits = [...cleaned].filter((char) => /\d/.test(char))
-  const cells = cleaned.length === count ? [...cleaned] : Array(count).fill('_')
-  cells[blankSlotIndex] = '_'
-  if (cleaned.length !== count && digits.length) {
-    const writable = cells.map((_, index) => index).filter((index) => index !== blankSlotIndex)
-    const retained = digits.slice(-writable.length)
-    retained.forEach((digit, index) => {
-      cells[writable[writable.length - retained.length + index]] = digit
-    })
-  }
-  return cells.join('')
-}
-
-export function inferSingleDigitSlot(cells = [], physicalSlotCount = 2) {
-  const count = Math.max(1, Number(physicalSlotCount) || 1)
-  if (count !== 2 || !Array.isArray(cells) || cells.length !== count) return null
-  const occupied = cells
-    .map((cell, slotIndex) => ({ cell: normalizedCell(cell), slotIndex }))
-    .filter(({ cell }) => cell !== null)
-  return occupied.length === 1 ? occupied[0].slotIndex : null
-}

@@ -10,9 +10,9 @@ function zIndexFor(selector) {
   return match ? Number(match[1]) : null
 }
 
-test('the teacher correction panel stays above blue recognition labels', () => {
+test('the on-sheet correction focus stays above blue recognition labels', () => {
   const recognitionLayer = zIndexFor('.recognition-read-overlay')
-  const correctionLayer = zIndexFor('.student-correction-panel--image')
+  const correctionLayer = zIndexFor('.on-sheet-correction-focus')
 
   assert.equal(Number.isFinite(recognitionLayer), true)
   assert.equal(Number.isFinite(correctionLayer), true)

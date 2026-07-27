@@ -16,6 +16,11 @@ const flexibleGroup = {
 test('recognizes a two-box contract that permits one digit in either box', () => {
   assert.equal(supportsEitherSlotForOneDigit(flexibleGroup), true)
   assert.equal(supportsEitherSlotForOneDigit({ accepted_digit_responses: [{ digits: [1, 3] }] }), false)
+  assert.equal(supportsEitherSlotForOneDigit({
+    answer: 8,
+    digit_box_ids: [20, 21],
+    accepted_digit_responses: [{ digits: [null, 8] }],
+  }), true)
 })
 
 test('clears only one artifact slot beside one independently strong digit', () => {
