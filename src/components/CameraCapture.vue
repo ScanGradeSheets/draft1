@@ -10616,14 +10616,27 @@ onUnmounted(() => {
   grid-template-columns: repeat(var(--correction-preview-slots, 1), minmax(0, 1fr));
   align-items: stretch;
   box-sizing: border-box;
-  overflow: hidden;
-  border: 2px solid rgba(36, 90, 164, 0.48);
-  border-radius: 4px;
-  background: rgba(251, 250, 244, 0.95);
+  overflow: visible;
+  border: 2px solid rgba(36, 90, 164, 0.72);
+  border-radius: 999px;
+  background: transparent;
   box-shadow:
-    0 0 0 3px rgba(176, 224, 255, 0.16),
-    0 1px 4px rgba(36, 90, 164, 0.10);
+    0 0 0 3px rgba(176, 224, 255, 0.10),
+    0 1px 4px rgba(36, 90, 164, 0.08);
   pointer-events: none;
+  transition:
+    background-color 90ms ease-out,
+    border-color 90ms ease-out,
+    border-radius 90ms ease-out,
+    box-shadow 90ms ease-out;
+}
+
+.on-sheet-correction-focus--entered {
+  overflow: hidden;
+  border-color: rgba(36, 90, 164, 0.18);
+  border-radius: 4px;
+  background: rgba(251, 250, 244, 0.97);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .on-sheet-correction-entry {

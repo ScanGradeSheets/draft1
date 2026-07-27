@@ -1,5 +1,26 @@
 # ScanGrade Active Handoff
 
+## 2026-07-27 visible-handwriting review Beta 15.31
+
+- Tony correctly rejected Beta 15.30's opaque white active state because it
+  covered the student's original handwriting before the teacher could inspect
+  it.
+- Before entry, the focused answer now has a transparent interior with a thin
+  muted-blue oval and restrained halo. The student's pencil remains fully
+  visible. As soon as the teacher enters a correction, that same layer changes
+  to white correction tape and renders the replacement in black; the completed
+  correction then remains in the marked sheet while focus advances.
+- The transition changes only presentation. Correction semantics, auto-advance,
+  OCR, grading, confidence, capture, and Beta 15.30 physical-box anchoring are
+  unchanged.
+- Focused correction tests pass **22/22**; the complete repository passes
+  **331/331** and the pruned build passes. Build label:
+  `2026.07.27-visible-handwriting-review-beta-15-31`.
+- The isolated 222-file static build is deployed at
+  `https://14b7ee72.scangrade.pages.dev/` and `https://scangrade.io/`.
+  Production serves byte-identical `index-CAiburV0.js` and
+  `index-D2TFvp4H.css`; `/api/submissions` remains the static app shell.
+
 ## 2026-07-27 physical-box-anchored review Beta 15.30
 
 - Tony's physical Beta 15.29 screenshots showed the remaining placement limit:

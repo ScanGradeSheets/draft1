@@ -19,8 +19,10 @@ test('correction entry is drawn on the sheet and uses a number-only custom keypa
   assert.equal(template.includes('on-sheet-correction-label'), false)
   assert.match(source, /\.correction-keypad\s*\{[^}]*font-family:\s*'Lexend'/s)
   assert.match(source, /const activeCorrectionFocusStyle = computed\(\(\) => \{[\s\S]*focusLeftPct[\s\S]*focusTopPct[\s\S]*focusWidthPct[\s\S]*focusHeightPct[\s\S]*\}\)/)
-  assert.match(source, /\.on-sheet-correction-focus\s*\{[^}]*background:\s*rgba\(251,\s*250,\s*244,\s*0\.95\)/s)
-  assert.match(source, /\.on-sheet-correction-focus\s*\{[^}]*border:\s*2px solid rgba\(36,\s*90,\s*164,\s*0\.48\)/s)
+  assert.match(source, /\.on-sheet-correction-focus\s*\{[^}]*background:\s*transparent/s)
+  assert.match(source, /\.on-sheet-correction-focus\s*\{[^}]*border:\s*2px solid rgba\(36,\s*90,\s*164,\s*0\.72\)/s)
+  assert.match(source, /\.on-sheet-correction-focus--entered\s*\{[^}]*background:\s*rgba\(251,\s*250,\s*244,\s*0\.97\)/s)
+  assert.match(template, /'on-sheet-correction-focus--entered': manualCorrectionText/)
   assert.match(source, /\.on-sheet-correction-entry\s*\{[^}]*color:\s*#171717/s)
 })
 
