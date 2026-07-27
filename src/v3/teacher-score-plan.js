@@ -95,6 +95,7 @@ export function buildTeacherScoreStrokePlan({
         char,
         charIndex,
         segmentIndex,
+        renderSeed: charSeed + segmentIndex * 101,
         points,
         d: teacherScoreSmoothPathD(points),
         inkWidth,
@@ -114,4 +115,33 @@ export function buildTeacherScoreStrokePlan({
       ? strokes.at(-1).delayMs + strokes.at(-1).durationMs
       : 0,
   })
+}
+
+// Expand each human pen stroke into the same restrained felt-pen passes used
+// by both the live SVG writer and the settled Canvas annotation. Animating the
+// coloured paths themselves (instead of using a self-crossing path as a mask
+// over an already-complete score) prevents later parts of an 8 from leaking
+// into view before the virtual pen reaches them.
+export function buildTeacherScoreInkPlan(scorePlan, passes) {
+  const sourceStrokes = Array.isArray(scorePlan?.strokes) ? scorePlan.strokes : []
+  const sourcePasses = Array.isArray(passes) ? passes : []
+  return Object.freeze(sourceStrokes.flatMap((stroke, logicalStrokeIndex) =>
+    sourcePasses.map((pass, passIndex) => {
+      const spread = Number(pass?.spread) || 0
+      const renderSeed = Number(stroke.renderSeed) || 1
+      const points = stroke.points.map(([x, y], pointIndex) => [
+        x + jitter(renderSeed + passIndex * 29 + pointIndex * 11, stroke.inkWidth * spread),
+        y + jitter(renderSeed + passIndex * 31 + pointIndex * 13, stroke.inkWidth * spread),
+      ])
+      return Object.freeze({
+        ...stroke,
+        logicalStrokeIndex,
+        passIndex,
+        points: Object.freeze(points.map((point) => Object.freeze(point))),
+        d: teacherScoreSmoothPathD(points),
+        width: Math.max(1, stroke.inkWidth * (Number(pass?.widthScale) || 1)),
+        opacity: Math.max(0, Math.min(1, Number(pass?.alpha) || 0)),
+      })
+    })
+  ))
 }

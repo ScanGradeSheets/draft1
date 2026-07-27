@@ -81,32 +81,6 @@
                 }"
               />
             </mask>
-            <mask
-              v-if="progressiveScoreRevealed && progressiveScoreStep"
-              id="progressive-score-mask"
-              maskUnits="userSpaceOnUse"
-              x="0"
-              y="0"
-              :width="progressiveMarkingDimensions.width"
-              :height="progressiveMarkingDimensions.height"
-            >
-              <path
-                v-for="(stroke, strokeIndex) in progressiveScoreStep.strokes"
-                :key="`score-mask-${strokeIndex}`"
-                class="progressive-marking-stroke"
-                :d="stroke.d"
-                fill="none"
-                stroke="white"
-                :stroke-width="stroke.width || progressiveScoreStep.strokeWidth"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                pathLength="1"
-                :style="{
-                  '--progressive-stroke-duration': `${stroke.durationMs}ms`,
-                  '--progressive-stroke-delay': `${stroke.delayMs}ms`,
-                }"
-              />
-            </mask>
           </defs>
           <image
             v-for="step in revealedProgressiveMarkingSteps"
@@ -120,17 +94,28 @@
             :href="progressiveAnnotatedImage"
             :mask="`url(#progressive-mask-${step.key})`"
           />
-          <image
+          <g
             v-if="progressiveScoreRevealed && progressiveScoreStep"
-            class="progressive-marking-reveal"
-            x="0"
-            y="0"
-            :width="progressiveMarkingDimensions.width"
-            :height="progressiveMarkingDimensions.height"
-            preserveAspectRatio="none"
-            :href="progressiveAnnotatedImage"
-            mask="url(#progressive-score-mask)"
-          />
+            class="progressive-score-ink"
+          >
+            <path
+              v-for="(stroke, strokeIndex) in progressiveScoreStep.inkStrokes"
+              :key="`score-ink-${strokeIndex}`"
+              class="progressive-marking-stroke"
+              :d="stroke.d"
+              fill="none"
+              :stroke="progressiveScoreStep.color"
+              :stroke-opacity="stroke.opacity"
+              :stroke-width="stroke.width"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              pathLength="1"
+              :style="{
+                '--progressive-stroke-duration': `${stroke.durationMs}ms`,
+                '--progressive-stroke-delay': `${stroke.delayMs}ms`,
+              }"
+            />
+          </g>
         </svg>
         <div
           v-if="showRecognitionOverlay && recognitionOverlayItems.length"
@@ -622,11 +607,13 @@ import {
   studentCaptureFocusDecision,
   studentSheetAppearanceDecision,
 } from '../v3/student-capture-policy.js'
-import { buildTeacherScoreStrokePlan } from '../v3/teacher-score-plan.js'
+import {
+  buildTeacherScoreInkPlan,
+  buildTeacherScoreStrokePlan,
+} from '../v3/teacher-score-plan.js'
 import {
   TEACHER_GREEN_INK,
   TEACHER_GREEN_PEN_PASSES,
-  teacherScoreRevealMaskWidth,
 } from '../v3/teacher-ink-style.js'
 import {
   manualCorrectionContract,
@@ -1841,14 +1828,13 @@ function progressiveScoreRevealStep({ result, dimensions, annotationRegions }) {
     fontSize,
     seed,
   })
-  const strokes = scorePlan.strokes.map((stroke) => ({
-    ...stroke,
-    width: teacherScoreRevealMaskWidth(stroke.inkWidth),
-  }))
-  return strokes.length ? {
+  const inkStrokes = buildTeacherScoreInkPlan(scorePlan, TEACHER_GREEN_PEN_PASSES)
+  const ratio = correct.filter(Boolean).length / Math.max(1, total)
+  return scorePlan.strokes.length ? {
     key: 'final-score',
-    strokes,
-    strokeWidth: teacherScoreRevealMaskWidth(fontSize * 0.07),
+    strokes: scorePlan.strokes,
+    inkStrokes,
+    color: ratio >= 0.7 ? TEACHER_GREEN_INK : ratio >= 0.5 ? '#c66f22' : '#b33d35',
   } : null
 }
 
@@ -4085,16 +4071,31 @@ function composeStudentAnnotatedImage(
 
       const drawScoreMark = (text, centerX, y, { color, fontSize, seed }) => {
         const plan = buildTeacherScoreStrokePlan({ text, centerX, y, fontSize, seed })
-        plan.strokes.forEach((stroke) => {
-          const charSeed = seed + stroke.charIndex * 53
-          drawSmoothHandStroke([stroke.points], {
-            color: varyInk(color, charSeed + 19, color === TEACHER_INK.green ? 10 : 12),
-            width: stroke.inkWidth,
-            seed: charSeed + stroke.segmentIndex * 101,
-            // Keep the same physical pen texture for green, amber, and red
-            // scores; only the teacher-ink color changes with the grade.
-            passes: TEACHER_GREEN_PEN_PASSES,
-          })
+        const inkStrokes = buildTeacherScoreInkPlan(plan, TEACHER_GREEN_PEN_PASSES)
+        inkStrokes.forEach((stroke) => {
+          ctx.save()
+          ctx.strokeStyle = color
+          ctx.globalCompositeOperation = 'multiply'
+          ctx.globalAlpha = stroke.opacity
+          ctx.lineWidth = stroke.width
+          ctx.lineCap = 'round'
+          ctx.lineJoin = 'round'
+          ctx.beginPath()
+          ctx.moveTo(stroke.points[0][0], stroke.points[0][1])
+          for (let index = 1; index < stroke.points.length - 1; index += 1) {
+            const point = stroke.points[index]
+            const next = stroke.points[index + 1]
+            ctx.quadraticCurveTo(
+              point[0],
+              point[1],
+              (point[0] + next[0]) / 2,
+              (point[1] + next[1]) / 2,
+            )
+          }
+          const last = stroke.points.at(-1)
+          ctx.quadraticCurveTo(last[0], last[1], last[0], last[1])
+          ctx.stroke()
+          ctx.restore()
         })
       }
 
@@ -10538,6 +10539,10 @@ onUnmounted(() => {
   opacity: 1;
 }
 
+.progressive-score-ink {
+  mix-blend-mode: multiply;
+}
+
 .progressive-marking-stroke {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
@@ -10618,11 +10623,11 @@ onUnmounted(() => {
   box-sizing: border-box;
   overflow: visible;
   border: 2px solid rgba(36, 90, 164, 0.72);
-  border-radius: 999px;
+  border-radius: 3px;
   background: transparent;
   box-shadow:
-    0 0 0 3px rgba(176, 224, 255, 0.10),
-    0 1px 4px rgba(36, 90, 164, 0.08);
+    0 0 0 2px rgba(176, 224, 255, 0.14),
+    0 0 8px rgba(36, 90, 164, 0.18);
   pointer-events: none;
   transition:
     background-color 90ms ease-out,
@@ -10634,7 +10639,7 @@ onUnmounted(() => {
 .on-sheet-correction-focus--entered {
   overflow: hidden;
   border-color: rgba(36, 90, 164, 0.18);
-  border-radius: 4px;
+  border-radius: 3px;
   background: rgba(251, 250, 244, 0.97);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }

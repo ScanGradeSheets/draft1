@@ -1,5 +1,33 @@
 # ScanGrade Active Handoff
 
+## 2026-07-27 human score strokes Beta 15.32
+
+- The completed-raster score mask was fundamentally unsafe for self-crossing
+  handwriting: while an `8` was being uncovered, the mask could expose a
+  spatially nearby but temporally future part of the lower loop. This produced
+  the observed “bottom first, top materializes later” effect even though the
+  underlying glyph point order was correct.
+- The score is now drawn as actual coloured SVG pen paths in strict human
+  order. Every `8` is one continuous top-first figure-eight; the first digit
+  completes before the slash begins, and the slash completes before the next
+  digit begins. The live writer and settled Canvas annotation share the same
+  deterministic geometry, four felt-pen passes, widths, opacity, and seeded
+  variation, so no completed-score fragment exists to leak through early.
+- Before typing, the active correction cue is now a thin blue rectangular
+  frame with restrained glow, aligned to the physical digit slot. A
+  single-slot uncertainty in a two-digit answer frames only that digit. The
+  interior remains transparent until entry, preserving the child's pencil.
+- These are presentation-only changes. OCR, confidence, grading, capture,
+  homography, answer placement, and correction semantics are unchanged.
+- Focused stroke/focus tests pass **8/8**; the complete repository passes
+  **332/332** and the pruned 222-file production build passes. Build label:
+  `2026.07.27-human-score-strokes-beta-15-32`.
+- The isolated static deployment is live at
+  `https://8a67d755.scangrade.pages.dev/` and `https://scangrade.io/`.
+  Production serves byte-identical `index-DoctASZ-.js` and
+  `index-DjEGJ-hx.css`; `/api/submissions` resolves to the identical static app
+  shell, confirming no Pages Function is active.
+
 ## 2026-07-27 visible-handwriting review Beta 15.31
 
 - Tony correctly rejected Beta 15.30's opaque white active state because it
