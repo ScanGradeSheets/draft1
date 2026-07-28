@@ -6,12 +6,37 @@ import { progressiveMarkingSteps } from '../src/v3/progressive-marking.js'
 
 const cameraSource = await readFile(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
 
-test('the scanning date remains mounted throughout progressive grading', () => {
+test('the date stamp is withheld until the score is complete, then lands as the completion seal', () => {
   assert.match(
     cameraSource,
-    /!processing\.value\s*&&\s*!progressiveMarkingActive\.value/,
+    /!progressiveDateStampRevealed\.value/,
   )
   assert.match(cameraSource, /v-if="scanningDateStampSpec"/)
+  assert.match(cameraSource, /clip-path="url\(#completion-date-stamp-clip\)"/)
+  assert.match(cameraSource, /:href="progressiveAnnotatedImage"/)
+  const scoreReveal = cameraSource.indexOf('progressiveScoreRevealed.value = true')
+  const dateReveal = cameraSource.indexOf('progressiveDateStampRevealed.value = true')
+  assert.ok(scoreReveal >= 0)
+  assert.ok(dateReveal > scoreReveal)
+  assert.doesNotMatch(cameraSource, /scanningDateEarliestFinish/)
+})
+
+test('the first yellow opens automatically after automatic marks settle without moving the worksheet', () => {
+  const advanceStart = cameraSource.indexOf('function advanceProgressiveMarking()')
+  const advanceEnd = cameraSource.indexOf('function resetProgressiveMarking()', advanceStart)
+  const advance = cameraSource.slice(advanceStart, advanceEnd)
+  assert.match(advance, /nextYellowReviewGroup\(/)
+  assert.match(advance, /openCorrectionByGroupSlot\(nextReviewGroup\)/)
+  assert.doesNotMatch(cameraSource, /scrollIntoView|scrollBy|scrollTo|visualViewport/)
+})
+
+test('manual correction digits use the lighter settled teacher-ink renderer', async () => {
+  const correctionInkSource = await readFile(
+    new URL('../src/v3/manual-correction-ink.js', import.meta.url),
+    'utf8',
+  )
+  assert.match(correctionInkSource, /ctx\.font = `700 /)
+  assert.match(correctionInkSource, /ctx\.globalAlpha = 0\.16/)
 })
 
 test('progressive marking reveals only settled answers in worksheet order', () => {

@@ -94,7 +94,7 @@ export function drawManualCorrectionInk(ctx, rects, cells, seed) {
     ctx.save()
     ctx.translate(x, y)
     ctx.rotate(jitter(seed + index * 23, 0.03))
-    ctx.font = `800 ${fontSize}px "Marker Felt", "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif`
+    ctx.font = `700 ${fontSize}px "Marker Felt", "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.lineJoin = 'round'
@@ -104,7 +104,7 @@ export function drawManualCorrectionInk(ctx, rects, cells, seed) {
     ctx.fillStyle = '#171717'
     ctx.globalAlpha = 0.96
     ctx.fillText(digitText, 0, 0)
-    ctx.globalAlpha = 0.28
+    ctx.globalAlpha = 0.16
     ctx.fillText(digitText, jitter(seed + index * 29, 1.3), jitter(seed + index * 31, 1.1))
     ctx.restore()
   })

@@ -49,9 +49,9 @@ export function dateStampSpecForLayout(layout, width, height, seed = 1, date = n
   const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
   const text = `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()}`
   const stampSeed = Number.isFinite(Number(seed)) ? Number(seed) + 701 : 702
-  const naturalFontSize = Math.max(36, Math.min(52, Number(width) * 0.026))
-  const naturalSpacing = Math.max(2.2, naturalFontSize * 0.14)
-  const naturalWidth = text.length * naturalFontSize * 0.62 + (text.length - 1) * naturalSpacing
+  const naturalFontSize = Math.max(40, Math.min(58, Number(width) * 0.029))
+  const naturalSpacing = Math.max(2.2, naturalFontSize * 0.12)
+  const naturalWidth = text.length * naturalFontSize * 0.53 + (text.length - 1) * naturalSpacing
   const fitScale = Math.min(1, (rect.w * 0.98) / naturalWidth, (rect.h * 0.72) / naturalFontSize)
   const fontSize = naturalFontSize * fitScale
   const spacing = naturalSpacing * fitScale

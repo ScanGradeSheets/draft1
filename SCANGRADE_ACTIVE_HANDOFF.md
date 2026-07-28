@@ -1,5 +1,36 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 completion flow Beta 15.35
+
+- The teacher-review sequence is now one stationary flow: automatic marks draw
+  first, the first yellow answer receives focus automatically, subsequent
+  yellows continue to auto-advance, the handwritten score draws after the last
+  yellow is resolved, and the date lands last as the completion seal.
+- The date is no longer shown during scanning or intermediate marking.
+  Correction-animation bases explicitly remove the date from their exported
+  intermediate raster, preventing it from flashing back before the score.
+  The live completion animation reveals the exact date pixels from the final
+  annotation, so switching to the settled sheet cannot move or re-typeset it.
+- The date is modestly larger and has a restrained ink-landing effect.
+  Manually entered teacher digits use a lighter 700-weight face with less
+  duplicate-ink darkening.
+- No worksheet panning is used by the live correction interface. The custom
+  number keypad remains fixed above the lower action bar/QR area while the
+  answer focus stays attached to its physical box.
+- OCR, confidence, grading, capture, homography, answer geometry, and
+  correction semantics are unchanged. The complete repository passes
+  **341/341** and the production build passes. Build label:
+  `2026.07.28-completion-flow-beta-15-35`.
+- Published from an isolated, static-only 222-file directory at
+  `fd7c8b46.scangrade.pages.dev` and `scangrade.io`. Production HTML and
+  `index-D_a_Jh7y.js` are byte-identical to the tested build. The dormant
+  `/api/submissions` route returns the identical static application shell,
+  confirming that no repository Pages Function was included.
+- Physical acceptance still required: one no-yellow page and one multi-yellow
+  page on the current iPhone and five-year-old iPad. Confirm that first-yellow
+  focus is automatic, the sheet remains stationary, the score waits for all
+  corrections, and the date appears once at the end without shifting.
+
 ## 2026-07-27 camera-readiness state Beta 15.34
 
 - A successful phone scan could still show “The camera is still getting

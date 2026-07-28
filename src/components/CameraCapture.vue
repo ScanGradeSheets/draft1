@@ -35,16 +35,26 @@
           preserveAspectRatio="xMidYMid meet"
           aria-hidden="true"
         >
-          <text
+          <defs>
+            <clipPath id="completion-date-stamp-clip">
+              <rect
+                :x="scanningDateStampSpec.rect.x"
+                :y="scanningDateStampSpec.rect.y"
+                :width="scanningDateStampSpec.rect.w"
+                :height="scanningDateStampSpec.rect.h"
+              />
+            </clipPath>
+          </defs>
+          <image
             class="scanning-date-stamp"
-            :x="scanningDateStampSpec.x"
-            :y="scanningDateStampSpec.y"
-            :font-size="scanningDateStampSpec.fontSize"
-            :letter-spacing="scanningDateStampSpec.spacing"
-            :textLength="scanningDateStampSpec.estimatedWidth"
-            lengthAdjust="spacingAndGlyphs"
-            :transform="`rotate(${scanningDateStampSpec.rotation * 180 / Math.PI} ${scanningDateStampSpec.x} ${scanningDateStampSpec.y})`"
-          >{{ scanningDateStampSpec.text }}</text>
+            x="0"
+            y="0"
+            :width="scanningAnnotationPreview.width"
+            :height="scanningAnnotationPreview.height"
+            preserveAspectRatio="none"
+            :href="progressiveAnnotatedImage"
+            clip-path="url(#completion-date-stamp-clip)"
+          />
         </svg>
         <svg
           v-if="progressiveMarkingActive && progressiveAnnotatedImage"
@@ -1373,6 +1383,7 @@ const localFirstStrongStatusByQuestion = ref({})
 const localFirstStrongContext = ref(null)
 const progressiveRevealedQuestionNums = ref([])
 const progressiveScoreRevealed = ref(false)
+const progressiveDateStampRevealed = ref(false)
 const progressiveMarkingComplete = ref(false)
 const progressiveMarkingSessionKey = ref('')
 const progressiveCorrectionQuestionNum = ref(null)
@@ -1470,7 +1481,7 @@ const scanningDateStampSpec = computed(() => {
   const preview = scanningAnnotationPreview.value
   if (
     !props.studentMode ||
-    (!processing.value && !progressiveMarkingActive.value) ||
+    !progressiveDateStampRevealed.value ||
     !preview
   ) return null
   return dateStampSpecForLayout(preview.layout, preview.width, preview.height, 1)
@@ -3489,6 +3500,7 @@ function finishProgressiveMarkingSoon(delayMs = 420) {
   const remaining = Math.max(0, progressiveMarkingEarliestFinish - Date.now())
   progressiveMarkingTimer = window.setTimeout(() => {
     progressiveMarkingComplete.value = true
+    progressiveDateStampRevealed.value = false
     progressiveCorrectionQuestionNum.value = null
     progressiveBaseImageOverride.value = ''
     progressiveMarkingTimer = null
@@ -3518,12 +3530,30 @@ function advanceProgressiveMarking() {
     progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 320)
     return
   }
+  const nextReviewGroup = nextYellowReviewGroup(
+    studentAnswerGroups.value,
+    ocrResult.value?.questionReview,
+    null,
+  )
+  if (nextReviewGroup) {
+    clearProgressiveMarkingTimer()
+    if (!activeCorrectionQuestion.value && progressiveCorrectionQuestionNum.value == null) {
+      openCorrectionByGroupSlot(nextReviewGroup)
+    }
+    return
+  }
   if (progressiveScoreStep.value && !progressiveScoreRevealed.value) {
     progressiveScoreRevealed.value = true
     clearProgressiveMarkingTimer()
     const lastStroke = progressiveScoreStep.value.strokes.at(-1)
     const duration = Number(lastStroke?.delayMs || 0) + Number(lastStroke?.durationMs || 0) + 220
     progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, duration)
+    return
+  }
+  if (progressiveScoreStep.value && progressiveScoreRevealed.value && !progressiveDateStampRevealed.value) {
+    progressiveDateStampRevealed.value = true
+    clearProgressiveMarkingTimer()
+    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 560)
     return
   }
   finishProgressiveMarkingSoon()
@@ -3533,6 +3563,7 @@ function resetProgressiveMarking() {
   clearProgressiveMarkingTimer()
   progressiveRevealedQuestionNums.value = []
   progressiveScoreRevealed.value = false
+  progressiveDateStampRevealed.value = false
   progressiveMarkingComplete.value = false
   progressiveMarkingSessionKey.value = ''
   progressiveCorrectionQuestionNum.value = null
@@ -3599,6 +3630,27 @@ async function manualCorrectionAnimationBase(
     const context = canvas.getContext('2d')
     if (!context) return previousAnnotatedImageUrl
     context.drawImage(previous, 0, 0, width, height)
+    // The date is a completion seal. Intermediate annotated images contain it
+    // for export, so remove it from the correction-animation base until the
+    // final handwritten score has finished drawing.
+    const dateRect = declaredDateStampRect(
+      scanningAnnotationPreview.value?.layout,
+      width,
+      height,
+    )
+    if (dateRect) {
+      context.drawImage(
+        clean,
+        dateRect.x,
+        dateRect.y,
+        dateRect.w,
+        dateRect.h,
+        dateRect.x,
+        dateRect.y,
+        dateRect.w,
+        dateRect.h,
+      )
+    }
     const questionGroups = Array.isArray(ocrResult.value?.layoutSnapshot?.question_groups)
       ? ocrResult.value.layoutSnapshot.question_groups
       : []
@@ -3646,6 +3698,7 @@ function startManualCorrectionAnimation(questionNum, correctionAnimationBaseUrl)
   progressiveBaseImageOverride.value = correctionAnimationBaseUrl || ''
   progressiveRevealedQuestionNums.value = []
   progressiveScoreRevealed.value = false
+  progressiveDateStampRevealed.value = false
   progressiveMarkingComplete.value = false
   progressiveMarkingEarliestFinish = Date.now() + 900
   progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 90)
@@ -7708,7 +7761,6 @@ async function withDigitEngineTimeout(promise, label, timeoutMs = DIGIT_ENGINE_O
 
 const runRealOCR = async () => {
   processing.value = true
-  let scanningDateEarliestFinish = 0
   scanningAnnotationPreview.value = null
   ocrResult.value = null
   activeCorrectionQuestion.value = null
@@ -7992,12 +8044,6 @@ const runRealOCR = async () => {
         height: annotationHeight,
         layout: annotationLayout,
       } : null
-      if (scanningAnnotationPreview.value && dateStampSpecForLayout(annotationLayout, annotationWidth, annotationHeight, 1)) {
-        // Let the small ink-landing animation finish before the interface moves
-        // from Scanning to Grading. This is capped and applies only to layouts
-        // with an explicitly approved date safe zone.
-        scanningDateEarliestFinish = performance.now() + 900
-      }
       if (typeof window !== 'undefined') {
         window.__SCANGRADE_SCANNING_DATE_DEBUG = {
           layoutId: annotationLayout?.layout_id || annotationLayout?.id || null,
@@ -10231,10 +10277,6 @@ const runRealOCR = async () => {
       // that final, pre-acceptance result is available.
       await candidatePresentationPromise
     }
-    const scanningDateWait = Math.max(0, scanningDateEarliestFinish - performance.now())
-    if (scanningDateWait > 0) {
-      await new Promise((resolve) => window.setTimeout(resolve, scanningDateWait))
-    }
     processing.value = false
     emit('ocr-complete', ocrResult.value)
   }
@@ -10568,12 +10610,8 @@ onUnmounted(() => {
 }
 
 .scanning-date-stamp {
-  fill: #245aa4;
-  font-family: "Courier New", "Lucida Console", Menlo, Monaco, monospace;
-  font-weight: 500;
-  dominant-baseline: middle;
   opacity: 0;
-  animation: date-stamp-ink-land 340ms cubic-bezier(0.18, 0.84, 0.24, 1.08) 90ms forwards;
+  animation: date-stamp-ink-land 430ms cubic-bezier(0.18, 0.84, 0.24, 1.08) 40ms forwards;
 }
 
 .recognition-read-overlay {
@@ -10626,7 +10664,7 @@ onUnmounted(() => {
   }
   58% {
     opacity: 0.76;
-    filter: blur(0.22px);
+    filter: blur(0.22px) drop-shadow(0 0 1.2px rgba(36, 90, 164, 0.24));
   }
   100% {
     opacity: 0.72;
