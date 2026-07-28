@@ -173,7 +173,10 @@
         <div
           v-if="activeCorrectionQuestion"
           class="on-sheet-correction-focus"
-          :class="{ 'on-sheet-correction-focus--entered': manualCorrectionText }"
+          :class="{
+            'on-sheet-correction-focus--entered': manualCorrectionText,
+            'on-sheet-correction-focus--committing': correctionKeypadSubmitting
+          }"
           :style="activeCorrectionFocusStyle"
           aria-live="polite"
         ></div>
@@ -10804,27 +10807,42 @@ onUnmounted(() => {
 
 .on-sheet-correction-focus--entered {
   overflow: visible;
-  border-color: rgba(36, 90, 164, 0.28);
   border-radius: 3px;
   background: transparent;
-  box-shadow:
-    0 0 0 2px rgba(176, 224, 255, 0.1),
-    0 0 6px rgba(36, 90, 164, 0.12);
+}
+
+.on-sheet-correction-focus--committing {
+  animation: correction-focus-release 180ms ease-out forwards;
 }
 
 @keyframes correction-focus-breathe {
   0%,
   100% {
-    border-color: rgba(36, 90, 164, 0.66);
+    border-color: rgba(36, 90, 164, 0.5);
     box-shadow:
-      0 0 0 2px rgba(176, 224, 255, 0.1),
-      0 0 7px rgba(36, 90, 164, 0.14);
+      0 0 0 2px rgba(176, 224, 255, 0.08),
+      0 0 7px rgba(36, 90, 164, 0.1);
   }
   50% {
-    border-color: rgba(36, 90, 164, 0.88);
+    border-color: rgba(36, 90, 164, 0.7);
     box-shadow:
-      0 0 0 3px rgba(176, 224, 255, 0.18),
-      0 0 11px rgba(36, 90, 164, 0.24);
+      0 0 0 3px rgba(176, 224, 255, 0.13),
+      0 0 10px rgba(36, 90, 164, 0.17);
+  }
+}
+
+@keyframes correction-focus-release {
+  from {
+    border-color: rgba(36, 90, 164, 0.58);
+    box-shadow:
+      0 0 0 2px rgba(176, 224, 255, 0.1),
+      0 0 8px rgba(36, 90, 164, 0.13);
+  }
+  to {
+    border-color: rgba(36, 90, 164, 0);
+    box-shadow:
+      0 0 0 2px rgba(176, 224, 255, 0),
+      0 0 8px rgba(36, 90, 164, 0);
   }
 }
 

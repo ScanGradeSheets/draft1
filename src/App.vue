@@ -367,7 +367,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.28-quiet-focus-completion-beta-15-37'
+const APP_BUILD_LABEL = '2026.07.28-stable-correction-transition-beta-15-38'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices

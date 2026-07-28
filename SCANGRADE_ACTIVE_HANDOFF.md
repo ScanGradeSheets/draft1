@@ -1,5 +1,27 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 stable correction transition Beta 15.38
+
+- Physical review of Beta 15.37 reported an apparent correction-digit shift
+  when the blue focus frame disappeared.
+- Inspection confirms the live and settled black digits already use the same
+  renderer, physical rectangles, deterministic seed, font, colour, and
+  placement. The strong pulsing frame was overriding the entered-state fade
+  and then disappearing abruptly, creating a contrast-based apparent jump.
+- The focus pulse is now lower amplitude. Once the complete correction has
+  been entered and submission begins, only the blue border and glow fade out
+  over 180 ms. The black digit layer is neither transformed nor faded, and a
+  partial first digit in a two-digit correction retains visible focus.
+- A direct source contract now locks the live and settled seed calculations to
+  the same value in addition to the existing shared-renderer determinism test.
+  OCR, recognition, grading, capture, geometry, and correction semantics are
+  unchanged. Focused presentation tests pass **23/23**; the full repository
+  passes **347/347** and the pruned production build passes. Build label:
+  `2026.07.28-stable-correction-transition-beta-15-38`.
+- Published static-only at `a2299891.scangrade.pages.dev` and
+  `scangrade.io`. Production HTML and `index-2vwcRpsk.js` are byte-identical
+  to the tested build; `/api/submissions` returns the identical static shell.
+
 ## 2026-07-28 quiet focus and completion Beta 15.37
 
 - The silent scanning stage retains its moving yellow sweep as a useful

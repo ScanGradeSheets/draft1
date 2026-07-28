@@ -226,3 +226,21 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   `e1816fa1.scangrade.pages.dev` and `scangrade.io` matches the tested HTML and
   JavaScript byte-for-byte; the API-shaped path returns only the static shell.
   This presentation-only release still needs physical-device review.
+
+# 2026-07-28 — Beta 15.38 stable correction transition
+
+- **Observation:** The corrected digit appeared to move or change tone when its
+  blue focus frame vanished.
+- **Diagnosis:** Live and settled correction ink already share identical
+  renderer calls, physical slot rectangles, and deterministic seed. Beta
+  15.37's pulse animation overrode the entered-state dimming, leaving a strong
+  contrast frame until abrupt removal.
+- **Change:** Reduced pulse amplitude and added a 180 ms border/shadow-only
+  release animation once a complete entry begins submission. Partial
+  multi-digit entries keep focus. Black correction ink is never animated,
+  transformed, or faded.
+- **Result:** Focused presentation tests 23/23; full repository 347/347;
+  pruned production build passed. Static production deployment
+  `a2299891.scangrade.pages.dev` and `scangrade.io` matches the tested HTML and
+  JavaScript byte-for-byte; the API-shaped path remains only the app shell.
+  OCR and grading behavior remain frozen.

@@ -42,4 +42,13 @@ test('CameraCapture uses the shared correction renderer for preview and final in
     2,
     'one shared call renders the live preview and one renders the settled sheet',
   )
+  assert.match(
+    source,
+    /drawManualCorrectionInk\(ctx,\s*rects,\s*cells,\s*\(groupIndex \+ 1\) \* 131 \+ 47\)/,
+  )
+  assert.match(source, /const seed = \(index \+ 1\) \* 131/)
+  assert.match(
+    source,
+    /drawManualCorrectionInk\(ctx,\s*correctedEntries\.map\(\(entry\) => entry\.rect\),\s*displayCells,\s*seed \+ 47\)/,
+  )
 })
