@@ -53,6 +53,13 @@ test('the completion date lands with only a natural ink impression and never mov
   assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*720\)/)
 })
 
+test('the date press uses a temporary neutral paper impression rather than an interface halo', () => {
+  assert.match(cameraSource, /class="scanning-date-paper-impression"/)
+  assert.match(cameraSource, /@keyframes date-paper-compression/)
+  assert.match(cameraSource, /fill="url\(#completion-date-paper-impression\)"/)
+  assert.doesNotMatch(cameraSource, /scanning-date-stamp-splash|date-stamp-completion-splash/)
+})
+
 test('progressive marking reveals only settled answers in worksheet order', () => {
   const groups = [
     { questionNum: 1, status: 'correct' },

@@ -1,6 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { dateStampSpecForLayout, declaredDateStampRect } from '../src/v3/date-stamp-placement.js'
+import {
+  completionDateStampRect,
+  dateStampSpecForLayout,
+  declaredDateStampRect,
+} from '../src/v3/date-stamp-placement.js'
+import { teacherScorePlacement } from '../src/v3/teacher-score-plan.js'
 
 const LAUNCH_LAYOUT_IDS = [
   'sg-g1-lw-01-add-1digit',
@@ -15,7 +20,7 @@ const LAUNCH_LAYOUT_IDS = [
   'sg-g1-lw-10-place-value-50',
 ]
 
-test('all ten frozen launch layouts resolve a date zone clear of shared title and name line', () => {
+test('all ten frozen launch layouts retain their declared date safety contract', () => {
   assert.equal(LAUNCH_LAYOUT_IDS.length, 10)
   for (const layoutId of LAUNCH_LAYOUT_IDS) {
     const rect = declaredDateStampRect({ layout_id: layoutId }, 215.9, 279.4)
@@ -27,6 +32,28 @@ test('all ten frozen launch layouts resolve a date zone clear of shared title an
     assert.ok(rect.y + rect.h < 84, layoutId)
     assert.ok(rect.x + rect.w < 193.5, layoutId)
   }
+})
+
+test('the completion date sits below the score and to the right of the QR code', () => {
+  const layout = {
+    layout_id: 'sg-g1-lw-06-ten-frames',
+    metadata: {
+      qr_position: { x: 0.4403, y: 0.8715, width: 0.1195, height: 0.0923 },
+    },
+  }
+  const questionRects = [
+    { x: 190, y: 420, w: 80, h: 65 },
+    { x: 760, y: 1020, w: 90, h: 70 },
+  ]
+  const width = 1200
+  const height = 1600
+  const score = teacherScorePlacement({ width, height, layout, questionRects })
+  const rect = completionDateStampRect(layout, width, height, questionRects)
+  assert.ok(rect)
+  assert.ok(rect.y > score.y)
+  assert.ok(rect.x > (0.4403 + 0.1195) * width)
+  assert.ok(rect.x + rect.w < width)
+  assert.ok(rect.y + rect.h < height)
 })
 
 test('undeclared or invalid layouts omit the date instead of guessing', () => {
@@ -50,6 +77,10 @@ test('the larger iPad date remains inside the declared safe zone', () => {
     2588,
     9,
     new Date('2026-07-18T12:00:00Z'),
+    [
+      { x: 300, y: 700, w: 120, h: 90 },
+      { x: 1380, y: 1700, w: 130, h: 95 },
+    ],
   )
   assert.ok(spec)
   assert.ok(spec.fontSize >= 40)

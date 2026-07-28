@@ -1,5 +1,27 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 score-adjacent completion date Beta 15.40
+
+- Tony approved moving the final date from the page header to the teacher-mark
+  cluster at the bottom right, directly below the handwritten score.
+- Date placement now derives from the same answer-box-aware score placement.
+  It remains to the right of the declared QR zone, inside the page margins,
+  and is enabled only for layouts carrying ScanGrade's date-zone safety
+  contract. The live reveal, saved annotation, and correction-animation
+  cleanup all use the same calculated rectangle.
+- A brief neutral paper-pressure gradient appears under the date as it lands,
+  then disappears completely. It does not transform the worksheet or date and
+  leaves no interface outline or halo.
+- OCR, recognition, grading, capture, homography, answer geometry, correction
+  behavior, score placement, and answer-key boundaries are unchanged. Focused
+  date/score/progressive tests pass **29/29**, the complete repository passes
+  **349/349**, and the pruned production build passes. Build label:
+  `2026.07.28-score-adjacent-date-beta-15-40`.
+- Published static-only at `28b3cc05.scangrade.pages.dev` and
+  `scangrade.io`. Production HTML and `index-CKkjlQJ6.js` are byte-identical
+  to the tested build; the cache-busted `/api/submissions` path returns the
+  identical static shell.
+
 ## 2026-07-28 natural date impression Beta 15.39
 
 - Physical review rejected Beta 15.38's blue completion outline because it

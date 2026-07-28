@@ -264,3 +264,24 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   and `index-C1MN8Jie.js` are byte-identical to the tested build. A
   cache-busted `/api/submissions` request returns the same app shell, so no
   Pages Function is active.
+
+# 2026-07-28 — Beta 15.40 score-adjacent completion date
+
+- **Observation:** Even with the interface-like halo removed, the header date
+  was away from the viewer's attention after the handwritten score completed.
+- **Change:** The completion date now derives from the existing
+  answer-box-aware score placement and lands directly below it, to the right
+  of the QR zone. A temporary neutral light/shade gradient simulates slight
+  paper compression under the stamp and fades without residue.
+- **Geometry invariant:** Live reveal, final Canvas annotation, and
+  correction-animation cleanup share the same score-relative date rectangle.
+  Neither the date nor worksheet is translated or scaled by the impression.
+- **Safety boundary:** The old declared date zone remains the per-template
+  opt-in contract. Unsupported layouts still omit the date rather than guess.
+  OCR, confidence, capture, grading, corrections, and score placement are
+  unchanged.
+- **Result:** Focused date/score/progressive tests pass 29/29; the full
+  repository passes 349/349; the pruned production build passes. Static
+  deployment `28b3cc05.scangrade.pages.dev` is live at `scangrade.io`.
+  Production HTML and `index-CKkjlQJ6.js` are byte-identical to the tested
+  build, and the cache-busted API-shaped path returns the same static shell.

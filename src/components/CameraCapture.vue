@@ -44,7 +44,21 @@
                 :height="scanningDateStampSpec.rect.h"
               />
             </clipPath>
+            <linearGradient id="completion-date-paper-impression" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="rgba(74, 65, 49, 0.12)" />
+              <stop offset="0.46" stop-color="rgba(255, 255, 255, 0)" />
+              <stop offset="1" stop-color="rgba(255, 255, 255, 0.24)" />
+            </linearGradient>
           </defs>
+          <rect
+            class="scanning-date-paper-impression"
+            :x="scanningDateStampSpec.rect.x - scanningDateStampSpec.rect.w * 0.015"
+            :y="scanningDateStampSpec.rect.y - scanningDateStampSpec.rect.h * 0.08"
+            :width="scanningDateStampSpec.rect.w * 1.03"
+            :height="scanningDateStampSpec.rect.h * 1.16"
+            :rx="scanningDateStampSpec.rect.h * 0.16"
+            fill="url(#completion-date-paper-impression)"
+          />
           <image
             class="scanning-date-stamp"
             x="0"
@@ -1494,7 +1508,27 @@ const scanningDateStampSpec = computed(() => {
     !progressiveDateStampRevealed.value ||
     !preview
   ) return null
-  return dateStampSpecForLayout(preview.layout, preview.width, preview.height, 1)
+  const questionRects = (ocrResult.value?.annotationRegions || [])
+    .map((region) => ({
+      x: Number(region?.focusX),
+      y: Number(region?.focusY),
+      w: Number(region?.focusW),
+      h: Number(region?.focusH),
+    }))
+    .filter((rect) => (
+      Number.isFinite(rect.x) &&
+      Number.isFinite(rect.y) &&
+      Number.isFinite(rect.w) &&
+      Number.isFinite(rect.h)
+    ))
+  return dateStampSpecForLayout(
+    preview.layout,
+    preview.width,
+    preview.height,
+    1,
+    new Date(),
+    questionRects,
+  )
 })
 
 const displayedResultImage = computed(() =>
@@ -3643,11 +3677,27 @@ async function manualCorrectionAnimationBase(
     // The date is a completion seal. Intermediate annotated images contain it
     // for export, so remove it from the correction-animation base until the
     // final handwritten score has finished drawing.
-    const dateRect = declaredDateStampRect(
+    const dateQuestionRects = (ocrResult.value?.annotationRegions || [])
+      .map((region) => ({
+        x: Number(region?.focusX),
+        y: Number(region?.focusY),
+        w: Number(region?.focusW),
+        h: Number(region?.focusH),
+      }))
+      .filter((candidate) => (
+        Number.isFinite(candidate.x) &&
+        Number.isFinite(candidate.y) &&
+        Number.isFinite(candidate.w) &&
+        Number.isFinite(candidate.h)
+      ))
+    const dateRect = dateStampSpecForLayout(
       scanningAnnotationPreview.value?.layout,
       width,
       height,
-    )
+      1,
+      new Date(),
+      dateQuestionRects,
+    )?.rect
     if (dateRect) {
       context.drawImage(
         clean,
@@ -4189,8 +4239,15 @@ function composeStudentAnnotatedImage(
         }
       }
 
-      const drawDateStamp = () => {
-        const spec = dateStampSpecForLayout(layout, warpedW, warpedH, 1)
+      const drawDateStamp = (questionRects = []) => {
+        const spec = dateStampSpecForLayout(
+          layout,
+          warpedW,
+          warpedH,
+          1,
+          new Date(),
+          questionRects,
+        )
         if (!spec) return
         const { text, stampSeed, fontSize, spacing, x, y, rotation } = spec
         ctx.save()
@@ -4353,7 +4410,7 @@ function composeStudentAnnotatedImage(
         const questionRects = questionRectsByIndex.filter(Boolean)
 
         if (questionGroups.length > 0) {
-          drawDateStamp()
+          drawDateStamp(questionRects)
           questionGroups.forEach((group, index) => {
             const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
             const rect = questionRectsByIndex[index]
@@ -10635,6 +10692,12 @@ onUnmounted(() => {
   animation: date-stamp-ink-land 560ms cubic-bezier(0.18, 0.84, 0.24, 1.08) 45ms forwards;
 }
 
+.scanning-date-paper-impression {
+  opacity: 0;
+  filter: blur(1.2px);
+  animation: date-paper-compression 620ms cubic-bezier(0.2, 0.72, 0.26, 1) forwards;
+}
+
 .recognition-read-overlay {
   position: absolute;
   inset: 0;
@@ -10694,6 +10757,21 @@ onUnmounted(() => {
   100% {
     opacity: 0.72;
     filter: blur(0) saturate(1);
+  }
+}
+
+@keyframes date-paper-compression {
+  0% {
+    opacity: 0;
+  }
+  24% {
+    opacity: 0.78;
+  }
+  58% {
+    opacity: 0.42;
+  }
+  100% {
+    opacity: 0;
   }
 }
 

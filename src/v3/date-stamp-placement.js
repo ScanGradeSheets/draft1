@@ -1,3 +1,5 @@
+import { teacherScorePlacement } from './teacher-score-plan.js'
+
 function normalized(value) {
   const number = Number(value)
   return Number.isFinite(number) && number >= 0 && number <= 1 ? number : null
@@ -38,13 +40,51 @@ export function declaredDateStampRect(layout, width, height) {
   }
 }
 
+export function completionDateStampRect(layout, width, height, questionRects = []) {
+  // Keep the original declared zone as the template opt-in/safety contract,
+  // but place the completion stamp beside the QR and immediately below the
+  // score—the point where the teacher's eye already rests.
+  if (!declaredDateStampRect(layout, width, height)) return null
+  const pageWidth = Number(width)
+  const pageHeight = Number(height)
+  if (!(pageWidth > 0) || !(pageHeight > 0)) return null
+  const score = teacherScorePlacement({
+    width: pageWidth,
+    height: pageHeight,
+    layout,
+    questionRects,
+  })
+  const qr = layout?.metadata?.qr_position
+  const qrRight = qr && Number.isFinite(Number(qr.x)) && Number.isFinite(Number(qr.width))
+    ? (Number(qr.x) + Number(qr.width)) * pageWidth
+    : pageWidth * 0.56
+  const w = pageWidth * 0.215
+  const h = pageHeight * 0.05
+  const x = Math.min(
+    pageWidth - w - pageWidth * 0.035,
+    Math.max(qrRight + pageWidth * 0.025, score.centerX - w * 0.5),
+  )
+  const y = Math.min(
+    pageHeight - h - pageHeight * 0.035,
+    score.y + Math.max(score.fontSize * 0.58, pageHeight * 0.022),
+  )
+  return { x, y, w, h }
+}
+
 function seededUnit(seed) {
   const x = Math.sin(seed * 12.9898) * 43758.5453
   return x - Math.floor(x)
 }
 
-export function dateStampSpecForLayout(layout, width, height, seed = 1, date = new Date()) {
-  const rect = declaredDateStampRect(layout, width, height)
+export function dateStampSpecForLayout(
+  layout,
+  width,
+  height,
+  seed = 1,
+  date = new Date(),
+  questionRects = [],
+) {
+  const rect = completionDateStampRect(layout, width, height, questionRects)
   if (!rect || !(date instanceof Date) || Number.isNaN(date.getTime())) return null
   const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
   const text = `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()}`
