@@ -1,5 +1,32 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 quiet focus and completion Beta 15.37
+
+- The silent scanning stage retains its moving yellow sweep as a useful
+  progress signal. Once automatic marks begin, `Grading` holds one steady
+  fluorescent band so it no longer competes with the teacher-pen animation.
+- The active manual-review box now uses a slow, low-amplitude blue border/glow
+  pulse. It changes only border and shadow—not position, size, opacity, or
+  worksheet geometry.
+- Manual correction digits retain the exact shared live/final renderer and
+  placement, but move from weight 700 to 600 with lighter duplicate ink
+  (`0.10` instead of `0.16`). This makes them less heavy without causing the
+  live-to-settled shift that earlier separate renderers produced.
+- The exact settled date pixels still appear only after the handwritten score.
+  A larger, short-lived blue completion halo now expands around the declared
+  date zone while the stamp lands; the halo disappears completely and cannot
+  alter the final date position.
+- OCR, recognition policy, confidence, coverage, grading, crops, homography,
+  capture, answer geometry, and correction semantics are unchanged. Focused
+  presentation regressions pass **23/23**; the complete repository passes
+  **347/347** and the pruned production build passes. Build label:
+  `2026.07.28-quiet-focus-completion-beta-15-37`.
+- Published from the isolated non-repository static directory
+  `e1816fa1.scangrade.pages.dev` and promoted to `scangrade.io`. Production
+  HTML and `index-Bbm1XX2G.js` are byte-identical to the tested build.
+  `/api/submissions` returns that same static shell, confirming no dormant
+  Pages Function is active.
+
 ## 2026-07-28 productive marking scheduler Beta 15.36
 
 - Progressive marking can now overlap an already-enabled asynchronous,

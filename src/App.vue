@@ -123,7 +123,10 @@
           }"
         >
           <div v-if="studentScanStage" class="student-scan-grading" aria-live="polite">
-            <span class="student-scan-grading-word">{{ studentScanStage === 'grading' ? 'Grading' : 'Scanning' }}</span>
+            <span
+              class="student-scan-grading-word"
+              :class="{ 'student-scan-grading-word--steady': studentScanStage === 'grading' }"
+            >{{ studentScanStage === 'grading' ? 'Grading' : 'Scanning' }}</span>
           </div>
           <template v-else>
             <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
@@ -364,7 +367,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.28-productive-marking-beta-15-36'
+const APP_BUILD_LABEL = '2026.07.28-quiet-focus-completion-beta-15-37'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -1851,6 +1854,12 @@ button.student-home-scan-btn:focus-visible {
   transform: translateY(-46%) rotate(-2deg) scaleX(0.18);
   transform-origin: left center;
   animation: scan-grading-word-highlight 1.16s ease-in-out infinite;
+}
+
+.student-scan-grading-word--steady::before {
+  opacity: 0.92;
+  transform: translate(0, -46%) rotate(-2deg) scaleX(1) skewX(-6deg);
+  animation: none;
 }
 
 @keyframes scan-grading-word-highlight {

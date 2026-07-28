@@ -28,6 +28,8 @@ test('correction entry is drawn on the sheet and uses a number-only custom keypa
   assert.match(source, /\.on-sheet-correction-ink\s*\{[^}]*object-fit:\s*contain/s)
   assert.match(source, /\.on-sheet-correction-focus--entered\s*\{[^}]*background:\s*transparent/s)
   assert.match(template, /'on-sheet-correction-focus--entered': manualCorrectionText/)
+  assert.match(source, /\.on-sheet-correction-focus\s*\{[^}]*animation:\s*correction-focus-breathe 1\.5s ease-in-out infinite/s)
+  assert.match(source, /@keyframes correction-focus-breathe/)
   assert.doesNotMatch(template, /class="on-sheet-correction-entry"/)
 })
 

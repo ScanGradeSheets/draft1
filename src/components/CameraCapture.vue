@@ -45,6 +45,14 @@
               />
             </clipPath>
           </defs>
+          <rect
+            class="scanning-date-stamp-splash"
+            :x="scanningDateStampSpec.rect.x - scanningDateStampSpec.rect.w * 0.04"
+            :y="scanningDateStampSpec.rect.y - scanningDateStampSpec.rect.h * 0.08"
+            :width="scanningDateStampSpec.rect.w * 1.08"
+            :height="scanningDateStampSpec.rect.h * 1.16"
+            :rx="scanningDateStampSpec.rect.h * 0.2"
+          />
           <image
             class="scanning-date-stamp"
             x="0"
@@ -3560,7 +3568,7 @@ function advanceProgressiveMarking() {
   if (progressiveScoreStep.value && progressiveScoreRevealed.value && !progressiveDateStampRevealed.value) {
     progressiveDateStampRevealed.value = true
     clearProgressiveMarkingTimer()
-    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 560)
+    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 720)
     return
   }
   finishProgressiveMarkingSoon()
@@ -10629,7 +10637,17 @@ onUnmounted(() => {
 
 .scanning-date-stamp {
   opacity: 0;
-  animation: date-stamp-ink-land 430ms cubic-bezier(0.18, 0.84, 0.24, 1.08) 40ms forwards;
+  animation: date-stamp-ink-land 560ms cubic-bezier(0.18, 0.84, 0.24, 1.08) 55ms forwards;
+}
+
+.scanning-date-stamp-splash {
+  fill: rgba(65, 119, 177, 0.18);
+  stroke: rgba(65, 119, 177, 0.24);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: date-stamp-completion-splash 680ms cubic-bezier(0.16, 0.82, 0.24, 1) forwards;
 }
 
 .recognition-read-overlay {
@@ -10678,15 +10696,30 @@ onUnmounted(() => {
 @keyframes date-stamp-ink-land {
   0% {
     opacity: 0;
-    filter: blur(0.9px);
+    filter: blur(1.25px);
   }
-  58% {
-    opacity: 0.76;
-    filter: blur(0.22px) drop-shadow(0 0 1.2px rgba(36, 90, 164, 0.24));
+  52% {
+    opacity: 0.82;
+    filter: blur(0.2px) drop-shadow(0 0 2px rgba(36, 90, 164, 0.3));
   }
   100% {
     opacity: 0.72;
     filter: blur(0);
+  }
+}
+
+@keyframes date-stamp-completion-splash {
+  0% {
+    opacity: 0;
+    transform: scale(0.58);
+  }
+  38% {
+    opacity: 0.42;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.34);
   }
 }
 
@@ -10749,6 +10782,7 @@ onUnmounted(() => {
   box-shadow:
     0 0 0 2px rgba(176, 224, 255, 0.14),
     0 0 8px rgba(36, 90, 164, 0.18);
+  animation: correction-focus-breathe 1.5s ease-in-out infinite;
   pointer-events: none;
   transition:
     background-color 90ms ease-out,
@@ -10776,6 +10810,22 @@ onUnmounted(() => {
   box-shadow:
     0 0 0 2px rgba(176, 224, 255, 0.1),
     0 0 6px rgba(36, 90, 164, 0.12);
+}
+
+@keyframes correction-focus-breathe {
+  0%,
+  100% {
+    border-color: rgba(36, 90, 164, 0.66);
+    box-shadow:
+      0 0 0 2px rgba(176, 224, 255, 0.1),
+      0 0 7px rgba(36, 90, 164, 0.14);
+  }
+  50% {
+    border-color: rgba(36, 90, 164, 0.88);
+    box-shadow:
+      0 0 0 3px rgba(176, 224, 255, 0.18),
+      0 0 11px rgba(36, 90, 164, 0.24);
+  }
 }
 
 .correction-keypad {
