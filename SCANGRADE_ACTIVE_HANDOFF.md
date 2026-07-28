@@ -1,5 +1,31 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 varied completion stamp Beta 15.41
+
+- Physical review of Beta 15.40 found a white edge in the temporary
+  paper-pressure effect and an overly uniform completion date.
+- The impression gradient now uses neutral paper shadow only—there is no
+  white stop or persistent outline. The completion-date zone is farther right
+  while remaining below the score, to the right of the QR code, and inside
+  the page boundary.
+- Date position and slant now derive from the worksheet result's existing
+  annotation seed. Different scans receive restrained natural variation;
+  replaying identical evidence remains pixel-stable. The live reveal, saved
+  worksheet, and correction-animation cleanup use the same seed and rectangle.
+- The blue manual-entry focus pulse was audited for upper and lower questions.
+  It follows the active answer's registered page coordinates with no viewport
+  or vertical-position gate, so bottom-row answers receive the same pulse.
+  A regression now locks that behavior.
+- OCR, recognition, grading, capture, homography, answer geometry, correction
+  semantics, and answer-key boundaries are unchanged. Focused presentation
+  tests pass **30/30**, the complete repository passes **351/351**, and the
+  pruned production build passes. Build label:
+  `2026.07.28-varied-completion-stamp-beta-15-41`.
+- Published static-only at `8724cffd.scangrade.pages.dev` and
+  `scangrade.io`. Production HTML and `index-BsH-NPm5.js` are byte-identical
+  to the tested build; the cache-busted `/api/submissions` path returns the
+  identical static shell.
+
 ## 2026-07-28 score-adjacent completion date Beta 15.40
 
 - Tony approved moving the final date from the page header to the teacher-mark

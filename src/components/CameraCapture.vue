@@ -45,9 +45,9 @@
               />
             </clipPath>
             <linearGradient id="completion-date-paper-impression" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="rgba(74, 65, 49, 0.12)" />
-              <stop offset="0.46" stop-color="rgba(255, 255, 255, 0)" />
-              <stop offset="1" stop-color="rgba(255, 255, 255, 0.24)" />
+              <stop offset="0" stop-color="#4a4131" stop-opacity="0.1" />
+              <stop offset="0.52" stop-color="#4a4131" stop-opacity="0.025" />
+              <stop offset="1" stop-color="#4a4131" stop-opacity="0" />
             </linearGradient>
           </defs>
           <rect
@@ -1525,7 +1525,7 @@ const scanningDateStampSpec = computed(() => {
     preview.layout,
     preview.width,
     preview.height,
-    1,
+    ocrResult.value?.annotationSeed ?? 1,
     new Date(),
     questionRects,
   )
@@ -3694,7 +3694,7 @@ async function manualCorrectionAnimationBase(
       scanningAnnotationPreview.value?.layout,
       width,
       height,
-      1,
+      ocrResult.value?.annotationSeed ?? 1,
       new Date(),
       dateQuestionRects,
     )?.rect
@@ -4244,7 +4244,7 @@ function composeStudentAnnotatedImage(
           layout,
           warpedW,
           warpedH,
-          1,
+          annotationJitterSeed,
           new Date(),
           questionRects,
         )

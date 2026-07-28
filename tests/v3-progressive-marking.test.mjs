@@ -57,7 +57,18 @@ test('the date press uses a temporary neutral paper impression rather than an in
   assert.match(cameraSource, /class="scanning-date-paper-impression"/)
   assert.match(cameraSource, /@keyframes date-paper-compression/)
   assert.match(cameraSource, /fill="url\(#completion-date-paper-impression\)"/)
+  assert.doesNotMatch(cameraSource, /completion-date-paper-impression[\s\S]{0,500}stop-color="(?:white|#fff|rgba\(255,\s*255,\s*255)/i)
   assert.doesNotMatch(cameraSource, /scanning-date-stamp-splash|date-stamp-completion-splash/)
+})
+
+test('the manual focus pulse follows the active answer at every page height', () => {
+  assert.match(cameraSource, /v-if="activeCorrectionQuestion"[\s\S]*class="on-sheet-correction-focus"/)
+  const focusStyleStart = cameraSource.indexOf('const activeCorrectionFocusStyle = computed')
+  const focusStyleEnd = cameraSource.indexOf('const correctionKeypadKeys', focusStyleStart)
+  const focusStyle = cameraSource.slice(focusStyleStart, focusStyleEnd)
+  assert.match(focusStyle, /focusTopPct \?\? region\.topPct/)
+  assert.doesNotMatch(focusStyle, /visualViewport|innerHeight|topPct\s*[<>]|focusTopPct\s*[<>]/)
+  assert.match(cameraSource, /\.on-sheet-correction-focus\s*\{[^}]*animation:\s*correction-focus-breathe/s)
 })
 
 test('progressive marking reveals only settled answers in worksheet order', () => {

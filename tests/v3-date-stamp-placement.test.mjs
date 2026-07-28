@@ -52,8 +52,36 @@ test('the completion date sits below the score and to the right of the QR code',
   assert.ok(rect)
   assert.ok(rect.y > score.y)
   assert.ok(rect.x > (0.4403 + 0.1195) * width)
+  assert.ok(rect.x + rect.w * 0.5 > score.centerX)
   assert.ok(rect.x + rect.w < width)
   assert.ok(rect.y + rect.h < height)
+})
+
+test('completion stamps vary naturally by scan seed but remain deterministic and bounded', () => {
+  const layout = {
+    layout_id: 'sg-g1-lw-07-dot-collections',
+    metadata: {
+      qr_position: { x: 0.4403, y: 0.8715, width: 0.1195, height: 0.0923 },
+    },
+  }
+  const date = new Date('2026-07-28T12:00:00Z')
+  const first = dateStampSpecForLayout(layout, 2000, 2588, 12031, date)
+  const replay = dateStampSpecForLayout(layout, 2000, 2588, 12031, date)
+  const nextSheet = dateStampSpecForLayout(layout, 2000, 2588, 12032, date)
+  assert.deepEqual(first, replay)
+  assert.ok(first)
+  assert.ok(nextSheet)
+  assert.notDeepEqual(
+    [first.x, first.y, first.rotation],
+    [nextSheet.x, nextSheet.y, nextSheet.rotation],
+  )
+  for (const spec of [first, nextSheet]) {
+    assert.ok(spec.x >= spec.rect.x)
+    assert.ok(spec.x + spec.estimatedWidth <= spec.rect.x + spec.rect.w)
+    assert.ok(spec.y >= spec.rect.y)
+    assert.ok(spec.y <= spec.rect.y + spec.rect.h)
+    assert.ok(Math.abs(spec.rotation) < 0.1)
+  }
 })
 
 test('undeclared or invalid layouts omit the date instead of guessing', () => {

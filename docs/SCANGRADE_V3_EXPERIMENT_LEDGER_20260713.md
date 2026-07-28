@@ -285,3 +285,22 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   deployment `28b3cc05.scangrade.pages.dev` is live at `scangrade.io`.
   Production HTML and `index-CKkjlQJ6.js` are byte-identical to the tested
   build, and the cache-busted API-shaped path returns the same static shell.
+## 2026-07-28 — Beta 15.41 varied completion stamp and full-height focus audit
+
+- Trigger: physical review found a white outline beneath the completion date,
+  asked for restrained between-sheet slant/position variation, a generally
+  farther-right stamp, and confirmation that the manual-input pulse also
+  appears for bottom questions.
+- Change: replaced the white-ended pressure gradient with neutral shadow-only
+  compression; shifted the bounded score-adjacent date zone right; connected
+  date placement and rotation to the existing deterministic annotation seed
+  in live, saved, and correction-cleanup paths.
+- Focus result: the blue focus frame is driven solely by the active answer's
+  registered `focusTopPct`/box geometry. It has no upper/lower or viewport
+  branch. Added a direct regression to prevent such a cutoff.
+- Safety: no OCR, recognition, grading, capture, homography, crop, confidence,
+  answer-key, or correction-policy changes.
+- Verification: focused tests **30/30**; full suite **351/351**; pruned
+  production build passed.
+- Deployment: static-only `8724cffd.scangrade.pages.dev`, promoted to
+  `scangrade.io`; production serves the verified `index-BsH-NPm5.js`.

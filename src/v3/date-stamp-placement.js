@@ -58,11 +58,11 @@ export function completionDateStampRect(layout, width, height, questionRects = [
   const qrRight = qr && Number.isFinite(Number(qr.x)) && Number.isFinite(Number(qr.width))
     ? (Number(qr.x) + Number(qr.width)) * pageWidth
     : pageWidth * 0.56
-  const w = pageWidth * 0.215
+  const w = pageWidth * 0.225
   const h = pageHeight * 0.05
   const x = Math.min(
-    pageWidth - w - pageWidth * 0.035,
-    Math.max(qrRight + pageWidth * 0.025, score.centerX - w * 0.5),
+    pageWidth - w - pageWidth * 0.025,
+    Math.max(qrRight + pageWidth * 0.03, score.centerX - w * 0.32),
   )
   const y = Math.min(
     pageHeight - h - pageHeight * 0.035,
@@ -103,9 +103,9 @@ export function dateStampSpecForLayout(
     fontSize,
     spacing,
     estimatedWidth,
-    x: rect.x + Math.max(0, rect.w - estimatedWidth) * (0.45 + seededUnit(stampSeed + 5) * 0.35),
-    y: rect.y + rect.h * (0.44 + seededUnit(stampSeed + 13) * 0.12),
-    rotation: -0.052 + (seededUnit(stampSeed + 23) - 0.5) * 0.048,
+    x: rect.x + Math.max(0, rect.w - estimatedWidth) * (0.18 + seededUnit(stampSeed + 5) * 0.72),
+    y: rect.y + rect.h * (0.4 + seededUnit(stampSeed + 13) * 0.2),
+    rotation: -0.046 + (seededUnit(stampSeed + 23) - 0.5) * 0.072,
     stampSeed,
   }
 }
