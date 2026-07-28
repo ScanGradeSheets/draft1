@@ -1,5 +1,33 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 productive marking scheduler Beta 15.36
+
+- Progressive marking can now overlap an already-enabled asynchronous,
+  key-blind local verification pass. The verifier must declare the exact
+  yellow and suspicious-accepted questions it is checking before animation
+  begins. Questions outside that queue may receive teacher marks while the
+  verifier works; queued questions remain withheld until their evidence
+  settles.
+- The scheduler is fail-closed. If a pending verifier does not declare its
+  queue, no answer animates early. A timeout or unavailable verifier cannot
+  invent, replace, or silently change a transcription.
+- This is deliberately policy-neutral on public `scangrade.io`: the existing
+  independent browser readers have not passed the prospective safety/device
+  gate, so none was newly enabled. Public OCR decisions, confident coverage,
+  yellow rate, capture, crops, homography, grading, and answer-key boundaries
+  remain unchanged. The scheduler becomes productive automatically wherever
+  the already-gated local verifier is explicitly enabled.
+- The normal browser digit model was already warmed when the scan screen
+  mounts, so no additional first-result delay was added. Build label:
+  `2026.07.28-productive-marking-beta-15-36`.
+- Direct scheduler tests cover deterministic queue union, safe-answer overlap,
+  and undeclared-queue fail-closed behavior. The complete repository passes
+  **345/345** and the production build passes.
+- Published from an isolated, static-only 222-file directory at
+  `bca456b4.scangrade.pages.dev` and `scangrade.io`. Production HTML and
+  `index-BoqLr77d.js` are byte-identical to the tested build.
+  `/api/submissions` returns the identical static shell.
+
 ## 2026-07-28 completion flow Beta 15.35
 
 - The teacher-review sequence is now one stationary flow: automatic marks draw

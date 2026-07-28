@@ -597,6 +597,10 @@ import {
   transformAnnotationCrop,
 } from '../v3/annotation-geometry.js'
 import { progressiveMarkingSteps } from '../v3/progressive-marking.js'
+import {
+  progressivePendingQuestionNumbers,
+  progressiveVerificationSchedule,
+} from '../v3/progressive-verification-scheduler.js'
 import { fluorescentHighlighterGeometry } from '../v3/highlighter-stroke.js'
 import { dateStampSpecForLayout, declaredDateStampRect } from '../v3/date-stamp-placement.js'
 import { recognitionOverlayItemsForAnswers } from '../v3/recognition-overlay.js'
@@ -1440,9 +1444,10 @@ const progressiveMarkingStepList = computed(() => progressiveMarkingSteps(
     // While the stronger review is running, reveal only questions that are not
     // in its queue. Questions it may promote or veto appear only after it has
     // reached a final decision, so a teacher/student never sees a mark retracted.
-    excludedQuestionNums: ocrResult.value?.v3Shadow?.status === 'compact-ready'
-      ? ocrResult.value?.v3Shadow?.pendingReviewQuestionNums
-      : [],
+    // Draw settled answers while the local verifier works, but reserve every
+    // question in its declared queue. An undeclared pending queue remains
+    // fail-closed through progressiveEvidenceReady below.
+    excludedQuestionNums: progressiveVerification.value.deferredQuestionNums,
     excludeReview: progressiveReviewPending.value,
     onlyQuestionNums: progressiveCorrectionQuestionNum.value != null && Number.isFinite(Number(progressiveCorrectionQuestionNum.value))
       ? [Number(progressiveCorrectionQuestionNum.value)]
@@ -1460,13 +1465,15 @@ const revealedProgressiveMarkingSteps = computed(() => {
 })
 
 const progressiveReviewPending = computed(() => {
-  const status = String(ocrResult.value?.v3Shadow?.status || '')
-  return status === 'pending' || status === 'compact-ready'
+  return progressiveVerification.value.pending
 })
 
+const progressiveVerification = computed(() =>
+  progressiveVerificationSchedule(ocrResult.value?.v3Shadow)
+)
+
 const progressiveEvidenceReady = computed(() => {
-  const status = String(ocrResult.value?.v3Shadow?.status || '')
-  return status !== 'pending'
+  return progressiveVerification.value.mayAnimateSettledAnswers
 })
 
 const progressiveMarkingActive = computed(() => (
@@ -9614,7 +9621,24 @@ const runRealOCR = async () => {
             rawCrops
           ).map((item) => ({ ...item, reviewOnly: true }))
         : []
-      payload.v3Shadow = { status: 'pending', policyVersion: V3_POLICY_VERSION, affectsGrade: false }
+      const initiallyYellowQuestionNums = displayedYellowQuestionNumbers(
+        layout.question_groups,
+        questionReview,
+        payload.answerGroups,
+      )
+      const initiallySuspiciousAcceptedQuestionNums = v3ConfidenceSafetyEnabled()
+        ? confidenceSafetyCandidateQuestionNumbers(layout.question_groups, predictions)
+        : []
+      const initialPendingReviewQuestionNums = progressivePendingQuestionNumbers({
+        yellowQuestionNums: initiallyYellowQuestionNums,
+        suspiciousAcceptedQuestionNums: initiallySuspiciousAcceptedQuestionNums,
+      })
+      payload.v3Shadow = {
+        status: 'pending',
+        policyVersion: V3_POLICY_VERSION,
+        affectsGrade: false,
+        pendingReviewQuestionNums: initialPendingReviewQuestionNums,
+      }
       const selectedCompactItems = partialDebug.v3AnswerZones.map((zone) => ({
         id: `question-${zone.questionNum}`,
         questionNum: zone.questionNum,
@@ -9642,14 +9666,8 @@ const runRealOCR = async () => {
           const timingStarted = performance.now()
           const stageTimingsMs = {}
           const markStage = (name) => { stageTimingsMs[name] = Math.round(performance.now() - timingStarted) }
-          const reviewQuestionNums = displayedYellowQuestionNumbers(
-            layout.question_groups,
-            questionReview,
-            payload.answerGroups
-          )
-          const confidenceSafetyQuestionNums = v3ConfidenceSafetyEnabled()
-            ? confidenceSafetyCandidateQuestionNumbers(layout.question_groups, predictions)
-            : []
+          const reviewQuestionNums = [...initiallyYellowQuestionNums]
+          const confidenceSafetyQuestionNums = [...initiallySuspiciousAcceptedQuestionNums]
           const compactQuestionNums = [...new Set([...reviewQuestionNums, ...confidenceSafetyQuestionNums])]
           let immediateCompactReads = []
           let immediateCompactChoices = []

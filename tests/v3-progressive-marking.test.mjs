@@ -3,6 +3,10 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 import { progressiveMarkingSteps } from '../src/v3/progressive-marking.js'
+import {
+  progressivePendingQuestionNumbers,
+  progressiveVerificationSchedule,
+} from '../src/v3/progressive-verification-scheduler.js'
 
 const cameraSource = await readFile(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
 
@@ -87,6 +91,56 @@ test('progressive marking excludes provisional and queued answers', () => {
     { excludedQuestionNums: [3] },
   )
   assert.deepEqual(steps.map((step) => step.questionNum), [1])
+})
+
+test('the verifier queue combines existing yellows and suspicious accepted answers deterministically', () => {
+  assert.deepEqual(
+    progressivePendingQuestionNumbers({
+      yellowQuestionNums: [5, 2, 5],
+      suspiciousAcceptedQuestionNums: [4, 2, 7],
+    }),
+    [2, 4, 5, 7],
+  )
+})
+
+test('settled answers may animate while a declared verifier queue remains pending', () => {
+  assert.deepEqual(
+    progressiveVerificationSchedule({
+      status: 'pending',
+      pendingReviewQuestionNums: [4, 2, 4],
+    }),
+    {
+      status: 'pending',
+      pending: true,
+      queueDeclared: true,
+      deferredQuestionNums: [2, 4],
+      mayAnimateSettledAnswers: true,
+    },
+  )
+})
+
+test('an asynchronous verifier with an undeclared queue remains fail-closed', () => {
+  assert.deepEqual(
+    progressiveVerificationSchedule({ status: 'pending' }),
+    {
+      status: 'pending',
+      pending: true,
+      queueDeclared: false,
+      deferredQuestionNums: [],
+      mayAnimateSettledAnswers: false,
+    },
+  )
+})
+
+test('the runtime declares suspicious questions before starting background verification', () => {
+  const pendingDeclaration = cameraSource.indexOf('pendingReviewQuestionNums: initialPendingReviewQuestionNums')
+  const asyncStart = cameraSource.indexOf('const v3Run = startAsyncV3Shadow')
+  assert.ok(pendingDeclaration >= 0)
+  assert.ok(asyncStart > pendingDeclaration)
+  assert.match(
+    cameraSource,
+    /excludedQuestionNums:\s*progressiveVerification\.value\.deferredQuestionNums/,
+  )
 })
 
 test('checkmark stroke travels continuously from left to right', () => {
