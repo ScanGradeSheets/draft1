@@ -1,5 +1,24 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 strictly sequential red X Beta 15.47
+
+- Physical review made the X's crossing stroke appear to start before the
+  first stroke had visibly finished. The animation now enforces this order:
+  top-left to bottom-right for `270ms`, a `160ms` pen-lift pause, then
+  top-right to bottom-left for `270ms`.
+- Any delayed SVG stroke is fully transparent before its own active interval,
+  preventing WebKit from exposing even a round starting cap during the pause.
+  The page-marking scheduler also waits for the complete X plus an `80ms`
+  settling margin before starting another question.
+- OCR, recognition, grading, capture, homography, mark geometry, correction
+  behavior, and answer-key boundaries are unchanged. Focused sequencing tests
+  pass **24/24**, the full repository passes **353/353**, and the pruned
+  production build passes. Build label:
+  `2026.07.28-sequential-red-x-beta-15-47`.
+- Deployment: `6b92f7c4.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Production HTML and `index-B1EXIQyg.js` are byte-identical to the verified
+  build.
+
 ## 2026-07-28 correction tape replaces compact focus frame Beta 15.46
 
 - Tony preferred the former compact blue correction frame to Beta 15.45's

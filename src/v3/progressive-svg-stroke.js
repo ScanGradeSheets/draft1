@@ -10,6 +10,7 @@ function settleStroke(element) {
   if (!element?.style) return
   element.style.strokeDasharray = 'none'
   element.style.strokeDashoffset = '0'
+  element.style.opacity = '1'
   element.style.transition = 'none'
 }
 
@@ -32,18 +33,22 @@ export function startMeasuredProgressiveStroke(element, options = {}) {
   element.style.animation = 'none'
   element.style.strokeDasharray = dash
   element.style.strokeDashoffset = String(revealLength)
+  // Delayed strokes must be completely absent until their own draw interval.
+  // `forwards` fill leaves this underlying opacity in force during the delay,
+  // preventing WebKit from exposing a round linecap before the pen is lifted.
+  element.style.opacity = delayMs > 0 ? '0' : '1'
 
   if (typeof element.animate === 'function') {
     const animation = element.animate(
       [
-        { strokeDasharray: dash, strokeDashoffset: String(revealLength) },
-        { strokeDasharray: dash, strokeDashoffset: '-2' },
+        { strokeDasharray: dash, strokeDashoffset: String(revealLength), opacity: '1' },
+        { strokeDasharray: dash, strokeDashoffset: '-2', opacity: '1' },
       ],
       {
         duration: durationMs,
         delay: delayMs,
         easing: 'cubic-bezier(0.2, 0.72, 0.26, 1)',
-        fill: 'both',
+        fill: 'forwards',
       },
     )
     animation.addEventListener?.('finish', () => settleStroke(element), { once: true })
@@ -53,14 +58,21 @@ export function startMeasuredProgressiveStroke(element, options = {}) {
 
   const requestFrame = globalThis.requestAnimationFrame || ((callback) => globalThis.setTimeout(callback, 0))
   const cancelFrame = globalThis.cancelAnimationFrame || globalThis.clearTimeout
+  let beginTimer = null
   const frame = requestFrame(() => {
-    element.style.transition = `stroke-dashoffset ${durationMs}ms cubic-bezier(0.2, 0.72, 0.26, 1) ${delayMs}ms`
-    element.style.strokeDashoffset = '-2'
+    const begin = () => {
+      element.style.opacity = '1'
+      element.style.transition = `stroke-dashoffset ${durationMs}ms cubic-bezier(0.2, 0.72, 0.26, 1)`
+      element.style.strokeDashoffset = '-2'
+    }
+    if (delayMs > 0) beginTimer = globalThis.setTimeout(begin, delayMs)
+    else begin()
   })
   const timer = globalThis.setTimeout(() => settleStroke(element), delayMs + durationMs + 34)
   return {
     cancel() {
       cancelFrame(frame)
+      if (beginTimer != null) globalThis.clearTimeout(beginTimer)
       globalThis.clearTimeout(timer)
     },
   }

@@ -1,5 +1,8 @@
 import { fluorescentHighlighterGeometry } from './highlighter-stroke.js'
 
+const X_STROKE_DURATION_MS = 270
+const X_PEN_LIFT_PAUSE_MS = 160
+
 function finite(value) {
   const number = Number(value)
   return Number.isFinite(number) ? number : null
@@ -99,10 +102,14 @@ function teacherStrokePaths(status, rect, seed, width, height) {
     angle + jitter(seed + 133, 0.05),
   )
   return [
-    { d: pathData(first), durationMs: 270, delayMs: 0 },
+    { d: pathData(first), durationMs: X_STROKE_DURATION_MS, delayMs: 0 },
     // Finish the top-left to bottom-right stroke before lifting the pen and
     // drawing the crossing top-right to bottom-left stroke.
-    { d: pathData(second), durationMs: 270, delayMs: 300 },
+    {
+      d: pathData(second),
+      durationMs: X_STROKE_DURATION_MS,
+      delayMs: X_STROKE_DURATION_MS + X_PEN_LIFT_PAUSE_MS,
+    },
   ]
 }
 

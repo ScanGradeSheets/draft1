@@ -367,7 +367,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.28-tape-replaces-focus-beta-15-46'
+const APP_BUILD_LABEL = '2026.07.28-sequential-red-x-beta-15-47'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices

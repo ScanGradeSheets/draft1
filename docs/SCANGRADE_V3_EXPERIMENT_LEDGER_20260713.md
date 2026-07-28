@@ -387,3 +387,20 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   production build passed.
 - Deployment: `369e18a1.scangrade.pages.dev`, promoted to `scangrade.io`;
   production serves byte-identical `index-BfcNW362.js`.
+
+## 2026-07-28 — Beta 15.47 strictly sequential red X
+
+- Failure evidence: on the physical phone, the X's second crossing stroke
+  appeared to begin before its first stroke had visibly ended.
+- Change: X stroke one runs top-left to bottom-right for `270ms`, followed by
+  a `160ms` hand-lift pause; only then does stroke two run top-right to
+  bottom-left for `270ms`. Delayed SVG paths remain fully transparent until
+  their active interval, and the next question cannot start until the whole X
+  has completed plus an `80ms` settling margin.
+- Safety: presentation only; OCR, recognition, confidence, crops, capture,
+  homography, grading decisions, correction values, and answer-key boundaries
+  are unchanged.
+- Verification: focused tests **24/24**; full suite **353/353**; pruned
+  production build passed.
+- Deployment: `6b92f7c4.scangrade.pages.dev`, promoted to `scangrade.io`;
+  production serves byte-identical `index-B1EXIQyg.js`.

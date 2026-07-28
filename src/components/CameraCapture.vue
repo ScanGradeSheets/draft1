@@ -3582,8 +3582,14 @@ function advanceProgressiveMarking() {
       ...progressiveRevealedQuestionNums.value,
       Number(next.questionNum),
     ]
+    const completeStepMs = Math.max(
+      620,
+      ...next.strokes.map((stroke) =>
+        (Number(stroke.delayMs) || 0) + (Number(stroke.durationMs) || 0) + 80
+      ),
+    )
     clearProgressiveMarkingTimer()
-    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 620)
+    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, completeStepMs)
     return
   }
   if (progressiveReviewPending.value) {
