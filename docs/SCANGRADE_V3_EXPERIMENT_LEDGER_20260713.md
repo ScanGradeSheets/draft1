@@ -371,3 +371,19 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   production build passed.
 - Deployment: `41bf5ba5.scangrade.pages.dev`, promoted to `scangrade.io`;
   production serves byte-identical `index-B1Kpgg1O.js`.
+
+## 2026-07-28 — Beta 15.46 simultaneous focus-to-tape handoff
+
+- Decision: restore the compact blue frame used before Beta 15.45, but prevent
+  it from overlapping the visible correction tape.
+- Change: the focus treatment is again a `2px` border on the digit-slot
+  geometry. As soon as correction text creates the white-tape preview, the
+  border animation, border color, and glow are removed in that same render.
+  The former delayed release animation was removed.
+- Safety: presentation only; OCR, recognition, confidence, crops, capture,
+  homography, grading decisions, correction values, and answer-key boundaries
+  are unchanged.
+- Verification: focused tests **24/24**; full suite **353/353**; pruned
+  production build passed.
+- Deployment: `369e18a1.scangrade.pages.dev`, promoted to `scangrade.io`;
+  production serves byte-identical `index-BfcNW362.js`.

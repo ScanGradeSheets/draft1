@@ -1,5 +1,24 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 correction tape replaces compact focus frame Beta 15.46
+
+- Tony preferred the former compact blue correction frame to Beta 15.45's
+  externally offset outline. The focus treatment is again a `2px` border on
+  the exact digit-slot geometry.
+- The visual handoff is now simultaneous: while the answer is untouched, the
+  blue frame remains visible around the student's pencil writing. On the first
+  entered correction digit, the white tape and black correction appear while
+  the blue border and glow become transparent in the same render. There is no
+  delayed border release to expose additional white pixels afterward.
+- OCR, recognition, grading, capture, homography, answer geometry, correction
+  values, and answer-key boundaries are unchanged. Focused correction and
+  animation tests pass **24/24**, the full repository passes **353/353**, and
+  the pruned production build passes. Build label:
+  `2026.07.28-tape-replaces-focus-beta-15-46`.
+- Deployment: `369e18a1.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Production HTML and `index-BfcNW362.js` are byte-identical to the verified
+  build.
+
 ## 2026-07-28 measured Safari pen reveal and external correction frame Beta 15.45
 
 - Live iPhone review showed that red X strokes could still contain transient

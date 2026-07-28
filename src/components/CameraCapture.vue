@@ -10839,11 +10839,9 @@ onUnmounted(() => {
   align-items: stretch;
   box-sizing: border-box;
   overflow: visible;
-  border: 0 solid transparent;
+  border: 2px solid rgba(36, 90, 164, 0.72);
   border-radius: 3px;
   background: transparent;
-  outline: 2px solid rgba(36, 90, 164, 0.72);
-  outline-offset: 3px;
   box-shadow:
     0 0 0 2px rgba(176, 224, 255, 0.14),
     0 0 8px rgba(36, 90, 164, 0.18);
@@ -10851,9 +10849,9 @@ onUnmounted(() => {
   pointer-events: none;
   transition:
     background-color 90ms ease-out,
-    outline-color 90ms ease-out,
+    border-color 0ms linear,
     border-radius 90ms ease-out,
-    box-shadow 90ms ease-out;
+    box-shadow 0ms linear;
 }
 
 .on-sheet-correction-ink {
@@ -10871,40 +10869,30 @@ onUnmounted(() => {
   overflow: visible;
   border-radius: 3px;
   background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  animation: none;
 }
 
 .on-sheet-correction-focus--committing {
-  animation: correction-focus-release 180ms ease-out forwards;
+  border-color: transparent;
+  box-shadow: none;
+  animation: none;
 }
 
 @keyframes correction-focus-breathe {
   0%,
   100% {
-    outline-color: rgba(36, 90, 164, 0.5);
+    border-color: rgba(36, 90, 164, 0.5);
     box-shadow:
       0 0 0 2px rgba(176, 224, 255, 0.08),
       0 0 7px rgba(36, 90, 164, 0.1);
   }
   50% {
-    outline-color: rgba(36, 90, 164, 0.7);
+    border-color: rgba(36, 90, 164, 0.7);
     box-shadow:
       0 0 0 3px rgba(176, 224, 255, 0.13),
       0 0 10px rgba(36, 90, 164, 0.17);
-  }
-}
-
-@keyframes correction-focus-release {
-  from {
-    outline-color: rgba(36, 90, 164, 0.58);
-    box-shadow:
-      0 0 0 2px rgba(176, 224, 255, 0.1),
-      0 0 8px rgba(36, 90, 164, 0.13);
-  }
-  to {
-    outline-color: rgba(36, 90, 164, 0);
-    box-shadow:
-      0 0 0 2px rgba(176, 224, 255, 0),
-      0 0 8px rgba(36, 90, 164, 0);
   }
 }
 
