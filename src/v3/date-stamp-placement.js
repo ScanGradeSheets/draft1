@@ -66,7 +66,7 @@ export function completionDateStampRect(layout, width, height, questionRects = [
   )
   const y = Math.min(
     pageHeight - h - pageHeight * 0.035,
-    score.y + Math.max(score.fontSize * 0.58, pageHeight * 0.022),
+    score.y + Math.max(score.fontSize * 0.84, pageHeight * 0.03),
   )
   return { x, y, w, h }
 }

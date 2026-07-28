@@ -1,5 +1,22 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 deeper red and score/date spacing Beta 15.44
+
+- Tony selected darker red option 2, `#862c2a`, after comparing it directly
+  with the established `#126c39` green and Beta 15.43's `#a03731` red.
+- The completion-date zone now begins at least `0.84 ×` the score font size
+  or `3%` of page height below the written score anchor, whichever is larger.
+  This adds visible breathing room while retaining the QR-aware page bounds
+  and the existing deterministic variation.
+- OCR, recognition, grading, capture, homography, answer geometry, correction
+  semantics, score geometry, and answer-key boundaries are unchanged. Focused
+  presentation tests pass **29/29**, the full repository passes **352/352**,
+  and the pruned production build passes. Build label:
+  `2026.07.28-deeper-red-score-spacing-beta-15-44`.
+- Deployment: static-only `cf066476.scangrade.pages.dev`, promoted to
+  `scangrade.io`. Production HTML and `index-CFsvfDhL.js` are byte-identical
+  to the verified build; `/api/submissions` remains the identical static shell.
+
 ## 2026-07-28 clear red ink and WebKit stroke repair Beta 15.43
 
 - Tony selected brighter option 3, `#a03731`, for incorrect X marks and red

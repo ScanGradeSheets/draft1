@@ -336,3 +336,19 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   production build passed.
 - Deployment: static-only `8f3e9a48.scangrade.pages.dev`, promoted to
   `scangrade.io`; production serves verified `index-r02V_Tdi.js`.
+
+## 2026-07-28 — Beta 15.44 darker red and score/date separation
+
+- Decision: Tony selected darker red option 2, `#862c2a`, after a direct
+  current-green/current-red/new-red comparison.
+- Change: incorrect X marks and red low scores use the new shared red. The
+  completion date begins at least `0.84 ×` the score font size or `3%` of page
+  height below the score anchor, adding visible separation while preserving
+  the existing QR-aware bounds and deterministic natural variation.
+- Safety: presentation only; OCR, recognition, confidence, crops, capture,
+  homography, grading decisions, correction semantics, and answer-key
+  boundaries are unchanged.
+- Verification: focused tests **29/29**; full suite **352/352**; pruned
+  production build passed.
+- Deployment: static-only `cf066476.scangrade.pages.dev`, promoted to
+  `scangrade.io`; production serves verified `index-CFsvfDhL.js`.

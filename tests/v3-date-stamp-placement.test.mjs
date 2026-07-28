@@ -50,7 +50,7 @@ test('the completion date sits below the score and to the right of the QR code',
   const score = teacherScorePlacement({ width, height, layout, questionRects })
   const rect = completionDateStampRect(layout, width, height, questionRects)
   assert.ok(rect)
-  assert.ok(rect.y > score.y)
+  assert.ok(rect.y >= score.y + Math.max(score.fontSize * 0.84, height * 0.03))
   assert.ok(rect.x > (0.4403 + 0.1195) * width)
   assert.ok(rect.x + rect.w * 0.5 > score.centerX)
   assert.ok(rect.x + rect.w < width)
