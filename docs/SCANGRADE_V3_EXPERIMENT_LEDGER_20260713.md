@@ -318,3 +318,21 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   production build passed.
 - Deployment: static-only `e69b29f1.scangrade.pages.dev`, promoted to
   `scangrade.io`; production serves verified `index-07fwW0ch.js`.
+
+## 2026-07-28 — Beta 15.43 clear red and WebKit full-scale stroke reveal
+
+- Decision: Tony selected the brighter `#a03731` red option.
+- Failure evidence: live iPhone review still showed intermittent gaps,
+  especially during the X's delayed crossing stroke, after Beta 15.42's final
+  frame repair.
+- Root cause and change: Safari/WebKit was still rounding normalized
+  `pathLength="1"` dash geometry during the animation. Both progressive mark
+  masks and direct score ink now use 100-unit path lengths/dashes, then settle
+  to a solid 100/0 path. Geometry, timing, and first-stroke-before-second order
+  are preserved.
+- Safety: presentation only; OCR, recognition, confidence, crops, capture,
+  homography, grading decisions, and correction semantics are unchanged.
+- Verification: focused tests **23/23**; full suite **352/352**; pruned
+  production build passed.
+- Deployment: static-only `8f3e9a48.scangrade.pages.dev`, promoted to
+  `scangrade.io`; production serves verified `index-r02V_Tdi.js`.

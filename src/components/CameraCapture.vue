@@ -98,7 +98,7 @@
                 :stroke-width="stroke.width || step.strokeWidth"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                pathLength="1"
+                pathLength="100"
                 :style="{
                   '--progressive-stroke-duration': `${stroke.durationMs}ms`,
                   '--progressive-stroke-delay': `${stroke.delayMs}ms`,
@@ -133,7 +133,7 @@
               :stroke-width="stroke.width"
               stroke-linecap="round"
               stroke-linejoin="round"
-              pathLength="1"
+              pathLength="100"
               :style="{
                 '--progressive-stroke-duration': `${stroke.durationMs}ms`,
                 '--progressive-stroke-delay': `${stroke.delayMs}ms`,
@@ -10732,15 +10732,15 @@ onUnmounted(() => {
 }
 
 .progressive-marking-stroke {
-  stroke-dasharray: 1 1;
-  stroke-dashoffset: 1;
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: 100;
   animation: progressive-write-stroke var(--progressive-stroke-duration, 500ms) cubic-bezier(0.2, 0.72, 0.26, 1) var(--progressive-stroke-delay, 0ms) forwards;
 }
 
 @keyframes progressive-write-stroke {
-  0% { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
-  99% { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
-  100% { stroke-dasharray: 1 0; stroke-dashoffset: 0; }
+  0% { stroke-dasharray: 100 100; stroke-dashoffset: 100; }
+  99% { stroke-dasharray: 100 100; stroke-dashoffset: 0; }
+  100% { stroke-dasharray: 100 0; stroke-dashoffset: 0; }
 }
 
 @keyframes date-stamp-ink-land {

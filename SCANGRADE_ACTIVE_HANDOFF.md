@@ -1,5 +1,24 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 clear red ink and WebKit stroke repair Beta 15.43
+
+- Tony selected brighter option 3, `#a03731`, for incorrect X marks and red
+  low-score writing. It remains less harsh than the former `#b33d35` while
+  reading more clearly than Beta 15.42's `#9a342f`.
+- Physical iPhone review showed that Beta 15.42 could still display gaps in
+  red strokes. The cause was WebKit rounding the normalized one-unit SVG dash
+  path during animation. All progressive mark and score paths now use a
+  100-unit path length and a 100-unit reveal. The completed frame explicitly
+  becomes one solid path. X stroke order remains unchanged.
+- OCR, recognition, grading, capture, homography, answer geometry, correction
+  semantics, and answer-key boundaries are unchanged. Focused ink/animation
+  tests pass **23/23**, the full repository passes **352/352**, and the pruned
+  production build passes. Build label:
+  `2026.07.28-clear-red-ink-beta-15-43`.
+- Deployment: static-only `8f3e9a48.scangrade.pages.dev`, promoted to
+  `scangrade.io`. Production HTML and `index-r02V_Tdi.js` are byte-identical
+  to the verified build; `/api/submissions` remains the identical static shell.
+
 ## 2026-07-28 balanced red ink Beta 15.42
 
 - Tony selected the slightly brighter balanced teacher red `#9a342f`.
