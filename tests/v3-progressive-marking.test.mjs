@@ -198,9 +198,9 @@ test('an X draws top-left to bottom-right, then crosses only after the first str
   assert.ok(first.at(-1).x > first[0].x && first.at(-1).y > first[0].y)
   assert.ok(second.at(-1).x < second[0].x && second.at(-1).y > second[0].y)
   assert.ok(step.strokes[1].delayMs >= step.strokes[0].durationMs)
-  assert.equal((cameraSource.match(/pathLength="100"/g) || []).length, 2)
-  assert.match(cameraSource, /stroke-dasharray:\s*100 100/)
-  assert.match(cameraSource, /100%\s*\{\s*stroke-dasharray:\s*100 0;\s*stroke-dashoffset:\s*0;\s*\}/)
+  assert.equal((cameraSource.match(/v-progressive-stroke/g) || []).length, 2)
+  assert.doesNotMatch(cameraSource, /pathLength="(?:1|100)"/)
+  assert.match(cameraSource, /startMeasuredProgressiveStroke/)
 })
 
 test('a settled review answer uses one left-to-right highlighter swipe', () => {
@@ -270,5 +270,6 @@ test('grading pen strokes remain animated when the device requests reduced motio
     false,
     'device motion settings must not silently replace the grading sequence with instant marks',
   )
-  assert.match(cameraSource, /animation:\s*progressive-write-stroke/)
+  assert.match(cameraSource, /startMeasuredProgressiveStroke/)
+  assert.match(cameraSource, /v-progressive-stroke/)
 })

@@ -352,3 +352,22 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   production build passed.
 - Deployment: static-only `cf066476.scangrade.pages.dev`, promoted to
   `scangrade.io`; production serves verified `index-CFsvfDhL.js`.
+
+## 2026-07-28 — Beta 15.45 measured stroke reveal and framed correction tape
+
+- Failure evidence: physical iPhone testing still showed gaps during the first
+  reveal of some red strokes, and the blue correction border covered the
+  outside edge of the white correction tape, making the tape appear to grow
+  when focus ended.
+- Root cause and change: CSS animation of normalized SVG dash lengths remained
+  vulnerable to WebKit rounding. Progressive check, X, and score paths now use
+  each path's measured physical length, a two-unit endpoint overrun, and an
+  explicit solid settled state. The blue focus treatment moved from an inward
+  border to a `2px` outline with a `3px` external offset.
+- Safety: presentation only; OCR, recognition, confidence, crops, capture,
+  homography, grading decisions, correction semantics, answer geometry, and
+  answer-key boundaries are unchanged.
+- Verification: focused tests **25/25**; full suite **353/353**; pruned
+  production build passed.
+- Deployment: `41bf5ba5.scangrade.pages.dev`, promoted to `scangrade.io`;
+  production serves byte-identical `index-B1Kpgg1O.js`.

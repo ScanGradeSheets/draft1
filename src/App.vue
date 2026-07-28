@@ -367,7 +367,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.28-deeper-red-score-spacing-beta-15-44'
+const APP_BUILD_LABEL = '2026.07.28-gapless-ink-framed-tape-beta-15-45'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices

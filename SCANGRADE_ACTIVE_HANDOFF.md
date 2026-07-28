@@ -1,5 +1,28 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 measured Safari pen reveal and external correction frame Beta 15.45
+
+- Live iPhone review showed that red X strokes could still contain transient
+  gaps while first being drawn. The normalized SVG `pathLength` approach was
+  removed. Progressive check, X, and score paths now measure their real SVG
+  length at runtime, reveal that physical length with a two-unit endpoint
+  overrun, and settle to one solid path. The first X stroke still completes
+  before the crossing stroke begins.
+- The blue manual-correction focus frame is now a `2px` outline positioned
+  `3px` outside the correction-tape geometry. It no longer covers the tape's
+  outer pixels, so removing the focus state does not visually enlarge the
+  white tape.
+- OCR, recognition, grading, capture, homography, answer geometry, correction
+  semantics, score/date placement, and answer-key boundaries are unchanged.
+  Focused animation/correction tests pass **25/25**, the full repository passes
+  **353/353**, and the pruned production build passes. Build label:
+  `2026.07.28-gapless-ink-framed-tape-beta-15-45`.
+- Deployment: static app `41bf5ba5.scangrade.pages.dev`, promoted to
+  `scangrade.io`. Production HTML and `index-B1Kpgg1O.js` are byte-identical
+  to the verified build. The existing submissions Function remains present
+  but reports that its D1 binding is not configured; this presentation patch
+  does not use or change it.
+
 ## 2026-07-28 deeper red and score/date spacing Beta 15.44
 
 - Tony selected darker red option 2, `#862c2a`, after comparing it directly

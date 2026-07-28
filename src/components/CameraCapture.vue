@@ -91,6 +91,7 @@
               <path
                 v-for="(stroke, strokeIndex) in step.strokes"
                 :key="`${step.key}-stroke-${strokeIndex}`"
+                v-progressive-stroke
                 class="progressive-marking-stroke"
                 :d="stroke.d"
                 fill="none"
@@ -98,7 +99,6 @@
                 :stroke-width="stroke.width || step.strokeWidth"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                pathLength="100"
                 :style="{
                   '--progressive-stroke-duration': `${stroke.durationMs}ms`,
                   '--progressive-stroke-delay': `${stroke.delayMs}ms`,
@@ -125,6 +125,7 @@
             <path
               v-for="(stroke, strokeIndex) in progressiveScoreStep.inkStrokes"
               :key="`score-ink-${strokeIndex}`"
+              v-progressive-stroke
               class="progressive-marking-stroke"
               :d="stroke.d"
               fill="none"
@@ -133,7 +134,6 @@
               :stroke-width="stroke.width"
               stroke-linecap="round"
               stroke-linejoin="round"
-              pathLength="100"
               :style="{
                 '--progressive-stroke-duration': `${stroke.durationMs}ms`,
                 '--progressive-stroke-delay': `${stroke.delayMs}ms`,
@@ -648,6 +648,7 @@ import {
   TEACHER_GREEN_PEN_PASSES,
   TEACHER_RED_INK,
 } from '../v3/teacher-ink-style.js'
+import { startMeasuredProgressiveStroke } from '../v3/progressive-svg-stroke.js'
 import {
   manualCorrectionContract,
 } from '../v3/manual-correction-contract.js'
@@ -1625,6 +1626,21 @@ const activeCorrectionFocusStyle = computed(() => {
 })
 
 const correctionKeypadKeys = CORRECTION_KEYPAD_KEYS
+
+const progressiveStrokeAnimations = new WeakMap()
+const vProgressiveStroke = {
+  mounted(element) {
+    const animation = startMeasuredProgressiveStroke(element, {
+      durationMs: element.style.getPropertyValue('--progressive-stroke-duration'),
+      delayMs: element.style.getPropertyValue('--progressive-stroke-delay'),
+    })
+    if (animation) progressiveStrokeAnimations.set(element, animation)
+  },
+  unmounted(element) {
+    progressiveStrokeAnimations.get(element)?.cancel?.()
+    progressiveStrokeAnimations.delete(element)
+  },
+}
 
 const activeCorrectionPreviewCells = computed(() =>
   correctionPreviewCells(manualCorrectionText.value, activeCorrectionMaxLength.value)
@@ -10732,15 +10748,8 @@ onUnmounted(() => {
 }
 
 .progressive-marking-stroke {
-  stroke-dasharray: 100 100;
-  stroke-dashoffset: 100;
-  animation: progressive-write-stroke var(--progressive-stroke-duration, 500ms) cubic-bezier(0.2, 0.72, 0.26, 1) var(--progressive-stroke-delay, 0ms) forwards;
-}
-
-@keyframes progressive-write-stroke {
-  0% { stroke-dasharray: 100 100; stroke-dashoffset: 100; }
-  99% { stroke-dasharray: 100 100; stroke-dashoffset: 0; }
-  100% { stroke-dasharray: 100 0; stroke-dashoffset: 0; }
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
 }
 
 @keyframes date-stamp-ink-land {
@@ -10830,9 +10839,11 @@ onUnmounted(() => {
   align-items: stretch;
   box-sizing: border-box;
   overflow: visible;
-  border: 2px solid rgba(36, 90, 164, 0.72);
+  border: 0 solid transparent;
   border-radius: 3px;
   background: transparent;
+  outline: 2px solid rgba(36, 90, 164, 0.72);
+  outline-offset: 3px;
   box-shadow:
     0 0 0 2px rgba(176, 224, 255, 0.14),
     0 0 8px rgba(36, 90, 164, 0.18);
@@ -10840,7 +10851,7 @@ onUnmounted(() => {
   pointer-events: none;
   transition:
     background-color 90ms ease-out,
-    border-color 90ms ease-out,
+    outline-color 90ms ease-out,
     border-radius 90ms ease-out,
     box-shadow 90ms ease-out;
 }
@@ -10869,13 +10880,13 @@ onUnmounted(() => {
 @keyframes correction-focus-breathe {
   0%,
   100% {
-    border-color: rgba(36, 90, 164, 0.5);
+    outline-color: rgba(36, 90, 164, 0.5);
     box-shadow:
       0 0 0 2px rgba(176, 224, 255, 0.08),
       0 0 7px rgba(36, 90, 164, 0.1);
   }
   50% {
-    border-color: rgba(36, 90, 164, 0.7);
+    outline-color: rgba(36, 90, 164, 0.7);
     box-shadow:
       0 0 0 3px rgba(176, 224, 255, 0.13),
       0 0 10px rgba(36, 90, 164, 0.17);
@@ -10884,13 +10895,13 @@ onUnmounted(() => {
 
 @keyframes correction-focus-release {
   from {
-    border-color: rgba(36, 90, 164, 0.58);
+    outline-color: rgba(36, 90, 164, 0.58);
     box-shadow:
       0 0 0 2px rgba(176, 224, 255, 0.1),
       0 0 8px rgba(36, 90, 164, 0.13);
   }
   to {
-    border-color: rgba(36, 90, 164, 0);
+    outline-color: rgba(36, 90, 164, 0);
     box-shadow:
       0 0 0 2px rgba(176, 224, 255, 0),
       0 0 8px rgba(36, 90, 164, 0);
