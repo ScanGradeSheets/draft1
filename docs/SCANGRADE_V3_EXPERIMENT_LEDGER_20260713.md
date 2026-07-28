@@ -304,3 +304,17 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   production build passed.
 - Deployment: static-only `8724cffd.scangrade.pages.dev`, promoted to
   `scangrade.io`; production serves the verified `index-BsH-NPm5.js`.
+## 2026-07-28 — Beta 15.42 balanced red ink and X endpoint repair
+
+- Decision: Tony selected brighter-red option 2, `#9a342f`, after comparing it
+  beside the established `#126c39` teacher green.
+- Change: centralized that red for incorrect X marks and low-score writing.
+  Progressive strokes retain their normal dash reveal while moving, then
+  become a solid completed path on the final animation frame. This prevents a
+  Safari residual gap, especially on the X's delayed second stroke.
+- Safety: presentation only; OCR, recognition, confidence, crops, capture,
+  homography, grading decisions, and correction semantics are unchanged.
+- Verification: focused tests **23/23**; full suite **352/352**; pruned
+  production build passed.
+- Deployment: static-only `e69b29f1.scangrade.pages.dev`, promoted to
+  `scangrade.io`; production serves verified `index-07fwW0ch.js`.

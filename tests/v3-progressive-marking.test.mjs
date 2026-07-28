@@ -198,6 +198,8 @@ test('an X draws top-left to bottom-right, then crosses only after the first str
   assert.ok(first.at(-1).x > first[0].x && first.at(-1).y > first[0].y)
   assert.ok(second.at(-1).x < second[0].x && second.at(-1).y > second[0].y)
   assert.ok(step.strokes[1].delayMs >= step.strokes[0].durationMs)
+  assert.match(cameraSource, /stroke-dasharray:\s*1 1/)
+  assert.match(cameraSource, /100%\s*\{\s*stroke-dasharray:\s*1 0;\s*stroke-dashoffset:\s*0;\s*\}/)
 })
 
 test('a settled review answer uses one left-to-right highlighter swipe', () => {

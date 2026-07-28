@@ -1,4 +1,5 @@
 export const TEACHER_GREEN_INK = '#126c39'
+export const TEACHER_RED_INK = '#9a342f'
 
 // One shared felt-pen recipe for checks and final scores. The broad translucent
 // pass supplies restrained paper bleed; the narrower passes add pressure and

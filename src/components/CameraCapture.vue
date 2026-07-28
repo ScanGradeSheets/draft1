@@ -646,6 +646,7 @@ import {
 import {
   TEACHER_GREEN_INK,
   TEACHER_GREEN_PEN_PASSES,
+  TEACHER_RED_INK,
 } from '../v3/teacher-ink-style.js'
 import {
   manualCorrectionContract,
@@ -1939,7 +1940,7 @@ function progressiveScoreRevealStep({ result, dimensions, annotationRegions }) {
     key: 'final-score',
     strokes: scorePlan.strokes,
     inkStrokes,
-    color: ratio >= 0.7 ? TEACHER_GREEN_INK : ratio >= 0.5 ? '#c66f22' : '#b33d35',
+    color: ratio >= 0.7 ? TEACHER_GREEN_INK : ratio >= 0.5 ? '#c66f22' : TEACHER_RED_INK,
   } : null
 }
 
@@ -3976,7 +3977,7 @@ function composeStudentAnnotatedImage(
 
       const TEACHER_INK = {
         green: TEACHER_GREEN_INK,
-        red: '#b33d35',
+        red: TEACHER_RED_INK,
         amber: '#c66f22',
         blue: '#245aa4'
       }
@@ -10731,14 +10732,15 @@ onUnmounted(() => {
 }
 
 .progressive-marking-stroke {
-  stroke-dasharray: 1;
+  stroke-dasharray: 1 1;
   stroke-dashoffset: 1;
   animation: progressive-write-stroke var(--progressive-stroke-duration, 500ms) cubic-bezier(0.2, 0.72, 0.26, 1) var(--progressive-stroke-delay, 0ms) forwards;
 }
 
 @keyframes progressive-write-stroke {
-  from { stroke-dashoffset: 1; }
-  to { stroke-dashoffset: 0; }
+  0% { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+  99% { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+  100% { stroke-dasharray: 1 0; stroke-dashoffset: 0; }
 }
 
 @keyframes date-stamp-ink-land {

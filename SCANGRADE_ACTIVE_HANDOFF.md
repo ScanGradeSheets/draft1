@@ -1,5 +1,25 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 balanced red ink Beta 15.42
+
+- Tony selected the slightly brighter balanced teacher red `#9a342f`.
+  Incorrect X marks and red low-score writing now share this one ink constant;
+  the approved dark green remains `#126c39`.
+- Safari could occasionally leave a small dash gap when a progressive stroke
+  reached its final frame, most noticeably on the X's second stroke. The draw
+  animation now switches to one solid dash only after the animated stroke has
+  reached its endpoint. Stroke order and geometry are unchanged: the first X
+  stroke completes before the second begins.
+- OCR, recognition, grading, capture, homography, answer geometry, correction
+  semantics, and answer-key boundaries are unchanged. Focused ink/animation
+  tests pass **23/23**, the full repository passes **352/352**, and the pruned
+  production build passes. Build label:
+  `2026.07.28-balanced-red-ink-beta-15-42`.
+- Published static-only at `e69b29f1.scangrade.pages.dev` and
+  `scangrade.io`. Production HTML and `index-07fwW0ch.js` are byte-identical
+  to the tested build; the cache-busted `/api/submissions` path returns the
+  identical static shell.
+
 ## 2026-07-28 varied completion stamp Beta 15.41
 
 - Physical review of Beta 15.40 found a white edge in the temporary
