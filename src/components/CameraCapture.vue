@@ -606,6 +606,7 @@ import {
   studentCaptureFocusDecision,
   studentSheetAppearanceDecision,
 } from '../v3/student-capture-policy.js'
+import { shouldClearTransientCameraReadinessError } from '../v3/camera-readiness-state.js'
 import {
   buildTeacherScoreInkPlan,
   buildTeacherScoreStrokePlan,
@@ -3084,6 +3085,12 @@ function runAutoCaptureCheck() {
       if (props.studentMode) studentAutoStatus.value = 'Camera warming up'
       return
     }
+    if (shouldClearTransientCameraReadinessError({
+      error: error.value,
+      cameraReady: true,
+    })) {
+      error.value = null
+    }
   }
   const isPortrait = props.studentMode
   const vw = video.videoWidth
@@ -3283,6 +3290,7 @@ async function doCapture({ source = 'manual' } = {}) {
     captureQuality.captureGateTelemetry = captureGateSnapshot()
     lastCaptureQuality.value = captureQuality
     pendingHybridBurstFrames = capture.hybridBurstFrames || []
+    error.value = null
     capturedImage.value = canvas.toDataURL('image/png')
     if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_CAPTURE) {
       window.__SCANGRADE_DEBUG_CAPTURE_URL = capturedImage.value
@@ -3306,6 +3314,7 @@ async function doCapture({ source = 'manual' } = {}) {
   canvas.height = video.videoHeight
   const ctx = canvas.getContext('2d')
   ctx.drawImage(video, 0, 0)
+  error.value = null
   capturedImage.value = canvas.toDataURL('image/jpeg', 0.96)
   streamActive.value = false
   stopStream()
@@ -3443,6 +3452,21 @@ watch(
     emit('processing-change', isProcessing)
   },
   { immediate: true }
+)
+
+watch(
+  () => [cameraReady.value, Boolean(capturedImage.value), Boolean(ocrResult.value)],
+  ([ready, hasCapturedImage, hasResult]) => {
+    if (shouldClearTransientCameraReadinessError({
+      error: error.value,
+      cameraReady: ready,
+      capturedImage: hasCapturedImage,
+      resultReady: hasResult,
+    })) {
+      error.value = null
+    }
+  },
+  { flush: 'sync' }
 )
 
 watch(

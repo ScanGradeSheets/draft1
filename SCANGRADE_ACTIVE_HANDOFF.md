@@ -1,5 +1,26 @@
 # ScanGrade Active Handoff
 
+## 2026-07-27 camera-readiness state Beta 15.34
+
+- A successful phone scan could still show “The camera is still getting
+  ready.” beneath the completed worksheet. The camera and grading result were
+  valid; only an earlier transient warning remained in application state.
+- The successful capture path now explicitly clears readiness warnings. A
+  narrow lifecycle guard also clears only “warming up” / “not ready” warnings
+  when the browser supplies a drawable camera frame, a captured image, or a
+  grading result. Blur, framing, QR, permission, and other real errors remain
+  visible.
+- Camera quality gates, capture thresholds, OCR, grading, annotations, and
+  review behavior are unchanged.
+- Four direct readiness-state regressions pass, the complete repository passes
+  **339/339**, and the production build passes. Build label:
+  `2026.07.27-camera-ready-state-beta-15-34`.
+- The isolated 222-file static build is deployed at
+  `https://a6cccd57.scangrade.pages.dev/` and `https://scangrade.io/`.
+  Production serves the tested `index-OHq4Lrww.js`; `/api/submissions` is
+  byte-identical to the static app shell, confirming that no Pages Function or
+  Mac Mini route was deployed.
+
 ## 2026-07-27 transition-locked ink Beta 15.33
 
 - Tony observed a small shift between the live blue-focus correction entry and
