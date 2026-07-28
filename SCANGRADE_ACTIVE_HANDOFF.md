@@ -1,5 +1,27 @@
 # ScanGrade Active Handoff
 
+## 2026-07-28 natural date impression Beta 15.39
+
+- Physical review rejected Beta 15.38's blue completion outline because it
+  looked like app feedback rather than something a teacher would leave on
+  paper.
+- The separate expanding blue rectangle has been removed. The final date now
+  arrives through its own blue ink only: a short soft/darker ink impression
+  settles into the exact final date pixels.
+- The date image is never translated, transformed, or scaled, and nothing
+  extra remains on the worksheet. Its existing final-raster clip and
+  score-before-date sequence remain unchanged.
+- OCR, recognition, grading, capture, homography, answer geometry, correction
+  behavior, and the date location are unchanged. The focused progressive
+  marking suite passes **18/18** and the complete repository passes
+  **347/347**. Build label:
+  `2026.07.28-natural-date-impression-beta-15-39`.
+- The pruned production build passes and was published static-only at
+  `36c41a3a.scangrade.pages.dev` and `scangrade.io`. Production HTML and
+  `index-C1MN8Jie.js` are byte-identical to the tested build. A cache-busted
+  `/api/submissions` request returns the identical app shell, confirming no
+  Pages Function is active.
+
 ## 2026-07-28 stable correction transition Beta 15.38
 
 - Physical review of Beta 15.37 reported an apparent correction-digit shift

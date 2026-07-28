@@ -244,3 +244,23 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   `a2299891.scangrade.pages.dev` and `scangrade.io` matches the tested HTML and
   JavaScript byte-for-byte; the API-shaped path remains only the app shell.
   OCR and grading behavior remain frozen.
+
+# 2026-07-28 — Beta 15.39 natural date impression
+
+- **Observation:** The expanding blue date outline looked like interface
+  feedback instead of a natural teacher completion mark.
+- **Change:** Removed the separate blue splash shape. The exact final-raster
+  date now lands using only a brief blur, saturation, and same-blue
+  drop-shadow bloom before settling crisp at its unchanged opacity.
+- **Geometry invariant:** The date image has no translation, scale, or
+  transform at any animation stage. Its clip rectangle, source pixels, and
+  final position are unchanged.
+- **Safety boundary:** Presentation only. OCR, confidence, crop, capture,
+  homography, grading, answer-key, correction, and annotation placement logic
+  are unchanged.
+- **Result:** Progressive marking tests pass 18/18; the complete repository
+  passes 347/347; the pruned production build passes. Static deployment
+  `36c41a3a.scangrade.pages.dev` is live at `scangrade.io`. Production HTML
+  and `index-C1MN8Jie.js` are byte-identical to the tested build. A
+  cache-busted `/api/submissions` request returns the same app shell, so no
+  Pages Function is active.

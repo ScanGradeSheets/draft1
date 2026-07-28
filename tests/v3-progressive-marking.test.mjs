@@ -44,10 +44,12 @@ test('manual correction digits use the lighter settled teacher-ink renderer', as
   assert.match(correctionInkSource, /ctx\.globalAlpha = 0\.1/)
 })
 
-test('the completion date has a noticeable final splash without moving the settled stamp', () => {
-  assert.match(cameraSource, /class="scanning-date-stamp-splash"/)
-  assert.match(cameraSource, /@keyframes date-stamp-completion-splash/)
-  assert.match(cameraSource, /transform-box:\s*fill-box/)
+test('the completion date lands with only a natural ink impression and never moves', () => {
+  assert.doesNotMatch(cameraSource, /scanning-date-stamp-splash/)
+  assert.doesNotMatch(cameraSource, /date-stamp-completion-splash/)
+  assert.match(cameraSource, /@keyframes date-stamp-ink-land/)
+  assert.match(cameraSource, /filter:\s*blur\(0\.55px\) saturate\(1\.16\) drop-shadow/)
+  assert.doesNotMatch(cameraSource, /\.scanning-date-stamp\s*\{[^}]*transform:/s)
   assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*720\)/)
 })
 
