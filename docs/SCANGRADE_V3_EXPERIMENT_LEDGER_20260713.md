@@ -506,3 +506,22 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   Production HTML, manifest, and Apple icon match the verified artifacts
   byte-for-byte, and a fresh browser install inspection found no manifest
   errors and only the new versioned icon URLs.
+
+## 2026-07-29 — Beta 15.52 physical-device icon alignment
+
+- Evidence: after deleting and reinstalling Beta 15.51, Tony's second physical
+  iPhone Home Screen inspection still read the mark slightly left of center.
+- Change: translate the unchanged logo an additional `2px` right on the native
+  180px Apple canvas, with proportional shifts in the 192px, 512px, and
+  maskable assets. Preserve the pure-white background and high-quality source
+  reduction.
+- Cache control: publish all four assets under new `v3` paths and update both
+  the Apple touch-icon link and manifest, forcing a newly added app to use the
+  corrected artwork.
+- Safety: icon presentation only; no grading, OCR, capture, worksheet,
+  correction, storage, service-worker privacy, or student-data changes.
+- Verification: icon/PWA contract **5/5**, full suite **360/360**, and pruned
+  production build passed.
+- Deployment: `190552d2.scangrade.pages.dev`, promoted to `scangrade.io`;
+  public HTML and the versioned `v3` 180px Apple icon match the verified build
+  byte-for-byte.

@@ -1,5 +1,24 @@
 # ScanGrade Active Handoff
 
+## 2026-07-29 physical icon alignment Beta 15.52
+
+- Tony's second physical iPhone Home Screen inspection requested a further
+  rightward correction so the logo reads centered after Apple's rounded icon
+  processing, using the lower corner markers as the visible anchors.
+- The unchanged logo receives an additional `2px` rightward translation in the
+  native 180px Apple asset. The pure-white background, scale, resolution, and
+  sharp source rendering are unchanged.
+- All install icon paths are versioned again as `v3`, preventing Safari or iOS
+  from reusing either previous icon when the app is removed and re-added.
+- OCR, recognition, capture, grading, review, PWA privacy boundaries, and all
+  student-data behavior are unchanged.
+- Verification: icon/PWA contract **5/5**, full repository **360/360**, and
+  pruned production build passed. Build label:
+  `2026.07.29-physical-icon-alignment-beta-15-52`.
+- Deployment: `190552d2.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Public HTML and the versioned `v3` Apple icon match the verified build
+  byte-for-byte.
+
 ## 2026-07-29 optically centered app icon Beta 15.51
 
 - A physical iPhone Home Screen screenshot showed that the first installed icon
