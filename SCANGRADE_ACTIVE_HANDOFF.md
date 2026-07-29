@@ -1,5 +1,31 @@
 # ScanGrade Active Handoff
 
+## 2026-07-29 optically centered app icon Beta 15.51
+
+- A physical iPhone Home Screen screenshot showed that the first installed icon
+  had a slightly grey background and read left-heavy even though its geometric
+  bounding box was centered.
+- The icon now uses a pure `#FFFFFF` background. Its exact approved ScanGrade
+  mark is shifted right by `2.35%` of the canvas so the black ink's measured
+  visual center lands within one pixel of the canvas center. The source logo
+  was not redrawn or modified.
+- New versioned Apple, standard, and maskable icon URLs prevent an iPhone
+  reinstall from reusing the former icon asset. Existing installed copies may
+  need to be removed and added to the Home Screen again because iOS retains
+  installed icon artwork.
+- Tests now lock the Apple icon at native `180×180` resolution, require a
+  pure-white perimeter, and verify optical ink centering on both axes.
+- OCR, recognition, capture, homography, grading, review, and all student-data
+  behavior are unchanged.
+- Verification: icon contract **5/5**, full repository **360/360**, pruned
+  production build passed, and the Apple rounded-mask comparison was inspected.
+  Build label:
+  `2026.07.29-optically-centered-app-icon-beta-15-51`.
+- Deployment: `67ff2433.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Public HTML, manifest, and 180px Apple icon match the verified build; the
+  production browser reports zero manifest errors and all installed-icon URLs
+  resolve to the versioned `v2` assets.
+
 ## 2026-07-29 installable web app Beta 15.50
 
 - ScanGrade can now be added to an iPhone or iPad Home Screen from Safari and

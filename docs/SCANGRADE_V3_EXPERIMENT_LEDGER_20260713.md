@@ -481,3 +481,28 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   HTML, hashed JavaScript/CSS, manifest, service worker, and Apple touch icon
   match the verified build byte-for-byte. The production manifest has no
   browser-reported errors and `/sw.js` is active at site-root scope.
+
+## 2026-07-29 — Beta 15.51 optically centered app icon
+
+- Evidence: Tony's physical iPhone Home Screen screenshot showed a light-grey
+  icon tile and a logo that appeared too far left. Pixel measurement confirmed
+  that the old 180px icon's heavy black ink center was `4.48px` left of the
+  canvas center even though its outer bounds were geometrically centered.
+- Change: render the unchanged approved transparent logo on pure white, shift
+  it right by `2.35%` of each icon canvas, and publish versioned 180px, 192px,
+  512px, and maskable 512px assets. The resulting Apple icon ink center is
+  `89.77px` on a 180px canvas.
+- Cache safety: both the Apple touch-icon link and manifest icon URLs are new,
+  so deleting and re-adding the app cannot receive the former cached artwork.
+- Regression: decode the actual Apple PNG, verify native dimensions and file
+  integrity, require a pure-white three-pixel perimeter, and require measured
+  black-ink center to be within one pixel of true center on both axes.
+- Safety: visual app-icon assets only; no OCR, capture, grading, worksheet,
+  correction, privacy, or student-data behavior changed.
+- Verification: focused icon/PWA contract **5/5**, full suite **360/360**,
+  pruned production build passed, and an Apple-style rounded-mask old/new
+  comparison was visually inspected.
+- Deployment: `67ff2433.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Production HTML, manifest, and Apple icon match the verified artifacts
+  byte-for-byte, and a fresh browser install inspection found no manifest
+  errors and only the new versioned icon URLs.
