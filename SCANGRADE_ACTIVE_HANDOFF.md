@@ -1,5 +1,63 @@
 # ScanGrade Active Handoff
 
+## 2026-07-29 debug-flow isolation Beta 15.55
+
+- A physical iPhone Debug Scan completed OCR but exposed the large export
+  summary while progressive marking/review was still active. The worksheet was
+  pushed out of its normal fixed workspace and the app remained visibly on
+  `Grading`, making the flow appear frozen before the yellow correction opened.
+- The debug export summary is now withheld while progressive marking or manual
+  yellow review is active. It becomes available only after the same normal
+  marking/review sequence has settled, so diagnostic UI cannot interrupt or
+  displace the teacher workflow.
+- Evidence:
+  `/tmp/codex-remote-attachments/019f4912-2a9c-7fe2-8862-abb5da1992bb/EF354322-9889-495A-A8A0-D540C0B58FEA/1-Photo-1.jpg`.
+  This private screenshot must not be committed.
+- This patch changes presentation only. OCR, capture, confidence, grading,
+  answer keys, annotations, and the browser-local safety policy are unchanged.
+- Verification: focused fixed-workspace/progressive tests **23/23**, complete
+  repository tests **360/360**, and production build passed. Build label:
+  `2026.07.29-debug-flow-isolation-beta-15-55`.
+
+## 2026-07-29 live confident-error incident under Beta 15.54
+
+- A physical iPhone screenshot from public build
+  `2026.07.29-marker-centered-app-icon-beta-15-54` shows
+  `SG-G1-LW-01` question B (`4 + 2`) visibly written as `6` but receiving an
+  automatic red X and a final score of `7/8`.
+- The authoritative layout was checked: question B's answer key is correctly
+  `6`. This is therefore a real unsafe public result, not an answer-key typo.
+- Tony expanded the recognition overlay before making a correction. It shows
+  the exact public OCR transcription for question B was `8`. The failure is
+  therefore conclusively an unsafe OCR acceptance (`6→8`), not a later
+  grading, scoring, answer-key, or annotation-state mismatch.
+- The screenshot evidence is:
+  `/tmp/codex-remote-attachments/019f4912-2a9c-7fe2-8862-abb5da1992bb/474E4B52-076D-462B-9E17-BB9A7F222AD9/1-Photo-1.jpg`.
+  It is private evidence and must not be committed.
+- A local diagnostic made from the rendered screenshot (not the original
+  phone tensor) reproduced the failure class: the ordinary small digit reader
+  preferred `8`, while the existing 7.7 MB key-blind whole-slot scout read `6`
+  with approximately `0.939` sequence support. This indicates that an
+  independent browser-local safety reader could have demoted this case to
+  yellow without substituting the mathematical answer.
+- A broad scout-only veto is not yet safe enough to deploy: prior replay
+  evidence shows that it catches some confident errors but leaves others and
+  can demote some correctly transcribed, mathematically wrong student answers.
+  No OCR/confidence/production code has been changed or deployed in response.
+- The canonical accepted-answer repair replay was rerun unchanged after this
+  incident. Its paired 345-answer evidence reproduces: broad-veto-removed
+  control `312/345` automatic with `20` confident transcription errors;
+  repaired candidate `284/345` automatic, `284/284` matching handwritten
+  truth, `0` known confident errors, and `61` yellow. It changes 28 decisions:
+  all 20 control errors become yellow, alongside eight correct-but-difficult
+  reads. This validates the safety architecture offline but does not authorize
+  public deployment because its complete independent-reader path is not the
+  current public browser-only runtime.
+- Next action: test an isolated browser-only safety candidate on identical
+  saved evidence, with this `6→8` morphology represented, before considering
+  any production change. Scout-only disagreement may be used as a cheap route
+  or containment signal, but not claimed as a complete zero-error solution.
+
 ## 2026-07-29 marker-centered app icon Beta 15.54
 
 - The third physical iPhone screenshot was measured directly rather than

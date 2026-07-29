@@ -367,7 +367,11 @@
     </div>
 
     <!-- Student Mode: show grade outcome or teacher-review outcome, never a dead-end "all set" screen -->
-    <div v-if="studentMode && ocrResult && liveOcrDebugExportEnabled" class="student-result" :class="studentResultClass">
+    <div
+      v-if="studentMode && ocrResult && liveOcrDebugExportEnabled && !progressiveMarkingActive"
+      class="student-result"
+      :class="studentResultClass"
+    >
       <p v-if="ocrResult.error" class="student-result-message">Try again</p>
       <p v-if="ocrResult.error && studentOcrResultErrorHint" class="student-result-subtext">
         {{ studentOcrResultErrorHint }}
