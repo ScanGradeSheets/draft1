@@ -18,6 +18,10 @@
 - Verification: focused fixed-workspace/progressive tests **23/23**, complete
   repository tests **360/360**, and production build passed. Build label:
   `2026.07.29-debug-flow-isolation-beta-15-55`.
+- Deployment: isolated static-only `ab5e380a.scangrade.pages.dev`, promoted to
+  `scangrade.io`. The custom domain and immutable URL serve the same
+  `index-C0MfzrAn.js` build, and `/api/submissions` is byte-identical to the
+  static app shell (no active backend).
 
 ## 2026-07-29 live confident-error incident under Beta 15.54
 
