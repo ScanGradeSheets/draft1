@@ -522,6 +522,21 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   correction, storage, service-worker privacy, or student-data changes.
 - Verification: icon/PWA contract **5/5**, full suite **360/360**, and pruned
   production build passed.
+- Deployment: `3ad73687.scangrade.pages.dev`, promoted to `scangrade.io`;
+  public HTML and the `v4` Apple icon match the verified build byte-for-byte.
 - Deployment: `190552d2.scangrade.pages.dev`, promoted to `scangrade.io`;
   public HTML and the versioned `v3` 180px Apple icon match the verified build
   byte-for-byte.
+
+## 2026-07-29 — Beta 15.53 final physical icon alignment
+
+- Evidence: immediate physical iPhone inspection showed Beta 15.52 was one
+  native Apple-icon pixel too far right.
+- Change: move the full unchanged mark exactly `1px` left on the 180px Apple
+  asset, with proportional movement in standard and maskable icons. Preserve
+  the pure-white background and existing scale.
+- Cache control: all install references now use new `v4` icon paths.
+- Safety: icon presentation only; no OCR, grading, capture, correction,
+  worksheet, privacy, or student-data change.
+- Verification: icon/PWA contract **5/5**, full suite **360/360**, and pruned
+  production build passed.

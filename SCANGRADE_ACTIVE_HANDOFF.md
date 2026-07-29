@@ -1,5 +1,20 @@
 # ScanGrade Active Handoff
 
+## 2026-07-29 final icon alignment Beta 15.53
+
+- Physical iPhone inspection found Beta 15.52 one native icon pixel too far
+  right. The complete unchanged logo is moved exactly `1px` left from that
+  version, preserving the pure-white background, scale, and sharp rendering.
+- Install assets use fresh `v4` URLs so a delete/re-add cannot reuse Beta
+  15.52's artwork.
+- OCR, capture, grading, review, privacy, and student-data behavior are
+  unchanged.
+- Verification: icon/PWA contract **5/5**, full repository **360/360**, and
+  pruned production build passed. Build label:
+  `2026.07.29-final-icon-alignment-beta-15-53`.
+- Deployment: `3ad73687.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Public HTML and the `v4` Apple icon match the verified build byte-for-byte.
+
 ## 2026-07-29 physical icon alignment Beta 15.52
 
 - Tony's second physical iPhone Home Screen inspection requested a further
