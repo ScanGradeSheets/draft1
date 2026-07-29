@@ -7,10 +7,10 @@ const scopeRoot = scopeUrl.href
 const shellUrls = [
   scopeRoot,
   new URL('manifest.webmanifest', scopeRoot).href,
-  new URL('icons/apple-touch-icon-180-v4.png', scopeRoot).href,
-  new URL('icons/scangrade-icon-192-v4.png', scopeRoot).href,
-  new URL('icons/scangrade-icon-512-v4.png', scopeRoot).href,
-  new URL('icons/scangrade-icon-maskable-512-v4.png', scopeRoot).href,
+  new URL('icons/apple-touch-icon-180-v5.png', scopeRoot).href,
+  new URL('icons/scangrade-icon-192-v5.png', scopeRoot).href,
+  new URL('icons/scangrade-icon-512-v5.png', scopeRoot).href,
+  new URL('icons/scangrade-icon-maskable-512-v5.png', scopeRoot).href,
 ]
 
 function isSafeCacheResponse(response) {

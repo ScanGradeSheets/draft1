@@ -38,9 +38,9 @@ test('manifest installs ScanGrade as a standalone education app with the approve
   assert.ok(manifest.categories.includes('education'))
 
   const expected = new Map([
-    ['icons/scangrade-icon-192-v4.png', 192],
-    ['icons/scangrade-icon-512-v4.png', 512],
-    ['icons/scangrade-icon-maskable-512-v4.png', 512],
+    ['icons/scangrade-icon-192-v5.png', 192],
+    ['icons/scangrade-icon-512-v5.png', 512],
+    ['icons/scangrade-icon-maskable-512-v5.png', 512],
   ])
   for (const icon of manifest.icons) {
     const size = expected.get(icon.src)
@@ -49,7 +49,7 @@ test('manifest installs ScanGrade as a standalone education app with the approve
   }
   assert.ok(manifest.icons.some((icon) => icon.purpose === 'maskable'))
   assert.deepEqual(
-    pngDimensions('public/icons/apple-touch-icon-180-v4.png'),
+    pngDimensions('public/icons/apple-touch-icon-180-v5.png'),
     { width: 180, height: 180 },
   )
 })
@@ -57,21 +57,21 @@ test('manifest installs ScanGrade as a standalone education app with the approve
 test('document advertises the manifest, Apple icon, standalone mode and app title', () => {
   const html = read('index.html')
   assert.match(html, /rel="manifest" href="%BASE_URL%manifest\.webmanifest"/)
-  assert.match(html, /rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%icons\/apple-touch-icon-180-v4\.png"/)
+  assert.match(html, /rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%icons\/apple-touch-icon-180-v5\.png"/)
   assert.match(html, /name="apple-mobile-web-app-capable" content="yes"/)
   assert.match(html, /name="apple-mobile-web-app-title" content="ScanGrade"/)
 })
 
 test('Apple Home Screen icon is a full-resolution PNG with a versioned path', () => {
-  const icon = pngRgba('public/icons/apple-touch-icon-180-v4.png')
+  const icon = pngRgba('public/icons/apple-touch-icon-180-v5.png')
   assert.equal(icon.width, 180)
   assert.equal(icon.height, 180)
   assert.ok(icon.bytes.length > 8_000)
 })
 
-test('Apple Home Screen icon has a pure-white edge and measured physical-device offset', async () => {
+test('Apple Home Screen icon has a pure-white edge and equidistant lower markers', async () => {
   const image = await loadImage(fileURLToPath(new URL(
-    'public/icons/apple-touch-icon-180-v4.png',
+    'public/icons/apple-touch-icon-180-v5.png',
     rootUrl,
   )))
   const canvas = createCanvas(image.width, image.height)
@@ -102,9 +102,26 @@ test('Apple Home Screen icon has a pure-white edge and measured physical-device 
     }
   }
 
-  assert.ok(weightedX / inkWeight - image.width / 2 > 0.25)
-  assert.ok(weightedX / inkWeight - image.width / 2 < 1.25)
   assert.ok(Math.abs(weightedY / inkWeight - image.height / 2) < 1)
+
+  let lowerInkMinX = image.width
+  let lowerInkMaxX = -1
+  for (let y = Math.floor(image.height * 0.7); y < image.height; y += 1) {
+    for (let x = 0; x < image.width; x += 1) {
+      const offset = (y * image.width + x) * 4
+      const luminance = (
+        pixels[offset] +
+        pixels[offset + 1] +
+        pixels[offset + 2]
+      ) / 3
+      if (luminance < 128) {
+        lowerInkMinX = Math.min(lowerInkMinX, x)
+        lowerInkMaxX = Math.max(lowerInkMaxX, x)
+      }
+    }
+  }
+  assert.ok(lowerInkMaxX >= 0)
+  assert.ok(Math.abs(lowerInkMinX - (image.width - 1 - lowerInkMaxX)) <= 1)
 })
 
 test('service worker is update-aware and never caches student or server traffic', () => {

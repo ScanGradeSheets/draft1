@@ -374,7 +374,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.29-final-icon-alignment-beta-15-53'
+const APP_BUILD_LABEL = '2026.07.29-marker-centered-app-icon-beta-15-54'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices

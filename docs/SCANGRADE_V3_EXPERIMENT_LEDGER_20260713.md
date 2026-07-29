@@ -522,8 +522,27 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   correction, storage, service-worker privacy, or student-data changes.
 - Verification: icon/PWA contract **5/5**, full suite **360/360**, and pruned
   production build passed.
+- Deployment: `50dd3556.scangrade.pages.dev`, promoted to `scangrade.io`;
+  public HTML and the marker-centered `v5` Apple icon match the verified build
+  byte-for-byte.
 - Deployment: `3ad73687.scangrade.pages.dev`, promoted to `scangrade.io`;
   public HTML and the `v4` Apple icon match the verified build byte-for-byte.
+
+## 2026-07-29 — Beta 15.54 marker-centered app icon
+
+- Evidence: pixel measurement of Tony's latest physical iPhone screenshot
+  found a rendered tile from x=`32–143`, a `25px` left lower-marker gap, and an
+  `18px` right lower-marker gap.
+- Change: remove the subjective optical offset and geometrically center the
+  unchanged source logo. This predicts an approximately `3.5px` left movement
+  in the physical screenshot and equal marker-to-tile margins.
+- Regression: on the actual 180px Apple PNG, require a pure-white perimeter
+  and equal lower dark-marker edge gaps within one pixel.
+- Cache control: all install references use fresh `v5` asset paths.
+- Safety: icon presentation only; no OCR, grading, capture, correction,
+  worksheet, privacy, or student-data changes.
+- Verification: icon/PWA contract **5/5**, full suite **360/360**, and pruned
+  production build passed.
 - Deployment: `190552d2.scangrade.pages.dev`, promoted to `scangrade.io`;
   public HTML and the versioned `v3` 180px Apple icon match the verified build
   byte-for-byte.

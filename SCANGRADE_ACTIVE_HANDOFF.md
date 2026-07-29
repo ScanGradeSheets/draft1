@@ -1,5 +1,25 @@
 # ScanGrade Active Handoff
 
+## 2026-07-29 marker-centered app icon Beta 15.54
+
+- The third physical iPhone screenshot was measured directly rather than
+  judging the source canvas: the rendered white tile spans x=`32–143`, while
+  the lower marker edge gaps were `25px` left and `18px` right.
+- The unchanged logo is now geometrically centered on the icon canvas. This
+  moves the physical rendering roughly `3.5` screenshot pixels left and makes
+  the lower corner-marker margins equal. Pure white, scale, and sharp source
+  rendering are preserved.
+- The regression now explicitly requires equal left/right lower-marker edge
+  gaps. Fresh `v5` URLs prevent reuse of any earlier icon.
+- OCR, capture, grading, review, privacy, and student-data behavior are
+  unchanged.
+- Verification: icon/PWA contract **5/5**, full repository **360/360**, and
+  pruned production build passed. Build label:
+  `2026.07.29-marker-centered-app-icon-beta-15-54`.
+- Deployment: `50dd3556.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Public HTML and the marker-centered `v5` Apple icon match the verified build
+  byte-for-byte.
+
 ## 2026-07-29 final icon alignment Beta 15.53
 
 - Physical iPhone inspection found Beta 15.52 one native icon pixel too far
