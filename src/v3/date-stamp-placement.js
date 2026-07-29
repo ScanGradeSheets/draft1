@@ -19,6 +19,40 @@ const LAUNCH_LAYOUT_IDS = new Set([
   'sg-g1-lw-10-place-value-50',
 ])
 
+function rectanglesOverlap(a, b) {
+  return !!(
+    a &&
+    b &&
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  )
+}
+
+export function qrCompletionExclusionRect(layout, width, height) {
+  const qr = layout?.metadata?.qr_position
+  const pageWidth = Number(width)
+  const pageHeight = Number(height)
+  if (
+    !(pageWidth > 0) ||
+    !(pageHeight > 0) ||
+    !qr ||
+    ![qr.x, qr.y, qr.width, qr.height].every((value) => Number.isFinite(Number(value)))
+  ) return null
+  // Include the QR quiet area, printed label, transform error and breathing
+  // room. A completion stamp must never enter this visible footprint.
+  const padX = pageWidth * 0.028
+  const padTop = pageHeight * 0.018
+  const padBottom = pageHeight * 0.025
+  return {
+    x: Number(qr.x) * pageWidth - padX,
+    y: Number(qr.y) * pageHeight - padTop,
+    w: Number(qr.width) * pageWidth + padX * 2,
+    h: Number(qr.height) * pageHeight + padTop + padBottom,
+  }
+}
+
 export function declaredDateStampRect(layout, width, height) {
   const layoutId = String(layout?.layout_id || layout?.id || '')
   const zone = layout?.metadata?.annotation_zones?.date_stamp ||
@@ -54,21 +88,28 @@ export function completionDateStampRect(layout, width, height, questionRects = [
     layout,
     questionRects,
   })
-  const qr = layout?.metadata?.qr_position
-  const qrRight = qr && Number.isFinite(Number(qr.x)) && Number.isFinite(Number(qr.width))
-    ? (Number(qr.x) + Number(qr.width)) * pageWidth
-    : pageWidth * 0.56
-  const w = pageWidth * 0.225
+  const qrExclusion = qrCompletionExclusionRect(layout, pageWidth, pageHeight)
+  const qrRight = qrExclusion
+    ? qrExclusion.x + qrExclusion.w
+    : pageWidth * 0.59
+  const w = pageWidth * 0.205
   const h = pageHeight * 0.05
-  const x = Math.min(
-    pageWidth - w - pageWidth * 0.025,
-    Math.max(qrRight + pageWidth * 0.03, score.centerX - w * 0.32),
+  const maxX = pageWidth - w - pageWidth * 0.025
+  const x = Math.max(
+    qrRight + pageWidth * 0.018,
+    score.centerX - w * 0.38,
   )
+  // A decorative completion seal is optional. If perspective leaves no safe
+  // space beside the QR, omit it instead of drawing over the QR or score.
+  if (x > maxX) return null
   const y = Math.min(
     pageHeight - h - pageHeight * 0.035,
-    score.y + Math.max(score.fontSize * 0.84, pageHeight * 0.03),
+    score.y + Math.max(score.fontSize * 0.95, pageHeight * 0.035),
   )
-  return { x, y, w, h }
+  const rect = { x, y, w, h }
+  if (qrExclusion && rectanglesOverlap(rect, qrExclusion)) return null
+  if (score.safetyRect && rectanglesOverlap(rect, score.safetyRect)) return null
+  return rect
 }
 
 function seededUnit(seed) {

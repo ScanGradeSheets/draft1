@@ -1,5 +1,30 @@
 # ScanGrade Active Handoff
 
+## 2026-07-29 QR-safe completion placement Beta 15.49
+
+- Physical iPhone evidence on the ten-frame sheet showed the completion date
+  entering the QR footprint and the handwritten `6/6` coming uncomfortably
+  close. The old placement used offsets from the QR's transformed edge but did
+  not collision-test the complete visible score and date regions.
+- The transformed QR now creates a padded, hard exclusion zone that includes
+  its quiet area, printed label, perspective error, and breathing room. The
+  handwritten score is placed beside that exclusion or moved fully above it.
+  The date is smaller horizontally, farther right, farther below the score,
+  and must pass explicit score/QR collision checks.
+- If an unusually skewed capture leaves no safe completion-date area, the
+  decorative date is omitted rather than drawn over the score, QR code, or
+  student work. The score remains present.
+- A photographed/skewed ten-frame regression now verifies all three required
+  separations: score↔QR, date↔QR, and date↔score. OCR, recognition, capture,
+  homography, grading, correction values, and answer-key boundaries are
+  unchanged.
+- Verification: focused placement tests **13/13**, full repository tests
+  **355/355**, pruned production build passed. Build label:
+  `2026.07.29-qr-safe-completion-zone-beta-15-49`.
+- Deployment: `08bb3bfd.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Production HTML, `index-BYipC2TZ.js`, and `index-Cf3B6WSa.css` are
+  byte-identical to the verified build.
+
 ## 2026-07-29 continuous corrections, final stamp, and landing composition Beta 15.48
 
 - A Safari paint race could remove the live black correction preview before

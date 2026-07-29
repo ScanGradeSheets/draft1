@@ -26,6 +26,47 @@ function jitter(seed, amount) {
   return (seededUnit(seed) - 0.5) * 2 * amount
 }
 
+function rectanglesOverlap(a, b) {
+  return !!(
+    a &&
+    b &&
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  )
+}
+
+function qrSafetyRect(layout, pageWidth, pageHeight) {
+  const qr = layout?.metadata?.qr_position
+  if (
+    !qr ||
+    ![qr.x, qr.y, qr.width, qr.height].every((value) => Number.isFinite(Number(value)))
+  ) return null
+  const padX = pageWidth * 0.018
+  const padY = pageHeight * 0.012
+  return {
+    x: Number(qr.x) * pageWidth - padX,
+    y: Number(qr.y) * pageHeight - padY,
+    w: Number(qr.width) * pageWidth + padX * 2,
+    h: Number(qr.height) * pageHeight + padY * 2,
+  }
+}
+
+export function teacherScoreSafetyRect(placement, width, height) {
+  const pageWidth = Math.max(1, Number(width) || 1)
+  const pageHeight = Math.max(1, Number(height) || 1)
+  const fontSize = Math.max(1, Number(placement?.fontSize) || 1)
+  const w = Math.max(fontSize * 2.9, pageWidth * 0.15)
+  const h = Math.max(fontSize * 1.18, pageHeight * 0.06)
+  return {
+    x: Number(placement?.centerX) - w / 2,
+    y: Number(placement?.y) - h / 2,
+    w,
+    h,
+  }
+}
+
 export function teacherScoreSmoothPathD(points) {
   if (!Array.isArray(points) || points.length < 2) return ''
   const commands = [`M ${points[0][0].toFixed(2)} ${points[0][1].toFixed(2)}`]
@@ -56,19 +97,45 @@ export function teacherScorePlacement({
     ? Math.max(...rects.map((rect) => Number(rect.y) + Number(rect.h)))
     : pageHeight * 0.56
   const qr = layout?.metadata?.qr_position
-  const hasQr = qr && Number.isFinite(qr.x) && Number.isFinite(qr.y)
-  const qrTop = hasQr ? qr.y * pageHeight : pageHeight * 0.8
-  const qrRight = hasQr && Number.isFinite(qr.width)
-    ? (qr.x + qr.width) * pageWidth
-    : pageWidth * 0.57
+  const hasQr = qr && Number.isFinite(Number(qr.x)) && Number.isFinite(Number(qr.y))
+  const qrTop = hasQr ? Number(qr.y) * pageHeight : pageHeight * 0.8
+  const fontSize = Math.max(58, Math.min(96, pageWidth * 0.052))
+  const desiredY = hasQr
+    ? Math.min(qrTop - pageHeight * 0.025, Math.max(maxQuestionBottom + pageHeight * 0.09, qrTop - pageHeight * 0.045))
+    : Math.min(pageHeight * 0.82, Math.max(maxQuestionBottom + pageHeight * 0.08, pageHeight * 0.59))
+  const qrExclusion = hasQr ? qrSafetyRect(layout, pageWidth, pageHeight) : null
+  const provisional = {
+    centerX: pageWidth * 0.69,
+    y: desiredY,
+    fontSize,
+  }
+  const scoreSize = teacherScoreSafetyRect(provisional, pageWidth, pageHeight)
+  const maxCenterX = pageWidth - pageWidth * 0.035 - scoreSize.w / 2
+  const rightOfQrCenterX = qrExclusion
+    ? qrExclusion.x + qrExclusion.w + pageWidth * 0.012 + scoreSize.w / 2
+    : provisional.centerX
+
+  provisional.centerX = Math.min(
+    maxCenterX,
+    Math.max(provisional.centerX, rightOfQrCenterX),
+  )
+
+  // Perspective correction can move the printed QR much farther right than
+  // its ideal worksheet position. Its visible footprint is a hard exclusion:
+  // if the score cannot fit beside it, put the score fully above it.
+  let safetyRect = teacherScoreSafetyRect(provisional, pageWidth, pageHeight)
+  if (qrExclusion && rectanglesOverlap(safetyRect, qrExclusion)) {
+    provisional.y = Math.min(
+      desiredY,
+      qrExclusion.y - pageHeight * 0.012 - safetyRect.h / 2,
+    )
+    safetyRect = teacherScoreSafetyRect(provisional, pageWidth, pageHeight)
+  }
+
   return Object.freeze({
-    centerX: hasQr
-      ? Math.min(pageWidth * 0.735, Math.max(qrRight + pageWidth * 0.075, pageWidth * 0.675))
-      : pageWidth * 0.67,
-    y: hasQr
-      ? Math.min(qrTop - pageHeight * 0.025, Math.max(maxQuestionBottom + pageHeight * 0.09, qrTop - pageHeight * 0.045))
-      : Math.min(pageHeight * 0.82, Math.max(maxQuestionBottom + pageHeight * 0.08, pageHeight * 0.59)),
-    fontSize: Math.max(58, Math.min(96, pageWidth * 0.052)),
+    ...provisional,
+    safetyRect: Object.freeze(safetyRect),
+    qrExclusion: qrExclusion ? Object.freeze(qrExclusion) : null,
   })
 }
 

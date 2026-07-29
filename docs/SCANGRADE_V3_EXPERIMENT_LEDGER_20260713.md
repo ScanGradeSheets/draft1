@@ -427,3 +427,28 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   production build passed.
 - Deployment: `5c450b80.scangrade.pages.dev`, promoted to `scangrade.io`;
   production serves byte-identical `index-C7E543Dp.js`.
+
+## 2026-07-29 — Beta 15.49 QR-safe completion placement
+
+- Failure evidence: a real skewed iPhone capture of
+  `sg-g1-lw-06-ten-frames` placed the completion date across the QR code and
+  left the handwritten `6/6` with insufficient QR clearance.
+- Root cause: placement used small offsets from transformed QR coordinates but
+  did not collision-test the full visible score and date footprints after
+  perspective correction.
+- Change: create padded QR exclusion rectangles for both score and date. Place
+  the score fully beside the QR or fully above it; require the date to clear
+  both the QR exclusion and the score safety rectangle. Reduce date-zone width,
+  move it farther right/below, and omit the optional stamp if no safe area
+  remains.
+- Regression: reproduce a lower-right-shifted ten-frame QR and assert no
+  score↔QR, date↔QR, or date↔score intersection. A second test locks the
+  fail-closed omission behavior under extreme skew.
+- Safety: presentation geometry only; OCR, recognition, confidence, capture,
+  homography, grading decisions, correction values, and answer-key boundaries
+  are unchanged.
+- Verification: focused placement tests **13/13**; full suite **355/355**;
+  pruned production build passed.
+- Deployment: `08bb3bfd.scangrade.pages.dev`, promoted to `scangrade.io`;
+  production serves byte-identical `index-BYipC2TZ.js` and
+  `index-Cf3B6WSa.css`.
