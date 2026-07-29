@@ -44,20 +44,20 @@ test('manual correction digits use the lighter settled teacher-ink renderer', as
   assert.match(correctionInkSource, /ctx\.globalAlpha = 0\.1/)
 })
 
-test('the completion date lands with only a natural ink impression and never moves', () => {
+test('the completion date appears once as a static final stamp and never moves', () => {
   assert.doesNotMatch(cameraSource, /scanning-date-stamp-splash/)
   assert.doesNotMatch(cameraSource, /date-stamp-completion-splash/)
-  assert.match(cameraSource, /@keyframes date-stamp-ink-land/)
-  assert.match(cameraSource, /filter:\s*blur\(0\.55px\) saturate\(1\.16\) drop-shadow/)
+  assert.match(cameraSource, /\.scanning-date-stamp\s*\{[^}]*opacity:\s*0\.72/s)
+  assert.doesNotMatch(cameraSource, /@keyframes date-stamp-ink-land/)
+  assert.doesNotMatch(cameraSource, /\.scanning-date-stamp\s*\{[^}]*animation:/s)
   assert.doesNotMatch(cameraSource, /\.scanning-date-stamp\s*\{[^}]*transform:/s)
-  assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*720\)/)
+  assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*420\)/)
 })
 
-test('the date press uses a temporary neutral paper impression rather than an interface halo', () => {
-  assert.match(cameraSource, /class="scanning-date-paper-impression"/)
-  assert.match(cameraSource, /@keyframes date-paper-compression/)
-  assert.match(cameraSource, /fill="url\(#completion-date-paper-impression\)"/)
-  assert.doesNotMatch(cameraSource, /completion-date-paper-impression[\s\S]{0,500}stop-color="(?:white|#fff|rgba\(255,\s*255,\s*255)/i)
+test('the final date stamp has no temporary paper impression or interface effect', () => {
+  assert.doesNotMatch(cameraSource, /scanning-date-paper-impression/)
+  assert.doesNotMatch(cameraSource, /date-paper-compression/)
+  assert.doesNotMatch(cameraSource, /completion-date-paper-impression/)
   assert.doesNotMatch(cameraSource, /scanning-date-stamp-splash|date-stamp-completion-splash/)
 })
 
@@ -269,6 +269,11 @@ test('runtime manual correction keeps the settled black answer in its animation 
       cameraSource.indexOf('ocrResult.value = nextResult'),
     'the stable correction base must exist before the displayed result switches',
   )
+  assert.match(cameraSource, /ref="displayedResultImageRef"/)
+  assert.match(cameraSource, /await waitForDisplayedCorrectionBase\(correctionAnimationBaseUrl\)/)
+  assert.match(cameraSource, /async function waitForDisplayedCorrectionBase/)
+  assert.match(cameraSource, /image\.addEventListener\('load',\s*finishAfterPaint/)
+  assert.match(cameraSource, /requestAnimationFrame\(\(\) => window\.requestAnimationFrame\(resolve\)\)/)
 })
 
 test('grading pen strokes remain animated when the device requests reduced motion', () => {

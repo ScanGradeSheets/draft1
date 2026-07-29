@@ -1,5 +1,30 @@
 # ScanGrade Active Handoff
 
+## 2026-07-29 continuous corrections, final stamp, and landing composition Beta 15.48
+
+- A Safari paint race could remove the live black correction preview before
+  the equivalent correction-animation base had painted, causing the digit to
+  disappear briefly before its check/X. The preview now stays present until
+  the replacement image reports loaded and two animation frames have passed;
+  only then can review advance to the next yellow.
+- The completion date keeps its approved size and placement but now appears
+  once at full settled opacity after the handwritten score. The blur, pop,
+  paper-compression impression, and all date-stamp keyframe animation were
+  removed. It remains visible for `420ms` as a punctuated completion mark
+  before the final annotated image takes over.
+- The scanning/grading header remains compact and fixed. The opening screen
+  now has its own centered hero composition: a `68px` logo, `30px` wordmark,
+  clearer brand-to-actions spacing, and the existing three actions grouped
+  below it. An iPhone 13 render was inspected after the loading transition.
+- OCR, recognition, grading, capture, homography, correction values, date
+  placement, and answer-key boundaries are unchanged. Focused UX tests pass
+  **27/27**, the full repository passes **353/353**, and the pruned production
+  build passes. Build label:
+  `2026.07.29-continuous-correction-final-stamp-home-beta-15-48`.
+- Deployment: `5c450b80.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Production HTML and `index-C7E543Dp.js` are byte-identical to the verified
+  build.
+
 ## 2026-07-28 strictly sequential red X Beta 15.47
 
 - Physical review made the X's crossing stroke appear to start before the

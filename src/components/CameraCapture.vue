@@ -24,6 +24,7 @@
         @click="handleCorrectionOutsideClick"
       >
         <img
+          ref="displayedResultImageRef"
           :src="displayedResultImage"
           class="captured-image"
           alt="Captured worksheet"
@@ -44,21 +45,7 @@
                 :height="scanningDateStampSpec.rect.h"
               />
             </clipPath>
-            <linearGradient id="completion-date-paper-impression" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#4a4131" stop-opacity="0.1" />
-              <stop offset="0.52" stop-color="#4a4131" stop-opacity="0.025" />
-              <stop offset="1" stop-color="#4a4131" stop-opacity="0" />
-            </linearGradient>
           </defs>
-          <rect
-            class="scanning-date-paper-impression"
-            :x="scanningDateStampSpec.rect.x - scanningDateStampSpec.rect.w * 0.015"
-            :y="scanningDateStampSpec.rect.y - scanningDateStampSpec.rect.h * 0.08"
-            :width="scanningDateStampSpec.rect.w * 1.03"
-            :height="scanningDateStampSpec.rect.h * 1.16"
-            :rx="scanningDateStampSpec.rect.h * 0.16"
-            fill="url(#completion-date-paper-impression)"
-          />
           <image
             class="scanning-date-stamp"
             x="0"
@@ -1397,6 +1384,7 @@ const modelInfoSnapshot = ref(null)
 const modelSanityRunning = ref(false)
 const modelSanityResults = ref(null)
 const capturedImageWrapRef = ref(null)
+const displayedResultImageRef = ref(null)
 const activeCorrectionQuestion = ref(null)
 const manualCorrectionText = ref('')
 const manualCorrectionClearedForSession = ref(false)
@@ -2400,6 +2388,10 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   )
   ocrResult.value = nextResult
   startManualCorrectionAnimation(correctedQuestionNum, correctionAnimationBaseUrl)
+  // Keep the live white-tape preview over the answer until Safari has loaded
+  // and painted the equivalent correction-animation base underneath it.
+  // Removing the preview earlier produces a one-frame missing-digit flash.
+  await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)
   if (lastLiveOcrDebug.value) {
     lastLiveOcrDebug.value = {
       ...lastLiveOcrDebug.value,
@@ -3620,7 +3612,7 @@ function advanceProgressiveMarking() {
   if (progressiveScoreStep.value && progressiveScoreRevealed.value && !progressiveDateStampRevealed.value) {
     progressiveDateStampRevealed.value = true
     clearProgressiveMarkingTimer()
-    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 720)
+    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 420)
     return
   }
   finishProgressiveMarkingSoon()
@@ -3666,6 +3658,31 @@ function imageElementFromUrl(url) {
     image.onload = () => resolve(image)
     image.onerror = () => reject(new Error('annotation image failed to load'))
     image.src = url
+  })
+}
+
+async function waitForDisplayedCorrectionBase(expectedUrl, timeoutMs = 650) {
+  if (!expectedUrl || typeof window === 'undefined') return
+  await nextTick()
+  const image = displayedResultImageRef.value
+  if (!image) return
+  await new Promise((resolve) => {
+    let settled = false
+    let timeout = null
+    const finishAfterPaint = () => {
+      if (settled) return
+      settled = true
+      if (timeout != null) window.clearTimeout(timeout)
+      image.removeEventListener('load', finishAfterPaint)
+      window.requestAnimationFrame(() => window.requestAnimationFrame(resolve))
+    }
+    const displayedSource = image.getAttribute('src') || image.currentSrc
+    if (image.complete && image.naturalWidth > 0 && displayedSource === expectedUrl) {
+      finishAfterPaint()
+      return
+    }
+    image.addEventListener('load', finishAfterPaint, { once: true })
+    timeout = window.setTimeout(finishAfterPaint, timeoutMs)
   })
 }
 
@@ -10711,14 +10728,7 @@ onUnmounted(() => {
 }
 
 .scanning-date-stamp {
-  opacity: 0;
-  animation: date-stamp-ink-land 560ms cubic-bezier(0.18, 0.84, 0.24, 1.08) 45ms forwards;
-}
-
-.scanning-date-paper-impression {
-  opacity: 0;
-  filter: blur(1.2px);
-  animation: date-paper-compression 620ms cubic-bezier(0.2, 0.72, 0.26, 1) forwards;
+  opacity: 0.72;
 }
 
 .recognition-read-overlay {
@@ -10756,40 +10766,6 @@ onUnmounted(() => {
 .progressive-marking-stroke {
   stroke-dasharray: none;
   stroke-dashoffset: 0;
-}
-
-@keyframes date-stamp-ink-land {
-  0% {
-    opacity: 0;
-    filter: blur(1.4px) saturate(1.08);
-  }
-  32% {
-    opacity: 0.88;
-    filter: blur(0.55px) saturate(1.16) drop-shadow(0 0 0.9px rgba(36, 90, 164, 0.35));
-  }
-  62% {
-    opacity: 0.78;
-    filter: blur(0.16px) saturate(1.08) drop-shadow(0 0 0.35px rgba(36, 90, 164, 0.18));
-  }
-  100% {
-    opacity: 0.72;
-    filter: blur(0) saturate(1);
-  }
-}
-
-@keyframes date-paper-compression {
-  0% {
-    opacity: 0;
-  }
-  24% {
-    opacity: 0.78;
-  }
-  58% {
-    opacity: 0.42;
-  }
-  100% {
-    opacity: 0;
-  }
 }
 
 .video-preview, .captured-image {

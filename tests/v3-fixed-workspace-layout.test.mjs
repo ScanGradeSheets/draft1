@@ -20,7 +20,11 @@ test('normal scans keep recognition on the sheet instead of expanding a result c
   assert.match(cameraSource, /studentMode && ocrResult && liveOcrDebugExportEnabled/)
 })
 
-test('landing and capture share one student header geometry', () => {
+test('landing has a centered hero header while capture keeps the compact fixed header', () => {
   assert.doesNotMatch(appSource, /header--capture/)
   assert.match(appSource, /\.scan-grade--student \.brand-logo \{\s*width: 44px;\s*height: 44px;/)
+  assert.match(appSource, /'scan-grade--landing': isStudentMode && studentView === 'landing'/)
+  assert.match(appSource, /\.scan-grade--student\.scan-grade--landing\s*\{[^}]*justify-content:\s*center/s)
+  assert.match(appSource, /\.scan-grade--student\.scan-grade--landing \.brand-logo\s*\{[^}]*width:\s*68px;[^}]*height:\s*68px/s)
+  assert.match(appSource, /\.scan-grade--student\.scan-grade--landing \.header h1\s*\{[^}]*font-size:\s*30px/s)
 })

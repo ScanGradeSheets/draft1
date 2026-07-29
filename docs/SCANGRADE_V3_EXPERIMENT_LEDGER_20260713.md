@@ -404,3 +404,26 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   production build passed.
 - Deployment: `6b92f7c4.scangrade.pages.dev`, promoted to `scangrade.io`;
   production serves byte-identical `index-B1EXIQyg.js`.
+
+## 2026-07-29 — Beta 15.48 continuous correction paint, static completion stamp, and landing layout
+
+- Failure evidence: the manually entered black digit could disappear for one
+  frame between removing the live entry overlay and painting the base used for
+  its check/X animation.
+- Correction change: retain the live white-tape/black-digit preview until the
+  replacement image has loaded and passed two browser paint frames. Review
+  advances only after that handoff, preventing a blank intermediate frame.
+- Completion change: keep the approved date size and placement, but remove the
+  stamp blur/pop and temporary paper-impression animation. The final date now
+  appears once at settled opacity after the score and holds for `420ms`.
+- Landing change: give the opening screen a distinct centered hero layout with
+  a `68px` logo and `30px` wordmark. The capture/grading header retains its
+  compact `44px`/`20px` geometry. The settled landing was visually inspected
+  in an iPhone 13 browser render.
+- Safety: presentation only; OCR, recognition, confidence, crops, capture,
+  homography, grading decisions, correction values, date placement, and
+  answer-key boundaries are unchanged.
+- Verification: focused tests **27/27**; full suite **353/353**; pruned
+  production build passed.
+- Deployment: `5c450b80.scangrade.pages.dev`, promoted to `scangrade.io`;
+  production serves byte-identical `index-C7E543Dp.js`.

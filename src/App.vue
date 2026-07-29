@@ -1,5 +1,12 @@
 <template>
-  <div class="scan-grade" :class="{ 'scan-grade--student': isStudentMode, 'scan-grade--capture': showStudentCaptureUi }">
+  <div
+    class="scan-grade"
+    :class="{
+      'scan-grade--student': isStudentMode,
+      'scan-grade--landing': isStudentMode && studentView === 'landing',
+      'scan-grade--capture': showStudentCaptureUi
+    }"
+  >
     <header class="header">
       <img :src="publicUrl('scangrade-logo-transparent.png')" alt="ScanGrade logo" class="brand-logo" />
       <h1><span class="brand-name">ScanGrade</span><span class="brand-domain">.io</span></h1>
@@ -367,7 +374,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.07.28-sequential-red-x-beta-15-47'
+const APP_BUILD_LABEL = '2026.07.29-continuous-correction-final-stamp-home-beta-15-48'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -1208,6 +1215,38 @@ onUnmounted(() => {
 .scan-grade--student .build-label {
   margin-top: 2px;
   font-size: 8px;
+}
+
+.scan-grade--student.scan-grade--landing {
+  justify-content: center;
+  padding-bottom: max(11dvh, 72px);
+}
+
+.scan-grade--student.scan-grade--landing .header {
+  margin-bottom: clamp(26px, 4dvh, 38px);
+}
+
+.scan-grade--student.scan-grade--landing .brand-logo {
+  width: 68px;
+  height: 68px;
+  margin-bottom: 7px;
+}
+
+.scan-grade--student.scan-grade--landing .header h1 {
+  font-size: 30px;
+  line-height: 1.05;
+}
+
+.scan-grade--student.scan-grade--landing .build-label {
+  margin-top: 5px;
+  font-size: 9px;
+}
+
+.scan-grade--landing .main--student {
+  flex: 0 0 auto;
+  min-height: auto;
+  width: 100%;
+  padding-bottom: 0;
 }
 
 .header h1 {
