@@ -452,3 +452,32 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
 - Deployment: `08bb3bfd.scangrade.pages.dev`, promoted to `scangrade.io`;
   production serves byte-identical `index-BYipC2TZ.js` and
   `index-Cf3B6WSa.css`.
+
+## 2026-07-29 — Beta 15.50 installable web app
+
+- Objective: make the verified ScanGrade website installable on iPhone and
+  iPad without creating a separate native-code product or changing the grading
+  pipeline.
+- Change: add a relative-scope web app manifest, iOS standalone metadata,
+  exact-logo home-screen icons, production-only service-worker registration,
+  and explicit Cloudflare cache headers for the manifest, worker, and icons.
+- Update safety: the worker checks for a new version on load but never reloads
+  an active page. Navigations are network-first; hashed UI assets and approved
+  public icon/font assets are cache-first.
+- Privacy and correctness boundary: the worker ignores non-GET requests,
+  cross-origin requests, range requests, and `/api/`. It does not cache scans,
+  corrections, submissions, debug uploads, OCR models, ONNX Runtime,
+  OpenCV, `localStorage`, or IndexedDB data.
+- Limitation: the install adds a standalone app experience and a small
+  resilience shell; it does not make first-use recognition fully offline.
+- Safety: no OCR, recognition, confidence, capture, homography, grading,
+  correction, answer-key, or worksheet behavior changed.
+- Verification: contract tests validated manifest fields, icon dimensions,
+  service-worker boundaries, registration, and headers. Chromium found zero
+  manifest errors, activated `/sw.js` at root scope, and created only
+  `scangrade-shell-v1` and `scangrade-assets-v1`. Full suite **358/358** and
+  pruned production build passed.
+- Deployment: `1843266b.scangrade.pages.dev`, promoted to `scangrade.io`.
+  HTML, hashed JavaScript/CSS, manifest, service worker, and Apple touch icon
+  match the verified build byte-for-byte. The production manifest has no
+  browser-reported errors and `/sw.js` is active at site-root scope.

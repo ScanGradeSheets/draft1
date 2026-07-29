@@ -1,0 +1,32 @@
+{
+  "id": "./",
+  "name": "ScanGrade",
+  "short_name": "ScanGrade",
+  "description": "Scan and grade ScanGrade math worksheets.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#f5f5f7",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "icons/scangrade-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/scangrade-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/scangrade-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

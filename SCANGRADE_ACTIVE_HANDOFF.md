@@ -1,5 +1,36 @@
 # ScanGrade Active Handoff
 
+## 2026-07-29 installable web app Beta 15.50
+
+- ScanGrade can now be added to an iPhone or iPad Home Screen from Safari and
+  opens in a standalone, app-like window without browser controls.
+- The installed icon uses the exact approved ScanGrade logo. Dedicated
+  `180px`, `192px`, `512px`, and maskable `512px` assets were generated
+  mechanically from `public/scangrade-logo-transparent.png`; the brand mark
+  itself was not redesigned.
+- A standards-based web app manifest, iOS home-screen metadata, and a
+  production-only service worker were added. Updates are checked whenever the
+  site loads, but an in-progress scan is never forcibly reloaded.
+- Privacy boundary: Cache Storage contains only the public app shell and
+  versioned static UI assets. Student scans, manual corrections, API requests,
+  debug uploads, model requests, and all non-GET traffic remain outside this
+  service worker's cache.
+- This is installability and launch resilience, not a claim that grading is
+  fully offline. Recognition resources that have not already been loaded can
+  still require a connection.
+- OCR, recognition, confidence, capture, homography, grading decisions,
+  correction values, and answer-key boundaries are unchanged.
+- Verification: install contract tests passed, Chromium reported no manifest
+  errors, the service worker installed and controlled the app, the exact icon
+  sizes were verified, the settled iPhone-size landing page was inspected,
+  the full repository passed **358/358**, and the pruned production build
+  passed. Build label:
+  `2026.07.29-installable-web-app-beta-15-50`.
+- Deployment: `1843266b.scangrade.pages.dev`, promoted to `scangrade.io`.
+  Production HTML, JavaScript, CSS, manifest, service worker, and Apple touch
+  icon are byte-identical to the verified build. A production browser smoke
+  test found zero manifest errors and an active root-scoped service worker.
+
 ## 2026-07-29 QR-safe completion placement Beta 15.49
 
 - Physical iPhone evidence on the ten-frame sheet showed the completion date

@@ -30,6 +30,35 @@ if (import.meta.env.DEV) {
 
 createApp(App).mount('#app')
 
+// Installability is intentionally independent of student data. The service
+// worker caches only public shell assets; scans and corrections remain in the
+// existing browser-local workflow and are never added to Cache Storage.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    const serviceWorkerUrl = `${import.meta.env.BASE_URL}sw.js`
+    try {
+      let registration
+      try {
+        registration = await navigator.serviceWorker.register(serviceWorkerUrl, {
+          scope: import.meta.env.BASE_URL,
+          updateViaCache: 'none',
+        })
+      } catch {
+        // Older supported WebKit releases may reject updateViaCache even
+        // though they support installable service workers.
+        registration = await navigator.serviceWorker.register(serviceWorkerUrl, {
+          scope: import.meta.env.BASE_URL,
+        })
+      }
+      // Check on each fresh launch. A new worker may take control without
+      // forcibly reloading an in-progress worksheet scan.
+      await registration.update().catch(() => {})
+    } catch (error) {
+      console.warn('[ScanGrade] App installation support unavailable:', error)
+    }
+  }, { once: true })
+}
+
 nextTick(() => {
   const loading = document.getElementById('loading')
   if (!loading) return
