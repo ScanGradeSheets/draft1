@@ -30,10 +30,12 @@
 - Private screenshots and the generated replay report remain under
   `private-evidence`/temporary attachments and must not be committed.
 - Build label: `2026.07.31-six-eight-safety-beta-15-56`. Deployment details
-  are to be added only after the isolated static deployment is verified. The
-  first upload exposed a pre-existing custom-domain cache entry that served the
-  SPA shell at the formerly missing unversioned model path; the client now uses
-  a versioned model URL, whose bytes match the tracked ONNX model exactly.
+  are: isolated static-only `e7221f62.scangrade.pages.dev`, promoted to
+  `scangrade.io`. The first upload exposed a pre-existing custom-domain cache
+  entry that served the SPA shell at the formerly missing unversioned model
+  path; the client now uses a versioned model URL. Final custom-domain and
+  immutable HTML match byte-for-byte, the public model matches the tracked
+  ONNX hash exactly, and `/api/submissions` remains a static HTML fallback.
 
 ## 2026-07-29 debug-flow isolation Beta 15.55
 
