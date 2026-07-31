@@ -43,15 +43,34 @@ test('active safety mode requests the scout and uses the old-device timeout', ()
   assert.equal(config.timeoutMs, 30000)
 })
 
-test('repair defaults on only for the private candidate and can be disabled', () => {
-  assert.equal(wholeSlotScoutShadowConfig({
+test('local replay can explicitly exercise the public narrow scope', () => {
+  const config = wholeSlotScoutShadowConfig({
+    hostname: '127.0.0.1',
+    search: '?v3AcceptedSafety=1&v3AcceptedSafetyScope=six-eight-only',
+  })
+  assert.equal(config.apply, true)
+  assert.equal(config.policyScope, 'six-eight-only')
+})
+
+test('narrow safety repair defaults on for public and private builds and can be disabled', () => {
+  const privateConfig = wholeSlotScoutShadowConfig({
     hostname: 'mac-mini.tail9a3379.ts.net',
     search: '',
-  }).apply, true)
-  assert.equal(wholeSlotScoutShadowConfig({
+  })
+  assert.equal(privateConfig.apply, true)
+  assert.equal(privateConfig.policyScope, 'full')
+  const publicConfig = wholeSlotScoutShadowConfig({
     hostname: 'scangrade.io',
     search: '',
-  }).apply, false)
+  })
+  assert.equal(publicConfig.apply, true)
+  assert.equal(publicConfig.policyScope, 'six-eight-only')
+  const pagesConfig = wholeSlotScoutShadowConfig({
+    hostname: 'ab5e380a.scangrade.pages.dev',
+    search: '',
+  })
+  assert.equal(pagesConfig.apply, true)
+  assert.equal(pagesConfig.policyScope, 'six-eight-only')
   assert.equal(wholeSlotScoutShadowConfig({
     hostname: 'mac-mini.tail9a3379.ts.net',
     search: '?v3AcceptedSafety=0',

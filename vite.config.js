@@ -15,7 +15,8 @@ const deployKeepFiles = new Set([
   'models/mnist-model.onnx',
   'models/worksheet-digit-generalist.onnx',
   'models/worksheet-digit-live-trusted-temp.onnx',
-  'models/worksheet-digit-tony-generalist-noaug-20260601.onnx'
+  'models/worksheet-digit-tony-generalist-noaug-20260601.onnx',
+  'models/v3-whole-slot-scout.onnx'
 ])
 
 function lastCliValue(flag) {

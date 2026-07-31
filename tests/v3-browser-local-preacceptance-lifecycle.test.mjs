@@ -6,8 +6,30 @@ const source = await readFile(new URL('../src/components/CameraCapture.vue', imp
 
 test('private browser-local candidate holds presentation and completion until its final decision', () => {
   const hold = source.indexOf('const holdBrowserLocalCandidatePresentation')
-  const initialPresentation = source.indexOf('if (!holdBrowserLocalCandidatePresentation)')
+  const initialPresentation = source.indexOf(
+    'if (!holdBrowserLocalCandidatePresentation && !holdAcceptedSafetyPresentation)',
+  )
   const promiseAssignment = source.indexOf('candidatePresentationPromise = requestWholeSlotScout')
+  const completionAwait = source.indexOf('await candidatePresentationPromise')
+  const completionEmit = source.lastIndexOf("emit('ocr-complete', ocrResult.value)")
+
+  assert.ok(hold >= 0)
+  assert.ok(initialPresentation > hold)
+  assert.ok(promiseAssignment > initialPresentation)
+  assert.ok(completionAwait > promiseAssignment)
+  assert.ok(completionEmit > completionAwait)
+})
+
+test('public 6/8 safety check holds marks until its final key-blind decision', () => {
+  assert.match(source, /acceptedSafetyRuntimeEnabled = acceptedSafetyConfig\.requested/)
+  assert.match(source, /acceptedSafetyConfig\.policyScope === 'six-eight-only'/)
+  const hold = source.indexOf('const holdAcceptedSafetyPresentation')
+  const initialPresentation = source.indexOf(
+    'if (!holdBrowserLocalCandidatePresentation && !holdAcceptedSafetyPresentation)',
+  )
+  const promiseAssignment = source.indexOf(
+    'candidatePresentationPromise = acceptedSafetyPromise',
+  )
   const completionAwait = source.indexOf('await candidatePresentationPromise')
   const completionEmit = source.lastIndexOf("emit('ocr-complete', ocrResult.value)")
 

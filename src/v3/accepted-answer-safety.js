@@ -2,6 +2,7 @@ import { normalizeTranscription } from '../hybrid-recognition.js'
 
 export const ACCEPTED_ANSWER_SAFETY_POLICY_VERSION = 'accepted-answer-safety-shadow-1'
 export const ACCEPTED_ANSWER_SCOUT_MIN_PROBABILITY = 0.90
+export const ACCEPTED_ANSWER_SIX_EIGHT_SCOUT_MIN_PROBABILITY = 0.90
 export const ACCEPTED_ANSWER_SECOND_CHOICE_MIN_PROBABILITY = 0.18
 export const ACCEPTED_ANSWER_STRONG_HIGH_CONFIDENCE = 0.97
 export const ACCEPTED_ANSWER_PLACE_VALUE_FOUR_RIVAL_MIN_PROBABILITY = 0.005
@@ -29,7 +30,9 @@ export function acceptedAnswerSafetyRoute({
   currentRead = null,
   predictions = [],
   scout = null,
+  slotCount = null,
   layoutId = '',
+  policyScope = 'full',
 } = {}) {
   const browserRead = digits(currentRead)
   if (!currentAutomatic || !browserRead) {
@@ -50,6 +53,33 @@ export function acceptedAnswerSafetyRoute({
 
   const scoutRead = digits(scout?.text ?? scout?.read)
   const scoutProbability = Number(scout?.probability ?? scout?.sequenceProbability ?? 0)
+  const sixEightScoutConflict = (
+    Number(slotCount) === 1 &&
+    (
+      (browserRead === '6' && scoutRead === '8') ||
+      (browserRead === '8' && scoutRead === '6')
+    ) &&
+    scoutProbability >= ACCEPTED_ANSWER_SIX_EIGHT_SCOUT_MIN_PROBABILITY
+  )
+  if (policyScope === 'six-eight-only') {
+    return {
+      policyVersion: ACCEPTED_ANSWER_SAFETY_POLICY_VERSION,
+      route: sixEightScoutConflict,
+      reason: sixEightScoutConflict
+        ? 'single-digit-six-eight-high-support-scout-conflict'
+        : 'no-public-six-eight-conflict',
+      reasons: sixEightScoutConflict
+        ? ['single-digit-six-eight-high-support-scout-conflict']
+        : [],
+      answerKeyUsed: false,
+      evidence: {
+        browserRead,
+        scoutRead,
+        scoutProbability,
+        slotCount: Number(slotCount) || null,
+      },
+    }
+  }
   if (
     scoutRead &&
     scoutRead !== browserRead &&
@@ -112,6 +142,7 @@ export function acceptedAnswerSafetyDecision({
   predictions = [],
   slotCount = null,
   layoutId = '',
+  policyScope = 'full',
 } = {}) {
   const browserRead = digits(currentRead)
   if (!routed || !browserRead) {
@@ -127,6 +158,8 @@ export function acceptedAnswerSafetyDecision({
   const continuousRead = digits(continuous?.text ?? continuous?.read)
   const stitchedRead = digits(stitched?.text ?? stitched?.read)
   const scoutRead = digits(scout?.text ?? scout?.read)
+  const scoutProbability = Number(
+    scout?.sequenceProbability ?? scout?.probability ?? 0)
   const continuousProbability = Number(
     continuous?.minTokenProbability ?? continuous?.probability ?? 0)
   const browserPreprocessingRisk = predictions.some((prediction) =>
@@ -162,6 +195,14 @@ export function acceptedAnswerSafetyDecision({
     validForSlots(continuousRead, slotCount) &&
     continuousProbability >= ACCEPTED_ANSWER_STRONG_HIGH_CONFIDENCE
   )
+  const singleDigitSixEightScoutConflict = (
+    Number(slotCount) === 1 &&
+    (
+      (browserRead === '6' && scoutRead === '8') ||
+      (browserRead === '8' && scoutRead === '6')
+    ) &&
+    scoutProbability >= ACCEPTED_ANSWER_SIX_EIGHT_SCOUT_MIN_PROBABILITY
+  )
 
   const leading = predictions
     .slice()
@@ -176,10 +217,17 @@ export function acceptedAnswerSafetyDecision({
   )
 
   const reasons = []
-  if (bothStrongConflict) reasons.push('two-strong-views-conflict-with-browser')
-  if (allIndependentReadersConflict) reasons.push('all-independent-readers-conflict-with-browser')
-  if (highConfidenceContinuousConflict) reasons.push('near-certain-strong-reader-conflict')
-  if (unanimousSuspiciousOneFour) reasons.push('unresolved-place-value-one-four-ambiguity')
+  if (policyScope !== 'six-eight-only') {
+    if (bothStrongConflict) reasons.push('two-strong-views-conflict-with-browser')
+    if (allIndependentReadersConflict) reasons.push('all-independent-readers-conflict-with-browser')
+    if (highConfidenceContinuousConflict) reasons.push('near-certain-strong-reader-conflict')
+  }
+  if (singleDigitSixEightScoutConflict) {
+    reasons.push('single-digit-six-eight-high-support-scout-conflict')
+  }
+  if (policyScope !== 'six-eight-only' && unanimousSuspiciousOneFour) {
+    reasons.push('unresolved-place-value-one-four-ambiguity')
+  }
 
   return {
     policyVersion: ACCEPTED_ANSWER_SAFETY_POLICY_VERSION,
@@ -193,6 +241,7 @@ export function acceptedAnswerSafetyDecision({
       continuousRead,
       stitchedRead,
       scoutRead,
+      scoutProbability,
       continuousProbability,
       browserPreprocessingRisk,
       independentPairAgreement,

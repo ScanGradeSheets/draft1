@@ -107,21 +107,118 @@ export function wholeSlotScoutShadowConfig(locationLike = null) {
     String(params.get('v3AcceptedSafetyShadow') || '').toLowerCase())
   const applyOverride = String(params.get('v3AcceptedSafety') || '').toLowerCase()
   const applyDisabled = ['0', 'false', 'no', 'off'].includes(applyOverride)
-  const privateCandidateDefault = String(location?.hostname || '').toLowerCase().endsWith('.ts.net')
+  const hostname = String(location?.hostname || '').toLowerCase()
+  const privateCandidateDefault = hostname.endsWith('.ts.net')
+  const publicSafetyDefault = hostname === 'scangrade.io' ||
+    hostname.endsWith('.scangrade.pages.dev')
+  const requestedScope = String(params.get('v3AcceptedSafetyScope') || '').toLowerCase()
   const apply = !applyDisabled && (
     ['1', 'true', 'yes', 'on'].includes(applyOverride) ||
-    privateCandidateDefault
+    privateCandidateDefault ||
+    publicSafetyDefault
   )
   return {
     requested: shadowRequested || apply,
     enabled: shadowRequested || apply,
     apply,
+    policyScope: requestedScope === 'six-eight-only' ||
+      (publicSafetyDefault && !privateCandidateDefault)
+      ? 'six-eight-only'
+      : 'full',
     modelUrl: publicUrl('models/v3-whole-slot-scout.onnx'),
     timeoutMs: Math.min(30000, Math.max(
       3000,
       Number(params.get('v3AcceptedSafetyScoutTimeoutMs')) || 30000,
     )),
   }
+}
+
+let residentScoutWorker = null
+let residentScoutSequence = 0
+
+function resetResidentScoutWorker() {
+  try { residentScoutWorker?.terminate() } catch (_) {}
+  residentScoutWorker = null
+}
+
+function scoutWorker() {
+  if (!residentScoutWorker) {
+    residentScoutWorker = new Worker(
+      new URL('../workers/whole-slot-scout.worker.js', import.meta.url),
+      { type: 'module' },
+    )
+  }
+  return residentScoutWorker
+}
+
+function runScoutWorker(items, config) {
+  return new Promise((resolve) => {
+    const worker = scoutWorker()
+    const id = `whole-slot-scout-${Date.now()}-${residentScoutSequence += 1}`
+    const finish = (value, reset = false) => {
+      clearTimeout(timeout)
+      worker.removeEventListener('message', onMessage)
+      worker.removeEventListener('error', onError)
+      if (reset) resetResidentScoutWorker()
+      resolve(value)
+    }
+    const onMessage = (event) => {
+      const response = event.data || {}
+      if (response.id !== id) return
+      if (response.error) {
+        finish({
+          version: WHOLE_SLOT_SCOUT_VERSION,
+          status: 'error',
+          affectsGrade: false,
+          error: response.error,
+          results: [],
+        }, true)
+      } else {
+        finish({
+          version: WHOLE_SLOT_SCOUT_VERSION,
+          status: 'complete',
+          affectsGrade: false,
+          ...response.result,
+        })
+      }
+    }
+    const onError = (event) => finish({
+      version: WHOLE_SLOT_SCOUT_VERSION,
+      status: 'error',
+      affectsGrade: false,
+      error: event?.message || 'whole-slot scout worker failed',
+      results: [],
+    }, true)
+    const timeout = setTimeout(() => finish({
+      version: WHOLE_SLOT_SCOUT_VERSION,
+      status: 'timeout',
+      affectsGrade: false,
+      results: [],
+    }, true), config.timeoutMs)
+    worker.addEventListener('message', onMessage)
+    worker.addEventListener('error', onError)
+    const transfers = items.flatMap((item) => [
+      item.whole.buffer,
+      item.left.buffer,
+      item.right.buffer,
+      item.metadata.buffer,
+    ])
+    worker.postMessage({
+      id,
+      modelUrl: config.modelUrl,
+      items,
+      wasmPaths: {
+        'ort-wasm.wasm': publicUrl('ort-wasm-nosimd.wasm'),
+        'ort-wasm-simd.wasm': publicUrl('ort-wasm-simd-1.17.wasm'),
+      },
+    }, transfers)
+  })
+}
+
+export async function warmWholeSlotScout(config = wholeSlotScoutShadowConfig()) {
+  if (!config.enabled || typeof Worker !== 'function') return false
+  const result = await runScoutWorker([], config)
+  return result.status === 'complete'
 }
 
 export async function requestWholeSlotScout(items, config = wholeSlotScoutShadowConfig()) {
@@ -137,64 +234,6 @@ export async function requestWholeSlotScout(items, config = wholeSlotScoutShadow
   const prepared = await Promise.all((items || [])
     .filter((item) => item?.imageDataUrl)
     .map(prepareItem))
-  return new Promise((resolve) => {
-    const worker = new Worker(new URL('../workers/whole-slot-scout.worker.js', import.meta.url), {
-      type: 'module',
-    })
-    const id = `whole-slot-scout-${Date.now()}-${Math.random().toString(16).slice(2)}`
-    const finish = (value) => {
-      clearTimeout(timeout)
-      try { worker.terminate() } catch (_) {}
-      resolve(value)
-    }
-    const timeout = setTimeout(() => finish({
-      version: WHOLE_SLOT_SCOUT_VERSION,
-      status: 'timeout',
-      affectsGrade: false,
-      results: [],
-    }), config.timeoutMs)
-    worker.onmessage = (event) => {
-      const response = event.data || {}
-      if (response.id !== id) return
-      if (response.error) {
-        finish({
-          version: WHOLE_SLOT_SCOUT_VERSION,
-          status: 'error',
-          affectsGrade: false,
-          error: response.error,
-          results: [],
-        })
-      } else {
-        finish({
-          version: WHOLE_SLOT_SCOUT_VERSION,
-          status: 'complete',
-          affectsGrade: false,
-          elapsedMs: performance.now() - started,
-          ...response.result,
-        })
-      }
-    }
-    worker.onerror = (event) => finish({
-      version: WHOLE_SLOT_SCOUT_VERSION,
-      status: 'error',
-      affectsGrade: false,
-      error: event?.message || 'whole-slot scout worker failed',
-      results: [],
-    })
-    const transfers = prepared.flatMap((item) => [
-      item.whole.buffer,
-      item.left.buffer,
-      item.right.buffer,
-      item.metadata.buffer,
-    ])
-    worker.postMessage({
-      id,
-      modelUrl: config.modelUrl,
-      items: prepared,
-      wasmPaths: {
-        'ort-wasm.wasm': publicUrl('ort-wasm-nosimd.wasm'),
-        'ort-wasm-simd.wasm': publicUrl('ort-wasm-simd-1.17.wasm'),
-      },
-    }, transfers)
-  })
+  const result = await runScoutWorker(prepared, config)
+  return { ...result, elapsedMs: performance.now() - started }
 }

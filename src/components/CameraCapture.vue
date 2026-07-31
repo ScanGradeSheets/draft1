@@ -669,6 +669,7 @@ import {
 } from '../v3/accepted-answer-safety.js'
 import {
   requestWholeSlotScout,
+  warmWholeSlotScout,
   wholeSlotScoutShadowConfig,
 } from '../v3/whole-slot-scout-client.js'
 
@@ -3443,6 +3444,14 @@ const startCamera = async (options = {}) => {
       const drawable = await waitForDrawableVideoFrame(video, 5000)
       cameraReady.value = drawable
       studentAutoStatus.value = drawable ? 'Put worksheet in frame' : 'Camera warming up'
+      const safetyConfig = wholeSlotScoutShadowConfig()
+      if (drawable && safetyConfig.apply && safetyConfig.enabled) {
+        // Initialize the browser-local safety reader while the teacher frames
+        // the page so model setup does not extend the post-capture wait.
+        void warmWholeSlotScout(safetyConfig).catch((warmupError) => {
+          console.warn('[ScanGrade] accepted-answer safety warmup did not finish:', warmupError)
+        })
+      }
       setTimeout(() => startAutoCaptureLoop(), drawable ? 250 : 900)
     }
   } catch (err) {
@@ -7893,8 +7902,12 @@ const runRealOCR = async () => {
   activeScanSessionId = newScanSessionId()
   const evaluationMetadata = prospectiveEvaluationMetadata()
   const browserLocalCandidateConfig = browserLocalCandidateRuntimeConfig()
-  // Assigned only by the private co-primary path and awaited in `finally`
-  // before the completion event is emitted.
+  const acceptedSafetyConfig = wholeSlotScoutShadowConfig()
+  const acceptedSafetyRuntimeEnabled = acceptedSafetyConfig.requested && (
+    hybridV3Enabled() || acceptedSafetyConfig.policyScope === 'six-eight-only'
+  )
+  // Assigned only by a pre-acceptance local-reader path and awaited in
+  // `finally` before the completion event is emitted.
   let candidatePresentationPromise = null
   const partialDebug = {
     stage: 'starting',
@@ -8869,7 +8882,14 @@ const runRealOCR = async () => {
       browserLocalCandidateConfig.enabled === true &&
       Array.isArray(layout?.question_groups) &&
       layout.question_groups.length > 0
-    if (!holdBrowserLocalCandidatePresentation) {
+    const holdAcceptedSafetyPresentation =
+      acceptedSafetyRuntimeEnabled &&
+      !browserLocalCandidateConfig.requested &&
+      acceptedSafetyConfig.apply === true &&
+      acceptedSafetyConfig.enabled === true &&
+      Array.isArray(layout?.question_groups) &&
+      layout.question_groups.length > 0
+    if (!holdBrowserLocalCandidatePresentation && !holdAcceptedSafetyPresentation) {
       ocrResult.value = payload
     }
 
@@ -9447,15 +9467,12 @@ const runRealOCR = async () => {
       }
     }
 
-    // Beta 15.3 safety-repair shadow. The small local scout examines accepted
-    // reads, routes only suspicious ones to two key-blind grayscale views, and
-    // records whether the accepted browser text should have remained yellow.
-    // Until prospective device validation passes, this is evidence-only and
-    // cannot change grading, annotations, or the correction interface.
-    const acceptedSafetyConfig = wholeSlotScoutShadowConfig()
+    // Accepted-answer safety reader. On the public site, only the narrow,
+    // replayed single-slot 6/8 scout conflict may force review. Broader rules
+    // remain private/evidence-only. It never sees the answer key and never
+    // replaces the browser transcription with the scout's guess.
     if (
-      hybridV3Enabled() &&
-      acceptedSafetyConfig.requested &&
+      acceptedSafetyRuntimeEnabled &&
       !browserLocalCandidateConfig.requested
     ) {
       const acceptedQuestionSet = new Set((payload.answerGroups || [])
@@ -9463,6 +9480,8 @@ const runRealOCR = async () => {
         .map((group) => Number(group?.questionNum)))
       const acceptedFlags = layout.question_groups.map((group) =>
         acceptedQuestionSet.has(Number(group?.question_num)))
+      const acceptedReadByQuestion = new Map((payload.answerGroups || [])
+        .map((group) => [Number(group?.questionNum), String(group?.answerText || '')]))
       const acceptedStitchedItems = browserLocalStrongShadowItems(
         layout.question_groups,
         acceptedFlags,
@@ -9472,13 +9491,24 @@ const runRealOCR = async () => {
         ...item,
         slotCount: item.contract?.physicalSlotCount,
         layoutFamily: item.contract?.layoutFamily,
-      }))
+      })).filter((item) => {
+        if (acceptedSafetyConfig.policyScope !== 'six-eight-only') return true
+        const read = acceptedReadByQuestion.get(Number(item.questionNum))
+        return Number(item.slotCount) === 1 && (read === '6' || read === '8')
+      })
       payload.v3AcceptedAnswerSafetyShadow = {
         status: 'pending',
         affectsGrade: false,
         acceptedAnswerCount: acceptedStitchedItems.length,
       }
-      requestWholeSlotScout(acceptedStitchedItems, acceptedSafetyConfig)
+      const acceptedSafetyPromise = (acceptedStitchedItems.length
+        ? requestWholeSlotScout(acceptedStitchedItems, acceptedSafetyConfig)
+        : Promise.resolve({
+            status: 'complete',
+            affectsGrade: false,
+            skipped: 'no-accepted-single-slot-six-or-eight',
+            results: [],
+          }))
         .then(async (scoutResult) => {
           const scoutByQuestion = new Map((scoutResult.results || [])
             .map((item) => [Number(item.questionNum), item]))
@@ -9502,7 +9532,9 @@ const runRealOCR = async () => {
                 currentRead: answerGroup?.answerText || '',
                 predictions: predictionsByQuestion.get(questionNum) || [],
                 scout: scoutByQuestion.get(questionNum) || null,
+                slotCount: item?.slotCount || null,
                 layoutId: layout.layout_id || layout.id || '',
+                policyScope: acceptedSafetyConfig.policyScope,
               }),
               slotCount: item?.slotCount || null,
             }
@@ -9527,7 +9559,10 @@ const runRealOCR = async () => {
               cropVariant: 'accepted-safety-stitched',
               reviewOnly: true,
             }))
-          const strongReads = routedQuestionSet.size
+          const strongReads = (
+            acceptedSafetyConfig.policyScope !== 'six-eight-only' &&
+            routedQuestionSet.size
+          )
             ? await requestWholeAnswerReviewSuggestions(
                 layout.question_groups,
                 layout.question_groups.map((group) =>
@@ -9561,6 +9596,7 @@ const runRealOCR = async () => {
                 predictions: predictionsByQuestion.get(questionNum) || [],
                 slotCount: item?.slotCount || null,
                 layoutId: layout.layout_id || layout.id || '',
+                policyScope: acceptedSafetyConfig.policyScope,
               }),
             }
           })
@@ -9650,7 +9686,9 @@ const runRealOCR = async () => {
             }
             void uploadLiveOcrDebug(lastLiveOcrDebug.value, 'accepted-answer-safety-shadow-complete')
           }
-          if (safetyApplication.applied.length) ocrResult.value = { ...payload }
+          if (safetyApplication.applied.length || holdAcceptedSafetyPresentation) {
+            ocrResult.value = { ...payload }
+          }
         })
         .catch((error) => {
           const result = {
@@ -9662,7 +9700,11 @@ const runRealOCR = async () => {
           payload.v3AcceptedAnswerSafetyShadow = result
           partialDebug.v3AcceptedAnswerSafetyShadow = result
           if (lastLiveOcrDebug.value) lastLiveOcrDebug.value.v3AcceptedAnswerSafetyShadow = result
+          if (holdAcceptedSafetyPresentation) ocrResult.value = { ...payload }
         })
+      if (holdAcceptedSafetyPresentation) {
+        candidatePresentationPromise = acceptedSafetyPromise
+      }
     }
 
     // Experimental browser-local larger-grayscale reader. It is deliberately

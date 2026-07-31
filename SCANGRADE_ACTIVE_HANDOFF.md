@@ -1,5 +1,37 @@
 # ScanGrade Active Handoff
 
+## 2026-07-31 narrow public 6/8 safety candidate Beta 15.56
+
+- The confirmed Beta 15.54 incident was a real handwritten `6` accepted as
+  `8`. The existing 7.7 MB browser-local whole-slot scout independently reads
+  the screenshot-derived answer view as `6` with approximately `0.939`
+  sequence support.
+- Public grading now performs one deliberately narrow, key-blind safety check:
+  for an already-accepted one-slot `6` or `8`, an exact `6↔8` disagreement from
+  the scout at `>=0.90` forces yellow review. It preserves the browser's text;
+  it never substitutes the scout result or consults mathematical correctness.
+  Older broad experimental vetoes remain unavailable on the public scope.
+- The scout is initialized while the teacher frames the page, retains its
+  browser-worker session between scans, and only receives accepted one-slot
+  `6`/`8` crops. Pages without such an accepted digit do not wait for it.
+  Failure and timeout remain fail-open to the prior public decision.
+- Reproducible replay:
+  `node scripts/evaluate_six_eight_scout_veto.mjs`. On the primary 345 labelled
+  answers, the candidate changes zero decisions and retains `315/315` correct
+  automatic reads with zero known confident errors. On 40 older historical
+  answers, it adds no error or regression; three unrelated legacy confident
+  errors remain outside this narrow repair. The prospective incident simulation
+  becomes yellow while preserving the recorded browser read `8`.
+- Focused tests pass **19/19**; all repository tests pass **365/365**; the
+  pruned production build passes and retains the 7.7 MB scout model. A local
+  mobile-WebKit smoke test completed the representative page in about 3.1 s;
+  its cold safety read was about 0.38 s in that environment. This is browser
+  emulation, not a claim about the physical five-year-old iPad.
+- Private screenshots and the generated replay report remain under
+  `private-evidence`/temporary attachments and must not be committed.
+- Build label: `2026.07.31-six-eight-safety-beta-15-56`. Deployment details
+  are to be added only after the isolated static deployment is verified.
+
 ## 2026-07-29 debug-flow isolation Beta 15.55
 
 - A physical iPhone Debug Scan completed OCR but exposed the large export

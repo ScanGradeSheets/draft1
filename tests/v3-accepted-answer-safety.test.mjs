@@ -75,6 +75,61 @@ test('one weak disagreement does not veto an accepted answer', () => {
   assert.equal(decision.veto, false)
 })
 
+test('high-support whole-slot disagreement makes a single-digit 6/8 ambiguity yellow', () => {
+  const decision = acceptedAnswerSafetyDecision({
+    routed: true,
+    currentRead: '8',
+    scout: { read: '6', sequenceProbability: 0.939 },
+    predictions: [{ digit: 8, confidence: 0.995 }],
+    slotCount: 1,
+  })
+  assert.equal(decision.veto, true)
+  assert.equal(decision.requiresTeacherReview, true)
+  assert.equal(
+    decision.reason,
+    'single-digit-six-eight-high-support-scout-conflict',
+  )
+  assert.equal(decision.evidence.browserRead, '8')
+  assert.equal(decision.evidence.scoutRead, '6')
+  assert.equal('automaticText' in decision, false)
+})
+
+test('6/8 scout veto stays narrow by confidence and physical slot contract', () => {
+  for (const input of [
+    { currentRead: '8', scout: { read: '6', sequenceProbability: 0.899 }, slotCount: 1 },
+    { currentRead: '8', scout: { read: '6', sequenceProbability: 0.99 }, slotCount: 2 },
+    { currentRead: '8', scout: { read: '9', sequenceProbability: 0.99 }, slotCount: 1 },
+  ]) {
+    assert.equal(acceptedAnswerSafetyDecision({
+      routed: true,
+      predictions: [{ digit: Number(input.currentRead) }],
+      ...input,
+    }).veto, false)
+  }
+})
+
+test('public safety scope cannot activate broader experimental vetoes', () => {
+  const route = acceptedAnswerSafetyRoute({
+    currentAutomatic: true,
+    currentRead: '15',
+    scout: { read: '16', sequenceProbability: 0.99 },
+    slotCount: 2,
+    policyScope: 'six-eight-only',
+  })
+  assert.equal(route.route, false)
+
+  const decision = acceptedAnswerSafetyDecision({
+    routed: true,
+    currentRead: '15',
+    continuous: { read: '16', minTokenProbability: 0.99 },
+    stitched: { read: '16', minTokenProbability: 0.99 },
+    scout: { read: '16', sequenceProbability: 0.99 },
+    slotCount: 2,
+    policyScope: 'six-eight-only',
+  })
+  assert.equal(decision.veto, false)
+})
+
 test('overlong reader artifacts that retain the browser text do not manufacture a conflict', () => {
   const decision = acceptedAnswerSafetyDecision({
     routed: true,
