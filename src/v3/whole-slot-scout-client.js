@@ -125,7 +125,9 @@ export function wholeSlotScoutShadowConfig(locationLike = null) {
       (publicSafetyDefault && !privateCandidateDefault)
       ? 'six-eight-only'
       : 'full',
-    modelUrl: publicUrl('models/v3-whole-slot-scout.onnx'),
+    // Version the first public model URL because the custom domain previously
+    // cached its missing-path SPA fallback under the unversioned pathname.
+    modelUrl: publicUrl('models/v3-whole-slot-scout.onnx?v=beta-15-56'),
     timeoutMs: Math.min(30000, Math.max(
       3000,
       Number(params.get('v3AcceptedSafetyScoutTimeoutMs')) || 30000,

@@ -65,6 +65,7 @@ test('narrow safety repair defaults on for public and private builds and can be 
   })
   assert.equal(publicConfig.apply, true)
   assert.equal(publicConfig.policyScope, 'six-eight-only')
+  assert.match(publicConfig.modelUrl, /v3-whole-slot-scout\.onnx\?v=beta-15-56$/)
   const pagesConfig = wholeSlotScoutShadowConfig({
     hostname: 'ab5e380a.scangrade.pages.dev',
     search: '',
