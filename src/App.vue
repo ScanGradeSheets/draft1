@@ -384,7 +384,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.01-reliable-debug-autosave-beta-15-66'
+const APP_BUILD_LABEL = '2026.08.01-in-app-autosave-setup-beta-15-67'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -475,6 +475,7 @@ const setLiveDebugInUrl = (enabled) => {
 }
 
 const studentDebugExportLabel = computed(() => {
+  if (studentDebugMode.value && cameraRef.value?.debugAutoUploadConfigured === false) return 'Connect'
   if (studentDebugExportBusy.value) return 'Preparing…'
   if (studentDebugExportState.value === 'saved') return 'Exported'
   if (studentDebugExportState.value === 'failed') return 'Try again'
@@ -482,7 +483,17 @@ const studentDebugExportLabel = computed(() => {
 })
 
 const exportStudentDebug = async () => {
-  if (!cameraRef.value?.exportLiveOcrDebugJson || studentDebugExportBusy.value) return
+  if (studentDebugExportBusy.value) return
+  if (cameraRef.value?.debugAutoUploadConfigured === false) {
+    studentDebugExportBusy.value = true
+    try {
+      await cameraRef.value?.connectDebugAutoUpload?.()
+    } finally {
+      studentDebugExportBusy.value = false
+    }
+    return
+  }
+  if (!cameraRef.value?.exportLiveOcrDebugJson) return
   studentDebugExportBusy.value = true
   studentDebugExportState.value = 'idle'
   try {

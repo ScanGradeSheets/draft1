@@ -68,6 +68,13 @@ Cloudflare. ScanGrade saves them locally and immediately clears the fragment
 from the visible URL. After opening the prepared URL once, Debug Scan on the
 same browser/PWA storage context should keep auto-saving until disabled.
 
+Some iOS versions open an installed Home Screen app without forwarding the URL
+fragment. In that case the Debug Scan bottom bar shows `Connect`. Tap it and
+paste either the private key or the complete activation link. ScanGrade stores
+the settings in that exact installation. If a completed scan is already on
+screen, it uploads immediately; no repeat scan is needed. `Export` returns as
+the manual fallback after connection.
+
 To disable auto-upload on that device:
 
 ```text

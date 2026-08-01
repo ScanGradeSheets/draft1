@@ -1,5 +1,28 @@
 # ScanGrade Active Handoff
 
+## 2026-08-01 in-app debug auto-save setup Beta 15.67 candidate
+
+- The first physical Beta 15.66 check did not produce a private bundle. Tony's
+  screenshot showed `Exported`, which is the manual iOS export state, not
+  `Debug saved`. The installed iOS web app opened from the activation link but
+  did not retain its URL fragment, so that standalone storage context never
+  received the private auto-save key. The public upload ingress itself remained
+  healthy and no phone POST reached it.
+- An unconfigured Debug Scan now labels the compact bottom-bar action
+  `Connect` instead of misleadingly offering only manual `Export`. Connect
+  accepts either the private key or the complete activation link, stores the
+  key and public upload URL locally in that exact browser/PWA installation,
+  and changes the action back to `Export` afterward.
+- If a completed debug scan is already on screen, connecting immediately
+  uploads its resident evidence as `connected-after-scan`; another scan is not
+  required. The visible `Debug saved: <id>` toast remains the success signal.
+- The private key is never added to source, build assets, query parameters, or
+  Cloudflare. This setup UI exists only in Debug Scan mode.
+- Verification: two new setup/recovery contracts pass; complete suite
+  **382/382** and the pruned production build pass. Build label:
+  `2026.08.01-in-app-autosave-setup-beta-15-67`.
+- Physical iPhone/PWA connection and receipt remain pending.
+
 ## 2026-08-01 reliable debug auto-save Beta 15.66 candidate
 
 - The iPhone's repeated `Load failed` was a transport failure between the

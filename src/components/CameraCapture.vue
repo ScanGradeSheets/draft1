@@ -1372,6 +1372,9 @@ const debugExportBusy = ref(false)
 const debugExportStatus = ref('')
 const lastCaptureQuality = ref(null)
 const debugUploadConfig = initDebugUploadConfig()
+const debugAutoUploadConfigured = ref(
+  !!(debugUploadConfig.autoUpload && debugUploadConfig.url && debugUploadConfig.token)
+)
 const debugAutoUploadState = ref(debugUploadConfig.autoUpload && debugUploadConfig.url ? 'ready' : 'idle')
 const debugAutoUploadStatus = ref(
   debugUploadConfig.autoUpload && debugUploadConfig.url
@@ -1422,6 +1425,8 @@ defineExpose({
   capturedImage,
   exportLiveOcrDebugJson,
   copyLiveOcrDebugJson,
+  connectDebugAutoUpload,
+  debugAutoUploadConfigured,
   debugExportBusy,
 })
 
@@ -10579,11 +10584,11 @@ function currentDebugPageUrl() {
 }
 
 async function uploadLiveOcrDebug(data, uploadReason = 'ocr-complete') {
-  if (!liveOcrDebugExportEnabled.value || !debugUploadConfig.autoUpload || !data) return
+  if (!liveOcrDebugExportEnabled.value || !debugUploadConfig.autoUpload || !data) return { ok: false }
   if (!debugUploadConfig.url) {
     debugAutoUploadState.value = 'failed'
     debugAutoUploadStatus.value = 'Debug auto-save needs an upload URL'
-    return
+    return { ok: false }
   }
 
   debugAutoUploadState.value = 'uploading'
@@ -10619,13 +10624,54 @@ async function uploadLiveOcrDebug(data, uploadReason = 'ocr-complete') {
     }
     debugAutoUploadState.value = 'saved'
     debugAutoUploadStatus.value = payload?.id ? `Debug saved: ${payload.id}` : 'Debug saved'
+    return { ok: true, id: payload?.id || null }
   } catch (err) {
     debugAutoUploadState.value = 'failed'
     debugAutoUploadStatus.value = `Debug auto-save failed: ${err?.message || err}`
     console.warn('[ScanGrade] live OCR debug upload failed:', err)
+    return { ok: false, error: err?.message || String(err) }
   } finally {
     if (timeout != null) window.clearTimeout(timeout)
   }
+}
+
+function debugTokenFromSetupValue(value) {
+  const entered = String(value || '').trim()
+  if (!entered) return ''
+  try {
+    const setupUrl = new URL(entered)
+    const fragment = new URLSearchParams(String(setupUrl.hash || '').replace(/^#/, ''))
+    return String(fragment.get('debugUploadToken') || fragment.get('debugToken') || '').trim()
+  } catch {
+    return entered
+  }
+}
+
+async function connectDebugAutoUpload() {
+  if (typeof window === 'undefined') return { ok: false }
+  const entered = window.prompt('Paste the private ScanGrade auto-save key or activation link.')
+  if (entered == null) return { ok: false, cancelled: true }
+  const token = debugTokenFromSetupValue(entered)
+  if (token.length < 24 || token.length > 4096) {
+    debugAutoUploadState.value = 'failed'
+    debugAutoUploadStatus.value = 'That auto-save key is not valid'
+    return { ok: false, error: 'Invalid auto-save key' }
+  }
+
+  debugUploadConfig.url = PUBLIC_DEBUG_UPLOAD_URL
+  debugUploadConfig.token = token
+  debugUploadConfig.autoUpload = true
+  safeStorageSet(DEBUG_UPLOAD_URL_KEY, PUBLIC_DEBUG_UPLOAD_URL)
+  safeStorageSet(DEBUG_UPLOAD_TOKEN_KEY, token)
+  safeStorageSet(DEBUG_AUTO_UPLOAD_KEY, '1')
+  debugAutoUploadConfigured.value = true
+  debugAutoUploadState.value = 'ready'
+  debugAutoUploadStatus.value = 'Debug auto-save ready'
+
+  if (lastLiveOcrDebug.value) {
+    return uploadLiveOcrDebug(lastLiveOcrDebug.value, 'connected-after-scan')
+  }
+  return { ok: true }
 }
 
 async function exportLiveOcrDebugJson() {
