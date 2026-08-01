@@ -10796,7 +10796,7 @@ onUnmounted(() => {
 
 .captured-image-wrap--stamp-impact {
   transform-origin: var(--stamp-impact-origin-x, 82%) var(--stamp-impact-origin-y, 88%);
-  animation: worksheet-stamp-impact 135ms cubic-bezier(0.18, 0.78, 0.24, 1) both;
+  animation: worksheet-stamp-impact 210ms cubic-bezier(0.18, 0.78, 0.24, 1) both;
   will-change: transform;
 }
 
@@ -10804,8 +10804,11 @@ onUnmounted(() => {
   0% {
     transform: translateY(0) scale(1);
   }
-  22% {
-    transform: translateY(1px) scale(0.992);
+  18% {
+    transform: translateY(2px) scale(0.978);
+  }
+  58% {
+    transform: translateY(-0.35px) scale(1.003);
   }
   100% {
     transform: translateY(0) scale(1);

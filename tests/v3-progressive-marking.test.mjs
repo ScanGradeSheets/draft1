@@ -53,7 +53,9 @@ test('the completion date appears once at its final opacity with a brief whole-p
   assert.doesNotMatch(cameraSource, /\.scanning-date-stamp\s*\{[^}]*transform:/s)
   assert.match(cameraSource, /captured-image-wrap--stamp-impact/)
   assert.match(cameraSource, /@keyframes worksheet-stamp-impact/)
-  assert.match(cameraSource, /scale\(0\.992\)/)
+  assert.match(cameraSource, /worksheet-stamp-impact 210ms/)
+  assert.match(cameraSource, /scale\(0\.978\)/)
+  assert.match(cameraSource, /scale\(1\.003\)/)
   assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*420\)/)
 })
 

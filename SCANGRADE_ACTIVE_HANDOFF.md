@@ -1,5 +1,29 @@
 # ScanGrade Active Handoff
 
+## 2026-08-01 stable check endpoint and stronger stamp impact Beta 15.58
+
+- Physical iPhone review of Beta 15.57 found that the stamp impact was too
+  subtle to notice and that the short starting end of some checkmarks appeared
+  to retract immediately after drawing.
+- Root cause of the checkmark snap: the oversized SVG reveal dash correctly
+  protected the far endpoint, but its negative final offset could pull the
+  already-drawn starting endpoint backward in WebKit before the path settled.
+  The oversized dash is retained, but every stroke now finishes at offset zero.
+  The revealed path and the settled path therefore have identical endpoints.
+- The stamp itself still appears immediately at its final opacity and never
+  fades, changes colour, or "sets." The worksheet impact is increased from
+  `0.8%`/`135 ms` to `2.2%` compression with a `0.3%` rebound over `210 ms`,
+  anchored at the actual stamp position. This should be clearly perceptible
+  without adding a non-paper visual element.
+- OCR, capture, homography, recognition, confidence, grading, answer-key use,
+  annotation geometry, correction state, privacy, and the `6↔8` safety repair
+  are unchanged.
+- Verification: focused animation tests **22/22**, complete repository tests
+  **366/366**, and the pruned root-domain production build pass. Build label:
+  `2026.08.01-stable-check-impact-beta-15-58`.
+- Deployment status: implementation verified locally; publication details are
+  recorded below once the final static-only smoke test completes.
+
 ## 2026-08-01 sequenced red X and stamp-impact candidate Beta 15.57
 
 - Tony reported two completion-animation defects in the current public UI:

@@ -56,7 +56,7 @@ export function startMeasuredProgressiveStroke(element, options = {}) {
   if (!spec) return null
   const durationMs = finiteMilliseconds(options.durationMs, 500)
   const delayMs = finiteMilliseconds(options.delayMs, 0)
-  const { dash, revealLength, endpointOverrun } = spec
+  const { dash, revealLength } = spec
 
   element.style.animation = 'none'
   element.style.strokeDasharray = dash
@@ -70,7 +70,7 @@ export function startMeasuredProgressiveStroke(element, options = {}) {
     const animation = element.animate(
       [
         { strokeDasharray: dash, strokeDashoffset: String(revealLength), opacity: '1' },
-        { strokeDasharray: dash, strokeDashoffset: String(-endpointOverrun), opacity: '1' },
+        { strokeDasharray: dash, strokeDashoffset: '0', opacity: '1' },
       ],
       {
         duration: durationMs,
@@ -91,7 +91,7 @@ export function startMeasuredProgressiveStroke(element, options = {}) {
     const begin = () => {
       element.style.opacity = '1'
       element.style.transition = `stroke-dashoffset ${durationMs}ms cubic-bezier(0.2, 0.72, 0.26, 1)`
-      element.style.strokeDashoffset = String(-endpointOverrun)
+      element.style.strokeDashoffset = '0'
     }
     if (delayMs > 0) beginTimer = globalThis.setTimeout(begin, delayMs)
     else begin()

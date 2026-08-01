@@ -35,7 +35,7 @@ test('progressive pen reveal uses measured length, endpoint overrun, and a solid
   assert.equal(style.opacity, '0')
   assert.deepEqual(calls[0].keyframes, [
     { strokeDasharray: '52 52', strokeDashoffset: '52', opacity: '1' },
-    { strokeDasharray: '52 52', strokeDashoffset: '-4', opacity: '1' },
+    { strokeDasharray: '52 52', strokeDashoffset: '0', opacity: '1' },
   ])
   assert.equal(calls[0].options.duration, 270)
   assert.equal(calls[0].options.delay, 300)
