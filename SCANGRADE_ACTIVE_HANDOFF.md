@@ -27,6 +27,15 @@
   repository suite passes **368/368**, the narrow 6↔8 replay gate passes, and
   the pruned production build passes.
 - Build label: `2026.08.01-sequential-x-beta-15-61`.
+- Source commit: `f74c6cb`. Isolated static-only deployment:
+  `https://7267edd3.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`. Production, immutable, local release, and
+  `/api/submissions` HTML are byte-identical at SHA-256
+  `4123f10782f01d576d1ec6b641a58eb50bca3322a6d3825d5339c65125099eef`.
+  Public JavaScript is byte-identical to the tested release at SHA-256
+  `1992a0bcd617ff83956efaa14fb98cd05be229ff9a7524d4708b5528ae214a80`
+  and contains the exact Beta 15.61 label. Public assets are
+  `index-wCjjOhRv.js` and `index-BCdifWrh.css`; no backend is active.
 - Private screenshot evidence:
   `/tmp/codex-remote-attachments/019f4912-2a9c-7fe2-8862-abb5da1992bb/6BC4C52E-1E78-423F-920F-75E38F32AA8B/1-Photo-1.jpg`.
   Do not commit the image.

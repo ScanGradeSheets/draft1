@@ -608,3 +608,8 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
 - **Verification:** Added a regression proving an accepted isolated `1` is not
   blanket-routed to review. Focused safety/animation tests **42/42**, complete
   suite **368/368**, narrow 6↔8 replay gate, and pruned production build pass.
+- **Deployment:** Source `f74c6cb`; isolated static release
+  `7267edd3.scangrade.pages.dev`, promoted to `scangrade.io` as
+  `2026.08.01-sequential-x-beta-15-61`. Production, immutable, local-release,
+  and `/api/submissions` HTML match byte-for-byte; public JavaScript matches the
+  verified release and no backend is active.
