@@ -17,10 +17,9 @@ test('capture stage precedes the reachable bottom action bar', () => {
 
 test('normal scans keep recognition on the sheet instead of expanding a result card', () => {
   assert.match(cameraSource, /showRecognitionOverlay && recognitionOverlayItems\.length/)
-  assert.match(
-    cameraSource,
-    /studentMode && ocrResult && liveOcrDebugExportEnabled && !progressiveMarkingActive/,
-  )
+  assert.doesNotMatch(cameraSource, /class="student-result"/)
+  assert.match(appSource, /ocrResult && studentDebugMode/)
+  assert.match(appSource, /@click="exportStudentDebug"/)
 })
 
 test('landing has a centered hero header while capture keeps the compact fixed header', () => {

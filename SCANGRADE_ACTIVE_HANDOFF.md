@@ -1,5 +1,32 @@
 # ScanGrade Active Handoff
 
+## 2026-08-01 compact debug evidence and restored private auto-save Beta 15.64 candidate
+
+- The full-height Debug Scan result card is removed. It duplicated the
+  transcription already available through the centre arrow and made a
+  completed scan look frozen on iPhone. Debug scans now retain the same fixed
+  worksheet view as public scans.
+- Manual JSON export remains as a compact `Export` action in the bottom bar.
+  Automatic upload status is a small temporary toast, not a second result
+  screen.
+- Private debug auto-save is restored. The Mac Mini LaunchAgent now runs the
+  current repository's `mission-control/server.mjs`, requires a private token,
+  and stores evidence only under ignored
+  `private-evidence/debug-scans/YYYY-MM-DD/`. Both local and Tailscale HTTPS
+  authenticated smoke uploads passed. The token is outside the repository.
+- A one-time URL-fragment setup can save the private receiver endpoint and
+  token into the scan device. The fragment is never sent to Cloudflare and is
+  removed from the address bar immediately after local storage succeeds.
+- The user's latest physical Beta 15.63 capture reports that the previously
+  unsafe handwritten `7` is now yellow, so the narrow second-reader veto
+  appears to have activated. Exact crop/candidate diagnosis still requires the
+  next automatically saved debug bundle; no attachment arrived with that
+  report.
+- Verification: complete test suite **375/375**, private receiver smoke tests,
+  and pruned production build pass. Build label:
+  `2026.08.01-compact-debug-autosave-beta-15-64`.
+- Physical iPhone/PWA verification and production deployment remain pending.
+
 ## 2026-08-01 iOS debug export and unified red-X ink Beta 15.63 candidate
 
 - A physical iPhone Debug Scan on Beta 15.62 reached its completed result page,

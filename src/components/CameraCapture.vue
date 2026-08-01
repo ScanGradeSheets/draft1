@@ -389,110 +389,18 @@
       <p>{{ studentMode ? 'Grading' : 'Processing with real OCR...' }}</p>
     </div>
 
-    <!-- Student Mode: show grade outcome or teacher-review outcome, never a dead-end "all set" screen -->
-    <div
-      v-if="studentMode && ocrResult && liveOcrDebugExportEnabled && !progressiveMarkingActive"
-      class="student-result"
-      :class="studentResultClass"
+    <!-- Debug scans stay in the same fixed worksheet view as public scans.
+         The bottom app bar owns manual export; this compact status is the only
+         extra debug UI shown over the page. -->
+    <p
+      v-if="studentMode && liveOcrDebugExportEnabled && debugUploadConfig.autoUpload && ['uploading', 'saved', 'failed'].includes(debugAutoUploadState)"
+      class="debug-auto-upload-toast"
+      :class="`debug-auto-upload-status--${debugAutoUploadState}`"
+      role="status"
+      aria-live="polite"
     >
-      <p v-if="ocrResult.error" class="student-result-message">Try again</p>
-      <p v-if="ocrResult.error && studentOcrResultErrorHint" class="student-result-subtext">
-        {{ studentOcrResultErrorHint }}
-      </p>
-      <p
-        v-if="ocrResult.error && liveOcrDebugExportEnabled"
-        class="student-result-subtext student-result-debug-error"
-      >
-        Debug: {{ ocrResult.error }}
-      </p>
-      <template v-else>
-        <p v-if="studentScoreText" class="student-result-message">{{ studentScoreText }}</p>
-        <p v-else class="student-result-message">Scan saved for teacher review</p>
-        <p v-if="studentResultSubtext" class="student-result-subtext">{{ studentResultSubtext }}</p>
-        <div
-          v-if="liveOcrDebugExportEnabled && lastLiveOcrDebug"
-          class="student-result-debug-actions"
-        >
-          <button
-            type="button"
-            class="btn btn-secondary"
-            :disabled="debugExportBusy"
-            @click="exportLiveOcrDebugJson"
-          >
-            {{ debugExportBusy ? 'Preparing debug file…' : 'Export OCR debug JSON' }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary student-result-debug-copy"
-            :disabled="debugExportBusy"
-            @click="copyLiveOcrDebugJson"
-          >
-            Copy debug JSON
-          </button>
-          <p
-            v-if="debugExportStatus"
-            class="student-result-subtext debug-export-status"
-            role="status"
-            aria-live="polite"
-          >
-            {{ debugExportStatus }}
-          </p>
-        </div>
-        <div v-if="studentAnswerGroups.length" class="student-answer-grid">
-          <div
-            v-for="group in studentAnswerGroups"
-            :key="group.key"
-            class="student-answer-item"
-            :class="`student-answer-item--${group.status}`"
-          >
-            <span class="scantron-letter-bubble student-answer-label" :aria-label="group.label">{{ scantronAnswerLabel(group.label) }}</span>
-            <span class="student-answer-pills" :class="{ 'student-answer-pills--double': group.displayDigits.length > 1 }">
-              <button
-                v-for="(digit, digitIndex) in group.displayDigits"
-                :key="digitIndex"
-                type="button"
-                class="student-answer-pill"
-                :class="[
-                  { 'student-answer-pill--blank': digit === null || digit === undefined || digit === '' },
-                  `student-answer-pill--${group.slotStatuses?.[digitIndex] || group.status}`,
-                  { 'student-answer-pill--clickable': isAnswerSlotEditable(group, digitIndex) }
-                ]"
-                :disabled="!isAnswerSlotEditable(group, digitIndex)"
-                :aria-label="`Fix ${group.label} digit ${digitIndex + 1}`"
-                @click.stop="openCorrectionByGroupSlot(group, shouldUseWholeAnswerCorrection(group) ? null : digitIndex)"
-              >
-                {{ digit === null || digit === undefined || digit === '' ? '' : digit }}
-              </button>
-            </span>
-          </div>
-        </div>
-      </template>
-      <div class="student-result-actions">
-        <button
-          v-if="liveOcrDebugExportEnabled && lastProcessedTensors?.length"
-          type="button"
-          class="btn btn-secondary"
-          @click="exportCropPreview"
-        >
-          Download model-input preview
-        </button>
-        <button
-          v-if="!ocrResult.error"
-          type="button"
-          class="btn btn-secondary"
-          @click="emit('student-done')"
-        >
-          Done
-        </button>
-      </div>
-      <p
-        v-if="liveOcrDebugExportEnabled && debugUploadConfig.autoUpload"
-        class="student-result-subtext debug-auto-upload-status"
-        :class="`debug-auto-upload-status--${debugAutoUploadState}`"
-      >
-        {{ debugAutoUploadStatus }}
-      </p>
-    </div>
+      {{ debugAutoUploadStatus }}
+    </p>
 
     <!-- Teacher / Review Mode: full OCR result -->
     <div v-if="!studentMode && ocrResult" class="ocr-result">
@@ -999,6 +907,10 @@ function initDebugUploadConfig() {
   if (typeof window === 'undefined') return empty
 
   const params = new URLSearchParams(window.location.search)
+  const fragmentParams = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''))
+  for (const name of ['debugUploadUrl', 'debugUploadEndpoint', 'debugUploadToken', 'debugToken', 'debugAutoUpload', 'debugUpload']) {
+    if (!params.has(name) && fragmentParams.has(name)) params.set(name, fragmentParams.get(name))
+  }
   const hasUrlParam = params.has('debugUploadUrl') || params.has('debugUploadEndpoint')
   const hasTokenParam = params.has('debugUploadToken') || params.has('debugToken')
   const hasAutoParam = params.has('debugAutoUpload') || params.has('debugUpload')
@@ -1010,6 +922,19 @@ function initDebugUploadConfig() {
   if (hasTokenParam) safeStorageSet(DEBUG_UPLOAD_TOKEN_KEY, queryToken || '')
   if (hasAutoParam) safeStorageSet(DEBUG_AUTO_UPLOAD_KEY, queryAuto === true ? '1' : '0')
   if (hasUrlParam && !hasAutoParam && queryUrl) safeStorageSet(DEBUG_AUTO_UPLOAD_KEY, '1')
+
+  // A setup link may carry the private receiver token in its URL fragment.
+  // Fragments never reach Cloudflare; remove it immediately after saving the
+  // settings locally so it also disappears from the visible address bar.
+  if (fragmentParams.has('debugUploadToken') || fragmentParams.has('debugToken')) {
+    try {
+      const cleanUrl = new URL(window.location.href)
+      cleanUrl.hash = ''
+      window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}`)
+    } catch {
+      // The stored settings still work if an embedded browser blocks history.
+    }
+  }
 
   const storedAuto = parseDebugBoolean(safeStorageGet(DEBUG_AUTO_UPLOAD_KEY))
   return {
@@ -1470,7 +1395,10 @@ let pendingHybridBurstFrames = []
 const studentAutoStatus = ref('Put worksheet in frame')
 
 defineExpose({
-  capturedImage
+  capturedImage,
+  exportLiveOcrDebugJson,
+  copyLiveOcrDebugJson,
+  debugExportBusy,
 })
 
 const hasLowConfidence = computed(() =>
@@ -10663,7 +10591,7 @@ async function uploadLiveOcrDebug(data, uploadReason = 'ocr-complete') {
 
 async function exportLiveOcrDebugJson() {
   const data = lastLiveOcrDebug.value
-  if (!data) return
+  if (!data) return { ok: false, error: 'Debug evidence is not ready yet' }
   debugExportBusy.value = true
   debugExportStatus.value = ''
   try {
@@ -10673,11 +10601,18 @@ async function exportLiveOcrDebugJson() {
       : result.method === 'copy'
         ? 'Debug JSON copied.'
         : 'Debug JSON downloaded.'
+    return { ok: true, method: result.method, status: debugExportStatus.value }
   } catch (err) {
     if (err?.name === 'AbortError') {
       debugExportStatus.value = 'Export cancelled.'
     } else {
       debugExportStatus.value = `Could not export: ${err?.message || err}. Try Copy debug JSON.`
+    }
+    return {
+      ok: false,
+      cancelled: err?.name === 'AbortError',
+      error: err?.message || String(err),
+      status: debugExportStatus.value,
     }
   } finally {
     debugExportBusy.value = false
@@ -10686,14 +10621,16 @@ async function exportLiveOcrDebugJson() {
 
 async function copyLiveOcrDebugJson() {
   const data = lastLiveOcrDebug.value
-  if (!data) return
+  if (!data) return { ok: false, error: 'Debug evidence is not ready yet' }
   debugExportBusy.value = true
   debugExportStatus.value = ''
   try {
     await copyDebugJson(data)
     debugExportStatus.value = 'Debug JSON copied. Paste it into the Codex conversation.'
+    return { ok: true, method: 'copy', status: debugExportStatus.value }
   } catch (err) {
     debugExportStatus.value = `Could not copy: ${err?.message || err}`
+    return { ok: false, error: err?.message || String(err), status: debugExportStatus.value }
   } finally {
     debugExportBusy.value = false
   }
@@ -11967,27 +11904,26 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.student-result-debug-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-  margin: 12px 0 16px;
-}
-
-.student-result-debug-actions .btn {
-  width: min(100%, 320px);
-}
-
-.student-result-debug-copy {
-  font-size: 15px;
-}
-
-.debug-export-status {
-  width: min(100%, 360px);
-  margin: 2px auto 0;
+.debug-auto-upload-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 68px;
+  z-index: 42;
+  max-width: calc(100% - 28px);
+  margin: 0;
+  padding: 7px 12px;
+  border: 1px solid rgba(18, 108, 57, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.14);
   color: #3f4a46;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ocr-result {

@@ -126,7 +126,8 @@
           class="student-scan-bar"
           :class="{
             'student-scan-bar--grading': studentScanStage,
-            'student-scan-bar--has-result': ocrResult
+            'student-scan-bar--has-result': ocrResult,
+            'student-scan-bar--debug-result': ocrResult && studentDebugMode
           }"
         >
           <div v-if="studentScanStage" class="student-scan-grading" aria-live="polite">
@@ -149,6 +150,15 @@
               @click="showRecognitionOverlay = !showRecognitionOverlay"
             >
               <span aria-hidden="true">{{ showRecognitionOverlay ? '⌃' : '⌄' }}</span>
+            </button>
+            <button
+              v-if="ocrResult && studentDebugMode"
+              type="button"
+              class="student-scan-link student-debug-export"
+              :disabled="studentDebugExportBusy"
+              @click="exportStudentDebug"
+            >
+              {{ studentDebugExportLabel }}
             </button>
             <div class="student-scan-actions">
               <button
@@ -374,7 +384,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.01-ios-debug-share-unified-x-beta-15-63'
+const APP_BUILD_LABEL = '2026.08.01-compact-debug-autosave-beta-15-64'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -412,6 +422,13 @@ const showStudentCaptureUi = computed(() => isStudentMode.value && studentView.v
 const ocrResult = ref(null)
 const studentCameraProcessing = ref(false)
 const studentScanStage = ref('')
+const studentDebugMode = ref(
+  typeof window !== 'undefined' && DEBUG_QUERY_FLAGS.some((flag) => (
+    new URLSearchParams(window.location.search).has(flag)
+  ))
+)
+const studentDebugExportBusy = ref(false)
+const studentDebugExportState = ref('idle')
 const showRecognitionOverlay = ref(false)
 const studentScanKey = ref(0)
 const cameraKey = computed(() => isStudentMode.value ? `student-camera-${studentScanKey.value}` : 'teacher-camera')
@@ -454,6 +471,26 @@ const setLiveDebugInUrl = (enabled) => {
     url.searchParams.set('liveOcrDebug', '1')
   }
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  studentDebugMode.value = !!enabled
+}
+
+const studentDebugExportLabel = computed(() => {
+  if (studentDebugExportBusy.value) return 'Preparing…'
+  if (studentDebugExportState.value === 'saved') return 'Exported'
+  if (studentDebugExportState.value === 'failed') return 'Try again'
+  return 'Export'
+})
+
+const exportStudentDebug = async () => {
+  if (!cameraRef.value?.exportLiveOcrDebugJson || studentDebugExportBusy.value) return
+  studentDebugExportBusy.value = true
+  studentDebugExportState.value = 'idle'
+  try {
+    const result = await cameraRef.value.exportLiveOcrDebugJson()
+    studentDebugExportState.value = result?.ok ? 'saved' : result?.cancelled ? 'idle' : 'failed'
+  } finally {
+    studentDebugExportBusy.value = false
+  }
 }
 
 const isOpenSubmission = (submission) => submission.status !== 'done'
@@ -527,6 +564,7 @@ const clearActiveScanResult = () => {
   showAnnotationLayer.value = false
   studentCameraProcessing.value = false
   studentScanStage.value = ''
+  studentDebugExportState.value = 'idle'
 }
 
 const resetStudentScan = () => {
@@ -1853,6 +1891,18 @@ button.student-home-scan-btn:focus-visible {
 .student-scan-bar--has-result:not(.student-scan-bar--grading) {
   grid-template-columns: minmax(82px, 1fr) 40px minmax(82px, 1fr);
   gap: 8px;
+}
+
+.student-scan-bar--debug-result:not(.student-scan-bar--grading) {
+  grid-template-columns: minmax(58px, 0.8fr) 34px minmax(64px, 0.9fr) minmax(82px, 1.1fr);
+  gap: 6px;
+}
+
+.student-debug-export {
+  min-width: 0;
+  padding: 8px 5px;
+  color: #225d91;
+  font-size: 13px;
 }
 
 .student-scan-bar--grading {

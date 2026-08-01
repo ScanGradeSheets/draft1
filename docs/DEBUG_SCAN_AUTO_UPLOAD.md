@@ -23,12 +23,12 @@ Each saved scan includes:
 - `raw-crops/*.png`: raw answer-box crops.
 - `model-inputs/*.png`: 28x28 model input images.
 
-## Start The Receiver
+## Receiver Status And Start Command
 
 Mission Control must be running on the Mac that owns this workspace.
 
 ```bash
-SG_DEBUG_UPLOAD_TOKEN=choose-a-short-secret node mission-control/server.mjs
+SG_DEBUG_UPLOAD_TOKEN=choose-a-private-secret node mission-control/server.mjs
 ```
 
 `SG_DEBUG_UPLOAD_TOKEN` is required. The browser sends the same value as `debugUploadToken`, and Mission Control rejects uploads without it.
@@ -41,20 +41,27 @@ https://hobbes-mac-mini.tail9a3379.ts.net/mission-control/api/debug-scans
 
 If the tailnet URL returns `502`, the local Mission Control server is probably not running.
 
-## Open The Prepared Debug URL
+The Mac Mini is normally kept running by the private
+`com.scangrade.mission-control` LaunchAgent. Its token is stored outside the
+repository. Do not commit or publish it.
+
+## Open The Prepared Debug URL Once
 
 Open a URL like this on the scanning device:
 
 ```text
-https://scangradesheets.github.io/draft1/?liveOcrDebug=1&debugAutoUpload=1&debugUploadUrl=https%3A%2F%2Fhobbes-mac-mini.tail9a3379.ts.net%2Fmission-control%2Fapi%2Fdebug-scans&debugUploadToken=choose-a-short-secret
+https://scangrade.io/?liveOcrDebug=1#debugAutoUpload=1&debugUploadUrl=https%3A%2F%2Fhobbes-mac-mini.tail9a3379.ts.net%2Fmission-control%2Fapi%2Fdebug-scans&debugUploadToken=PRIVATE_TOKEN
 ```
 
-The upload URL, token, and auto-upload setting are remembered in browser storage. After opening the prepared URL once, normal debug scans on the same device should keep auto-saving until disabled.
+The private values are carried in the URL fragment, which is not sent to
+Cloudflare. ScanGrade saves them locally and immediately clears the fragment
+from the visible URL. After opening the prepared URL once, Debug Scan on the
+same browser/PWA storage context should keep auto-saving until disabled.
 
 To disable auto-upload on that device:
 
 ```text
-https://scangradesheets.github.io/draft1/?liveOcrDebug=1&debugAutoUpload=0
+https://scangrade.io/?liveOcrDebug=1&debugAutoUpload=0
 ```
 
 ## Classroom Collection Flow
@@ -63,10 +70,16 @@ https://scangradesheets.github.io/draft1/?liveOcrDebug=1&debugAutoUpload=0
 2. Confirm the tailnet Mission Control URL works from the scan device.
 3. Open the prepared debug URL on the scan device.
 4. Scan a worksheet page.
-5. Wait for `Debug saved: ...` under the result buttons.
+5. Wait for the brief `Debug saved: ...` status over the worksheet.
 6. Tap `New Scan` and repeat.
 
-If the page says `Debug auto-save failed`, do not keep scanning until the receiver/tailnet issue is fixed. The manual download buttons still work as a fallback.
+If the page says `Debug auto-save failed`, do not keep scanning until the
+receiver/tailnet issue is fixed. The compact manual `Export` action still works
+as a fallback.
+
+The long debug answer list is intentionally absent. Use the centre arrow in
+the bottom bar to show or hide recognized readings directly above their answer
+boxes. `Export` in the same bar is the manual evidence fallback.
 
 ## Codex Handoff
 

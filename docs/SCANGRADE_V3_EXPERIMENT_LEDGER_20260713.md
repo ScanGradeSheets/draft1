@@ -671,3 +671,24 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   no backend is active. An earlier same-turn deploy launched from the repository
   directory briefly attached the dormant unconfigured Function, was detected
   by the mandatory API smoke check, and was superseded by the isolated deploy.
+
+# 2026-08-01 — Beta 15.64 compact debug evidence and private auto-save
+
+- Observation: the full Debug Scan result card repeated the arrow-overlay
+  readings, extended beyond the fixed phone viewport, and looked frozen even
+  after grading had completed.
+- UI candidate: remove that card completely. Keep the marked worksheet fixed,
+  place one compact `Export` fallback in the bottom bar, and show only a small
+  transient auto-upload status.
+- Evidence transport: restore the authenticated Mission Control receiver at
+  the current repository path. Debug bundles remain private and git-ignored.
+  A URL fragment may configure a device without sending its token to
+  Cloudflare; the fragment is cleared immediately after local persistence.
+- Receiver verification: authenticated POSTs passed over both localhost and
+  the Tailscale HTTPS route, creating private smoke records under
+  `private-evidence/debug-scans/2026-08-01/`.
+- Recognition policy is unchanged. The user's latest physical scan reports
+  that the target handwritten `7` was yellow; its next auto-saved debug bundle
+  is required for exact forensic confirmation.
+- Verification: `node --test tests/*.test.mjs` -> **375/375 pass**; pruned Vite
+  production build passes.
