@@ -1,5 +1,28 @@
 # ScanGrade Active Handoff
 
+## 2026-08-01 faster, transition-stable red X Beta 15.65 candidate
+
+- Physical Beta 15.64 review found that red X marks appeared to change shade
+  between their live SVG drawing and settled annotated-image stages. The two
+  renderers shared a hex value but not their opacity, compositing, or pen-pass
+  recipe.
+- Both stages now use the exact same `#9a3a37` ink at `0.94` opacity, identical
+  width, and multiply-on-paper compositing. The settled canvas no longer adds
+  extra translucent passes after the live drawing. Seeded path geometry still
+  supplies restrained natural variation.
+- X size and placement are unchanged. Each leg is slightly quicker at `230ms`
+  instead of `270ms`; the strict sequence and visible `160ms` pen-lift pause
+  remain. The second top-right-to-bottom-left leg cannot start before the first
+  top-left-to-bottom-right leg settles.
+- The second physical auto-save attempt did not create a private bundle. The
+  client showed no confirmed `Debug saved` state. The private-network receiver
+  remains healthy and its authenticated preflight/upload tests pass; the
+  mobile transport requires another test after the earlier failed-preflight
+  cache has expired. Do not claim auto-save physically verified yet.
+- Verification: complete suite **376/376** and pruned production build pass.
+  Build label: `2026.08.01-faster-stable-red-x-beta-15-65`.
+- Source commit/deployment and physical verification remain pending.
+
 ## 2026-08-01 compact debug evidence and restored private auto-save Beta 15.64 candidate
 
 - First physical iPhone attempt reached completed grading but reported

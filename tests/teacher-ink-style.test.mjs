@@ -5,6 +5,7 @@ import {
   TEACHER_GREEN_INK,
   TEACHER_GREEN_PEN_PASSES,
   TEACHER_RED_INK,
+  TEACHER_RED_INK_OPACITY,
   teacherScoreRevealMaskWidth,
 } from '../src/v3/teacher-ink-style.js'
 
@@ -17,6 +18,7 @@ test('teacher checks and scores use the New Scan dark green and shared pen passe
 
 test('incorrect marks use the approved balanced teacher red', () => {
   assert.equal(TEACHER_RED_INK, '#9a3a37')
+  assert.equal(TEACHER_RED_INK_OPACITY, 0.94)
 })
 
 test('score reveal mask covers pen bleed without exposing neighbouring future strokes', () => {

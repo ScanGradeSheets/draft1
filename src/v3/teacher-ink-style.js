@@ -2,6 +2,7 @@ export const TEACHER_GREEN_INK = '#126c39'
 // A restrained burgundy-red, bright enough to read clearly beside the green
 // ink without looking like a saturated UI error colour.
 export const TEACHER_RED_INK = '#9a3a37'
+export const TEACHER_RED_INK_OPACITY = 0.94
 
 // One shared felt-pen recipe for checks and final scores. The broad translucent
 // pass supplies restrained paper bleed; the narrower passes add pressure and

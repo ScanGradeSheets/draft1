@@ -119,6 +119,7 @@
               :d="stroke.d"
               fill="none"
               :stroke="TEACHER_RED_INK"
+              :stroke-opacity="TEACHER_RED_INK_OPACITY"
               :stroke-width="step.inkWidth"
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -590,6 +591,7 @@ import {
   TEACHER_GREEN_INK,
   TEACHER_GREEN_PEN_PASSES,
   TEACHER_RED_INK,
+  TEACHER_RED_INK_OPACITY,
 } from '../v3/teacher-ink-style.js'
 import { copyDebugJson, exportDebugJson } from '../v3/debug-json-export.js'
 import {
@@ -4106,7 +4108,7 @@ function composeStudentAnnotatedImage(
         })
       }
 
-      const drawHandStroke = (segments, { color, width, seed = 1, passes = null }) => {
+      const drawHandStroke = (segments, { color, width, seed = 1, passes = null, composite = 'source-over' }) => {
         const strokePasses = passes || [
           { alpha: 0.12, widthScale: 1.72, spread: 0.24 },
           { alpha: 0.7, widthScale: 1, spread: 0.11 },
@@ -4114,7 +4116,7 @@ function composeStudentAnnotatedImage(
         ]
         ctx.save()
         ctx.strokeStyle = color
-        ctx.globalCompositeOperation = 'source-over'
+        ctx.globalCompositeOperation = composite
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         strokePasses.forEach((passConfig, pass) => {
@@ -4301,10 +4303,13 @@ function composeStudentAnnotatedImage(
             color,
             width: Math.max(3.2, size * 0.075),
             seed,
+            composite: 'multiply',
+            // The animated SVG uses this exact opacity, width, colour and
+            // multiply-on-paper treatment. Keeping one settled pass prevents
+            // the X changing shade when the temporary SVG is replaced by the
+            // final annotated bitmap.
             passes: [
-              { alpha: 0.16, widthScale: 1.24, spread: 0.12 },
-              { alpha: 0.7, widthScale: 1, spread: 0.06 },
-              { alpha: 0.24, widthScale: 0.44, spread: 0.04 }
+              { alpha: TEACHER_RED_INK_OPACITY, widthScale: 1, spread: 0 }
             ]
           }
         )
@@ -10920,7 +10925,6 @@ onUnmounted(() => {
 }
 
 .progressive-direct-incorrect-ink {
-  opacity: 0.94;
   mix-blend-mode: multiply;
 }
 

@@ -1,6 +1,6 @@
 import { fluorescentHighlighterGeometry } from './highlighter-stroke.js'
 
-const X_STROKE_DURATION_MS = 270
+const X_STROKE_DURATION_MS = 230
 const X_PEN_LIFT_PAUSE_MS = 160
 
 function finite(value) {
