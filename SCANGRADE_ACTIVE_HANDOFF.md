@@ -27,8 +27,16 @@
   `2026.08.01-one-seven-safety-sequential-x-beta-15-60`.
 - Private screenshot evidence:
   `/tmp/codex-remote-attachments/019f4912-2a9c-7fe2-8862-abb5da1992bb/6BC4C52E-1E78-423F-920F-75E38F32AA8B/1-Photo-1.jpg`.
-  Do not commit the image. Deployment details follow only after the isolated
-  static release passes production smoke testing.
+  Do not commit the image.
+- Source commit: `ee978bc`. Isolated static-only deployment:
+  `https://41975303.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`. Production, immutable, local release, and
+  `/api/submissions` HTML are byte-identical at SHA-256
+  `ca69a0a3c2e62f84c4165a5ca3d362394a0fc6eddc28e29e2dae77c325125f70`.
+  Public JavaScript is byte-identical to the tested release at SHA-256
+  `e086611418bd6d42dbca15b2859d9bb392c5fe899e7c7cf52fb11440f10c80c3`
+  and contains the exact Beta 15.60 label. Public assets are
+  `index-BwcbdN3q.js` and `index-CwL-39MC.css`; no backend is active.
 
 ## 2026-08-01 stationary completion and retained slot focus Beta 15.59
 

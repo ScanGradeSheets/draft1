@@ -583,3 +583,7 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   bottom-left path. It cannot become visible until the first leg settles, two
   render frames complete, and the pen-lift pause elapses. This replaces
   reliance on Safari's early animation-finished event.
+- **Deployment:** `41975303.scangrade.pages.dev`, promoted to
+  `scangrade.io` as `2026.08.01-one-seven-safety-sequential-x-beta-15-60`.
+  Production HTML and JavaScript are byte-identical to the tested release;
+  `/api/submissions` remains the identical static shell with no backend.
