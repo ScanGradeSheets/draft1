@@ -30,7 +30,16 @@
   `567ba5c0b9d423c81a76bbea906750a4375f09bb9cbab760e827e2f042a4fd7a`
   and contains the Beta 15.67 label. No Cloudflare backend or debug evidence
   storage is active.
-- Physical iPhone/PWA connection and receipt remain pending.
+- Physical iPhone/PWA connection and receipt are verified. Tony connected the
+  installed Beta 15.67 app at 2026-08-01 12:54 Toronto time; the resident scan
+  uploaded immediately with reason `connected-after-scan` and was saved as
+  `private-evidence/debug-scans/2026-08-01/2026-08-01_16-54-09-635-sg-g1-lw-03-sub-1digit-5901ddb8/`.
+  The bundle contains the captured and warped pages, marked sheet, overlay
+  geometry, eight raw crops, eight model inputs, full debug JSON, and summary.
+  The compact bar correctly returns to `Export` after connection because that
+  is the manual fallback; the temporary `Debug saved` confirmation had cleared
+  before Tony's screenshot. Future Debug Scans in this PWA storage context
+  should auto-upload without reconnecting.
 
 ## 2026-08-01 reliable debug auto-save Beta 15.66 candidate
 
