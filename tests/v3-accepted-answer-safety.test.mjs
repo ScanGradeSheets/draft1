@@ -108,7 +108,7 @@ test('6/8 scout veto stays narrow by confidence and physical slot contract', () 
   }
 })
 
-test('public safety makes an accepted isolated 1 review-only without changing it', () => {
+test('public safety never makes every legitimate isolated 1 review-only', () => {
   const route = acceptedAnswerSafetyRoute({
     currentAutomatic: true,
     currentRead: '1',
@@ -116,42 +116,12 @@ test('public safety makes an accepted isolated 1 review-only without changing it
     predictions: [{ digit: 1, confidence: 0.999 }],
     slotCount: 1,
     policyScope: 'six-eight-only',
-    answerKey: '7',
-    truth: '7',
+    answerKey: '1',
+    truth: '1',
   })
-  assert.equal(route.route, true)
-  assert.equal(route.reason, 'single-digit-one-seven-ambiguity')
+  assert.equal(route.route, false)
+  assert.equal(route.reason, 'no-public-six-eight-conflict')
   assert.equal(route.answerKeyUsed, false)
-
-  const decision = acceptedAnswerSafetyDecision({
-    routed: route.route,
-    currentRead: '1',
-    scout: { read: '1', sequenceProbability: 0.999 },
-    predictions: [{ digit: 1, confidence: 0.999 }],
-    slotCount: 1,
-    policyScope: 'six-eight-only',
-    answerKey: '7',
-    truth: '7',
-  })
-  assert.equal(decision.veto, true)
-  assert.equal(decision.reason, 'single-digit-one-seven-ambiguity')
-  assert.equal(decision.evidence.browserRead, '1')
-  assert.equal(decision.answerKeyUsed, false)
-  assert.equal('automaticText' in decision, false)
-})
-
-test('public 1/7 ambiguity veto is limited to a physical single-slot read of 1', () => {
-  for (const input of [
-    { currentRead: '1', slotCount: 2 },
-    { currentRead: '7', slotCount: 1 },
-    { currentRead: '11', slotCount: 2 },
-  ]) {
-    assert.equal(acceptedAnswerSafetyRoute({
-      currentAutomatic: true,
-      policyScope: 'six-eight-only',
-      ...input,
-    }).route, false)
-  }
 })
 
 test('public safety scope cannot activate broader experimental vetoes', () => {

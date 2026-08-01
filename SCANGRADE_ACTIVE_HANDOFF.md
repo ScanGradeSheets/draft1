@@ -1,21 +1,50 @@
 # ScanGrade Active Handoff
 
-## 2026-08-01 prospective 7→1 safety repair and render-locked X Beta 15.60
+## 2026-08-01 rejected broad 1 veto removed; render-locked X retained Beta 15.61
+
+- Tony correctly rejected Beta 15.60's rule that made every confidently read
+  isolated `1` yellow. Legitimate student answers of `1` are common, and a
+  safety rule must distinguish suspicious evidence rather than distrust the
+  digit class itself.
+- The labelled replay used for Beta 15.60 contained no confidently accepted
+  isolated `1`, so its zero measured coverage change did **not** test the
+  policy's real classroom cost. That was an evaluation blind spot, not evidence
+  that the broad rule was safe to ship.
+- Beta 15.61 removes the isolated-`1` veto completely. Public accepted-answer
+  safety returns to the previously verified narrow, key-blind physical-slot
+  `6`↔`8` scout conflict only. Ordinary `1` answers are not sent to review.
+- The live `7`→`1` transcription at `SG-G1-LW-03` question C remains an open
+  safety incident. The screenshot does not contain the original unannotated
+  crop, preprocessing candidates, or confidence evidence needed to design a
+  defensible shape-specific repair. Do not claim this incident is fixed.
+- Question G in that screenshot was correct behavior: the student wrote `9`,
+  the teacher confirmed `9`, and `14 - 9` correctly graded that work wrong.
+- Beta 15.60's independently useful red-X repair is retained: the second leg
+  is one uninterrupted top-right-to-bottom-left path, hidden until the first
+  leg has settled, two browser paint frames pass, and the pen-lift pause ends.
+- Regression coverage explicitly proves that an accepted isolated `1` is not
+  routed to review. Focused safety/animation tests pass **42/42**, the complete
+  repository suite passes **368/368**, the narrow 6↔8 replay gate passes, and
+  the pruned production build passes.
+- Build label: `2026.08.01-sequential-x-beta-15-61`.
+- Private screenshot evidence:
+  `/tmp/codex-remote-attachments/019f4912-2a9c-7fe2-8862-abb5da1992bb/6BC4C52E-1E78-423F-920F-75E38F32AA8B/1-Photo-1.jpg`.
+  Do not commit the image.
+
+## 2026-08-01 prospective 7→1 safety repair and render-locked X Beta 15.60 — superseded
 
 - Physical Beta 15.59 evidence shows a new unsafe transcription at
   `SG-G1-LW-03` question C: the student wrote `7`, the browser confidently
   displayed `1`, and correct work received a red X. Question G is not an OCR
   failure: the student wrote `9`, the teacher confirmed `9`, and `14 - 9`
   correctly graded that response wrong.
-- Until representative authentic `1`/`7` examples support a narrower shape
-  rule, every accepted isolated one-slot browser read of `1` is preserved but
-  forced to yellow review. The rule never receives the answer key or truth and
-  cannot replace the browser transcription.
+- Beta 15.60 briefly forced every accepted isolated one-slot browser read of
+  `1` to yellow. Tony rejected that over-broad policy immediately; Beta 15.61
+  removes it. Do not restore it without representative `1`/`7` evidence.
 - Reproducible replay: `node scripts/evaluate_six_eight_scout_veto.mjs` across
-  all 385 available labelled answers. It changes no known decision or measured
-  coverage, retains zero known confident errors on the primary 345, introduces
-  no historical regression, and demotes simulations of both live `6→8` and
-  `7→1` incidents while preserving the browser reads. The output is private:
+  all 385 available labelled answers. It changed no known decision or measured
+  coverage because the corpus had no confidently accepted isolated `1`; this
+  was non-informative about the policy's classroom cost. The output is private:
   `private-evidence/reports/public-critical-confusion-veto-20260801.json`.
 - The red X now draws its second leg as one uninterrupted top-right-to-bottom-
   left SVG path. Later strokes remain `visibility:hidden` until the preceding

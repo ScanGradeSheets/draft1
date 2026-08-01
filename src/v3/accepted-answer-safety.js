@@ -1,6 +1,6 @@
 import { normalizeTranscription } from '../hybrid-recognition.js'
 
-export const ACCEPTED_ANSWER_SAFETY_POLICY_VERSION = 'accepted-answer-safety-shadow-2'
+export const ACCEPTED_ANSWER_SAFETY_POLICY_VERSION = 'accepted-answer-safety-shadow-1'
 export const ACCEPTED_ANSWER_SCOUT_MIN_PROBABILITY = 0.90
 export const ACCEPTED_ANSWER_SIX_EIGHT_SCOUT_MIN_PROBABILITY = 0.90
 export const ACCEPTED_ANSWER_SECOND_CHOICE_MIN_PROBABILITY = 0.18
@@ -61,32 +61,22 @@ export function acceptedAnswerSafetyRoute({
     ) &&
     scoutProbability >= ACCEPTED_ANSWER_SIX_EIGHT_SCOUT_MIN_PROBABILITY
   )
-  // A live prospective failure showed a clearly written single-slot 7 being
-  // confidently accepted as 1. Until a representative 1/7 corpus supports a
-  // narrower shape rule, preserve every isolated browser read of 1 but require
-  // teacher review. This is transcription-only and never sees the answer key.
-  const singleDigitOneRequiresReview = (
-    Number(slotCount) === 1 && browserRead === '1'
-  )
   if (policyScope === 'six-eight-only') {
-    const publicSafetyConflict = sixEightScoutConflict || singleDigitOneRequiresReview
-    const reason = singleDigitOneRequiresReview
-      ? 'single-digit-one-seven-ambiguity'
-      : sixEightScoutConflict
-        ? 'single-digit-six-eight-high-support-scout-conflict'
-        : 'no-public-critical-conflict'
     return {
       policyVersion: ACCEPTED_ANSWER_SAFETY_POLICY_VERSION,
-      route: publicSafetyConflict,
-      reason,
-      reasons: publicSafetyConflict ? [reason] : [],
+      route: sixEightScoutConflict,
+      reason: sixEightScoutConflict
+        ? 'single-digit-six-eight-high-support-scout-conflict'
+        : 'no-public-six-eight-conflict',
+      reasons: sixEightScoutConflict
+        ? ['single-digit-six-eight-high-support-scout-conflict']
+        : [],
       answerKeyUsed: false,
       evidence: {
         browserRead,
         scoutRead,
         scoutProbability,
         slotCount: Number(slotCount) || null,
-        singleDigitOneRequiresReview,
       },
     }
   }
@@ -213,9 +203,6 @@ export function acceptedAnswerSafetyDecision({
     ) &&
     scoutProbability >= ACCEPTED_ANSWER_SIX_EIGHT_SCOUT_MIN_PROBABILITY
   )
-  const singleDigitOneRequiresReview = (
-    Number(slotCount) === 1 && browserRead === '1'
-  )
 
   const leading = predictions
     .slice()
@@ -238,9 +225,6 @@ export function acceptedAnswerSafetyDecision({
   if (singleDigitSixEightScoutConflict) {
     reasons.push('single-digit-six-eight-high-support-scout-conflict')
   }
-  if (singleDigitOneRequiresReview) {
-    reasons.push('single-digit-one-seven-ambiguity')
-  }
   if (policyScope !== 'six-eight-only' && unanimousSuspiciousOneFour) {
     reasons.push('unresolved-place-value-one-four-ambiguity')
   }
@@ -262,7 +246,6 @@ export function acceptedAnswerSafetyDecision({
       browserPreprocessingRisk,
       independentPairAgreement,
       slotCount: Number(slotCount) || null,
-      singleDigitOneRequiresReview,
     },
   }
 }

@@ -9527,10 +9527,9 @@ const runRealOCR = async () => {
     }
 
     // Accepted-answer safety reader. On the public site, only the narrow,
-    // replayed single-slot 6/8 scout conflict and conservative single-slot
-    // 1/7 ambiguity veto may force review. Broader rules remain private and
-    // evidence-only. It never sees the answer key and never replaces the
-    // browser transcription with the scout's guess.
+    // replayed single-slot 6/8 scout conflict may force review. Broader rules
+    // remain private/evidence-only. It never sees the answer key and never
+    // replaces the browser transcription with the scout's guess.
     if (
       acceptedSafetyRuntimeEnabled &&
       !browserLocalCandidateConfig.requested
@@ -9554,23 +9553,19 @@ const runRealOCR = async () => {
       })).filter((item) => {
         if (acceptedSafetyConfig.policyScope !== 'six-eight-only') return true
         const read = acceptedReadByQuestion.get(Number(item.questionNum))
-        return Number(item.slotCount) === 1 && (read === '1' || read === '6' || read === '8')
-      })
-      const acceptedScoutItems = acceptedStitchedItems.filter((item) => {
-        const read = acceptedReadByQuestion.get(Number(item.questionNum))
-        return read === '6' || read === '8'
+        return Number(item.slotCount) === 1 && (read === '6' || read === '8')
       })
       payload.v3AcceptedAnswerSafetyShadow = {
         status: 'pending',
         affectsGrade: false,
         acceptedAnswerCount: acceptedStitchedItems.length,
       }
-      const acceptedSafetyPromise = (acceptedScoutItems.length
-        ? requestWholeSlotScout(acceptedScoutItems, acceptedSafetyConfig)
+      const acceptedSafetyPromise = (acceptedStitchedItems.length
+        ? requestWholeSlotScout(acceptedStitchedItems, acceptedSafetyConfig)
         : Promise.resolve({
             status: 'complete',
             affectsGrade: false,
-            skipped: 'no-accepted-public-critical-single-digit',
+            skipped: 'no-accepted-single-slot-six-or-eight',
             results: [],
           }))
         .then(async (scoutResult) => {

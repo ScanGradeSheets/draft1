@@ -560,7 +560,7 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
 - Verification: icon/PWA contract **5/5**, full suite **360/360**, and pruned
   production build passed.
 
-## 2026-08-01 — Beta 15.60 prospective 7→1 safety repair
+## 2026-08-01 — Beta 15.60 prospective 7→1 safety repair — rejected
 
 - **Evidence:** A physical public Beta 15.59 scan of `SG-G1-LW-03` showed a
   clearly written `7` confidently transcribed as `1` at question C. This is a
@@ -576,9 +576,12 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   simulated `7→1` live incident becomes yellow with browser read `1`
   preserved. Private report:
   `private-evidence/reports/public-critical-confusion-veto-20260801.json`.
-- **Decision:** Ship as a conservative temporary safety veto. Do not claim it
-  solves `1`/`7` recognition. Collect representative authentic isolated `1`
-  and `7` crops before attempting a narrower second-reader shape rule.
+- **Decision:** Reject and remove the broad veto. The replay's zero changed
+  decisions was non-informative because the labelled corpus contained no
+  confidently accepted isolated `1`. Legitimate `1` answers would otherwise
+  be needlessly reviewed. Do not claim the `7→1` incident is fixed; collect its
+  original debug evidence and representative authentic isolated `1`/`7` crops
+  before attempting a narrower second-reader shape rule.
 - **Animation repair:** The red X crossing leg is one continuous top-right-to-
   bottom-left path. It cannot become visible until the first leg settles, two
   render frames complete, and the pen-lift pause elapses. This replaces
@@ -587,3 +590,21 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   `scangrade.io` as `2026.08.01-one-seven-safety-sequential-x-beta-15-60`.
   Production HTML and JavaScript are byte-identical to the tested release;
   `/api/submissions` remains the identical static shell with no backend.
+
+## 2026-08-01 — Beta 15.61 removes broad isolated-1 veto
+
+- **User finding:** Treating every accepted isolated `1` as suspicious is not
+  a sensible general policy because many worksheets legitimately contain `1`.
+- **Repair:** Remove only the Beta 15.60 isolated-`1` veto and associated
+  runtime routing. Restore the public safety scope to the previously verified,
+  key-blind, single-slot `6`↔`8` scout conflict.
+- **Preserved work:** Keep the independently tested sequential red-X repair.
+- **Open incident:** The physical `7→1` error remains unresolved. A screenshot
+  after grading is insufficient for a shape-specific fix because it lacks the
+  raw crop and alternate preprocessing/model evidence.
+- **Decision:** Ordinary accepted `1` answers remain automatic. Any future
+  `1`/`7` repair must be evidence-specific and must be tested on authentic
+  examples of both digits before deployment.
+- **Verification:** Added a regression proving an accepted isolated `1` is not
+  blanket-routed to review. Focused safety/animation tests **42/42**, complete
+  suite **368/368**, narrow 6↔8 replay gate, and pruned production build pass.
