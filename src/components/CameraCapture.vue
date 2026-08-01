@@ -858,6 +858,9 @@ const DEBUG_UPLOAD_URL_KEY = 'scangrade.debugUploadUrl.v1'
 const DEBUG_UPLOAD_TOKEN_KEY = 'scangrade.debugUploadToken.v1'
 const DEBUG_AUTO_UPLOAD_KEY = 'scangrade.debugAutoUpload.v1'
 const REVIEW_ACCESS_TOKEN_SESSION_KEY = 'scangrade.reviewAccessToken.v1'
+const LEGACY_PRIVATE_DEBUG_UPLOAD_URL = 'https://hobbes-mac-mini.tail9a3379.ts.net/mission-control/api/debug-scans'
+const PUBLIC_DEBUG_UPLOAD_URL = 'https://hobbes-mac-mini.tail9a3379.ts.net:8443/'
+const DEBUG_UPLOAD_TIMEOUT_MS = 75_000
 
 function parseDebugBoolean(value) {
   if (value == null) return null
@@ -904,6 +907,21 @@ function optionalReviewAccessToken() {
   }
 }
 
+function migrateDebugUploadUrl(value) {
+  const configured = String(value || '').trim()
+  if (!configured) return ''
+  try {
+    const url = new URL(configured)
+    const legacyUrl = new URL(LEGACY_PRIVATE_DEBUG_UPLOAD_URL)
+    if (url.origin === legacyUrl.origin && url.pathname.replace(/\/$/, '') === legacyUrl.pathname) {
+      return PUBLIC_DEBUG_UPLOAD_URL
+    }
+  } catch {
+    // Preserve an unknown value so the visible upload error remains actionable.
+  }
+  return configured
+}
+
 function initDebugUploadConfig() {
   const empty = { url: '', token: '', autoUpload: false }
   if (typeof window === 'undefined') return empty
@@ -916,7 +934,7 @@ function initDebugUploadConfig() {
   const hasUrlParam = params.has('debugUploadUrl') || params.has('debugUploadEndpoint')
   const hasTokenParam = params.has('debugUploadToken') || params.has('debugToken')
   const hasAutoParam = params.has('debugAutoUpload') || params.has('debugUpload')
-  const queryUrl = getDebugQueryParam(params, 'debugUploadUrl', 'debugUploadEndpoint')
+  const queryUrl = migrateDebugUploadUrl(getDebugQueryParam(params, 'debugUploadUrl', 'debugUploadEndpoint'))
   const queryToken = getDebugQueryParam(params, 'debugUploadToken', 'debugToken')
   const queryAuto = parseDebugBoolean(getDebugQueryParam(params, 'debugAutoUpload', 'debugUpload'))
 
@@ -938,9 +956,13 @@ function initDebugUploadConfig() {
     }
   }
 
+  const storedUrl = migrateDebugUploadUrl(safeStorageGet(DEBUG_UPLOAD_URL_KEY))
+  if (storedUrl && storedUrl !== safeStorageGet(DEBUG_UPLOAD_URL_KEY)) {
+    safeStorageSet(DEBUG_UPLOAD_URL_KEY, storedUrl)
+  }
   const storedAuto = parseDebugBoolean(safeStorageGet(DEBUG_AUTO_UPLOAD_KEY))
   return {
-    url: (hasUrlParam ? queryUrl : safeStorageGet(DEBUG_UPLOAD_URL_KEY)) || '',
+    url: (hasUrlParam ? queryUrl : storedUrl) || '',
     token: (hasTokenParam ? queryToken : safeStorageGet(DEBUG_UPLOAD_TOKEN_KEY)) || '',
     autoUpload: queryAuto ?? storedAuto ?? (hasUrlParam && !!queryUrl)
   }
@@ -10567,12 +10589,15 @@ async function uploadLiveOcrDebug(data, uploadReason = 'ocr-complete') {
   debugAutoUploadState.value = 'uploading'
   debugAutoUploadStatus.value = 'Saving debug bundle...'
 
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+  let timeout = null
   try {
     const headers = { 'Content-Type': 'application/json' }
     if (debugUploadConfig.token) headers['X-ScanGrade-Debug-Token'] = debugUploadConfig.token
-    const response = await fetch(debugUploadConfig.url, {
+    const uploadRequest = fetch(debugUploadConfig.url, {
       method: 'POST',
       headers,
+      ...(controller ? { signal: controller.signal } : {}),
       body: JSON.stringify({
         source: 'scangrade-browser-debug',
         uploadReason,
@@ -10581,6 +10606,13 @@ async function uploadLiveOcrDebug(data, uploadReason = 'ocr-complete') {
         debug: data
       })
     })
+    const timeoutRequest = new Promise((_, reject) => {
+      timeout = window.setTimeout(() => {
+        controller?.abort()
+        reject(new Error('Upload timed out'))
+      }, DEBUG_UPLOAD_TIMEOUT_MS)
+    })
+    const response = await Promise.race([uploadRequest, timeoutRequest])
     const payload = await response.json().catch(() => ({}))
     if (!response.ok || payload?.ok === false) {
       throw new Error(payload?.error || `Upload failed (${response.status})`)
@@ -10591,6 +10623,8 @@ async function uploadLiveOcrDebug(data, uploadReason = 'ocr-complete') {
     debugAutoUploadState.value = 'failed'
     debugAutoUploadStatus.value = `Debug auto-save failed: ${err?.message || err}`
     console.warn('[ScanGrade] live OCR debug upload failed:', err)
+  } finally {
+    if (timeout != null) window.clearTimeout(timeout)
   }
 }
 

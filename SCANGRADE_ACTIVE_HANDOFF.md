@@ -1,5 +1,40 @@
 # ScanGrade Active Handoff
 
+## 2026-08-01 reliable debug auto-save Beta 15.66 candidate
+
+- The iPhone's repeated `Load failed` was a transport failure between the
+  public ScanGrade page and a private tailnet browser destination. Receiver
+  CORS/PNA behavior was valid, but mobile WebKit still did not reliably send
+  the authenticated POST.
+- Debug auto-save now uses a dedicated upload-only HTTPS ingress at
+  `https://hobbes-mac-mini.tail9a3379.ts.net:8443/`. Tailscale Funnel exposes
+  only `127.0.0.1:8793`; it does not expose Mission Control, its UI, its state,
+  or stored evidence. The proxy accepts only `POST /` and preflight, requires
+  the existing private token using constant-time comparison, permits only the
+  exact `https://scangrade.io` browser origin, limits bundles to 80 MB, applies
+  60 requests per 10 minutes per client, and times out after 70 seconds.
+- The proxy forwards authenticated bundles over localhost to Mission Control.
+  Its public response is sanitized to `{ok,id}` and never returns a local path.
+  Student evidence remains only in ignored
+  `private-evidence/debug-scans/YYYY-MM-DD/` on the Mac Mini; Cloudflare stores
+  no debug data.
+- A persistent private LaunchAgent
+  `com.scangrade.debug-upload-proxy` runs the proxy separately from Mission
+  Control. Its authentication token and operational plist remain outside git.
+  Tailscale Funnel is enabled only on HTTPS port 8443 for this service.
+- Existing configured phones automatically migrate the former private
+  `/mission-control/api/debug-scans` URL to the new ingress without changing
+  their locally stored token. Uploads now have a 75-second client deadline, so
+  a network outage reports a visible failure instead of waiting indefinitely.
+- Verified before deployment: exact-origin preflight returns 204; missing-token
+  upload returns 401; wrong-origin upload returns 403; an authenticated public
+  HTTPS bundle returns 201 and appeared in the private evidence directory.
+  Complete suite **380/380** and the pruned production build pass.
+- Build label: `2026.08.01-reliable-debug-autosave-beta-15-66`.
+- Physical iPhone/PWA verification remains required after deployment. Do not
+  claim physical success until a real Debug Scan shows `Debug saved` and its
+  ID exists under `private-evidence/debug-scans/`.
+
 ## 2026-08-01 faster, transition-stable red X Beta 15.65 candidate
 
 - Physical Beta 15.64 review found that red X marks appeared to change shade

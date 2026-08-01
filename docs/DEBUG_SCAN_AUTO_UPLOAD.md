@@ -33,30 +33,34 @@ SG_DEBUG_UPLOAD_TOKEN=choose-a-private-secret node mission-control/server.mjs
 
 `SG_DEBUG_UPLOAD_TOKEN` is required. The browser sends the same value as `debugUploadToken`, and Mission Control rejects uploads without it.
 
-The public ScanGrade site is HTTPS, so the scan device also needs an HTTPS route to this receiver. The intended route is the tailnet Mission Control URL:
+The public ScanGrade site sends debug bundles through a dedicated upload-only
+HTTPS ingress:
 
 ```text
-https://hobbes-mac-mini.tail9a3379.ts.net/mission-control/api/debug-scans
+https://hobbes-mac-mini.tail9a3379.ts.net:8443/
 ```
 
-If the tailnet URL returns `502`, the local Mission Control server is probably not running.
+Tailscale Funnel exposes only the restricted proxy on `127.0.0.1:8793`. It
+does not expose Mission Control, stored files, or other Mac Mini services. The
+proxy accepts only authenticated debug POSTs from the exact
+`https://scangrade.io` origin, enforces an 80 MB request limit, rate limits and
+timeouts, then forwards the bundle over localhost to Mission Control.
 
-Because this request travels from a public site to a private tailnet address,
-the receiver must include `Access-Control-Allow-Private-Network: true` on its
-OPTIONS response. Without it, iPhone browsers can report the generic
-`Debug auto-save failed: Load failed` before the authenticated POST reaches
-Mission Control.
+If the public upload URL returns `502`, either the restricted proxy or local
+Mission Control receiver is probably not running. If it cannot connect at all,
+confirm Tailscale Funnel still exposes HTTPS port 8443.
 
-The Mac Mini is normally kept running by the private
-`com.scangrade.mission-control` LaunchAgent. Its token is stored outside the
-repository. Do not commit or publish it.
+The Mac Mini normally keeps both services running through the private
+`com.scangrade.mission-control` and `com.scangrade.debug-upload-proxy`
+LaunchAgents. Their shared token is stored outside the repository. Do not
+commit or publish it.
 
 ## Open The Prepared Debug URL Once
 
 Open a URL like this on the scanning device:
 
 ```text
-https://scangrade.io/?liveOcrDebug=1#debugAutoUpload=1&debugUploadUrl=https%3A%2F%2Fhobbes-mac-mini.tail9a3379.ts.net%2Fmission-control%2Fapi%2Fdebug-scans&debugUploadToken=PRIVATE_TOKEN
+https://scangrade.io/?liveOcrDebug=1#debugAutoUpload=1&debugUploadUrl=https%3A%2F%2Fhobbes-mac-mini.tail9a3379.ts.net%3A8443%2F&debugUploadToken=PRIVATE_TOKEN
 ```
 
 The private values are carried in the URL fragment, which is not sent to
@@ -73,7 +77,7 @@ https://scangrade.io/?liveOcrDebug=1&debugAutoUpload=0
 ## Classroom Collection Flow
 
 1. Start Mission Control on the Mac.
-2. Confirm the tailnet Mission Control URL works from the scan device.
+2. Confirm the restricted public upload URL is reachable.
 3. Open the prepared debug URL on the scan device.
 4. Scan a worksheet page.
 5. Wait for the brief `Debug saved: ...` status over the worksheet.
