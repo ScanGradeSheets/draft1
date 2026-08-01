@@ -21,8 +21,7 @@
         v-else-if="displayedResultImage"
         ref="capturedImageWrapRef"
         class="captured-image-wrap"
-        :class="{ 'captured-image-wrap--stamp-impact': completionStampImpactActive }"
-        :style="completionStampImpactStyle"
+        :class="{ 'captured-image-wrap--completion-glow': completionStampEffectActive }"
         @click="handleCorrectionOutsideClick"
       >
         <img
@@ -169,7 +168,7 @@
           v-if="activeCorrectionQuestion"
           class="on-sheet-correction-focus"
           :class="{
-            'on-sheet-correction-focus--entered': manualCorrectionText,
+            'on-sheet-correction-focus--entered': activeCorrectionEntryComplete,
             'on-sheet-correction-focus--committing': correctionKeypadSubmitting
           }"
           :style="activeCorrectionFocusStyle"
@@ -652,6 +651,7 @@ import {
   CORRECTION_KEYPAD_KEYS,
   correctionKeypadEntry,
   correctionKeypadEntryComplete,
+  correctionPendingSlotIndex,
   correctionPreviewCells,
 } from '../v3/correction-keypad.js'
 import {
@@ -1531,24 +1531,11 @@ const scanningDateStampSpec = computed(() => {
   )
 })
 
-const completionStampImpactActive = computed(() => (
+const completionStampEffectActive = computed(() => (
   props.studentMode &&
   progressiveDateStampRevealed.value &&
   !!scanningDateStampSpec.value
 ))
-
-const completionStampImpactStyle = computed(() => {
-  const spec = scanningDateStampSpec.value
-  const width = Number(scanningAnnotationPreview.value?.width)
-  const height = Number(scanningAnnotationPreview.value?.height)
-  if (!spec || !(width > 0) || !(height > 0)) return {}
-  const centerX = spec.rect.x + spec.rect.w / 2
-  const centerY = spec.rect.y + spec.rect.h / 2
-  return {
-    '--stamp-impact-origin-x': `${Math.max(0, Math.min(100, centerX / width * 100))}%`,
-    '--stamp-impact-origin-y': `${Math.max(0, Math.min(100, centerY / height * 100))}%`,
-  }
-})
 
 const displayedResultImage = computed(() =>
   processing.value && scanningAnnotationPreview.value?.imageUrl
@@ -1631,14 +1618,44 @@ const activeCorrectionRegion = computed(() => {
 })
 
 const activeCorrectionFocusStyle = computed(() => {
-  const region = activeCorrectionRegion.value
-  if (!region) return {}
+  const wholeRegion = activeCorrectionRegion.value
+  if (!wholeRegion) return {}
+  let region = wholeRegion
+  let previewSlots = activeCorrectionMaxLength.value
+  const pendingSlotIndex = correctionPendingSlotIndex(
+    manualCorrectionText.value,
+    activeCorrectionMaxLength.value,
+  )
+  if (activeCorrectionSlotIndex.value == null && pendingSlotIndex != null) {
+    const slotRegion = allAnnotationRegions.value.find((candidate) => (
+      Number(candidate?.questionNum) === Number(activeCorrectionQuestion.value?.questionNum) &&
+      Number(candidate?.slotIndex) === pendingSlotIndex
+    ))
+    if (slotRegion) {
+      region = slotRegion
+    } else {
+      const left = Number(wholeRegion.focusLeftPct ?? wholeRegion.leftPct)
+      const top = Number(wholeRegion.focusTopPct ?? wholeRegion.topPct)
+      const width = Number(wholeRegion.focusWidthPct ?? wholeRegion.widthPct)
+      const height = Number(wholeRegion.focusHeightPct ?? wholeRegion.heightPct)
+      const slotWidth = width / activeCorrectionMaxLength.value
+      if ([left, top, width, height, slotWidth].every(Number.isFinite)) {
+        region = {
+          focusLeftPct: left + slotWidth * pendingSlotIndex,
+          focusTopPct: top,
+          focusWidthPct: slotWidth,
+          focusHeightPct: height,
+        }
+      }
+    }
+    previewSlots = 1
+  }
   return {
     left: `${region.focusLeftPct ?? region.leftPct}%`,
     top: `${region.focusTopPct ?? region.topPct}%`,
     width: `${region.focusWidthPct ?? region.widthPct}%`,
     height: `${region.focusHeightPct ?? region.heightPct}%`,
-    '--correction-preview-slots': String(activeCorrectionMaxLength.value),
+    '--correction-preview-slots': String(previewSlots),
   }
 })
 
@@ -1675,6 +1692,10 @@ const vProgressiveStrokeSequence = {
 
 const activeCorrectionPreviewCells = computed(() =>
   correctionPreviewCells(manualCorrectionText.value, activeCorrectionMaxLength.value)
+)
+
+const activeCorrectionEntryComplete = computed(() =>
+  correctionKeypadEntryComplete(manualCorrectionText.value, activeCorrectionMaxLength.value)
 )
 
 const activeCorrectionGroup = computed(() => {
@@ -10794,24 +10815,34 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.captured-image-wrap--stamp-impact {
-  transform-origin: var(--stamp-impact-origin-x, 82%) var(--stamp-impact-origin-y, 88%);
-  animation: worksheet-stamp-impact 210ms cubic-bezier(0.18, 0.78, 0.24, 1) both;
-  will-change: transform;
+.captured-image-wrap--completion-glow::after {
+  content: '';
+  position: absolute;
+  z-index: 12;
+  inset: 0;
+  box-sizing: border-box;
+  border: 3px solid rgba(18, 108, 57, 0.96);
+  box-shadow:
+    inset 0 0 0 1px rgba(18, 108, 57, 0.72),
+    inset 0 0 16px rgba(18, 108, 57, 0.30),
+    inset 0 0 34px rgba(18, 108, 57, 0.18),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.42);
+  pointer-events: none;
+  animation: worksheet-completion-glow 720ms ease-out both;
 }
 
-@keyframes worksheet-stamp-impact {
+@keyframes worksheet-completion-glow {
   0% {
-    transform: translateY(0) scale(1);
+    opacity: 0;
   }
-  18% {
-    transform: translateY(2px) scale(0.978);
+  12% {
+    opacity: 1;
   }
-  58% {
-    transform: translateY(-0.35px) scale(1.003);
+  62% {
+    opacity: 0.86;
   }
   100% {
-    transform: translateY(0) scale(1);
+    opacity: 0;
   }
 }
 

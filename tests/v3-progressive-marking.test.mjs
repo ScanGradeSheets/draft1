@@ -44,28 +44,29 @@ test('manual correction digits use the lighter settled teacher-ink renderer', as
   assert.match(correctionInkSource, /ctx\.globalAlpha = 0\.1/)
 })
 
-test('the completion date appears once at its final opacity with a brief whole-page impact', () => {
+test('the completion date appears once at its final opacity with a stationary completion glow', () => {
   assert.doesNotMatch(cameraSource, /scanning-date-stamp-splash/)
   assert.doesNotMatch(cameraSource, /date-stamp-completion-splash/)
   assert.match(cameraSource, /\.scanning-date-stamp\s*\{[^}]*opacity:\s*1/s)
   assert.doesNotMatch(cameraSource, /@keyframes date-stamp-ink-land/)
   assert.doesNotMatch(cameraSource, /\.scanning-date-stamp\s*\{[^}]*animation:/s)
   assert.doesNotMatch(cameraSource, /\.scanning-date-stamp\s*\{[^}]*transform:/s)
-  assert.match(cameraSource, /captured-image-wrap--stamp-impact/)
-  assert.match(cameraSource, /@keyframes worksheet-stamp-impact/)
-  assert.match(cameraSource, /worksheet-stamp-impact 210ms/)
-  assert.match(cameraSource, /scale\(0\.978\)/)
-  assert.match(cameraSource, /scale\(1\.003\)/)
+  assert.match(cameraSource, /captured-image-wrap--completion-glow/)
+  assert.match(cameraSource, /@keyframes worksheet-completion-glow/)
+  assert.match(cameraSource, /worksheet-completion-glow 720ms/)
+  assert.doesNotMatch(cameraSource, /worksheet-stamp-impact/)
+  assert.doesNotMatch(cameraSource, /captured-image-wrap--stamp-impact/)
   assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*420\)/)
 })
 
-test('the final date stamp uses page compression without changing the stamp ink', () => {
+test('the final date stamp uses a viewfinder-green glow without moving the page or stamp ink', () => {
   assert.doesNotMatch(cameraSource, /scanning-date-paper-impression/)
   assert.doesNotMatch(cameraSource, /date-paper-compression/)
   assert.doesNotMatch(cameraSource, /completion-date-paper-impression/)
   assert.doesNotMatch(cameraSource, /scanning-date-stamp-splash|date-stamp-completion-splash/)
-  assert.match(cameraSource, /--stamp-impact-origin-x/)
-  assert.match(cameraSource, /--stamp-impact-origin-y/)
+  assert.match(cameraSource, /border:\s*3px solid rgba\(18,\s*108,\s*57,\s*0\.96\)/)
+  assert.doesNotMatch(cameraSource, /--stamp-impact-origin-x/)
+  assert.doesNotMatch(cameraSource, /\.captured-image-wrap--completion-glow::after\s*\{[^}]*transform:/s)
 })
 
 test('the manual focus pulse follows the active answer at every page height', () => {

@@ -1,5 +1,26 @@
 # ScanGrade Active Handoff
 
+## 2026-08-01 stationary completion and retained slot focus Beta 15.59
+
+- Physical review of Beta 15.58 found that the whole-page stamp compression
+  looked like an accidental layout shift. The worksheet now remains completely
+  stationary. When the final date stamp appears, a brief viewfinder-green edge
+  glow confirms completion without moving, scaling, or changing the sheet or
+  stamp ink.
+- During a two-slot manual correction, entering the first digit no longer
+  removes the blue focus prematurely. The entered digit remains rendered in its
+  final black position, while the blue focus moves behind the remaining
+  physical slot. The focus clears only when the full correction contract is
+  complete.
+- This is a presentation-only patch. OCR, capture gates, homography,
+  recognition, confidence, answer-key use, grading, correction values,
+  annotation registration, privacy, and the `6↔8` safety repair are unchanged.
+- Verification: focused transition tests **30/30**, complete repository tests
+  **367/367**, and the pruned root-domain production build pass. Build label:
+  `2026.08.01-static-completion-glow-beta-15-59`.
+- Deployment details will be recorded after the isolated static release is
+  published and smoke-tested.
+
 ## 2026-08-01 stable check endpoint and stronger stamp impact Beta 15.58
 
 - Physical iPhone review of Beta 15.57 found that the stamp impact was too

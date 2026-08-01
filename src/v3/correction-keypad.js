@@ -30,3 +30,12 @@ export function correctionPreviewCells(text, maxLength = 1) {
     return value && value !== '_' ? value : ''
   })
 }
+
+export function correctionPendingSlotIndex(text, maxLength = 1) {
+  const limit = Math.max(1, Number(maxLength) || 1)
+  const enteredLength = String(text || '')
+    .replace(/[^\d_]/g, '')
+    .slice(0, limit)
+    .length
+  return enteredLength > 0 && enteredLength < limit ? enteredLength : null
+}

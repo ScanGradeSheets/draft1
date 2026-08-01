@@ -5,6 +5,7 @@ import {
   CORRECTION_KEYPAD_KEYS,
   correctionKeypadEntry,
   correctionKeypadEntryComplete,
+  correctionPendingSlotIndex,
   correctionPreviewCells,
 } from '../src/v3/correction-keypad.js'
 
@@ -13,6 +14,14 @@ test('the custom keypad contains digits, underscore blank, and delete without ph
     '1', '2', '3', '4', '5', 'backspace',
     '6', '7', '8', '9', '0', '_',
   ])
+})
+
+test('a partial whole-answer entry focuses the next physical slot', () => {
+  assert.equal(correctionPendingSlotIndex('', 2), null)
+  assert.equal(correctionPendingSlotIndex('1', 2), 1)
+  assert.equal(correctionPendingSlotIndex('_', 2), 1)
+  assert.equal(correctionPendingSlotIndex('15', 2), null)
+  assert.equal(correctionPendingSlotIndex('7', 1), null)
 })
 
 test('single-slot digit and blank entries complete immediately', () => {
