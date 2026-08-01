@@ -21,6 +21,15 @@
 - Verification: two new setup/recovery contracts pass; complete suite
   **382/382** and the pruned production build pass. Build label:
   `2026.08.01-in-app-autosave-setup-beta-15-67`.
+- Source commit `649d98f` is pushed. The isolated static production deployment
+  is `https://ccaade59.scangrade.pages.dev/`, promoted to
+  `https://scangrade.io/`. Immutable, custom-domain, local, and the static
+  `/api/submissions` fallback HTML are byte-identical at SHA-256
+  `e40958062ef384615f7540180a5705937e6173981df39e041df7a3f976bdeea9`.
+  Public JavaScript is byte-identical at SHA-256
+  `567ba5c0b9d423c81a76bbea906750a4375f09bb9cbab760e827e2f042a4fd7a`
+  and contains the Beta 15.67 label. No Cloudflare backend or debug evidence
+  storage is active.
 - Physical iPhone/PWA connection and receipt remain pending.
 
 ## 2026-08-01 reliable debug auto-save Beta 15.66 candidate
