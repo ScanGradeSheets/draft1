@@ -31,6 +31,15 @@
   HTTPS bundle returns 201 and appeared in the private evidence directory.
   Complete suite **380/380** and the pruned production build pass.
 - Build label: `2026.08.01-reliable-debug-autosave-beta-15-66`.
+- Source commit `8750cb2` is pushed. The isolated static deployment
+  `https://dce39763.scangrade.pages.dev/` is promoted to
+  `https://scangrade.io/`. Immutable, public, local, and the propagated static
+  `/api/submissions` fallback are byte-identical at SHA-256
+  `d7b222513d2f5baca4b17590d7a9f84d8e4aa0d14fc7153d6804a96e03260b81`.
+  Public JavaScript is byte-identical at SHA-256
+  `21cac7b3c04a5249483f0c09915235c8b71eb60b7bcc620114592d36c96088b0`
+  and contains the Beta 15.66 label. No Cloudflare backend or debug storage is
+  active.
 - Physical iPhone/PWA verification remains required after deployment. Do not
   claim physical success until a real Debug Scan shows `Debug saved` and its
   ID exists under `private-evidence/debug-scans/`.
