@@ -713,7 +713,7 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
 - Repair: use the identical red, `0.94` opacity, line width, and multiply
   compositing in both stages. Remove only the final canvas's additional colour-
   changing passes. Preserve seeded path variation and strict two-stroke order.
-- Timing: each leg is `230ms` rather than `270ms`; X size is unchanged and the
+- Timing: each leg is `200ms` rather than `270ms`; X size is unchanged and the
   explicit `160ms` pen lift remains.
 - Debug evidence: no new private bundle arrived from the second physical scan,
   so phone auto-save remains unverified despite passing receiver-side

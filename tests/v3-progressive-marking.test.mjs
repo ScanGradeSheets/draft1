@@ -212,8 +212,8 @@ test('an X draws top-left to bottom-right, then crosses only after the first str
   assert.ok(second.at(-1).x < second[0].x && second.at(-1).y > second[0].y)
   assert.equal(second.length, 3, 'the direct crossing stroke must match the final raster X path')
   assert.ok(step.inkWidth >= 3.2)
-  assert.equal(step.strokes[0].durationMs, 230)
-  assert.equal(step.strokes[1].durationMs, 230)
+  assert.equal(step.strokes[0].durationMs, 200)
+  assert.equal(step.strokes[1].durationMs, 200)
   assert.ok(
     step.strokes[1].delayMs >= step.strokes[0].durationMs + 120,
     'the second stroke must wait for the first stroke and a visible pen-lift pause',

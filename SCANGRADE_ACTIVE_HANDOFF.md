@@ -10,7 +10,7 @@
   width, and multiply-on-paper compositing. The settled canvas no longer adds
   extra translucent passes after the live drawing. Seeded path geometry still
   supplies restrained natural variation.
-- X size and placement are unchanged. Each leg is slightly quicker at `230ms`
+- X size and placement are unchanged. Each leg is slightly quicker at `200ms`
   instead of `270ms`; the strict sequence and visible `160ms` pen-lift pause
   remain. The second top-right-to-bottom-left leg cannot start before the first
   top-left-to-bottom-right leg settles.
@@ -20,7 +20,7 @@
   mobile transport requires another test after the earlier failed-preflight
   cache has expired. Do not claim auto-save physically verified yet.
 - Verification: complete suite **376/376** and pruned production build pass.
-  Build label: `2026.08.01-faster-stable-red-x-beta-15-65`.
+  Build label: `2026.08.01-faster-stable-red-x-beta-15-65-1`.
 - Source commit/deployment and physical verification remain pending.
 
 ## 2026-08-01 compact debug evidence and restored private auto-save Beta 15.64 candidate

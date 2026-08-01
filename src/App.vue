@@ -384,7 +384,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.01-faster-stable-red-x-beta-15-65'
+const APP_BUILD_LABEL = '2026.08.01-faster-stable-red-x-beta-15-65-1'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
