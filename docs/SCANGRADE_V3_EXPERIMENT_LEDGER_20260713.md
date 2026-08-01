@@ -692,3 +692,8 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   is required for exact forensic confirmation.
 - Verification: `node --test tests/*.test.mjs` -> **375/375 pass**; pruned Vite
   production build passes.
+- Deployment: source `2b33b5c`; isolated static release
+  `3de786c4.scangrade.pages.dev` promoted to `scangrade.io`. Public, immutable,
+  local, and static `/api/submissions` HTML match byte-for-byte; public
+  JavaScript also matches and contains the Beta 15.64 label. No backend is
+  active on Cloudflare.

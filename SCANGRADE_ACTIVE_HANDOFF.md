@@ -25,7 +25,15 @@
 - Verification: complete test suite **375/375**, private receiver smoke tests,
   and pruned production build pass. Build label:
   `2026.08.01-compact-debug-autosave-beta-15-64`.
-- Physical iPhone/PWA verification and production deployment remain pending.
+- Source commit `2b33b5c` is pushed. The isolated static release
+  `https://3de786c4.scangrade.pages.dev/` is promoted to
+  `https://scangrade.io/`. Immutable, custom-domain, local, and static
+  `/api/submissions` HTML are byte-identical at SHA-256
+  `35b2256dd09e6da0be73ea4b8ab00678f5fa26f8877a6573451f2494fb58933d`.
+  Public JavaScript is byte-identical at SHA-256
+  `6313c664048041f29b776928c0013e8a1e23f322b3f96378d29c999debb265ba`
+  and contains the Beta 15.64 label. No Cloudflare backend is active.
+- Physical iPhone/PWA verification remains pending.
 
 ## 2026-08-01 iOS debug export and unified red-X ink Beta 15.63 candidate
 
