@@ -67,7 +67,7 @@
         >
           <defs>
             <mask
-              v-for="step in revealedProgressiveMarkingSteps"
+              v-for="step in maskedProgressiveMarkingSteps"
               :id="`progressive-mask-${step.key}`"
               :key="`mask-${step.key}`"
               v-progressive-stroke-sequence
@@ -95,7 +95,7 @@
             </mask>
           </defs>
           <image
-            v-for="step in revealedProgressiveMarkingSteps"
+            v-for="step in maskedProgressiveMarkingSteps"
             :key="step.key"
             class="progressive-marking-reveal"
             x="0"
@@ -106,6 +106,28 @@
             :href="progressiveAnnotatedImage"
             :mask="`url(#progressive-mask-${step.key})`"
           />
+          <g
+            v-for="step in directIncorrectProgressiveMarkingSteps"
+            :key="`direct-${step.key}`"
+            v-progressive-stroke-sequence
+            class="progressive-direct-incorrect-ink"
+          >
+            <path
+              v-for="(stroke, strokeIndex) in step.strokes"
+              :key="`${step.key}-direct-stroke-${strokeIndex}`"
+              class="progressive-marking-stroke"
+              :d="stroke.d"
+              fill="none"
+              :stroke="TEACHER_RED_INK"
+              :stroke-width="step.inkWidth"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              :style="{
+                '--progressive-stroke-duration': `${stroke.durationMs}ms`,
+                '--progressive-stroke-delay': `${stroke.delayMs}ms`,
+              }"
+            />
+          </g>
           <g
             v-if="progressiveScoreRevealed && progressiveScoreStep"
             class="progressive-score-ink"
@@ -387,6 +409,18 @@
         <p v-if="studentScoreText" class="student-result-message">{{ studentScoreText }}</p>
         <p v-else class="student-result-message">Scan saved for teacher review</p>
         <p v-if="studentResultSubtext" class="student-result-subtext">{{ studentResultSubtext }}</p>
+        <div
+          v-if="liveOcrDebugExportEnabled && lastLiveOcrDebug"
+          class="student-result-debug-actions"
+        >
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="exportLiveOcrDebugJson"
+          >
+            Download OCR debug JSON
+          </button>
+        </div>
         <div v-if="studentAnswerGroups.length" class="student-answer-grid">
           <div
             v-for="group in studentAnswerGroups"
@@ -424,14 +458,6 @@
           @click="exportCropPreview"
         >
           Download model-input preview
-        </button>
-        <button
-          v-if="liveOcrDebugExportEnabled && lastLiveOcrDebug"
-          type="button"
-          class="btn btn-secondary"
-          @click="exportLiveOcrDebugJson"
-        >
-          Download OCR debug JSON
         </button>
         <button
           v-if="!ocrResult.error"
@@ -1480,6 +1506,14 @@ const revealedProgressiveMarkingSteps = computed(() => {
   const revealed = new Set(progressiveRevealedQuestionNums.value.map(Number))
   return progressiveMarkingStepList.value.filter((step) => revealed.has(Number(step.questionNum)))
 })
+
+const maskedProgressiveMarkingSteps = computed(() =>
+  revealedProgressiveMarkingSteps.value.filter((step) => step.status !== 'incorrect')
+)
+
+const directIncorrectProgressiveMarkingSteps = computed(() =>
+  revealedProgressiveMarkingSteps.value.filter((step) => step.status === 'incorrect')
+)
 
 const progressiveReviewPending = computed(() => {
   return progressiveVerification.value.pending
@@ -9526,8 +9560,8 @@ const runRealOCR = async () => {
       }
     }
 
-    // Accepted-answer safety reader. On the public site, only the narrow,
-    // replayed single-slot 6/8 scout conflict may force review. Broader rules
+    // Accepted-answer safety reader. On the public site, only narrow, replayed
+    // single-slot 6/8 and 1->7 scout conflicts may force review. Broader rules
     // remain private/evidence-only. It never sees the answer key and never
     // replaces the browser transcription with the scout's guess.
     if (
@@ -9553,7 +9587,7 @@ const runRealOCR = async () => {
       })).filter((item) => {
         if (acceptedSafetyConfig.policyScope !== 'six-eight-only') return true
         const read = acceptedReadByQuestion.get(Number(item.questionNum))
-        return Number(item.slotCount) === 1 && (read === '6' || read === '8')
+        return Number(item.slotCount) === 1 && (read === '1' || read === '6' || read === '8')
       })
       payload.v3AcceptedAnswerSafetyShadow = {
         status: 'pending',
@@ -9565,7 +9599,7 @@ const runRealOCR = async () => {
         : Promise.resolve({
             status: 'complete',
             affectsGrade: false,
-            skipped: 'no-accepted-single-slot-six-or-eight',
+            skipped: 'no-accepted-single-slot-critical-confusion',
             results: [],
           }))
         .then(async (scoutResult) => {
@@ -10899,6 +10933,11 @@ onUnmounted(() => {
   mix-blend-mode: multiply;
 }
 
+.progressive-direct-incorrect-ink {
+  opacity: 0.94;
+  mix-blend-mode: multiply;
+}
+
 .progressive-marking-stroke {
   stroke-dasharray: none;
   stroke-dashoffset: 0;
@@ -11877,6 +11916,16 @@ onUnmounted(() => {
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+.student-result-debug-actions {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 16px;
+}
+
+.student-result-debug-actions .btn {
+  width: min(100%, 320px);
 }
 
 .ocr-result {

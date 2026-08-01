@@ -96,6 +96,7 @@ function teacherStrokePaths(status, rect, seed, width, height) {
     size,
     [
       [0.3 + jitter(seed + 7, 0.04), -0.34 + jitter(seed + 8, 0.04)],
+      [-0.02 + jitter(seed + 9, 0.035), 0.01 + jitter(seed + 10, 0.035)],
       [-0.32 + jitter(seed + 11, 0.04), 0.31 + jitter(seed + 12, 0.04)],
     ],
     angle + jitter(seed + 133, 0.05),
@@ -182,6 +183,7 @@ export function progressiveMarkingSteps(answerGroups = [], annotationRegions = [
       const y = Math.max(0, rect.y - padY)
       const right = Math.min(width, rect.x + rect.w + padX)
       const bottom = Math.min(height, rect.y + rect.h + padY)
+      const anchor = indicatorAnchor(focusRect, seed, width, height)
       const markingStrokes = teacherStrokePaths(group.status, focusRect, seed, width, height)
       const revealAnswer = revealAnswerQuestionNums.has(questionNum)
       const answerRevealStroke = revealAnswer
@@ -205,7 +207,14 @@ export function progressiveMarkingSteps(answerGroups = [], annotationRegions = [
         seed,
         strokeWidth: group.status === 'review'
           ? Math.max(24, fluorescentHighlighterGeometry(focusRect, seed).width)
-          : Math.max(12, indicatorAnchor(focusRect, seed, width, height).size * 0.3),
+          : Math.max(12, anchor.size * 0.3),
+        // Incorrect marks are drawn as real SVG ink instead of revealing a
+        // finished X from the annotated bitmap. A crossing reveal mask exposes
+        // pixels from the future stroke at the intersection, which made the
+        // second leg appear early in physical Safari.
+        inkWidth: group.status === 'incorrect'
+          ? Math.max(3.2, anchor.size * 0.075)
+          : null,
         strokes: [...answerRevealStroke, ...delayedMarkingStrokes],
         x,
         y,

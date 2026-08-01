@@ -1,8 +1,9 @@
 import { normalizeTranscription } from '../hybrid-recognition.js'
 
-export const ACCEPTED_ANSWER_SAFETY_POLICY_VERSION = 'accepted-answer-safety-shadow-1'
+export const ACCEPTED_ANSWER_SAFETY_POLICY_VERSION = 'accepted-answer-safety-shadow-2'
 export const ACCEPTED_ANSWER_SCOUT_MIN_PROBABILITY = 0.90
 export const ACCEPTED_ANSWER_SIX_EIGHT_SCOUT_MIN_PROBABILITY = 0.90
+export const ACCEPTED_ANSWER_ONE_SEVEN_SCOUT_MIN_PROBABILITY = 0.99
 export const ACCEPTED_ANSWER_SECOND_CHOICE_MIN_PROBABILITY = 0.18
 export const ACCEPTED_ANSWER_STRONG_HIGH_CONFIDENCE = 0.97
 export const ACCEPTED_ANSWER_PLACE_VALUE_FOUR_RIVAL_MIN_PROBABILITY = 0.005
@@ -61,16 +62,24 @@ export function acceptedAnswerSafetyRoute({
     ) &&
     scoutProbability >= ACCEPTED_ANSWER_SIX_EIGHT_SCOUT_MIN_PROBABILITY
   )
+  const oneSevenScoutConflict = (
+    Number(slotCount) === 1 &&
+    browserRead === '1' &&
+    scoutRead === '7' &&
+    scoutProbability >= ACCEPTED_ANSWER_ONE_SEVEN_SCOUT_MIN_PROBABILITY
+  )
   if (policyScope === 'six-eight-only') {
+    const publicCriticalConflict = sixEightScoutConflict || oneSevenScoutConflict
+    const reason = sixEightScoutConflict
+      ? 'single-digit-six-eight-high-support-scout-conflict'
+      : oneSevenScoutConflict
+        ? 'single-digit-one-seven-high-support-scout-conflict'
+        : 'no-public-critical-conflict'
     return {
       policyVersion: ACCEPTED_ANSWER_SAFETY_POLICY_VERSION,
-      route: sixEightScoutConflict,
-      reason: sixEightScoutConflict
-        ? 'single-digit-six-eight-high-support-scout-conflict'
-        : 'no-public-six-eight-conflict',
-      reasons: sixEightScoutConflict
-        ? ['single-digit-six-eight-high-support-scout-conflict']
-        : [],
+      route: publicCriticalConflict,
+      reason,
+      reasons: publicCriticalConflict ? [reason] : [],
       answerKeyUsed: false,
       evidence: {
         browserRead,
@@ -203,6 +212,12 @@ export function acceptedAnswerSafetyDecision({
     ) &&
     scoutProbability >= ACCEPTED_ANSWER_SIX_EIGHT_SCOUT_MIN_PROBABILITY
   )
+  const singleDigitOneSevenScoutConflict = (
+    Number(slotCount) === 1 &&
+    browserRead === '1' &&
+    scoutRead === '7' &&
+    scoutProbability >= ACCEPTED_ANSWER_ONE_SEVEN_SCOUT_MIN_PROBABILITY
+  )
 
   const leading = predictions
     .slice()
@@ -224,6 +239,9 @@ export function acceptedAnswerSafetyDecision({
   }
   if (singleDigitSixEightScoutConflict) {
     reasons.push('single-digit-six-eight-high-support-scout-conflict')
+  }
+  if (singleDigitOneSevenScoutConflict) {
+    reasons.push('single-digit-one-seven-high-support-scout-conflict')
   }
   if (policyScope !== 'six-eight-only' && unanimousSuspiciousOneFour) {
     reasons.push('unresolved-place-value-one-four-ambiguity')

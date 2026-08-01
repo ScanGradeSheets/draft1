@@ -96,9 +96,9 @@ test('progressive marking reveals only settled answers in worksheet order', () =
   assert.equal(steps[0].strokes.length, 1, 'a checkmark must be one continuous pen stroke')
   assert.equal(steps[1].strokes.length, 2, 'an X must use two crossing pen strokes')
   assert.equal(
-    (steps[1].strokes[1].d.match(/\bL\b/g) || []).length,
+    (steps[1].strokes[1].d.match(/\bM\b/g) || []).length,
     1,
-    'the second X stroke must be one uninterrupted top-right-to-bottom-left line',
+    'the second X stroke must remain one uninterrupted top-right-to-bottom-left path',
   )
   assert.ok(steps.flatMap((step) => step.strokes).every((stroke) => /^M .+ L /.test(stroke.d)))
 })
@@ -210,6 +210,8 @@ test('an X draws top-left to bottom-right, then crosses only after the first str
 
   assert.ok(first.at(-1).x > first[0].x && first.at(-1).y > first[0].y)
   assert.ok(second.at(-1).x < second[0].x && second.at(-1).y > second[0].y)
+  assert.equal(second.length, 3, 'the direct crossing stroke must match the final raster X path')
+  assert.ok(step.inkWidth >= 3.2)
   assert.ok(
     step.strokes[1].delayMs >= step.strokes[0].durationMs + 120,
     'the second stroke must wait for the first stroke and a visible pen-lift pause',
@@ -219,6 +221,9 @@ test('an X draws top-left to bottom-right, then crosses only after the first str
     /const completeStepMs = Math\.max\([\s\S]*stroke\.delayMs[\s\S]*stroke\.durationMs[\s\S]*\+ 80/,
   )
   assert.match(cameraSource, /v-progressive-stroke-sequence/)
+  assert.match(cameraSource, /directIncorrectProgressiveMarkingSteps/)
+  assert.match(cameraSource, /step\.status !== 'incorrect'/)
+  assert.match(cameraSource, /:stroke="TEACHER_RED_INK"/)
   assert.doesNotMatch(cameraSource, /pathLength="(?:1|100)"/)
   assert.match(cameraSource, /startMeasuredProgressiveStrokeSequence/)
 })

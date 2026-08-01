@@ -120,8 +120,50 @@ test('public safety never makes every legitimate isolated 1 review-only', () => 
     truth: '1',
   })
   assert.equal(route.route, false)
-  assert.equal(route.reason, 'no-public-six-eight-conflict')
+  assert.equal(route.reason, 'no-public-critical-conflict')
   assert.equal(route.answerKeyUsed, false)
+})
+
+test('public safety routes only a near-certain 1 to 7 scout conflict', () => {
+  const suspicious = acceptedAnswerSafetyRoute({
+    currentAutomatic: true,
+    currentRead: '1',
+    scout: { read: '7', sequenceProbability: 0.999459 },
+    slotCount: 1,
+    policyScope: 'six-eight-only',
+    answerKey: '7',
+    truth: '7',
+  })
+  assert.equal(suspicious.route, true)
+  assert.equal(suspicious.reason, 'single-digit-one-seven-high-support-scout-conflict')
+  assert.equal(suspicious.answerKeyUsed, false)
+
+  const decision = acceptedAnswerSafetyDecision({
+    routed: suspicious.route,
+    currentRead: '1',
+    scout: { read: '7', sequenceProbability: 0.999459 },
+    slotCount: 1,
+    policyScope: 'six-eight-only',
+    answerKey: '7',
+    truth: '7',
+  })
+  assert.equal(decision.veto, true)
+  assert.equal(decision.reason, 'single-digit-one-seven-high-support-scout-conflict')
+  assert.equal(decision.evidence.browserRead, '1')
+  assert.equal('automaticText' in decision, false)
+
+  for (const scout of [
+    { read: '1', sequenceProbability: 0.9999 },
+    { read: '7', sequenceProbability: 0.9899 },
+  ]) {
+    assert.equal(acceptedAnswerSafetyRoute({
+      currentAutomatic: true,
+      currentRead: '1',
+      scout,
+      slotCount: 1,
+      policyScope: 'six-eight-only',
+    }).route, false)
+  }
 })
 
 test('public safety scope cannot activate broader experimental vetoes', () => {

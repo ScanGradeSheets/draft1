@@ -1,5 +1,45 @@
 # ScanGrade Active Handoff
 
+## 2026-08-01 targeted 1→7 second-reader veto and structural red-X repair Beta 15.62 candidate
+
+- A repeat physical Debug Scan of `SG-G1-LW-03` question C again accepted the
+  student's written `7` as `1`. The completed debug summary appeared like a
+  frozen screen because its download controls were below the visible answer
+  grid. Private screenshot evidence:
+  `/tmp/codex-remote-attachments/019f4912-2a9c-7fe2-8862-abb5da1992bb/43C1BB16-5E0B-4CB5-A3E7-6D8794BC525D/1-Photo-1.jpg`.
+  Do not commit it.
+- The previously labelled authentic instance of this exact packet/template/
+  question contains decisive independent evidence: the browser initially read
+  `1` automatically, while the local whole-slot scout read `7` with `0.999459`
+  sequence probability. Handwritten truth was joined only after the decision;
+  the policy never receives the answer key or truth.
+- Public safety is extended narrowly: only an accepted physical one-slot `1`
+  that independently reads as `7` at `>=0.99` is forced yellow. The browser
+  transcription is preserved and never replaced. A true `1` supported as `1`,
+  or a weaker `7` disagreement, remains automatic. This is not the rejected
+  Beta 15.60 blanket-one veto.
+- Reproducible replay: `node scripts/evaluate_six_eight_scout_veto.mjs` across
+  all 385 labelled answers changes no known decision or measured coverage. The
+  primary 345 remain zero known confident errors; three unrelated historical
+  errors remain in the older 40-answer set. The authentic P03 `1`/`7` target
+  is demoted to review while preserving read `1`; the prior `6`/`8` incident
+  remains demoted. Private report:
+  `private-evidence/reports/public-critical-confusion-scout-veto-20260801.json`.
+- Root cause of the still-broken X was not timing: the animation revealed a
+  finished bitmap containing both X legs through a broad crossing mask, so the
+  first mask exposed pixels belonging to the future second leg. Incorrect
+  marks now use two actual SVG ink paths. The second path does not exist on
+  screen until the first has finished, two paint frames settle, and the pen
+  lifts; its three-point geometry matches the final raster X.
+- Debug completion now places `Download OCR debug JSON` above the answer grid,
+  making the completed state and evidence export immediately reachable.
+- Verification so far: targeted tests **41/41**, complete suite **369/369**,
+  labelled replay gate, and production build pass. Build label:
+  `2026.08.01-targeted-one-seven-direct-x-beta-15-62`.
+- Next action: commit only verified files, deploy an isolated static-only
+  release, smoke-test production, then physically verify the same sheet and X
+  animation on iPhone. Do not call physical behavior verified until that test.
+
 ## 2026-08-01 rejected broad 1 veto removed; render-locked X retained Beta 15.61
 
 - Tony correctly rejected Beta 15.60's rule that made every confidently read

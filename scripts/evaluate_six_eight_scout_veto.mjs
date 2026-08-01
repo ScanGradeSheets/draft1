@@ -28,7 +28,7 @@ const safetyRepair = JSON.parse(fs.readFileSync(path.join(
 ), 'utf8'))
 const outputPath = path.join(
   reportDir,
-  'single-digit-six-eight-scout-veto-20260731.json',
+  'public-critical-confusion-scout-veto-20260801.json',
 )
 
 const layoutDir = path.join(
@@ -164,6 +164,22 @@ const incident = applyVeto({
   baseDecision: { automatic: true, read: '8', reason: 'public-browser-accepted' },
   scout: { read: '6', probability: 0.939 },
 })
+const oneSevenSource = sourceById.get('P03|sg-g1-lw-03-sub-1digit|3')
+if (!oneSevenSource) throw new Error('missing labelled P03 one/seven target evidence')
+const oneSevenIncident = applyVeto({
+  id: 'P03|sg-g1-lw-03-sub-1digit|3-prospective-browser-acceptance',
+  packetId: 'P03',
+  layoutId: 'sg-g1-lw-03-sub-1digit',
+  questionNum: 3,
+  // Truth is deliberately withheld from both route and decision. It is joined
+  // below only to score the completed policy output.
+  scoredTruth: null,
+  baseDecision: { automatic: true, read: '1', reason: 'public-browser-accepted' },
+  scout: {
+    read: oneSevenSource.evidence.scoutRead,
+    probability: oneSevenSource.evidence.scoutProbability,
+  },
+})
 const changed = rows.filter((row) => row.changed)
 const report = {
   schemaVersion: 1,
@@ -176,11 +192,14 @@ const report = {
     acceptedReadReplacementPermitted: false,
   },
   policy: {
-    name: 'single-digit-six-eight-high-support-scout-veto-1',
+    name: 'single-digit-public-critical-confusion-scout-veto-2',
     action: 'preserve the browser read but require yellow review',
-    minimumScoutProbability: 0.90,
+    minimumScoutProbabilityByConflict: {
+      sixEight: 0.90,
+      oneToSeven: 0.99,
+    },
     physicalSlotCount: 1,
-    conflictPairs: ['6→8', '8→6'],
+    conflictPairs: ['6→8', '8→6', '1→7'],
   },
   baseline: summarize(rows, 'baseDecision'),
   candidate: summarize(rows),
@@ -197,6 +216,12 @@ const report = {
   },
   changedKnownDecisions: changed,
   prospectiveIncident: incident,
+  oneSevenTarget: {
+    ...oneSevenIncident,
+    scoredTruthAfterDecision: oneSevenSource.truthText,
+    sourceInitialRead: oneSevenSource.initialRead,
+    sourceInitiallyAutomatic: oneSevenSource.initiallyAutomatic,
+  },
   gate: {
     all385LabelsPresent: rows.length === 385,
     zeroKnownConfidentErrorsPrimary345:
@@ -207,6 +232,10 @@ const report = {
     noKnownCoverageRegression: changed.length === 0,
     incidentDemotedToReview: incident.decision.automatic === false,
     incidentTranscriptionPreserved: incident.decision.read === '8',
+    oneSevenTargetDemotedToReview: oneSevenIncident.decision.automatic === false,
+    oneSevenTargetTranscriptionPreserved: oneSevenIncident.decision.read === '1',
+    oneSevenTargetScoutIndependentRead:
+      oneSevenIncident.scout.read === '7' && oneSevenIncident.scout.probability >= 0.99,
     answerKeyBlind: true,
   },
 }
@@ -221,6 +250,12 @@ console.log(JSON.stringify({
     automatic: incident.decision.automatic,
     preservedRead: incident.decision.read,
     reason: incident.decision.reason,
+  },
+  oneSevenTarget: {
+    automatic: oneSevenIncident.decision.automatic,
+    preservedRead: oneSevenIncident.decision.read,
+    scout: oneSevenIncident.scout,
+    reason: oneSevenIncident.decision.reason,
   },
   gate: report.gate,
 }, null, 2))

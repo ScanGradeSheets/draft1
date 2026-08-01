@@ -613,3 +613,32 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   `2026.08.01-sequential-x-beta-15-61`. Production, immutable, local-release,
   and `/api/submissions` HTML match byte-for-byte; public JavaScript matches the
   verified release and no backend is active.
+
+## 2026-08-01 — Beta 15.62 targeted 1→7 veto and direct-ink X candidate
+
+- **New evidence:** A repeat physical Debug Scan reproduced the authentic
+  `SG-G1-LW-03` C error: a written `7` was confidently accepted as `1`.
+  The saved labelled P03 evidence for this exact question records initial
+  automatic read `1` and an independent whole-slot scout read `7` at
+  `0.999459` probability.
+- **Narrow safety rule:** For one physical slot only, browser `1` plus scout
+  `7` at `>=0.99` forces yellow. It preserves `1`, never auto-corrects, and is
+  blind to the answer key and handwritten truth. Scout agreement on `1` and
+  weaker conflicts do nothing, so legitimate `1` answers are not blanket-
+  reviewed.
+- **Replay:** All 385 labelled answers retain identical measured decisions and
+  `88.6%` automatic coverage. The primary 345 retain zero known confident
+  errors; three unrelated historical errors remain in the older 40. The
+  authentic P03 target is demoted to review, as is the prior 6/8 incident.
+  Private output:
+  `private-evidence/reports/public-critical-confusion-scout-veto-20260801.json`.
+- **X root cause and repair:** The prior mask revealed pixels from a completed
+  X bitmap; where the broad first-leg mask crossed the second leg, future ink
+  appeared early. Incorrect marks now animate as two real red SVG paths. The
+  second remains absent until the first finishes, two paint frames settle, and
+  the pen-lift pause ends. Its geometry matches the final raster path.
+- **Debug UX:** The JSON export action is moved above the result grid so a
+  completed Debug Scan no longer looks like a frozen dead end.
+- **Verification:** focused tests **41/41**, complete suite **369/369**,
+  labelled replay gate, and production build pass. Physical iPhone verification
+  remains required before calling the candidate fully verified.
