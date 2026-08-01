@@ -44,21 +44,26 @@ test('manual correction digits use the lighter settled teacher-ink renderer', as
   assert.match(correctionInkSource, /ctx\.globalAlpha = 0\.1/)
 })
 
-test('the completion date appears once as a static final stamp and never moves', () => {
+test('the completion date appears once at its final opacity with a brief whole-page impact', () => {
   assert.doesNotMatch(cameraSource, /scanning-date-stamp-splash/)
   assert.doesNotMatch(cameraSource, /date-stamp-completion-splash/)
-  assert.match(cameraSource, /\.scanning-date-stamp\s*\{[^}]*opacity:\s*0\.72/s)
+  assert.match(cameraSource, /\.scanning-date-stamp\s*\{[^}]*opacity:\s*1/s)
   assert.doesNotMatch(cameraSource, /@keyframes date-stamp-ink-land/)
   assert.doesNotMatch(cameraSource, /\.scanning-date-stamp\s*\{[^}]*animation:/s)
   assert.doesNotMatch(cameraSource, /\.scanning-date-stamp\s*\{[^}]*transform:/s)
+  assert.match(cameraSource, /captured-image-wrap--stamp-impact/)
+  assert.match(cameraSource, /@keyframes worksheet-stamp-impact/)
+  assert.match(cameraSource, /scale\(0\.992\)/)
   assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*420\)/)
 })
 
-test('the final date stamp has no temporary paper impression or interface effect', () => {
+test('the final date stamp uses page compression without changing the stamp ink', () => {
   assert.doesNotMatch(cameraSource, /scanning-date-paper-impression/)
   assert.doesNotMatch(cameraSource, /date-paper-compression/)
   assert.doesNotMatch(cameraSource, /completion-date-paper-impression/)
   assert.doesNotMatch(cameraSource, /scanning-date-stamp-splash|date-stamp-completion-splash/)
+  assert.match(cameraSource, /--stamp-impact-origin-x/)
+  assert.match(cameraSource, /--stamp-impact-origin-y/)
 })
 
 test('the manual focus pulse follows the active answer at every page height', () => {
@@ -205,9 +210,9 @@ test('an X draws top-left to bottom-right, then crosses only after the first str
     cameraSource,
     /const completeStepMs = Math\.max\([\s\S]*stroke\.delayMs[\s\S]*stroke\.durationMs[\s\S]*\+ 80/,
   )
-  assert.equal((cameraSource.match(/v-progressive-stroke/g) || []).length, 2)
+  assert.match(cameraSource, /v-progressive-stroke-sequence/)
   assert.doesNotMatch(cameraSource, /pathLength="(?:1|100)"/)
-  assert.match(cameraSource, /startMeasuredProgressiveStroke/)
+  assert.match(cameraSource, /startMeasuredProgressiveStrokeSequence/)
 })
 
 test('a settled review answer uses one left-to-right highlighter swipe', () => {

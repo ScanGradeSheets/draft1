@@ -1,5 +1,35 @@
 # ScanGrade Active Handoff
 
+## 2026-08-01 sequenced red X and stamp-impact candidate Beta 15.57
+
+- Tony reported two completion-animation defects in the current public UI:
+  the red X's second stroke could visibly begin before the first completed and
+  could show an endpoint gap that filled later; the completion-date ink could
+  appear to change or "set" after landing.
+- Red X strokes are now a true completion-driven sequence. The crossing stroke
+  is kept hidden until the browser reports that the first top-left-to-bottom-
+  right stroke has actually finished, then observes the pen-lift pause before
+  drawing top-right to bottom-left. The reveal mask runs beyond each physical
+  endpoint by a stroke-width-aware amount and settles solid, preventing the
+  transient WebKit gap without changing the final X geometry.
+- The selected stamp treatment is **Option 1: physical page impact**. The date
+  appears immediately at its final ink opacity with no fade, outline, ink-set,
+  or stamp animation. At that instant the complete worksheet compresses by
+  about `0.8%` for `135 ms`, anchored at the calculated stamp position, then
+  returns to exactly the same size. This creates a short "boom" while keeping
+  the resulting sheet indistinguishable from an ordinary static teacher stamp.
+- This is a presentation-only candidate. OCR, capture gates, homography,
+  recognition, confidence, answer keys, grading, correction data, annotation
+  geometry, privacy, and the Beta 15.56 `6↔8` safety repair are unchanged.
+- Verification: focused progressive-animation tests **22/22**; complete
+  repository tests **366/366**; standard and pruned public production builds
+  pass. A new regression simulates a late browser animation and proves that the
+  crossing stroke cannot start early. Build label:
+  `2026.08.01-sequenced-x-stamp-impact-beta-15-57`.
+- This candidate is implemented locally but is not yet committed, pushed, or
+  deployed. The public site remains Beta 15.56 pending physical iPhone/iPad
+  review or explicit publication approval.
+
 ## 2026-07-31 narrow public 6/8 safety candidate Beta 15.56
 
 - The confirmed Beta 15.54 incident was a real handwritten `6` accepted as

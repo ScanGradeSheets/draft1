@@ -21,6 +21,8 @@
         v-else-if="displayedResultImage"
         ref="capturedImageWrapRef"
         class="captured-image-wrap"
+        :class="{ 'captured-image-wrap--stamp-impact': completionStampImpactActive }"
+        :style="completionStampImpactStyle"
         @click="handleCorrectionOutsideClick"
       >
         <img
@@ -69,6 +71,7 @@
               v-for="step in revealedProgressiveMarkingSteps"
               :id="`progressive-mask-${step.key}`"
               :key="`mask-${step.key}`"
+              v-progressive-stroke-sequence
               maskUnits="userSpaceOnUse"
               x="0"
               y="0"
@@ -78,7 +81,6 @@
               <path
                 v-for="(stroke, strokeIndex) in step.strokes"
                 :key="`${step.key}-stroke-${strokeIndex}`"
-                v-progressive-stroke
                 class="progressive-marking-stroke"
                 :d="stroke.d"
                 fill="none"
@@ -639,7 +641,10 @@ import {
   TEACHER_GREEN_PEN_PASSES,
   TEACHER_RED_INK,
 } from '../v3/teacher-ink-style.js'
-import { startMeasuredProgressiveStroke } from '../v3/progressive-svg-stroke.js'
+import {
+  startMeasuredProgressiveStroke,
+  startMeasuredProgressiveStrokeSequence,
+} from '../v3/progressive-svg-stroke.js'
 import {
   manualCorrectionContract,
 } from '../v3/manual-correction-contract.js'
@@ -1526,6 +1531,25 @@ const scanningDateStampSpec = computed(() => {
   )
 })
 
+const completionStampImpactActive = computed(() => (
+  props.studentMode &&
+  progressiveDateStampRevealed.value &&
+  !!scanningDateStampSpec.value
+))
+
+const completionStampImpactStyle = computed(() => {
+  const spec = scanningDateStampSpec.value
+  const width = Number(scanningAnnotationPreview.value?.width)
+  const height = Number(scanningAnnotationPreview.value?.height)
+  if (!spec || !(width > 0) || !(height > 0)) return {}
+  const centerX = spec.rect.x + spec.rect.w / 2
+  const centerY = spec.rect.y + spec.rect.h / 2
+  return {
+    '--stamp-impact-origin-x': `${Math.max(0, Math.min(100, centerX / width * 100))}%`,
+    '--stamp-impact-origin-y': `${Math.max(0, Math.min(100, centerY / height * 100))}%`,
+  }
+})
+
 const displayedResultImage = computed(() =>
   processing.value && scanningAnnotationPreview.value?.imageUrl
     ? scanningAnnotationPreview.value.imageUrl
@@ -1621,6 +1645,7 @@ const activeCorrectionFocusStyle = computed(() => {
 const correctionKeypadKeys = CORRECTION_KEYPAD_KEYS
 
 const progressiveStrokeAnimations = new WeakMap()
+const progressiveStrokeSequences = new WeakMap()
 const vProgressiveStroke = {
   mounted(element) {
     const animation = startMeasuredProgressiveStroke(element, {
@@ -1632,6 +1657,19 @@ const vProgressiveStroke = {
   unmounted(element) {
     progressiveStrokeAnimations.get(element)?.cancel?.()
     progressiveStrokeAnimations.delete(element)
+  },
+}
+
+const vProgressiveStrokeSequence = {
+  mounted(element) {
+    const sequence = startMeasuredProgressiveStrokeSequence(
+      element.querySelectorAll('.progressive-marking-stroke'),
+    )
+    if (sequence) progressiveStrokeSequences.set(element, sequence)
+  },
+  unmounted(element) {
+    progressiveStrokeSequences.get(element)?.cancel?.()
+    progressiveStrokeSequences.delete(element)
   },
 }
 
@@ -10756,6 +10794,24 @@ onUnmounted(() => {
   height: 100%;
 }
 
+.captured-image-wrap--stamp-impact {
+  transform-origin: var(--stamp-impact-origin-x, 82%) var(--stamp-impact-origin-y, 88%);
+  animation: worksheet-stamp-impact 135ms cubic-bezier(0.18, 0.78, 0.24, 1) both;
+  will-change: transform;
+}
+
+@keyframes worksheet-stamp-impact {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  22% {
+    transform: translateY(1px) scale(0.992);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
 .progressive-marking-layer {
   position: absolute;
   inset: 0;
@@ -10774,7 +10830,7 @@ onUnmounted(() => {
 }
 
 .scanning-date-stamp {
-  opacity: 0.72;
+  opacity: 1;
 }
 
 .recognition-read-overlay {
