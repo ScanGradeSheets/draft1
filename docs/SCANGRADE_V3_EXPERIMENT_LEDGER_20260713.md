@@ -697,3 +697,10 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   local, and static `/api/submissions` HTML match byte-for-byte; public
   JavaScript also matches and contains the Beta 15.64 label. No backend is
   active on Cloudflare.
+- First device result: grading completed, but auto-save failed generically and
+  the receiver recorded no bundle. The device remained online in Tailscale and
+  ordinary CORS passed. A browser private-network preflight reproduced the
+  missing grant. The receiver now returns
+  `Access-Control-Allow-Private-Network: true`; after LaunchAgent restart, the
+  exact preflight and an authenticated Tailscale upload both pass. Public OCR
+  and UI code are unchanged.

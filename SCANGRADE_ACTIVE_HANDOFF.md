@@ -2,6 +2,15 @@
 
 ## 2026-08-01 compact debug evidence and restored private auto-save Beta 15.64 candidate
 
+- First physical iPhone attempt reached completed grading but reported
+  `Debug auto-save failed: Load failed`; no student bundle reached the receiver.
+  Root cause was the public page's fetch into a tailnet/private-network address:
+  ordinary CORS passed, but the receiver omitted the mobile browser's explicit
+  private-network preflight grant. Mission Control now sends
+  `Access-Control-Allow-Private-Network: true`. The LaunchAgent was restarted,
+  the exact private-network OPTIONS request returns 204 with the grant, and an
+  authenticated end-to-end Tailscale POST succeeds. This is receiver-only; the
+  public Beta 15.64 application did not need another deployment.
 - The full-height Debug Scan result card is removed. It duplicated the
   transcription already available through the centre arrow and made a
   completed scan look frozen on iPhone. Debug scans now retain the same fixed

@@ -26,6 +26,10 @@ const jsonHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, X-ScanGrade-Debug-Token',
+  // Public ScanGrade pages upload only authenticated debug evidence to this
+  // tailnet address. Mobile browsers classify that hop as private-network
+  // access and otherwise fail fetch() before the POST reaches this server.
+  'Access-Control-Allow-Private-Network': 'true',
 };
 
 const mimeTypes = {

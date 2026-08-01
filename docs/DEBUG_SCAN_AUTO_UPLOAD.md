@@ -41,6 +41,12 @@ https://hobbes-mac-mini.tail9a3379.ts.net/mission-control/api/debug-scans
 
 If the tailnet URL returns `502`, the local Mission Control server is probably not running.
 
+Because this request travels from a public site to a private tailnet address,
+the receiver must include `Access-Control-Allow-Private-Network: true` on its
+OPTIONS response. Without it, iPhone browsers can report the generic
+`Debug auto-save failed: Load failed` before the authenticated POST reaches
+Mission Control.
+
 The Mac Mini is normally kept running by the private
 `com.scangrade.mission-control` LaunchAgent. Its token is stored outside the
 repository. Do not commit or publish it.
