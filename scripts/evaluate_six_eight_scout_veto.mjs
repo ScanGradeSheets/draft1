@@ -28,7 +28,7 @@ const safetyRepair = JSON.parse(fs.readFileSync(path.join(
 ), 'utf8'))
 const outputPath = path.join(
   reportDir,
-  'single-digit-six-eight-scout-veto-20260731.json',
+  'public-critical-confusion-veto-20260801.json',
 )
 
 const layoutDir = path.join(
@@ -155,7 +155,7 @@ const historicalRows = safetyRepair.historicalRows.map((row) => {
 })
 
 const rows = [...fiveRows, ...historicalRows]
-const incident = applyVeto({
+const sixEightIncident = applyVeto({
   id: 'live-20260729-sg-g1-lw-01-question-2',
   packetId: 'prospective-live-incident',
   layoutId: 'sg-g1-lw-01-add-1digit',
@@ -163,6 +163,17 @@ const incident = applyVeto({
   scoredTruth: null,
   baseDecision: { automatic: true, read: '8', reason: 'public-browser-accepted' },
   scout: { read: '6', probability: 0.939 },
+})
+const oneSevenIncident = applyVeto({
+  id: 'live-20260801-sg-g1-lw-03-question-3',
+  packetId: 'prospective-live-incident',
+  layoutId: 'sg-g1-lw-03-sub-1digit',
+  questionNum: 3,
+  scoredTruth: null,
+  baseDecision: { automatic: true, read: '1', reason: 'public-browser-accepted' },
+  // The conservative 1/7 repair does not depend on a second reader. The
+  // browser transcription is preserved and routed to teacher review.
+  scout: null,
 })
 const changed = rows.filter((row) => row.changed)
 const report = {
@@ -176,11 +187,12 @@ const report = {
     acceptedReadReplacementPermitted: false,
   },
   policy: {
-    name: 'single-digit-six-eight-high-support-scout-veto-1',
+    name: 'public-critical-single-digit-veto-2',
     action: 'preserve the browser read but require yellow review',
     minimumScoutProbability: 0.90,
     physicalSlotCount: 1,
     conflictPairs: ['6→8', '8→6'],
+    conservativeReviewReads: ['isolated physical-slot 1'],
   },
   baseline: summarize(rows, 'baseDecision'),
   candidate: summarize(rows),
@@ -196,7 +208,10 @@ const report = {
     note: 'Contains three unrelated legacy confident errors outside this narrow 6/8 repair.',
   },
   changedKnownDecisions: changed,
-  prospectiveIncident: incident,
+  prospectiveIncidents: {
+    sixEight: sixEightIncident,
+    oneSeven: oneSevenIncident,
+  },
   gate: {
     all385LabelsPresent: rows.length === 385,
     zeroKnownConfidentErrorsPrimary345:
@@ -205,8 +220,10 @@ const report = {
       summarize(historicalRows).confidentErrors ===
       summarize(historicalRows, 'baseDecision').confidentErrors,
     noKnownCoverageRegression: changed.length === 0,
-    incidentDemotedToReview: incident.decision.automatic === false,
-    incidentTranscriptionPreserved: incident.decision.read === '8',
+    sixEightIncidentDemotedToReview: sixEightIncident.decision.automatic === false,
+    sixEightIncidentTranscriptionPreserved: sixEightIncident.decision.read === '8',
+    oneSevenIncidentDemotedToReview: oneSevenIncident.decision.automatic === false,
+    oneSevenIncidentTranscriptionPreserved: oneSevenIncident.decision.read === '1',
     answerKeyBlind: true,
   },
 }
@@ -217,10 +234,17 @@ console.log(JSON.stringify({
   baseline: report.baseline,
   candidate: report.candidate,
   changedKnownDecisions: changed.length,
-  prospectiveIncident: {
-    automatic: incident.decision.automatic,
-    preservedRead: incident.decision.read,
-    reason: incident.decision.reason,
+  prospectiveIncidents: {
+    sixEight: {
+      automatic: sixEightIncident.decision.automatic,
+      preservedRead: sixEightIncident.decision.read,
+      reason: sixEightIncident.decision.reason,
+    },
+    oneSeven: {
+      automatic: oneSevenIncident.decision.automatic,
+      preservedRead: oneSevenIncident.decision.read,
+      reason: oneSevenIncident.decision.reason,
+    },
   },
   gate: report.gate,
 }, null, 2))

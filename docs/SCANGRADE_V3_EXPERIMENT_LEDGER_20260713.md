@@ -559,3 +559,27 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   worksheet, privacy, or student-data change.
 - Verification: icon/PWA contract **5/5**, full suite **360/360**, and pruned
   production build passed.
+
+## 2026-08-01 — Beta 15.60 prospective 7→1 safety repair
+
+- **Evidence:** A physical public Beta 15.59 scan of `SG-G1-LW-03` showed a
+  clearly written `7` confidently transcribed as `1` at question C. This is a
+  transcription safety failure; question G on the same page was correctly
+  graded wrong after the teacher confirmed the student's written `9`.
+- **Candidate:** Preserve but force yellow for an otherwise accepted isolated
+  one-slot browser read of `1`. The decision receives neither handwritten
+  truth nor the mathematical answer key and never substitutes another digit.
+- **Replay:** `node scripts/evaluate_six_eight_scout_veto.mjs` replays the
+  policy over 345 primary and 40 historical labelled answers. It changes zero
+  known decisions, retains primary zero-confident-error status, adds no
+  historical error, and leaves measured automatic coverage unchanged. A
+  simulated `7→1` live incident becomes yellow with browser read `1`
+  preserved. Private report:
+  `private-evidence/reports/public-critical-confusion-veto-20260801.json`.
+- **Decision:** Ship as a conservative temporary safety veto. Do not claim it
+  solves `1`/`7` recognition. Collect representative authentic isolated `1`
+  and `7` crops before attempting a narrower second-reader shape rule.
+- **Animation repair:** The red X crossing leg is one continuous top-right-to-
+  bottom-left path. It cannot become visible until the first leg settles, two
+  render frames complete, and the pen-lift pause elapses. This replaces
+  reliance on Safari's early animation-finished event.

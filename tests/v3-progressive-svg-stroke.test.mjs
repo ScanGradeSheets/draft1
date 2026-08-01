@@ -50,6 +50,14 @@ test('progressive pen reveal uses measured length, endpoint overrun, and a solid
 test('a crossing stroke cannot start until the preceding stroke actually finishes', async () => {
   const starts = []
   const completions = []
+  const frames = []
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame
+  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame
+  globalThis.requestAnimationFrame = (callback) => {
+    frames.push(callback)
+    return frames.length
+  }
+  globalThis.cancelAnimationFrame = () => {}
   const makeElement = (name, delay) => {
     const style = {
       '--progressive-stroke-duration': '20ms',
@@ -79,20 +87,34 @@ test('a crossing stroke cannot start until the preceding stroke actually finishe
       },
     }
   }
-  const first = makeElement('first', 0)
-  const second = makeElement('second', 20)
-  const sequence = startMeasuredProgressiveStrokeSequence([first, second])
+  try {
+    const first = makeElement('first', 0)
+    const second = makeElement('second', 20)
+    const sequence = startMeasuredProgressiveStrokeSequence([first, second])
 
-  await Promise.resolve()
-  assert.deepEqual(starts, ['first'])
-  assert.equal(second.style.opacity, '0')
+    await Promise.resolve()
+    assert.deepEqual(starts, ['first'])
+    assert.equal(second.style.opacity, '0')
+    assert.equal(second.style.visibility, 'hidden')
 
-  completions[0]()
-  await new Promise((resolve) => setTimeout(resolve, 0))
-  assert.deepEqual(starts, ['first', 'second'])
+    completions[0]()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    assert.deepEqual(starts, ['first'])
+    assert.equal(frames.length, 1)
+    frames.shift()()
+    await Promise.resolve()
+    assert.deepEqual(starts, ['first'])
+    assert.equal(frames.length, 1)
+    frames.shift()()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    assert.deepEqual(starts, ['first', 'second'])
 
-  completions[1]()
-  await sequence.finished
-  assert.equal(first.style.strokeDasharray, 'none')
-  assert.equal(second.style.strokeDasharray, 'none')
+    completions[1]()
+    await sequence.finished
+    assert.equal(first.style.strokeDasharray, 'none')
+    assert.equal(second.style.strokeDasharray, 'none')
+  } finally {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame
+  }
 })

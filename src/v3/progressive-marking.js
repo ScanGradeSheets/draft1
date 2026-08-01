@@ -96,7 +96,6 @@ function teacherStrokePaths(status, rect, seed, width, height) {
     size,
     [
       [0.3 + jitter(seed + 7, 0.04), -0.34 + jitter(seed + 8, 0.04)],
-      [-0.02 + jitter(seed + 9, 0.035), 0.01 + jitter(seed + 10, 0.035)],
       [-0.32 + jitter(seed + 11, 0.04), 0.31 + jitter(seed + 12, 0.04)],
     ],
     angle + jitter(seed + 133, 0.05),

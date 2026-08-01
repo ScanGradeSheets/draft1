@@ -95,6 +95,11 @@ test('progressive marking reveals only settled answers in worksheet order', () =
   assert.ok(steps.every((step) => step.x >= 0 && step.y >= 0 && step.w > 0 && step.h > 0))
   assert.equal(steps[0].strokes.length, 1, 'a checkmark must be one continuous pen stroke')
   assert.equal(steps[1].strokes.length, 2, 'an X must use two crossing pen strokes')
+  assert.equal(
+    (steps[1].strokes[1].d.match(/\bL\b/g) || []).length,
+    1,
+    'the second X stroke must be one uninterrupted top-right-to-bottom-left line',
+  )
   assert.ok(steps.flatMap((step) => step.strokes).every((stroke) => /^M .+ L /.test(stroke.d)))
 })
 

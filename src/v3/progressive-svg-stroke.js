@@ -11,6 +11,7 @@ function settleStroke(element) {
   element.style.strokeDasharray = 'none'
   element.style.strokeDashoffset = '0'
   element.style.opacity = '1'
+  element.style.visibility = 'visible'
   element.style.transition = 'none'
 }
 
@@ -39,6 +40,7 @@ function hidePreparedStroke(element) {
   element.style.strokeDasharray = spec.dash
   element.style.strokeDashoffset = String(spec.revealLength)
   element.style.opacity = '0'
+  element.style.visibility = 'hidden'
   element.style.transition = 'none'
   return spec
 }
@@ -65,6 +67,7 @@ export function startMeasuredProgressiveStroke(element, options = {}) {
   // `forwards` fill leaves this underlying opacity in force during the delay,
   // preventing WebKit from exposing a round linecap before the pen is lifted.
   element.style.opacity = delayMs > 0 ? '0' : '1'
+  element.style.visibility = 'visible'
 
   if (typeof element.animate === 'function') {
     const animation = element.animate(
@@ -143,6 +146,7 @@ export function startMeasuredProgressiveStrokeSequence(elements, options = {}) {
   let cancelled = false
   let activeAnimation = null
   const timers = new Set()
+  const frames = new Set()
   const registerTimer = (timer) => timers.add(timer)
   const wait = (milliseconds) => new Promise((resolve) => {
     if (!(milliseconds > 0) || cancelled) {
@@ -155,10 +159,23 @@ export function startMeasuredProgressiveStrokeSequence(elements, options = {}) {
     }, milliseconds)
     registerTimer(timer)
   })
+  const waitForPaintFrame = () => new Promise((resolve) => {
+    if (cancelled) {
+      resolve()
+      return
+    }
+    const requestFrame = globalThis.requestAnimationFrame || ((callback) =>
+      globalThis.setTimeout(callback, 0))
+    const frame = requestFrame(() => {
+      frames.delete(frame)
+      resolve()
+    })
+    frames.add(frame)
+  })
 
   const finished = (async () => {
     let previousNominalEnd = 0
-    for (const element of strokes) {
+    for (const [index, element] of strokes.entries()) {
       if (cancelled) return
       const durationMs = finiteMilliseconds(
         element.style.getPropertyValue('--progressive-stroke-duration'),
@@ -168,14 +185,24 @@ export function startMeasuredProgressiveStrokeSequence(elements, options = {}) {
         element.style.getPropertyValue('--progressive-stroke-delay'),
         0,
       )
-      const penLiftMs = Math.max(0, nominalDelayMs - previousNominalEnd)
-      await wait(penLiftMs)
+      if (index > 0) {
+        // WebKit may resolve a finished animation before its final pixels have
+        // actually reached the screen. Keep every later stroke visibility-
+        // hidden until two complete paint frames have passed, then observe the
+        // explicit pen-lift pause. The crossing X stroke therefore cannot
+        // appear, even partially, while the first stroke is still settling.
+        await waitForPaintFrame()
+        await waitForPaintFrame()
+        const penLiftMs = Math.max(0, nominalDelayMs - previousNominalEnd)
+        await wait(penLiftMs)
+      }
       if (cancelled) return
       activeAnimation = startMeasuredProgressiveStroke(element, {
         durationMs,
         delayMs: 0,
       })
       await waitForAnimation(activeAnimation, durationMs, timers)
+      settleStroke(element)
       previousNominalEnd = nominalDelayMs + durationMs
     }
   })()
@@ -187,6 +214,9 @@ export function startMeasuredProgressiveStrokeSequence(elements, options = {}) {
       activeAnimation?.cancel?.()
       timers.forEach((timer) => globalThis.clearTimeout(timer))
       timers.clear()
+      const cancelFrame = globalThis.cancelAnimationFrame || globalThis.clearTimeout
+      frames.forEach((frame) => cancelFrame(frame))
+      frames.clear()
       strokes.forEach(settleStroke)
       options.onCancel?.()
     },
