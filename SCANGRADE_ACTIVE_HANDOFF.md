@@ -26,9 +26,20 @@
   pass. A new regression simulates a late browser animation and proves that the
   crossing stroke cannot start early. Build label:
   `2026.08.01-sequenced-x-stamp-impact-beta-15-57`.
-- This candidate is implemented locally but is not yet committed, pushed, or
-  deployed. The public site remains Beta 15.56 pending physical iPhone/iPad
-  review or explicit publication approval.
+- Source commit: `bef4c54`. Final static-only deployment:
+  `https://2bfafb58.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`. Production, immutable, and local release HTML are
+  byte-identical at SHA-256
+  `c57e1775a05c9897b9a82a85e96bb3699a4bf320ebf90b34202bf61f4cbdb5cd`
+  and serve `index-DjDGL_l3.js` / `index-BMMaQ6Xz.css`; the live JavaScript is
+  byte-identical to the tested release and contains the exact Beta 15.57 label.
+- Deployment safety note: the first production upload was invoked from the
+  repository root and Wrangler discovered the dormant `functions/` directory,
+  briefly activating an unconfigured D1 route. The smoke test caught this
+  immediately. It was superseded from a genuinely isolated static working
+  directory by `2bfafb58`; final `/api/submissions` is byte-identical to the
+  static app HTML, confirming that no backend or student-data storage route is
+  active.
 
 ## 2026-07-31 narrow public 6/8 safety candidate Beta 15.56
 
