@@ -642,3 +642,10 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
 - **Verification:** focused tests **41/41**, complete suite **369/369**,
   labelled replay gate, and production build pass. Physical iPhone verification
   remains required before calling the candidate fully verified.
+- **Deployment:** Source `29beb54`. A first preview (`23bda85f`) accidentally
+  discovered the dormant repository Functions because Wrangler was launched
+  from the repo; its unconfigured D1 response was caught before promotion. The
+  safe replacement was launched from the isolated static directory only:
+  `617ab041.scangrade.pages.dev`, promoted to `scangrade.io`. Immutable,
+  production, local, and `/api/submissions` HTML match byte-for-byte; public
+  JavaScript matches the tested release and contains the Beta 15.62 label.

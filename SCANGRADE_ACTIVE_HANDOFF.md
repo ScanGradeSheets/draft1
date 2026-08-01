@@ -36,9 +36,21 @@
 - Verification so far: targeted tests **41/41**, complete suite **369/369**,
   labelled replay gate, and production build pass. Build label:
   `2026.08.01-targeted-one-seven-direct-x-beta-15-62`.
-- Next action: commit only verified files, deploy an isolated static-only
-  release, smoke-test production, then physically verify the same sheet and X
-  animation on iPhone. Do not call physical behavior verified until that test.
+- Source commit: `29beb54`. The first preview, `23bda85f`, was launched from
+  the repository working directory and the smoke test caught an unconfigured
+  dormant D1 Function at `/api/submissions`; it never reached the custom
+  domain. It was immediately superseded from the genuinely isolated static
+  directory by `https://617ab041.scangrade.pages.dev/`, promoted to
+  `https://scangrade.io/`.
+- Production, immutable, local release, and `/api/submissions` HTML are
+  byte-identical at SHA-256
+  `2d22a6b3188b9782aa4d53d3f4041aaa2dcf9826ee7b8c0477817e5de7ed668b`.
+  Public JavaScript is byte-identical at SHA-256
+  `a4bd101e0091dd3c68ba0034f40660284e4c2ccc9a50af4bd5c3ca5802b63c2b`
+  and contains the exact Beta 15.62 label. A mobile-browser production smoke
+  test mounts successfully. No backend is active.
+- Next action: physically verify the same sheet and X animation on iPhone. Do
+  not call physical behavior verified until that test.
 
 ## 2026-08-01 rejected broad 1 veto removed; render-locked X retained Beta 15.61
 
