@@ -21,7 +21,15 @@
   cache has expired. Do not claim auto-save physically verified yet.
 - Verification: complete suite **376/376** and pruned production build pass.
   Build label: `2026.08.01-faster-stable-red-x-beta-15-65-1`.
-- Source commit/deployment and physical verification remain pending.
+- Source commits `f6463bf` and timing-only follow-up `9793ed7` are pushed.
+  Final isolated static release `https://8bd3f9e1.scangrade.pages.dev/` is
+  promoted to `https://scangrade.io/`. Immutable, public, local, and the
+  propagated static `/api/submissions` fallback are byte-identical at SHA-256
+  `0d6bee3565f3c923f8348a753744de093d4e9418441aac157f4bde7a4fb040aa`.
+  Public JavaScript is byte-identical at SHA-256
+  `b1bde0ef0290a89b1729cc5d2364af3604e88a49d052a19d47c3a9bb4f5af099`
+  and contains the Beta 15.65.1 label. No Cloudflare backend is active.
+- Physical verification remains pending.
 
 ## 2026-08-01 compact debug evidence and restored private auto-save Beta 15.64 candidate
 

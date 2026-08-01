@@ -719,3 +719,8 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   so phone auto-save remains unverified despite passing receiver-side
   private-network preflight and authenticated upload tests.
 - Verification: complete suite **376/376** and pruned production build pass.
+- Deployment: final source `9793ed7`; isolated static release
+  `8bd3f9e1.scangrade.pages.dev` promoted to `scangrade.io`. Public,
+  immutable, local, and static `/api/submissions` HTML match byte-for-byte;
+  public JavaScript matches and contains the Beta 15.65.1 label. No backend is
+  active on Cloudflare.
