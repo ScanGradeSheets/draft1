@@ -664,3 +664,10 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
 - Tests: `node --test tests/*.test.mjs` -> **373/373 pass**. `npm run build`
   passes. The next evidence gate is a physical Debug Scan export of the live
   `7`→`1` case; this candidate does not claim that recognition incident fixed.
+- Release: source `ab5c4fc`; final isolated static production
+  `1c549da2.scangrade.pages.dev` promoted to `scangrade.io`. Root and static
+  `/api/submissions` fallback match local SHA-256
+  `702bc8478db0134b0fc4e8e769eda1db7f71e2151bdc2b11542fccf595fc80ab`;
+  no backend is active. An earlier same-turn deploy launched from the repository
+  directory briefly attached the dormant unconfigured Function, was detected
+  by the mandatory API smoke check, and was superseded by the isolated deploy.

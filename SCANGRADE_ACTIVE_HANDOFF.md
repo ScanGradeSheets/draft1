@@ -23,6 +23,18 @@
 - Verification: debug-export and ink tests pass; complete suite **373/373**;
   production build passes. Build label:
   `2026.08.01-ios-debug-share-unified-x-beta-15-63`.
+- Source commit `ab5c4fc` is pushed. The first production command was launched
+  from the repository working directory and the smoke test caught the dormant
+  D1 Function on `/api/submissions`; it was immediately replaced before handoff
+  by the same pruned build deployed from inside the isolated static directory.
+  Final immutable production: `https://1c549da2.scangrade.pages.dev/` and
+  custom domain `https://scangrade.io/`.
+- Final immutable root, public root, local `dist/index.html`, and the custom
+  `/api/submissions` fallback are byte-identical at SHA-256
+  `702bc8478db0134b0fc4e8e769eda1db7f71e2151bdc2b11542fccf595fc80ab`.
+  Public JavaScript is byte-identical to local at SHA-256
+  `9339cc6c163a5945f1211479ac02b29f5b1a993d0044431132f9dee84e3b3d51`
+  and contains the Beta 15.63 label. No backend is active.
 
 ## 2026-08-01 targeted 1→7 second-reader veto and structural red-X repair Beta 15.62 candidate
 
