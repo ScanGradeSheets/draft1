@@ -21,8 +21,13 @@
 - Verification: focused animation tests **22/22**, complete repository tests
   **366/366**, and the pruned root-domain production build pass. Build label:
   `2026.08.01-stable-check-impact-beta-15-58`.
-- Deployment status: implementation verified locally; publication details are
-  recorded below once the final static-only smoke test completes.
+- Source commit: `7bb6f3d`. Final static-only deployment:
+  `https://d8a93999.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`. Production, immutable, local release, and
+  `/api/submissions` HTML are byte-identical at SHA-256
+  `5b2281c38351e0769ab21cb6eacceb29f2d2d66455173cda7f83cbedf8629000`,
+  confirming the exact tested Beta 15.58 build is live with no active backend.
+  Public assets are `index-BtCaH_Xy.js` and `index-QCetzWaK.css`.
 
 ## 2026-08-01 sequenced red X and stamp-impact candidate Beta 15.57
 
