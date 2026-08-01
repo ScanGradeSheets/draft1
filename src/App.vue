@@ -374,7 +374,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.01-targeted-one-seven-direct-x-beta-15-62'
+const APP_BUILD_LABEL = '2026.08.01-ios-debug-share-unified-x-beta-15-63'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices

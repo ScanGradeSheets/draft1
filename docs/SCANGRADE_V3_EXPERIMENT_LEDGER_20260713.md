@@ -649,3 +649,18 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   `617ab041.scangrade.pages.dev`, promoted to `scangrade.io`. Immutable,
   production, local, and `/api/submissions` HTML match byte-for-byte; public
   JavaScript matches the tested release and contains the Beta 15.62 label.
+# 2026-08-01 — Beta 15.63 iOS debug-export repair and unified X colour
+
+- Observation: the Beta 15.62 Debug Scan finished and displayed its result,
+  but an installed iPhone web app did not complete the synthetic anchor-file
+  download. The same scan again accepted a handwritten `7` as `1`, showing
+  that the narrowly shipped `scout 7 >= 0.99` veto did not activate for this
+  capture. No recognition threshold was changed without its saved evidence.
+- Reversible UI/runtime repair: use file-capable Web Share first; use clipboard
+  in installed-iOS fallback; retain delayed-revocation anchor download for
+  ordinary browsers; show explicit export state and provide a Copy action.
+- Rendering repair: replace seeded red hue variation with one shared
+  `#9a3a37` for both progressive SVG and settled canvas X paths.
+- Tests: `node --test tests/*.test.mjs` -> **373/373 pass**. `npm run build`
+  passes. The next evidence gate is a physical Debug Scan export of the live
+  `7`→`1` case; this candidate does not claim that recognition incident fixed.

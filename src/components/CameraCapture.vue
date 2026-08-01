@@ -416,10 +416,27 @@
           <button
             type="button"
             class="btn btn-secondary"
+            :disabled="debugExportBusy"
             @click="exportLiveOcrDebugJson"
           >
-            Download OCR debug JSON
+            {{ debugExportBusy ? 'Preparing debug file…' : 'Export OCR debug JSON' }}
           </button>
+          <button
+            type="button"
+            class="btn btn-secondary student-result-debug-copy"
+            :disabled="debugExportBusy"
+            @click="copyLiveOcrDebugJson"
+          >
+            Copy debug JSON
+          </button>
+          <p
+            v-if="debugExportStatus"
+            class="student-result-subtext debug-export-status"
+            role="status"
+            aria-live="polite"
+          >
+            {{ debugExportStatus }}
+          </p>
         </div>
         <div v-if="studentAnswerGroups.length" class="student-answer-grid">
           <div
@@ -666,6 +683,7 @@ import {
   TEACHER_GREEN_PEN_PASSES,
   TEACHER_RED_INK,
 } from '../v3/teacher-ink-style.js'
+import { copyDebugJson, exportDebugJson } from '../v3/debug-json-export.js'
 import {
   startMeasuredProgressiveStroke,
   startMeasuredProgressiveStrokeSequence,
@@ -1401,6 +1419,8 @@ const processing = ref(false)
 const ocrResult = ref(null)
 const lastProcessedTensors = ref(null)
 const lastLiveOcrDebug = ref(null)
+const debugExportBusy = ref(false)
+const debugExportStatus = ref('')
 const lastCaptureQuality = ref(null)
 const debugUploadConfig = initDebugUploadConfig()
 const debugAutoUploadState = ref(debugUploadConfig.autoUpload && debugUploadConfig.url ? 'ready' : 'idle')
@@ -4320,7 +4340,10 @@ function composeStudentAnnotatedImage(
 
       const drawX = (rect, seed) => {
         const { x, y, size } = indicatorAnchor(rect, seed)
-        const color = varyInk(TEACHER_INK.red, seed + 23, 14)
+        // Keep every X the same red. Geometry and pen passes still provide
+        // natural variation without making two wrong marks look like
+        // different ink colours.
+        const color = TEACHER_RED_INK
         const angle = jitter(seed + 131, 0.12)
         const first = transformLocalPoints(
           x,
@@ -10638,16 +10661,42 @@ async function uploadLiveOcrDebug(data, uploadReason = 'ocr-complete') {
   }
 }
 
-function exportLiveOcrDebugJson() {
+async function exportLiveOcrDebugJson() {
   const data = lastLiveOcrDebug.value
   if (!data) return
-  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.download = `scangrade-live-ocr-debug-${Date.now()}.json`
-  link.href = url
-  link.click()
-  URL.revokeObjectURL(url)
+  debugExportBusy.value = true
+  debugExportStatus.value = ''
+  try {
+    const result = await exportDebugJson(data)
+    debugExportStatus.value = result.method === 'share'
+      ? 'Share sheet opened. Save or attach the JSON file.'
+      : result.method === 'copy'
+        ? 'Debug JSON copied.'
+        : 'Debug JSON downloaded.'
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      debugExportStatus.value = 'Export cancelled.'
+    } else {
+      debugExportStatus.value = `Could not export: ${err?.message || err}. Try Copy debug JSON.`
+    }
+  } finally {
+    debugExportBusy.value = false
+  }
+}
+
+async function copyLiveOcrDebugJson() {
+  const data = lastLiveOcrDebug.value
+  if (!data) return
+  debugExportBusy.value = true
+  debugExportStatus.value = ''
+  try {
+    await copyDebugJson(data)
+    debugExportStatus.value = 'Debug JSON copied. Paste it into the Codex conversation.'
+  } catch (err) {
+    debugExportStatus.value = `Could not copy: ${err?.message || err}`
+  } finally {
+    debugExportBusy.value = false
+  }
 }
 
 const retake = () => {
@@ -11920,12 +11969,25 @@ onUnmounted(() => {
 
 .student-result-debug-actions {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   justify-content: center;
   margin: 12px 0 16px;
 }
 
 .student-result-debug-actions .btn {
   width: min(100%, 320px);
+}
+
+.student-result-debug-copy {
+  font-size: 15px;
+}
+
+.debug-export-status {
+  width: min(100%, 360px);
+  margin: 2px auto 0;
+  color: #3f4a46;
 }
 
 .ocr-result {

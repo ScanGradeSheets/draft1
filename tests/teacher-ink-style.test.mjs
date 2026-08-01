@@ -16,7 +16,7 @@ test('teacher checks and scores use the New Scan dark green and shared pen passe
 })
 
 test('incorrect marks use the approved balanced teacher red', () => {
-  assert.equal(TEACHER_RED_INK, '#862c2a')
+  assert.equal(TEACHER_RED_INK, '#9a3a37')
 })
 
 test('score reveal mask covers pen bleed without exposing neighbouring future strokes', () => {

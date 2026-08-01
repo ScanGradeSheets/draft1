@@ -1,5 +1,29 @@
 # ScanGrade Active Handoff
 
+## 2026-08-01 iOS debug export and unified red-X ink Beta 15.63 candidate
+
+- A physical iPhone Debug Scan on Beta 15.62 reached its completed result page,
+  but the installed web app silently failed when its synthetic download link
+  was tapped. This was an iOS/PWA export failure, not an OCR-processing freeze.
+  Private screenshots are under the Codex attachment path ending
+  `C57085D5-C2D6-4AB1-91F9-71D44F512F19`; do not commit them.
+- Debug export now prefers the native Web Share file sheet on compatible iOS,
+  falls back to clipboard in installed mode, retains ordinary browser download
+  elsewhere, and shows a visible success/cancel/error status. A separate
+  `Copy debug JSON` action remains available beside the export action.
+- Two wrong marks on the same page appeared as different reds because final
+  canvas X marks varied their hue by seeded question value while live SVG X
+  marks used the shared constant. Both paths now use one fixed, modestly
+  brighter burgundy `#9a3a37`; shape and pen-pressure variation remain.
+- The live `SG-G1-LW-03` C `7`→`1` incident is **not yet repaired** by Beta
+  15.62's narrow scout rule on this capture. Do not lower the threshold or add
+  a blanket `1` veto without the exported crop/candidate evidence. The next
+  physical Debug Scan should use the new Export or Copy action and attach the
+  resulting JSON for diagnosis.
+- Verification: debug-export and ink tests pass; complete suite **373/373**;
+  production build passes. Build label:
+  `2026.08.01-ios-debug-share-unified-x-beta-15-63`.
+
 ## 2026-08-01 targeted 1→7 second-reader veto and structural red-X repair Beta 15.62 candidate
 
 - A repeat physical Debug Scan of `SG-G1-LW-03` question C again accepted the
