@@ -18,8 +18,15 @@
 - Verification: focused transition tests **30/30**, complete repository tests
   **367/367**, and the pruned root-domain production build pass. Build label:
   `2026.08.01-static-completion-glow-beta-15-59`.
-- Deployment details will be recorded after the isolated static release is
-  published and smoke-tested.
+- Source commit: `2217fd0`. Isolated static-only deployment:
+  `https://257df070.scangrade.pages.dev/`; production:
+  `https://scangrade.io/`. Production, immutable, local release, and
+  `/api/submissions` HTML are byte-identical at SHA-256
+  `6b7e835f65f52c01c8063b629f3a73ec324124e728f97fb39e93e2ade0ed3c34`.
+  The public JavaScript is byte-identical to the tested release at SHA-256
+  `d0a993a00d7e1cd2f59f91ffc7d79447875033dfe84bee90386b6776dfd295a6`
+  and contains the exact Beta 15.59 label. Public assets are
+  `index-CQziMzZb.js` and `index-C000gUB3.css`; no backend is active.
 
 ## 2026-08-01 stable check endpoint and stronger stamp impact Beta 15.58
 
