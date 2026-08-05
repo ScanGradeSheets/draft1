@@ -79,6 +79,7 @@
   "dependencies": {
     "canvas": "^3.2.1",
     "jsqr": "^1.4.0",
+    "onnxjs": "0.1.8",
     "onnxruntime-web": "1.17.0",
     "vue": "^3.4.21"
   },

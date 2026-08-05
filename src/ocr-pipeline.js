@@ -1,5 +1,6 @@
 import * as ort from 'onnxruntime-web/wasm';
 import { modelUrlFromQuery, publicUrl } from './public-paths.js';
+import { createDigitInferenceSession } from './v3/digit-engine-provider.js';
 
 // Bump whenever code that turns retained tensors/probabilities into a selected
 // digit changes. Saved debug artifacts record this so two results are never
@@ -23,6 +24,18 @@ function shouldForceNoSimd() {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
   return params.get('forceNoSimd') === '1' || params.get('ortNoSimd') === '1';
+}
+
+function shouldForceWebglDigitEngine() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('forceDigitWebgl') === '1';
+}
+
+function shouldForceLegacyDigitEngine() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('forceDigitLegacy') === '1' || params.get('forceDigitOnnxjs') === '1';
 }
 
 const WASM_SIMD_SUPPORTED = isWasmSimdSupported();
@@ -64,10 +77,38 @@ const LEGACY_MNIST_MODEL_PATH = publicUrl('models/mnist-model.onnx');
 const DEFAULT_MODEL_PATH = publicUrl('models/worksheet-digit-tony-generalist-noaug-20260601.onnx');
 const DEFAULT_RIGHT_SLOT_MODEL_PATH = publicUrl('models/worksheet-digit-live-trusted-temp.onnx');
 const DEFAULT_ENSEMBLE_MODEL_PATH = publicUrl('models/worksheet-digit-generalist.onnx');
-const MODEL_CACHE_BUSTER = 'worksheet-slot-models-20260603-default-right-slot';
+const MODEL_CACHE_BUSTER = 'worksheet-slot-models-20260805-webgl-batch1';
 const KNOWN_WORKSHEET_SHA256 = 'e15751df23d9e88f4c103ff1c53f019a66a631dc4926d7091481ebdbacf518da';
 const KNOWN_RIGHT_SLOT_SHA256 = '582ddb904ec2958a4f8283c3e02f5f50daaa24940243f402f85615a58b77db62';
 const KNOWN_ENSEMBLE_SHA256 = '50e82b5d5569198f326c4c4d127d668b1c4101e5e2aaacf71d07f85b4d193282';
+const WEBGL_MODEL_COMPANIONS = new Map([
+  [DEFAULT_MODEL_PATH, {
+    path: publicUrl('models/worksheet-digit-tony-generalist-noaug-20260601-batch1-webgl.onnx'),
+    sha256: '023f950e9c695d49ce572beae2d9a4c56da9b26f94b5b25d618aa73a42b75c8a'
+  }],
+  [DEFAULT_RIGHT_SLOT_MODEL_PATH, {
+    path: publicUrl('models/worksheet-digit-live-trusted-temp-batch1-webgl.onnx'),
+    sha256: 'aad6bb469388bf2d7adc1fa6a330bf80d20c1d6137e94986be0f3894d6e13bd5'
+  }],
+  [DEFAULT_ENSEMBLE_MODEL_PATH, {
+    path: publicUrl('models/worksheet-digit-generalist-batch1-webgl.onnx'),
+    sha256: 'ef634507867f2193efc7f6fb4248eb430954ecca85253cff457890ab64d5b640'
+  }]
+]);
+const LEGACY_ONNXJS_MODEL_COMPANIONS = new Map([
+  [DEFAULT_MODEL_PATH, {
+    path: publicUrl('models/worksheet-digit-tony-generalist-noaug-20260601-opset9-onnxjs.onnx'),
+    sha256: '52508ce8f675dc9ac75a710150b0420213440cdf95c204ac4914041e72674376'
+  }],
+  [DEFAULT_RIGHT_SLOT_MODEL_PATH, {
+    path: publicUrl('models/worksheet-digit-live-trusted-temp-opset9-onnxjs.onnx'),
+    sha256: 'c2283445cf77fb730b3b616c6481819b655b9d799e2ff03e5808a118c7c881b5'
+  }],
+  [DEFAULT_ENSEMBLE_MODEL_PATH, {
+    path: publicUrl('models/worksheet-digit-generalist-opset9-onnxjs.onnx'),
+    sha256: '282bb2e9533711141a31ed807fd3014f182562a1e00e6a543e7b0d15c9645b4a'
+  }]
+]);
 const PRIMARY_MODEL_WEIGHT = 0.75;
 const ENSEMBLE_MODEL_WEIGHT = 0.25;
 const MNIST_DIGIT_SIZE = 28;
@@ -76,6 +117,7 @@ const ROBUST_RECOGNITION_CONFIDENCE_THRESHOLD = 0.86;
 const ROBUST_RECOGNITION_MARGIN_THRESHOLD = 0.18;
 const CLEAN_FIVE_SIX_VARIANT_INDEXES = [6, 7, 8, 9, 10, 11, 21, 22, 23, 24];
 let modelRuntimeInfo = null;
+const digitSessionRuntime = new WeakMap();
 
 async function sha256Hex(buffer) {
   if (typeof crypto === 'undefined' || !crypto.subtle) return null;
@@ -548,7 +590,8 @@ export async function initDigitModel() {
         sha256Short: aux.sha256 ? aux.sha256.slice(0, 12) : null,
         knownSha256: KNOWN_ENSEMBLE_SHA256,
         matchesKnownModel: !!aux.sha256 && aux.sha256 === KNOWN_ENSEMBLE_SHA256,
-        weight: ENSEMBLE_MODEL_WEIGHT
+        weight: ENSEMBLE_MODEL_WEIGHT,
+        executionProvider: aux.executionProvider
       };
       if (aux.sha256 && aux.sha256 !== KNOWN_ENSEMBLE_SHA256) {
         digitSession = null;
@@ -608,6 +651,11 @@ export async function initDigitModel() {
       contractSummary: `model expects type=${inputType}, shape=${asJson(inputShape)}; app feeds float32 NCHW [1,1,28,28] in 0..1`,
       runtime: getOrtRuntimeConfig()
     };
+    modelRuntimeInfo.runtime.executionProvider = primary.executionProvider;
+    modelRuntimeInfo.runtime.wasmFallbackError = primary.wasmFallbackError || null;
+    modelRuntimeInfo.runtime.webglFallbackError = primary.webglFallbackError || null;
+    modelRuntimeInfo.runtime.legacyFallbackError = primary.legacyFallbackError || null;
+    modelRuntimeInfo.runtime.legacyAsset = primary.legacyAsset || null;
     if (modelPath === DEFAULT_MODEL_PATH && primary.sha256 && primary.sha256 !== KNOWN_WORKSHEET_SHA256) {
       digitSession = null;
       ensembleDigitSession = null;
@@ -688,6 +736,7 @@ async function getRightSlotDigitSession() {
       knownSha256: KNOWN_RIGHT_SLOT_SHA256,
       matchesKnownModel: !!loaded.sha256 && loaded.sha256 === KNOWN_RIGHT_SLOT_SHA256,
       loaded: true,
+      executionProvider: loaded.executionProvider,
       routing: 'digitIndex === 1'
     };
   }
@@ -702,15 +751,86 @@ async function loadDigitSession(modelPath) {
   }
   const buffer = await response.arrayBuffer();
   const sha256 = await sha256Hex(buffer);
-  const session = await ort.InferenceSession.create(buffer, {
-    executionProviders: ['wasm'],
+  const webglCompanion = WEBGL_MODEL_COMPANIONS.get(modelPath) || null;
+  const legacyCompanion = LEGACY_ONNXJS_MODEL_COMPANIONS.get(modelPath) || null;
+  let loadedWebglAsset = null;
+  let loadedLegacyAsset = null;
+  const created = await createDigitInferenceSession({
+    buffer,
+    wasmRuntime: ort,
+    loadWebglRuntime: () => import('onnxruntime-web/webgl'),
+    loadWebglBuffer: webglCompanion
+      ? async () => {
+          const fallbackUrl = `${webglCompanion.path}?v=${encodeURIComponent(MODEL_CACHE_BUSTER)}`;
+          const fallbackResponse = await fetch(fallbackUrl, { cache: 'no-store' });
+          if (!fallbackResponse.ok) {
+            throw new Error(`WebGL model fetch failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`);
+          }
+          const fallbackBuffer = await fallbackResponse.arrayBuffer();
+          const fallbackSha256 = await sha256Hex(fallbackBuffer);
+          if (fallbackSha256 && fallbackSha256 !== webglCompanion.sha256) {
+            throw new Error(
+              `WebGL model SHA ${fallbackSha256.slice(0, 12)} does not match expected ` +
+              `${webglCompanion.sha256.slice(0, 12)}`
+            );
+          }
+          loadedWebglAsset = {
+            modelUrl: fallbackUrl,
+            fetchedUrl: fallbackResponse.url || fallbackUrl,
+            byteLength: fallbackBuffer.byteLength,
+            sha256: fallbackSha256
+          };
+          return fallbackBuffer;
+        }
+      : null,
+    loadLegacyRuntime: legacyCompanion
+      ? async () => {
+          const onnxModule = await import('onnxjs');
+          const { createOnnxJsRuntime } = await import('./v3/legacy-onnxjs-runtime.js');
+          return createOnnxJsRuntime(onnxModule);
+        }
+      : null,
+    loadLegacyBuffer: legacyCompanion
+      ? async () => {
+          const fallbackUrl = `${legacyCompanion.path}?v=${encodeURIComponent(MODEL_CACHE_BUSTER)}`;
+          const fallbackResponse = await fetch(fallbackUrl, { cache: 'no-store' });
+          if (!fallbackResponse.ok) {
+            throw new Error(`ONNX.js model fetch failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`);
+          }
+          const fallbackBuffer = await fallbackResponse.arrayBuffer();
+          const fallbackSha256 = await sha256Hex(fallbackBuffer);
+          if (fallbackSha256 && fallbackSha256 !== legacyCompanion.sha256) {
+            throw new Error(
+              `ONNX.js model SHA ${fallbackSha256.slice(0, 12)} does not match expected ` +
+              `${legacyCompanion.sha256.slice(0, 12)}`
+            );
+          }
+          loadedLegacyAsset = {
+            modelUrl: fallbackUrl,
+            fetchedUrl: fallbackResponse.url || fallbackUrl,
+            byteLength: fallbackBuffer.byteLength,
+            sha256: fallbackSha256
+          };
+          return fallbackBuffer;
+        }
+      : null,
+    forceWebgl: shouldForceWebglDigitEngine(),
+    forceLegacy: shouldForceLegacyDigitEngine(),
   });
+  const session = created.session;
+  digitSessionRuntime.set(session, created.runtime);
   return {
     session,
     modelUrl,
     fetchedUrl: response.url || modelUrl,
     byteLength: buffer.byteLength,
-    sha256
+    sha256,
+    executionProvider: created.provider,
+    wasmFallbackError: created.wasmError?.message || null,
+    webglFallbackError: created.webglError?.message || null,
+    legacyFallbackError: created.legacyError?.message || null,
+    webglAsset: loadedWebglAsset,
+    legacyAsset: loadedLegacyAsset
   };
 }
 
@@ -1785,6 +1905,21 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
     postSelectionRescue = true;
   };
 
+  const connectedEdge = findVariant(variantResults, 'connected-edge-strokes');
+  if (
+    result.digit === 1 &&
+    strict?.result?.digit === 1 &&
+    connectedEdge?.result?.digit === 7 &&
+    (connectedEdge.result.confidence || 0) >= 0.97 &&
+    digitTopGap(connectedEdge.result) >= 0.90
+  ) {
+    applyRescue(
+      connectedEdge.result.probs,
+      7,
+      'connected-edge-seven-preservation-rescue'
+    );
+  }
+
   const strictShape = digitTensorShapeFeatures(strict?.data);
   const shapeRescue = (() => {
     if (!strictShape) return null;
@@ -2255,7 +2390,8 @@ async function runDigitDataAsProbs(data, options = {}) {
   let usedRightSlotSession = false;
   if (rightSlotSession) {
     try {
-      const rightSlotTensor = new ort.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
+      const rightSlotRuntime = digitSessionRuntime.get(rightSlotSession) || ort;
+      const rightSlotTensor = new rightSlotRuntime.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
       usedRightSlotSession = true;
       return await runDigitSessionAsProbs(rightSlotSession, rightSlotTensor);
     } catch (err) {
@@ -2263,10 +2399,12 @@ async function runDigitDataAsProbs(data, options = {}) {
       disableRightSlotModel(getRightSlotModelPathFromUrl(), err);
     }
   }
-  const tensor = new ort.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
+  const primaryRuntime = digitSessionRuntime.get(digitSession) || ort;
+  const tensor = new primaryRuntime.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
   const probs = await runDigitSessionAsProbs(digitSession, tensor);
   if (!usedRightSlotSession && ensembleDigitSession) {
-    const ensembleTensor = new ort.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
+    const ensembleRuntime = digitSessionRuntime.get(ensembleDigitSession) || ort;
+    const ensembleTensor = new ensembleRuntime.Tensor('float32', new Float32Array(data), [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]);
     const auxProbs = await runDigitSessionAsProbs(ensembleDigitSession, ensembleTensor);
     for (let i = 0; i < probs.length; i++) {
       probs[i] = probs[i] * PRIMARY_MODEL_WEIGHT + auxProbs[i] * ENSEMBLE_MODEL_WEIGHT;

@@ -1,5 +1,180 @@
 # ScanGrade V3 experiment ledger — 2026-07-13
 
+## 2026-08-02 — Beta 15.81 corrected camera-guidance color roles
+
+- UI-only correction after physical clarification: hide the redundant disabled
+  camera-loading button below the viewfinder, keep the required manual camera
+  fallback in navigation blue, restore in-view warming/search guidance to dark
+  neutral, and preserve the green ready state. Capture and OCR are frozen.
+- Verification: focused 37/37, full 412/412, and pruned build pass. Published
+  static-only at `be1383b8.scangrade.pages.dev` and `scangrade.io`; production,
+  immutable, and `/api/submissions` resolve to the same app asset set.
+
+## 2026-08-02 — Beta 15.80 correction typography and blue token
+
+- UI-rendering-only refinement: manual correction ink is lighter (500), lifted
+  within its tape, and less vertically jittered. Navigation, camera-startup,
+  and revealed-reading blue are unified at `#245aa4` through one inherited
+  token. Recognition and capture logic are frozen.
+- Verification: focused 31/31, full 412/412, and deployment-pruned build pass.
+  Published static-only at `7fe604e2.scangrade.pages.dev` and
+  `scangrade.io`; production, immutable, and `/api/submissions` resolve to the
+  same app asset set.
+
+## 2026-08-02 — Beta 15.79 persistent back navigation
+
+- UI-only refinement: keep the back control visible for every bottom-bar
+  state, center the stage word independently behind it, and reduce the larger
+  chevrons' source stroke to 1.7 for a closer perceptual match to the back
+  arrow. No recognition or capture behavior changed.
+- Verification: focused 30/30, full 411/411, and pruned build pass. Published
+  static-only at `bea51095.scangrade.pages.dev` and `scangrade.io`.
+
+## 2026-08-02 — Beta 15.78 balanced navigation ink
+
+- UI-only refinement: the larger rendered up/down chevrons now use a 1.9 SVG
+  stroke while the smaller back arrow remains 2.15, equalizing their apparent
+  on-screen weight. Geometry, placement, and behavior are unchanged.
+- Verification: focused 30/30, full 411/411, pruned build pass. Static-only
+  deployment: `950c49ed.scangrade.pages.dev`; production: `scangrade.io`.
+
+## 2026-08-02 — Beta 15.77 correction target and replacement cleanup
+
+- Reproduced a UI/state mismatch in Beta 15.76: a teacher could tap a mapped
+  right digit, see the right-slot focus rectangle, then have whole-answer
+  routing replace the selected slot before the keypad value was applied.
+  Physical slot selection now wins over inferred whole-answer behavior.
+- Expanded correction-transition cleanup using the exact deterministic
+  teacher-indicator footprint. This prevents edge pixels from the prior red X
+  surviving while a corrected green check is drawn.
+- Added focused tests for right-slot preservation and generated-X containment.
+  OCR, grading, confidence, crop, capture, and homography behavior are frozen.
+- Result: focused tests 32/32, full suite 411/411, and pruned production build
+  pass. Published from an isolated static directory at
+  `887b30de.scangrade.pages.dev` and `scangrade.io`; root and
+  `/api/submissions` are byte-identical static app shells. The first production
+  upload (`a1512e18`) was immediately superseded after a dormant repo-local
+  Function was detected.
+
+## 2026-08-02 — Beta 15.76 minimal navigation and explicit all-reading edits
+
+- Interface-only hypothesis: the completed-sheet bar can be made quieter and
+  more predictable without changing OCR or the yellow-review workflow.
+- Implemented one shared line treatment for back/up/down controls, centered the
+  reading toggle at the exact bar midpoint, and made the chevrons mirrored so
+  their superimposed geometry is a diamond. Explicit grid columns preserve the
+  layout when private Debug Export is present.
+- Separated editability from uncertainty: hidden-reading mode exposes only
+  yellow or teacher-corrected regions; revealed-reading mode exposes every
+  mapped answer region. The automatic sequence still visits only yellows.
+- Verification: focused 28/28, full 409/409, production build pass. Public
+  static-only deployment: `f0c272b6.scangrade.pages.dev`; production:
+  `scangrade.io`. Legacy orange-iPad camera/photo-fallback verification remains
+  the immediate physical gate.
+
+## 2026-08-01 — Beta 15.71 atomic completion handoff
+
+- Direct Beta 15.70 phone and black-iPad tests both recovered the prospective
+  handwritten `7` automatically. The independent handwritten `9` remained a
+  mathematically wrong red-X result, and H remained a legitimate manual review
+  for `6`.
+- On the black iPad, resolving the final yellow briefly removed every settled
+  mark before the final annotated bitmap appeared. This is a rendering handoff
+  defect, not a recognition-policy change.
+- Repair: preload/decode the final annotated worksheet, retain it as the
+  displayed image source, and only then retire live progressive layers. The
+  completion glow stays visible until the exact state change that also reveals
+  the bottom controls.
+- The black iPad's first viewfinder startup was laggy at 5% battery and its
+  second scan was smooth. No capture thresholds changed without a reproducible
+  performance trace.
+- Verification: 385/385 tests and pruned build pass. Preview:
+  `331216c8.scangrade.pages.dev` / `atomic-completion-beta.scangrade.pages.dev`.
+  Tony authorized production promotion; direct deployment
+  `95c01759.scangrade.pages.dev` now serves `scangrade.io`, and custom-domain
+  asset inspection confirms Beta 15.71. Physical confirmation of the atomic
+  transition remains the next observation gate.
+
+## 2026-08-01 — Beta 15.70 physical-device records and correction-transition repair
+
+- Physical screenshots from a current iPhone, a roughly four-to-five-year-old
+  iPad, and a roughly nine-year-old iPad all showed public Beta 15.67. They do
+  not validate the Beta 15.69 connected-edge recognition candidate.
+- The iPhone's authenticated debug auto-save produced six incremental bundles
+  for one session. Capture quality was strong and stable. C's damaged `7` was
+  safely yellow, not confidently accepted as `1`; G was correctly transcribed
+  as the student's written `9` and graded mathematically wrong. The saved
+  correction sequence was C→7, E→5, H→9 (teacher entry mistake), then H→6.
+- The sequence reproduced a rendering defect: a repeated correction retained
+  the old question mark and old score in the animation base until the final
+  bitmap replaced it, briefly displaying old and new ink simultaneously.
+- Repair: restore the changed question's complete annotation region and the
+  score safety region from the clean registered worksheet before copying the
+  corrected black answer and drawing the new mark/score. All unrelated settled
+  marks remain visible.
+- The middle-aged iPad completed grading but had a laggy viewfinder; no device
+  timing bundle exists, so do not tune capture from this observation alone.
+  The nine-year-old iPad could not open live camera capture and remains outside
+  the demonstrated compatibility floor.
+- Verification: 384/384 tests and pruned build pass. Preview-only candidate:
+  `0a3c757d.scangrade.pages.dev`; production remains Beta 15.67 pending direct
+  preview tests on the iPhone and charged black iPad.
+
+## 2026-08-01 — Beta 15.69 connected-edge handwriting preservation
+
+- Prospective evidence proved that the camera and raw answer crop retained a
+  handwritten `7`'s top bar, while printed-border cleanup erased it before the
+  28x28 classifier saw the digit.
+- Candidate: protect only a diagonally descending handwriting component that
+  is connected to a horizontal box edge; retain normal removal of the rest of
+  the printed border. Produce the view only for ordinary undivided boxes and
+  only when it differs from strict cleanup. A broad divided-slot version was
+  rejected after it preserved centre guides as false digit evidence.
+- Selection: strict `1` versus preserved `7` requires preserved confidence at
+  least `0.97` and top-two gap at least `0.90`. It does not use the answer key
+  or mathematical correctness.
+- Reproducible production-scope crop replay: 50 pages, 600 digit crops, 44
+  ordinary-box crops with protected pixels, and three changed standalone
+  predictions. All three changed toward
+  handwritten truth (`9->5`, `0->6`, `1->7`); zero changed crop regressed.
+- Paired 345-answer browser replay changed four decisions, all beneficial,
+  correcting two confident errors and promoting two correct yellows, with no
+  packet/layout regression. Absolute scores from that stripped diagnostic lane
+  are not product metrics because the stronger browser-local reader was
+  intentionally disabled for isolation.
+- Prospective current-code WebKit recovered the photographed `7` as `7` at
+  `0.997766`; the page's separate `6` versus handwritten `5` incident remains
+  unresolved. Complete suite 383/383 and production build pass.
+- Decision: advance as Beta 15.69 for isolated physical iPhone/old-iPad
+  verification at `connected-edge-beta15-69.scangrade.pages.dev`. Static
+  preview smoke passes and no submissions backend is active. Keep ScanGrade.io
+  on Beta 15.67 until that gate passes.
+
+## 2026-08-01 — Beta 15.68 prospective 7→1 threshold repair (preview gate)
+
+- Evidence: physically auto-saved Beta 15.67 bundle
+  `2026-08-01_16-54-09-635-sg-g1-lw-03-sub-1digit-5901ddb8`.
+- Handwriting finding: question C is visually a `7`; the raw crop retains the
+  top stroke, while the production 28×28 input removes it and reads `1` at
+  `0.885628`. The independent whole-slot scout reads `7` at `0.9866875`.
+- Fidelity experiments: strict, gentle, no-rule-cleanup,
+  no-component-cleanup, and targeted edge-stroke preservation all still read
+  `1`. The edge-preservation candidate increased `1` confidence to `0.919079`,
+  so it was rejected and removed rather than generalized from one sample.
+- Candidate: lower only the key-blind, one-physical-slot `1`→scout-`7` review
+  threshold from `0.99` to `0.985`. The policy preserves the browser read and
+  may only turn it yellow; it never auto-corrects or receives answer-key/truth
+  fields.
+- Threshold frontier: `0.985` catches the prospective incident and changes no
+  decision in the frozen 385-answer replay. Primary 345: 315 automatic,
+  91.3% coverage, zero known confident errors, 30 yellow. Historical 40: no
+  new error or coverage change; three unrelated legacy errors remain.
+- Software gates: targeted tests 14/14; complete suite 383/383; production
+  build passes; immutable preview smoke test confirms Beta 15.68 and policy
+  `accepted-answer-safety-shadow-3`.
+- Status: **preview only**, pending current-iPhone and five-year-old-iPad
+  physical replay. Do not promote to ScanGrade.io until both pass.
+
 All recognition experiments were key-blind. Handwritten truth was used only for scoring and training labels, never replaced by the mathematical answer key. Historical splits are R&D evidence, not a final generalization claim.
 
 | Experiment | Result | Decision |
@@ -724,3 +899,271 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   immutable, local, and static `/api/submissions` HTML match byte-for-byte;
   public JavaScript matches and contains the Beta 15.65.1 label. No backend is
   active on Cloudflare.
+
+# 2026-08-01 — Beta 15.72 capture-first guidance and workload isolation
+
+- Evidence: current-phone screenshots showed a green accepted frame and “Hold
+  steady” simultaneously with a stale red camera-readiness warning; earlier
+  older-iPad testing showed the first live viewfinder lagging while subsequent
+  scans were smoother.
+- Diagnosis: the readiness watcher did not depend on the error value, allowing
+  a late transient warning to survive recovery. Live-camera work also included
+  browser OCR/scout model initialization, creating avoidable contention on
+  older WebKit.
+- Candidate: map detector detail to four user actions—“Starting camera…”,
+  “Find full page”, “Hold steady”, “Capturing…”—and tolerate a single marker
+  miss before changing guidance. Hide only transient readiness warnings while
+  a stream is active or recovered. Move recognition model initialization to
+  the existing post-capture OCR path.
+- Safety: no capture acceptance threshold changed. Four-corner geometry,
+  full-resolution focus >= 560, clearest-frame selection, QR decoding, page
+  appearance, perspective, motion, and final-quality gates remain frozen.
+- Reproducibility: added policy tests for every public guidance state,
+  readiness-warning suppression, genuine-error visibility, and a source
+  contract that prevents model warmup from returning to `startCamera` while
+  confirming OCR still initializes after capture.
+- Result: complete suite **391/391** before the final wording-only adjustment;
+  all focused tests pass after it; the pruned build passes. Isolated preview:
+  `https://capture-flow-beta15-72.scangrade.pages.dev/`. After Tony approved
+  promotion, production deployment `30207d63.scangrade.pages.dev` went live at
+  `scangrade.io`. Production serves `index-Da-zONVu.js`; downloaded asset
+  inspection confirms the Beta 15.72 label and simplified capture guidance.
+
+# 2026-08-01 — Beta 15.73 trigger-frame latch after failed physical capture
+
+- Physical result: Beta 15.72 regressed clarity. A current-iPhone number-bond
+  scan cycled from “Find full page” into “Capturing”/“Hold steady” and back,
+  taking roughly 30 seconds. The teacher reasonably moved after the capture
+  cue, and the final marks were visibly displaced.
+- Reproduced code path: automatic capture opened from a preliminary frame, but
+  `captureStudentFrameCandidate` waited for the next drawable frame before it
+  created any full-resolution candidate. Thus the UI could announce capture
+  before evidence was preserved and later reject every moved burst frame.
+- Repair: copy the full-resolution trigger synchronously at the start of
+  `doCapture`, score it as burst candidate zero, and retain the best of it and
+  later frames. The UI continues “Hold steady” until a candidate clears every
+  final gate. Guidance once again identifies the failed requirement rather
+  than collapsing marker, distance, centering, angle, and QR failures into
+  “Find full page”.
+- Safety: no capture threshold changed. Final focus >= 560, four markers, QR,
+  appearance, perspective, motion, and burst selection are frozen. Source
+  contracts verify trigger preservation occurs before the capture announcement
+  and that candidate zero does not wait for another frame.
+- Verification: focused capture/readiness tests **20/20**, complete suite
+  **394/394**, pruned build pass. Isolated deployment
+  `c24bcb2b.scangrade.pages.dev` / `trigger-frame-latched-beta15.scangrade.pages.dev`
+  serves byte-identical `index-Bh2-beWI.js` at SHA-256
+  `da16250ffb7ddcf9049d20547a4f02b838d4a3d8a95244c98cad44e6cf091134`.
+  Production remains Beta 15.72 pending physical verification.
+- Annotation finding: the latest failed number-bond capture is not present in
+  private debug evidence. Screenshots alone cannot safely identify whether the
+  displacement originated in chosen-frame registration, page projection, or
+  slot geometry. Require one exact candidate Debug Scan before any homography
+  or annotation patch.
+
+# 2026-08-01 — Beta 15.74 marker-scale registration repair
+
+- Hypothesis: the visible number-bond annotation displacement was upstream page
+  registration failure, not merely CSS scaling or decorative highlight jitter.
+- Reproduction: `scripts/audit_saved_marker_registration.mjs` replayed the
+  saved 2026-07-17 number-bond capture through the current detector. The
+  corner-window fallback selected a 7 x 12 px artifact at `(1331, 30)` as the
+  top-right marker; genuine markers were approximately 70 px wide/high.
+- Isolated repair: retain contour dimensions and require the four corner-window
+  anchors to have plausible mutual marker scale before accepting their page
+  quad. Do not change any final capture threshold.
+- Exact-page result: the false set is rejected; the detector selects the real
+  top-right marker near `(1251.75, 225.76)` and produces a visibly straight
+  warp.
+- Corpus result: `scripts/audit_saved_marker_corpus.mjs` detects **21/21** saved
+  number-bond pages and safely rejects tiny full-frame artifacts on **11**.
+- Regression result: direct tests reproduce the false 7 x 12 marker, accept
+  realistic perspective variation, fail closed without dimensions, and prove
+  that the valid trigger frame remains selected when every later burst frame
+  is invalidated by movement. Full suite **401/401** and production-pruned Vite
+  build pass.
+- Diagnostics: source annotation debug now records anchors, transformed crop
+  rectangles, centre deltas, and size ratios for future physical scans.
+- Physical result: Tony ran repeated current-phone Debug Scans on row and
+  number-bond pages. Capture felt materially easier and the severe false-marker
+  registration failure did not recur. A brief `Show all 4 squares` state with
+  four visible markers and one slightly displaced highlight remained; retain
+  these as measured follow-up defects rather than reopening the capture
+  thresholds before release.
+- Decision: pass the reversible public release gate. Tony explicitly approved
+  promotion. Exact production deployment:
+  `https://7f151a24.scangrade.pages.dev/`, live at `https://scangrade.io/`.
+  Production HTML and JavaScript are byte-identical to the physically tested
+  isolated candidate (`https://910ca555.scangrade.pages.dev/`): HTML SHA-256
+  `6b4296541a4c5be7cb033d0f0143f9048d72dc12b414de7b914cbf4b7e538d30`,
+  JavaScript SHA-256
+  `924658e90944957c363d6eb5660084624c8d219ac6876c62b4d60027bbb09be3`.
+  The production `/api/submissions` response is the same static HTML, proving
+  no dormant Pages Function or private-computer dependency shipped. Rollback:
+  Beta 15.72 at `https://30207d63.scangrade.pages.dev/`.
+- Evidence limitation: the newest reported auto-saved Debug Scans were not in
+  the private archive when checked. Do not claim their structured telemetry was
+  audited; diagnose the upload path separately while retaining the supplied
+  screenshots and physical acceptance notes.
+
+# 2026-08-04 — Beta 15.84 legacy-iPad physical review repair
+
+- Physical Beta 15.83 reproduction: the orange iPad clipped the bottom bar,
+  took more than 20 seconds, marked all six dot-collection answers yellow,
+  briefly hid completed checks during each new correction, and repeatedly
+  reopened the final `19` correction.
+- Root causes isolated with failing regressions before implementation:
+  (1) the legacy viewport reserved too little Safari chrome; (2) the known-page
+  fallback compared twelve derived digit halves against six physical answer
+  frames and therefore rejected a valid registration; (3) the corrected result
+  was published one render before the stable animation base; and (4) the
+  question fallback was not explicitly cleared after every physical slot had
+  been teacher-confirmed.
+- Repair is deliberately narrow. Shared-frame fallback requires exact known
+  layout/title evidence, complete logical mappings, finite geometry, a common
+  explicit parent frame within each question group, and an independently
+  trusted member. It does not consult the answer key or change recognition,
+  confidence, crops, homography, or capture-quality thresholds.
+- Verification: focused **36/36** and full **423/423** tests pass; production
+  Vite build passes. Physical orange-iPad verification is still required. The
+  long first-pass runtime remains an observed performance issue, not a solved
+  result.
+- Production release: exact pruned static bytes deployed at
+  `https://091af5d6.scangrade.pages.dev/` and promoted to `scangrade.io` via
+  production branch `autobuild/safe-20260223`. Smoke test verified bundle
+  `assets/index-C5iIgarz.js`, the exact Beta 15.84 label, and a byte-identical
+  SPA response at `/api/submissions` (no grading backend attached).
+
+# 2026-08-02 — Beta 15.75 old-iPad camera startup recovery
+
+- Question: can the approximately nine-year-old orange iPad regain a usable
+  capture path without weakening image-quality gates or changing OCR?
+- Historical evidence: older ScanGrade builds did complete capture on an old
+  iPad after slow warmup, while the recent Beta 15.67 orange-iPad screenshot
+  showed live camera startup failure. The exact device/API exception was not
+  captured, so this is a compatibility ladder followed by a physical gate, not
+  a claim that a single historical root cause has been proven.
+- Defect found: the component computed a student-mode file/photo recovery path
+  after camera failure, while its template hid the control whenever
+  `studentMode` was true.
+- Candidate: ordered high-resolution rear, relaxed rear, default camera, and
+  old prefixed-Safari requests; 12-second first-frame allowance; a rear-photo
+  fallback shown only after genuine live-camera failure. No OCR, homography,
+  marker, perspective, focus, QR, or final-quality threshold changed.
+- Verification: new camera-startup tests **5/5**; full repository **406/406**;
+  deploy-pruned Vite build pass; exact candidate label verified in the live
+  bundle. Static-only physical-test deployment:
+  `https://25e05bbf.scangrade.pages.dev/`. An initial static candidate at
+  `dbac937f` was superseded before physical test after removing
+  `Array.prototype.at`, which is absent on some old Safari versions.
+  Production remains Beta 15.74.
+- Decision gate: live camera or the photo fallback must complete one orange-iPad
+  worksheet, and the current phone must retain its normal live-camera path,
+  before promotion.
+
+# 2026-08-02 — Beta 15.82 teacher-confirmed required blank
+
+- Reproduction: on place-value question A (`3 tens + 4`), the student response
+  occupied two physical slots as `[7, blank]`. The browser accepted `7` and
+  showed the required blank yellow. Pressing `_` correctly stored a
+  teacher-confirmed blank but the question-level review policy ignored that
+  confirmation, suppressed the incorrect mark, and later revisited the group.
+- Root cause: `groupHasRequiredSlotReview` exempted a group only when every
+  physical slot had been manually corrected. It did not exempt an individual
+  manually confirmed blank while preserving a sibling automatic digit.
+- Isolated repair: required-slot resolution now treats each
+  `manualCorrected === true` slot as resolved. `[7, confirmed blank]` becomes
+  the transcribed answer `7`, which is then graded normally against `34` and
+  receives an incorrect result. No recognition candidate, confidence rule,
+  crop, key-blind boundary, or optional-slot policy changed.
+- Tests: exact regression plus unconfirmed-required-blank and optional-blank
+  controls; focused suite **17/17**; complete suite **415/415**; production
+  build pass.
+- Deployment: static-only immutable release
+  `https://9673b871.scangrade.pages.dev/`, promoted to `scangrade.io` after
+  explicit custom-domain cache revalidation. Public JavaScript contains the
+  exact Beta 15.82 label and `/api/submissions` remains the byte-identical SPA
+  fallback rather than a home-computer or cloud grading backend.
+# 2026-08-04 — Beta 15.85 legacy-iPad review-state repair
+
+- Physical Beta 15.84 testing on the orange iPad reproduced two failures even
+  though the earlier narrow fix passed: an already completed check could flash
+  off during the next correction, and the final two-slot `19` returned to
+  yellow after both slots were manually confirmed.
+- Cause: question-level review and answer-group review were rebuilt separately;
+  clearing only the former left a stale group able to reopen the queue. The new
+  reconciler updates both from teacher-confirmed physical slots without using
+  mathematical correctness as handwriting truth.
+- Old Safari frame transition is now gated on decoding and painting the stable
+  correction-animation base before publishing the new result.
+- Exact six-answer replay (`5, 8, 12, 13, 16, 19`) and partial-two-slot control
+  pass. Focused suite **28/28** and complete suite **425/425** pass.
+- Separate finding: iOS 12.5.7 cannot start the ONNX/WASM recognition runtime,
+  so all-yellow is the intended review-only fallback on that device. Existing
+  pure-JavaScript model evidence is too weak to authorize automatic grading.
+  Do not loosen thresholds or claim automatic OCR support on that iPad.
+- Production build passed and the exact pruned static bytes were published at
+  `https://06688541.scangrade.pages.dev/` and `https://scangrade.io/` on the
+  production branch `autobuild/safe-20260223`. Public smoke verified bundle
+  `assets/index-DJdtT4Tf.js` contains the exact Beta 15.85 label.
+
+# 2026-08-05 — Beta 15.86 legacy-iPad WebGL local fallback
+
+- Physical Beta 15.85 result: prior-check flashing was repaired, but all six
+  answers remained yellow, final `19` still reopened, and the bottom bar was
+  clipped. The old device's ONNX/WASM initialization failure was confirmed as
+  the blanket-yellow trigger.
+- Candidate: retain the frozen recognition and confidence policy, attempt the
+  normal local WASM runtime first, then load browser-local WebGL only if WASM
+  fails. The fallback uses fixed-batch-one companions with identical learned
+  weights. If neither local engine works, preserve review-only all-yellow
+  behavior. No answer-key evidence enters recognition.
+- Model-integrity and numerical checks: companion models differ from originals
+  only in batch contract; SHA-256 values are recorded in the active handoff.
+  Chromium software-WebGL versus WASM on three model paths and 36
+  deterministic inputs produced zero top-one changes and maximum probability
+  delta below `6e-7`.
+- Related narrow repairs: publish a settled manual-correction state before
+  awaiting redraw so the final `19` cannot reopen; reserve 148 px for legacy
+  Safari's bottom chrome. Exact final-question and viewport regressions pass.
+- Verification: focused **23/23**, full repository **433/433**, and pruned
+  production build pass. Static release deployed to
+  `https://9ba7100d.scangrade.pages.dev/` and `https://scangrade.io/`; public
+  JavaScript SHA-256 is
+  `970febac2af1a49b4b7e09b1d3f38f52c557ede1b29b1b23d9e0b184e58938c6`.
+  All WebGL model assets return 200, and `/api/submissions` is still the static
+  shell rather than a grading backend.
+- Status: technically verified, physically unaccepted. The next decisive test
+  is one orange-iPad Safari scan confirming the visible bottom bar, restored
+  automatic reads, and a final `19` that settles. Do not call old-iPad support
+  complete until that test passes.
+# 2026-08-05 — Beta 15.88 legacy-iPad ONNX.js fallback and correction transaction
+
+- Hypothesis: the orange iPad's blanket-yellow result is a runtime-compatibility
+  failure, not evidence that the handwriting model is unsafe. Preserve the
+  frozen recognition/confidence policy and add a legacy-only local path rather
+  than weakening thresholds or consulting the answer key.
+- Fallback order implemented and tested: WASM, ORT WebGL, ONNX.js WebGL using
+  a companion model with opset 9, then the existing conservative yellow review
+  fallback. The adapter normalizes ONNX.js's Tensor/Map API to the pipeline's
+  `InferenceSession` surface.
+- Three companion models were generated from the production models by changing
+  only the opset declaration (13 -> 9). SHA-256 values are recorded in the
+  active handoff and checked by `tests/legacy-onnxjs-models.test.mjs`.
+- Deterministic parity: 16 identical tensors, zero argmax mismatches;
+  maximum absolute difference about `0.0000041`, mean absolute difference
+  about `0.0000009`. This is a numerical compatibility check, not a classroom
+  accuracy claim.
+- Correction safety: the existing authoritative physical-slot transaction was
+  replayed for `5, 8, 12, 13, 16, 19`; the final `19` remains unresolved after
+  the first slot and settles only after both slots are teacher-confirmed.
+  Late OCR, image, and animation work cannot reopen the settled answer.
+- Verification: focused compatibility/correction tests **50/50**, complete
+  repository tests **454/454**, production-pruned Vite build pass, and clean
+  diff check. No public claim is made until the orange iPad physically loads
+  the companion runtime and completes the final-answer test.
+- Decision gate: perform one Safari test on the orange iPad using the public
+  build. Record provider/runtime, model-load result, yellow count, review
+  completion, final two-slot behavior, bottom-bar visibility, and elapsed time.
+  If ONNX.js WebGL fails, retain review-only behavior and do not loosen the
+  policy or deploy a weaker recognizer.

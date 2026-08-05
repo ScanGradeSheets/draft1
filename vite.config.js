@@ -14,8 +14,14 @@ const deployKeepFiles = new Set([
   'ort-wasm-simd-1.17.wasm',
   'models/mnist-model.onnx',
   'models/worksheet-digit-generalist.onnx',
+  'models/worksheet-digit-generalist-batch1-webgl.onnx',
   'models/worksheet-digit-live-trusted-temp.onnx',
+  'models/worksheet-digit-live-trusted-temp-batch1-webgl.onnx',
   'models/worksheet-digit-tony-generalist-noaug-20260601.onnx',
+  'models/worksheet-digit-tony-generalist-noaug-20260601-batch1-webgl.onnx',
+  'models/worksheet-digit-tony-generalist-noaug-20260601-opset9-onnxjs.onnx',
+  'models/worksheet-digit-live-trusted-temp-opset9-onnxjs.onnx',
+  'models/worksheet-digit-generalist-opset9-onnxjs.onnx',
   'models/v3-whole-slot-scout.onnx'
 ])
 

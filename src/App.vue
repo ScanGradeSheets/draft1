@@ -1,6 +1,7 @@
 <template>
   <div
     class="scan-grade"
+    :style="legacyStudentViewportStyle"
     :class="{
       'scan-grade--student': isStudentMode,
       'scan-grade--landing': isStudentMode && studentView === 'landing',
@@ -130,6 +131,16 @@
             'student-scan-bar--debug-result': ocrResult && studentDebugMode
           }"
         >
+          <button
+            type="button"
+            class="student-scan-link student-scan-home student-nav-icon"
+            aria-label="Back to ScanGrade home"
+            @click="returnToLanding"
+          >
+            <svg class="student-back-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <polyline points="16,3 7,12 16,21" />
+            </svg>
+          </button>
           <div v-if="studentScanStage" class="student-scan-grading" aria-live="polite">
             <span
               class="student-scan-grading-word"
@@ -137,9 +148,6 @@
             >{{ studentScanStage === 'grading' ? 'Grading' : 'Scanning' }}</span>
           </div>
           <template v-else>
-            <button type="button" class="student-scan-link student-scan-home" @click="returnToLanding">
-              Home
-            </button>
             <button
               v-if="ocrResult && !ocrResult.error"
               type="button"
@@ -149,7 +157,11 @@
               :aria-label="showRecognitionOverlay ? 'Hide what ScanGrade saw' : 'Show what ScanGrade saw'"
               @click="showRecognitionOverlay = !showRecognitionOverlay"
             >
-              <span aria-hidden="true">{{ showRecognitionOverlay ? '⌃' : '⌄' }}</span>
+              <svg class="student-reading-chevron" viewBox="0 0 24 20" aria-hidden="true">
+                <polyline
+                  :points="showRecognitionOverlay ? '4,10 12,2 20,10' : '4,10 12,18 20,10'"
+                />
+              </svg>
             </button>
             <button
               v-if="ocrResult && studentDebugMode"
@@ -375,6 +387,11 @@ import { computed, ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import CameraCapture from './components/CameraCapture.vue'
 import { publicUrl } from './public-paths.js'
 import {
+  legacyVisibleViewportStyle,
+  needsLegacyCaptureViewport,
+  visibleViewportSize,
+} from './v3/legacy-capture-viewport.js'
+import {
   clearSavedSubmissions,
   deleteSubmission,
   loadClassRoster,
@@ -384,7 +401,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.01-in-app-autosave-setup-beta-15-67'
+const APP_BUILD_LABEL = '2026.08.05-legacy-onnxjs-fallback-beta-15-88'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -419,6 +436,7 @@ const isStudentMode = ref(
 const showTeacherUi = ref(!isStudentMode.value)
 const studentView = ref(isStudentMode.value ? 'landing' : 'capture')
 const showStudentCaptureUi = computed(() => isStudentMode.value && studentView.value === 'capture')
+const legacyStudentViewportStyle = ref({})
 const ocrResult = ref(null)
 const studentCameraProcessing = ref(false)
 const studentScanStage = ref('')
@@ -1181,14 +1199,41 @@ const setCaptureViewportLock = (active) => {
   document.body.classList.toggle('scan-grade-capture-lock', active)
 }
 
-watch(showStudentCaptureUi, setCaptureViewportLock, { immediate: true })
+const updateLegacyStudentViewport = () => {
+  if (
+    !showStudentCaptureUi.value ||
+    typeof window === 'undefined' ||
+    !needsLegacyCaptureViewport(window.CSS)
+  ) {
+    legacyStudentViewportStyle.value = {}
+    return
+  }
+  legacyStudentViewportStyle.value = legacyVisibleViewportStyle(
+    visibleViewportSize(window, document),
+  )
+}
+
+const handleLegacyViewportChange = () => {
+  updateLegacyStudentViewport()
+  window.setTimeout(updateLegacyStudentViewport, 120)
+}
+
+watch(showStudentCaptureUi, (active) => {
+  setCaptureViewportLock(active)
+  updateLegacyStudentViewport()
+}, { immediate: true })
 
 onMounted(() => {
   loadTeacherData()
+  window.addEventListener('resize', handleLegacyViewportChange)
+  window.addEventListener('orientationchange', handleLegacyViewportChange)
+  handleLegacyViewportChange()
 })
 
 onUnmounted(() => {
   setCaptureViewportLock(false)
+  window.removeEventListener('resize', handleLegacyViewportChange)
+  window.removeEventListener('orientationchange', handleLegacyViewportChange)
 })
 </script>
 
@@ -1197,6 +1242,7 @@ onUnmounted(() => {
   /* Sharpie-style fluorescent yellow: lemon-bright with just enough green
      cast to read as highlighter ink, never as a warm gold fill. */
   --teacher-highlighter-rgb: 238, 255, 0;
+  --sg-interface-blue: #245aa4;
   max-width: 800px;
   margin: 0 auto;
   color: #202124;
@@ -1883,6 +1929,7 @@ button.student-home-scan-btn:focus-visible {
 }
 
 .student-scan-bar {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(64px, 1fr) auto minmax(76px, 1fr);
   align-items: center;
@@ -1917,11 +1964,12 @@ button.student-home-scan-btn:focus-visible {
 }
 
 .student-scan-bar--grading {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(64px, 1fr) auto minmax(76px, 1fr);
 }
 
 .student-scan-grading {
-  grid-column: 1 / -1;
+  position: absolute;
+  inset: 8px;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -2004,6 +2052,7 @@ button.student-home-scan-btn:focus-visible {
 }
 
 .student-scan-actions {
+  grid-column: 3;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2011,7 +2060,19 @@ button.student-home-scan-btn:focus-visible {
   min-width: 76px;
 }
 
+.student-scan-bar--debug-result:not(.student-scan-bar--grading) .student-debug-export {
+  grid-column: 3;
+}
+
+.student-scan-bar--debug-result:not(.student-scan-bar--grading) .student-scan-actions {
+  grid-column: 4;
+}
+
 .student-recognition-toggle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2021,12 +2082,46 @@ button.student-home-scan-btn:focus-visible {
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: #245aa4;
-  font: inherit;
-  font-size: 25px;
-  line-height: 1;
+  color: var(--sg-interface-blue);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.student-reading-chevron,
+.student-back-icon {
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.student-reading-chevron {
+  width: 30px;
+  height: 25px;
+  /* Its 24-unit viewBox is rendered wider than the back icon, so a slightly
+     lighter source stroke produces the same apparent on-screen ink weight. */
+  stroke-width: 1.7;
+}
+
+.student-nav-icon {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  color: var(--sg-interface-blue);
+}
+
+.student-back-icon {
+  width: 27px;
+  height: 27px;
+  stroke-width: 2.15;
 }
 
 .student-recognition-toggle:hover,
@@ -2059,6 +2154,13 @@ button.student-home-scan-btn:focus-visible {
 
 .student-scan-home {
   justify-self: start;
+  color: var(--sg-interface-blue);
+}
+
+.student-scan-home:hover,
+.student-scan-home:focus-visible {
+  background: transparent;
+  color: #173f73;
 }
 
 .student-scan-reset {
