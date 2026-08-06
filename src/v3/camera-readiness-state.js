@@ -17,3 +17,13 @@ export function shouldClearTransientCameraReadinessError({
   if (!isTransientCameraReadinessError(error)) return false
   return cameraReady === true || capturedImage === true || resultReady === true
 }
+
+export function shouldShowStudentCameraError({
+  error,
+  streamActive = false,
+  cameraReady = false,
+} = {}) {
+  if (!error) return false
+  if ((streamActive || cameraReady) && isTransientCameraReadinessError(error)) return false
+  return true
+}

@@ -6,9 +6,34 @@ import {
   STUDENT_AUTO_CAPTURE_STABILITY_HOLD_MS,
   STUDENT_AUTO_CAPTURE_TRIGGER_FOCUS_MIN,
   STUDENT_MANUAL_CAPTURE_FOCUS_MIN,
+  studentCaptureGuidance,
   studentCaptureFocusDecision,
   studentSheetAppearanceDecision,
 } from '../src/v3/student-capture-policy.js'
+
+test('live capture keeps instructions short but preserves the action the user needs', () => {
+  assert.equal(studentCaptureGuidance({ status: 'Camera warming up', cameraReady: false }), 'Starting camera…')
+  assert.equal(studentCaptureGuidance({ status: 'Find all 4 black squares', cameraReady: true }), 'Show all 4 squares')
+  assert.equal(studentCaptureGuidance({ status: 'Center the sheet', cameraReady: true }), 'Center full page')
+  assert.equal(studentCaptureGuidance({ status: 'Move sheet closer', cameraReady: true }), 'Move closer')
+  assert.equal(studentCaptureGuidance({ status: 'Flatten the sheet a bit', cameraReady: true }), 'Hold phone level')
+  assert.equal(studentCaptureGuidance({ status: 'Keep the QR code visible', cameraReady: true }), 'Show QR code')
+  assert.equal(studentCaptureGuidance({ status: 'Hold still while camera focuses', cameraReady: true }), 'Hold steady')
+  assert.equal(studentCaptureGuidance({ status: 'Choosing clearest frame', cameraReady: true }), 'Capturing…')
+})
+
+test('an active preliminary burst keeps asking for stability until capture is committed', () => {
+  assert.equal(studentCaptureGuidance({
+    status: 'Find all 4 black squares',
+    cameraReady: true,
+    captureAttemptActive: true,
+  }), 'Hold steady')
+  assert.equal(studentCaptureGuidance({
+    status: 'Hold still while camera focuses',
+    cameraReady: true,
+    captureAttemptActive: true,
+  }), 'Hold steady')
+})
 
 test('auto-capture starts its burst sooner but preserves the final quality floor', () => {
   assert.equal(STUDENT_AUTO_CAPTURE_TRIGGER_FOCUS_MIN, 220)

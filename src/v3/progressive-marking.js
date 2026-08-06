@@ -40,6 +40,24 @@ function indicatorAnchor(rect, seed, width, height) {
   return { x, y, size }
 }
 
+export function teacherIndicatorBounds(rect, seed, dimensions = {}) {
+  if (!rect) return null
+  const width = Math.max(1, finite(dimensions.width) || 1)
+  const height = Math.max(1, finite(dimensions.height) || 1)
+  const anchor = indicatorAnchor(rect, seed, width, height)
+  const radius = anchor.size * 0.76
+  const x = Math.max(0, Math.floor(anchor.x - radius))
+  const y = Math.max(0, Math.floor(anchor.y - radius))
+  const right = Math.min(width, Math.ceil(anchor.x + radius))
+  const bottom = Math.min(height, Math.ceil(anchor.y + radius))
+  return {
+    x,
+    y,
+    w: Math.max(1, right - x),
+    h: Math.max(1, bottom - y),
+  }
+}
+
 function pathData(points) {
   if (!Array.isArray(points) || points.length < 2) return ''
   return points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' ')

@@ -9,6 +9,30 @@ export const STUDENT_PAPER_USABLE_MEAN_MIN = 105
 export const STUDENT_PAPER_USABLE_BRIGHT_FRACTION_MIN = 0.12
 export const STUDENT_PAPER_USABLE_DARK_FRACTION_MAX = 0.28
 
+// The detector has several internal failure reasons, but the teacher only
+// needs one clear action at a time. Keep the public instruction vocabulary
+// small without changing any marker, geometry, or sharpness thresholds.
+export function studentCaptureGuidance({
+  status = '',
+  cameraReady = false,
+  captureAttemptActive = false,
+} = {}) {
+  const message = String(status || '').toLowerCase()
+  // The preliminary burst is not yet a committed capture. Keep asking the
+  // teacher to hold steady until a frame passes every final gate; saying
+  // “Capturing” too early reasonably invites them to move the page.
+  if (captureAttemptActive) return 'Hold steady'
+  if (!cameraReady || message.includes('warming')) return 'Starting camera…'
+  if (message.includes('choosing') || message.includes('captur')) return 'Capturing…'
+  if (message.includes('hold') || message.includes('focus')) return 'Hold steady'
+  if (message.includes('4 corner') || message.includes('4 black')) return 'Show all 4 squares'
+  if (message.includes('closer')) return 'Move closer'
+  if (message.includes('center') || message.includes('inside')) return 'Center full page'
+  if (message.includes('flatten') || message.includes('directly above')) return 'Hold phone level'
+  if (message.includes('qr')) return 'Show QR code'
+  return 'Center full page'
+}
+
 export function studentSheetAppearanceDecision({
   markerStats = [],
   paperStats = {},

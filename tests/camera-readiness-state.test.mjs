@@ -4,7 +4,30 @@ import assert from 'node:assert/strict'
 import {
   isTransientCameraReadinessError,
   shouldClearTransientCameraReadinessError,
+  shouldShowStudentCameraError,
 } from '../src/v3/camera-readiness-state.js'
+
+test('hides a stale readiness warning over a recovering live viewfinder', () => {
+  assert.equal(shouldShowStudentCameraError({
+    error: 'Camera is still warming up. Try again.',
+    streamActive: true,
+  }), false)
+  assert.equal(shouldShowStudentCameraError({
+    error: 'Camera not ready. Try again.',
+    cameraReady: true,
+  }), false)
+})
+
+test('keeps real camera and capture-quality failures visible', () => {
+  assert.equal(shouldShowStudentCameraError({
+    error: 'Camera access failed. Use file upload instead.',
+  }), true)
+  assert.equal(shouldShowStudentCameraError({
+    error: 'Image is still blurry. Hold steady and try again.',
+    streamActive: true,
+    cameraReady: true,
+  }), true)
+})
 
 test('recognizes only transient camera-readiness warnings', () => {
   assert.equal(isTransientCameraReadinessError('Camera is still warming up. Try again.'), true)

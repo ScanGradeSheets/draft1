@@ -2,13 +2,30 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
-import { progressiveMarkingSteps } from '../src/v3/progressive-marking.js'
+import {
+  progressiveMarkingSteps,
+  teacherIndicatorBounds,
+} from '../src/v3/progressive-marking.js'
 import {
   progressivePendingQuestionNumbers,
   progressiveVerificationSchedule,
 } from '../src/v3/progressive-verification-scheduler.js'
 
 const cameraSource = await readFile(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
+
+test('teacher indicator cleanup bounds stay inside the rendered sheet', () => {
+  const bounds = teacherIndicatorBounds(
+    { x: 250, y: 360, w: 62, h: 58 },
+    131,
+    { width: 800, height: 1100 },
+  )
+  assert.ok(bounds.x >= 0)
+  assert.ok(bounds.y >= 0)
+  assert.ok(bounds.x + bounds.w <= 800)
+  assert.ok(bounds.y + bounds.h <= 1100)
+  assert.ok(bounds.w > 62)
+  assert.ok(bounds.h > 58)
+})
 
 test('the date stamp is withheld until the score is complete, then lands as the completion seal', () => {
   assert.match(
@@ -53,7 +70,7 @@ test('the completion date appears once at its final opacity with a stationary co
   assert.doesNotMatch(cameraSource, /\.scanning-date-stamp\s*\{[^}]*transform:/s)
   assert.match(cameraSource, /captured-image-wrap--completion-glow/)
   assert.match(cameraSource, /@keyframes worksheet-completion-glow/)
-  assert.match(cameraSource, /worksheet-completion-glow 720ms/)
+  assert.match(cameraSource, /worksheet-completion-glow 180ms/)
   assert.doesNotMatch(cameraSource, /worksheet-stamp-impact/)
   assert.doesNotMatch(cameraSource, /captured-image-wrap--stamp-impact/)
   assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*420\)/)
