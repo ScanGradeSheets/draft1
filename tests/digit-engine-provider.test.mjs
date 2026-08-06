@@ -110,3 +110,28 @@ test('can force the legacy provider without attempting modern engines', async ()
   assert.equal(wasmCalls, 0)
   assert.equal(webglCalls, 0)
 })
+
+test('falls back to the legacy ONNX.js CPU backend when legacy WebGL fails', async () => {
+  const wasm = runtime('wasm', async () => { throw new Error('wasm unavailable') })
+  const webgl = runtime('webgl', async () => { throw new Error('ORT WebGL unavailable') })
+  const legacyBuffer = new ArrayBuffer(4)
+  const providers = []
+  const legacy = runtime('onnxjs', async (_buffer, options) => {
+    providers.push(options.executionProviders[0])
+    if (options.executionProviders[0] === 'webgl') throw new Error('legacy WebGL unavailable')
+    return { id: 'legacy-cpu-session' }
+  })
+  const result = await createDigitInferenceSession({
+    buffer: new ArrayBuffer(2),
+    wasmRuntime: wasm,
+    webglRuntime: webgl,
+    legacyRuntime: legacy,
+    loadLegacyBuffer: async () => legacyBuffer,
+  })
+  assert.equal(result.provider, 'onnxjs-cpu')
+  assert.equal(result.runtime, legacy)
+  assert.equal(result.session.id, 'legacy-cpu-session')
+  assert.deepEqual(providers, ['webgl', 'cpu'])
+  assert.equal(result.legacyBuffer, legacyBuffer)
+  assert.match(result.legacyWebglError.message, /legacy WebGL unavailable/)
+})

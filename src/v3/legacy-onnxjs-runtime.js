@@ -19,8 +19,13 @@ export function createOnnxJsRuntime(onnxModule) {
   }
 
   const InferenceSession = {
-    async create(buffer) {
-      const native = new onnx.InferenceSession({ backendHint: 'webgl' })
+    async create(buffer, options = {}) {
+      // The old iPad can load ONNX.js but often cannot create a WebGL
+      // context.  Keep WebGL as the default, while allowing the provider
+      // selector to request ONNX.js' pure-JavaScript CPU backend.
+      const executionProvider = options.executionProviders?.[0]
+      const backendHint = options.backendHint || (executionProvider === 'cpu' ? 'cpu' : 'webgl')
+      const native = new onnx.InferenceSession({ backendHint })
       await native.loadModel(new Uint8Array(buffer))
       // ONNX.js has used both `_graph` and `graph` for this internal graph
       // across its browser builds. Prefer the public-ish spelling when it is
@@ -42,6 +47,15 @@ export function createOnnxJsRuntime(onnxModule) {
             result.forEach((value, key) => { output[key] = value })
           } else {
             Object.assign(output, result || {})
+          }
+          // ONNX.js has returned output maps keyed by the graph's internal
+          // name in some Safari builds, while ORT uses the declared graph
+          // output name.  The digit pipeline only needs one output tensor;
+          // alias the first value to the declared name so both runtimes have
+          // the same stable surface.
+          if (outputNames[0] && !output[outputNames[0]]) {
+            const firstKey = Object.keys(output)[0]
+            if (firstKey) output[outputNames[0]] = output[firstKey]
           }
           return output
         },

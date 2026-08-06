@@ -38,6 +38,7 @@ export async function createDigitInferenceSession({
   }
 
   let legacyError = null
+  let legacyWebglError = null
   if (!legacyRuntime && typeof loadLegacyRuntime !== 'function') {
     const wasmMessage = wasmError?.message || String(wasmError || 'not attempted')
     const webglMessage = webglError?.message || String(webglError || 'not attempted')
@@ -49,9 +50,10 @@ export async function createDigitInferenceSession({
     throw error
   }
 
+  const resolvedLegacyRuntime = legacyRuntime || await loadLegacyRuntime()
+  const legacyBuffer = loadLegacyBuffer ? await loadLegacyBuffer() : buffer
+
   try {
-    const resolvedLegacyRuntime = legacyRuntime || await loadLegacyRuntime()
-    const legacyBuffer = loadLegacyBuffer ? await loadLegacyBuffer() : buffer
     const session = await resolvedLegacyRuntime.InferenceSession.create(legacyBuffer, {
       executionProviders: ['webgl'],
     })
@@ -64,15 +66,38 @@ export async function createDigitInferenceSession({
       legacyBuffer,
     }
   } catch (error) {
+    legacyWebglError = error
+  }
+
+  // WebGL is unavailable on some old Safari/iPad combinations even though
+  // the ONNX.js CPU backend still works.  This is intentionally a final
+  // fallback: it trades speed for availability and never changes the
+  // answer/confidence policy.
+  try {
+    const session = await resolvedLegacyRuntime.InferenceSession.create(legacyBuffer, {
+      executionProviders: ['cpu'],
+    })
+    return {
+      session,
+      runtime: resolvedLegacyRuntime,
+      provider: 'onnxjs-cpu',
+      wasmError,
+      webglError,
+      legacyWebglError,
+      legacyBuffer,
+    }
+  } catch (error) {
     legacyError = error
     const wasmMessage = wasmError?.message || String(wasmError || 'not attempted')
     const webglMessage = webglError?.message || String(webglError || 'not attempted')
-    const legacyMessage = legacyError?.message || String(legacyError)
+    const legacyWebglMessage = legacyWebglError?.message || String(legacyWebglError || 'not attempted')
+    const legacyCpuMessage = legacyError?.message || String(legacyError)
     const failure = new Error(
-      `Digit model engines unavailable (WASM: ${wasmMessage}; WebGL: ${webglMessage}; ONNX.js WebGL: ${legacyMessage})`,
+      `Digit model engines unavailable (WASM: ${wasmMessage}; WebGL: ${webglMessage}; ONNX.js WebGL: ${legacyWebglMessage}; ONNX.js CPU: ${legacyCpuMessage})`,
     )
     failure.wasmError = wasmError
     failure.webglError = webglError
+    failure.legacyWebglError = legacyWebglError
     failure.legacyError = legacyError
     throw failure
   }
