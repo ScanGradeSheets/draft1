@@ -7433,3 +7433,40 @@ Next action:
   physical slots are confirmed. If ONNX.js WebGL also fails on that device,
   all-yellow review remains the safe and honest result; do not claim automatic
   OCR support until the physical test passes.
+
+### 2026-08-06 Beta 15.89 legacy ONNX.js CPU fallback (deployed; physical acceptance pending)
+
+- The 15.88 legacy fallback was extended without changing the normal browser
+  path or the frozen confidence policy. After WASM and ORT WebGL fail, the
+  provider now tries the opset-9 ONNX.js companion on WebGL and then retries it
+  on ONNX.js's pure-JavaScript CPU backend. This is a compatibility fallback
+  only; it does not use the answer key as handwriting truth and does not lower
+  the automatic-acceptance threshold.
+- The adapter now accepts an explicit backend hint and aliases the first graph
+  output to the declared output name when old ONNX.js builds return an internal
+  map key. This preserves the existing OCR provider interface.
+- Focused compatibility/correction tests: **50/50**. `npm run build` passes.
+  The complete historical repository suite is not presently green: 13 older
+  static/baseline assertions fail and must not be represented as Beta 15.89
+  regressions without investigation. A real 8.4 MB opset-9 companion loaded
+  and produced a `[1,10]` output through ONNX.js CPU on the Mac in about 55 ms
+  per inference. All three shipped opset-9 companions also loaded and produced
+  `[1,10]` outputs through the CPU path in the desktop smoke test (about 40.5,
+  91.6, and 98.9 ms respectively). These timings are desktop-only and are not
+  evidence of acceptable orange-iPad speed.
+- Commits `c0fae10` and `4d46d77` are pushed on
+  `autobuild/safe-20260223`. Cloudflare Pages production deployment:
+  `https://6981ec24.scangrade.pages.dev`. The public `scangrade.io` response
+  was independently fetched and verified to reference the same
+  `assets/index-DLDR_Twn.js` bundle (823,154 bytes), containing the
+  `legacy-onnxjs-cpu-fallback-beta-15-89` marker.
+- Status: **deployed but not physically accepted**. Test in ordinary Safari
+  (not the old home-screen installation) at `https://scangrade.io`, confirm the
+  visible Beta 15.89 build label, and scan the same P08 Dot Collections page.
+  Record whether all six answers remain yellow, time to initial results,
+  bottom-bar visibility, and whether the final two-slot correction settles.
+  If the page is still blanket-yellow, repeat once with Debug Scan and confirm
+  its autosave. Diagnose the recorded provider/runtime failure; do not tune
+  thresholds or use the answer key to rescue recognition. If CPU inference is
+  too slow or fails on iOS 12.5.7, classify that device as unsupported or
+  review-only rather than weakening the frozen safety policy.
