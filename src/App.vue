@@ -5,7 +5,8 @@
     :class="{
       'scan-grade--student': isStudentMode,
       'scan-grade--landing': isStudentMode && studentView === 'landing',
-      'scan-grade--capture': showStudentCaptureUi
+      'scan-grade--capture': showStudentCaptureUi,
+      'scan-grade--legacy-capture': showStudentCaptureUi && legacyStudentCaptureLayout
     }"
   >
     <header class="header">
@@ -401,7 +402,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.09-legacy-ipad-stage-timing-beta-15-94'
+const APP_BUILD_LABEL = '2026.08.09-legacy-ipad-viewport-fit-beta-15-95'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -437,6 +438,7 @@ const showTeacherUi = ref(!isStudentMode.value)
 const studentView = ref(isStudentMode.value ? 'landing' : 'capture')
 const showStudentCaptureUi = computed(() => isStudentMode.value && studentView.value === 'capture')
 const legacyStudentViewportStyle = ref({})
+const legacyStudentCaptureLayout = ref(false)
 const ocrResult = ref(null)
 const studentCameraProcessing = ref(false)
 const studentScanStage = ref('')
@@ -1200,10 +1202,14 @@ const setCaptureViewportLock = (active) => {
 }
 
 const updateLegacyStudentViewport = () => {
+  const useLegacyLayout = Boolean(
+    showStudentCaptureUi.value &&
+    typeof window !== 'undefined' &&
+    needsLegacyCaptureViewport(window.CSS)
+  )
+  legacyStudentCaptureLayout.value = useLegacyLayout
   if (
-    !showStudentCaptureUi.value ||
-    typeof window === 'undefined' ||
-    !needsLegacyCaptureViewport(window.CSS)
+    !useLegacyLayout
   ) {
     legacyStudentViewportStyle.value = {}
     return
@@ -1310,6 +1316,32 @@ onUnmounted(() => {
 .scan-grade--student .build-label {
   margin-top: 2px;
   font-size: 8px;
+}
+
+/* Safari 12 on the original classroom iPad has substantially less visible
+   height after its persistent browser chrome. Compact only that capture UI;
+   current Safari/Chrome keep the modern dimensions above. */
+.scan-grade--legacy-capture {
+  padding: 3px 8px;
+}
+
+.scan-grade--legacy-capture .header {
+  margin-bottom: 2px;
+}
+
+.scan-grade--legacy-capture .brand-logo {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 0;
+}
+
+.scan-grade--legacy-capture .header h1 {
+  font-size: 16px;
+}
+
+.scan-grade--legacy-capture .build-label {
+  margin-top: 1px;
+  font-size: 7px;
 }
 
 .scan-grade--student.scan-grade--landing {
@@ -1965,6 +1997,17 @@ button.student-home-scan-btn:focus-visible {
 
 .student-scan-bar--grading {
   grid-template-columns: minmax(64px, 1fr) auto minmax(76px, 1fr);
+}
+
+.scan-grade--legacy-capture .student-scan-bar {
+  height: 50px;
+  margin-top: 4px;
+  padding: 3px 6px;
+}
+
+.scan-grade--legacy-capture .student-scan-grading {
+  inset: 3px;
+  min-height: 42px;
 }
 
 .student-scan-grading {

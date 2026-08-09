@@ -1,5 +1,14 @@
 <template>
-  <div class="camera-capture" :class="[{ 'camera-capture--student': studentMode }, studentCaptureStateClass]">
+  <div
+    class="camera-capture"
+    :class="[
+      {
+        'camera-capture--student': studentMode,
+        'camera-capture--legacy-viewport': legacyCaptureLayout,
+      },
+      studentCaptureStateClass,
+    ]"
+  >
     <p v-if="studentMode && !captureEnabled && captureBlockedReason" class="student-blocked">
       {{ captureBlockedReason }}
     </p>
@@ -1465,13 +1474,18 @@ let pendingHybridBurstFrames = []
 const studentAutoStatus = ref('Put worksheet in frame')
 const captureAttemptActive = ref(false)
 const legacyCapturePreviewStyle = ref({})
+const legacyCaptureLayout = ref(false)
 const previewAreaRef = ref(null)
 
 function updateLegacyCapturePreviewStyle() {
+  const useLegacyLayout = Boolean(
+    props.studentMode &&
+    typeof window !== 'undefined' &&
+    needsLegacyCaptureViewport(window.CSS)
+  )
+  legacyCaptureLayout.value = useLegacyLayout
   if (
-    !props.studentMode ||
-    typeof window === 'undefined' ||
-    !needsLegacyCaptureViewport(window.CSS)
+    !useLegacyLayout
   ) {
     legacyCapturePreviewStyle.value = {}
     return

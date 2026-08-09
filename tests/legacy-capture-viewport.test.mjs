@@ -23,10 +23,24 @@ test('old Safari preview fits entirely inside the visible viewport contract', ()
     viewportHeight: 900,
     topOffset: 150,
   })
-  assert.deepEqual(size, { width: 465, height: 602 })
-  assert.ok(size.height <= 900 - 150 - 148)
+  assert.deepEqual(size, { width: 505, height: 654 })
+  assert.ok(size.height <= 900 - 150 - 96)
   assert.ok(size.width <= 768 - 20)
   assert.ok(Math.abs((size.width / size.height) - (8.5 / 11)) < 0.002)
+})
+
+test('legacy capture compaction is explicitly scoped away from modern layouts', async () => {
+  const appSource = await import('node:fs/promises')
+    .then(({ readFile }) => readFile(new URL('../src/App.vue', import.meta.url), 'utf8'))
+  const cameraSource = await import('node:fs/promises')
+    .then(({ readFile }) => readFile(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8'))
+
+  assert.match(appSource, /'scan-grade--legacy-capture': showStudentCaptureUi && legacyStudentCaptureLayout/)
+  assert.match(appSource, /\.scan-grade--legacy-capture \.brand-logo\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;/s)
+  assert.match(appSource, /\.scan-grade--legacy-capture \.student-scan-bar\s*\{[^}]*height:\s*50px;/s)
+  assert.match(cameraSource, /'camera-capture--legacy-viewport': legacyCaptureLayout/)
+  assert.match(appSource, /\.scan-grade--student \.brand-logo\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px;/s)
+  assert.match(appSource, /\.student-scan-bar\s*\{[^}]*height:\s*60px;/s)
 })
 
 test('old Safari uses the smallest available viewport instead of its taller layout viewport', () => {

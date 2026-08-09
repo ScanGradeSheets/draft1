@@ -4,7 +4,7 @@ export function legacyCapturePreviewSize({
   viewportWidth,
   viewportHeight,
   topOffset = 0,
-  bottomReserve = 148,
+  bottomReserve = 96,
   horizontalGutter = 20,
 } = {}) {
   const visibleWidth = Math.max(0, Number(viewportWidth) || 0)
