@@ -4,6 +4,17 @@ Created 2026-05-30 from Tony's follow-up notes after the ScanGrade voice intervi
 
 This file captures important interview details that were likely discussed but did not fully survive into the first structured summary. Treat these as product-memory refinements. Where this addendum conflicts with generic wording elsewhere, prefer the more specific rule here unless Tony later supersedes it.
 
+## 0. Two-Box One-Digit Classroom Rule
+
+When a worksheet prints two digit boxes but the student's handwritten answer contains only one digit, the answer has the same meaning whether the child writes the digit in the left box or the right box.
+
+- `_9` and `9_` both represent the handwritten answer `9`.
+- ScanGrade should preserve the physical position for annotation and teacher review.
+- The blank companion box should not be highlighted merely because the child chose the other box.
+- A true two-digit response still requires both digits in their written order.
+- A leading zero such as `09` is not implied by this rule unless the worksheet explicitly permits it.
+- This is a placement/grading contract, not permission for OCR to guess the mathematically correct digit.
+
 ## 1. Red Teacher Pen / Teacher Markup Feel
 
 Review and correction should feel closer to a teacher marking a paper than a computer reviewing OCR output.

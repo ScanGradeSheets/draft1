@@ -19,10 +19,11 @@ export function reviewSuggestionDisplayEligible({ suggestion, frameConsensus, cu
 }
 
 export function nextYellowReviewGroup(answerGroups, questionReview, currentQuestionNum) {
-  const yellowQuestions = new Set((questionReview || [])
-    .map((needsReview, index) => needsReview ? index + 1 : null)
-    .filter(Number.isInteger))
-  const groups = (answerGroups || []).filter((group) => yellowQuestions.has(Number(group?.questionNum)))
+  const groups = (answerGroups || []).filter((group, index) => (
+    questionReview?.[index] === true
+    && group?.reviewNeeded !== false
+    && group?.manualCorrected !== true
+  ))
   return groups.find((group) => Number(group.questionNum) > Number(currentQuestionNum)) || groups[0] || null
 }
 

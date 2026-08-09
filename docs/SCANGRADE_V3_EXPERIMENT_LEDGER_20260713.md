@@ -1167,3 +1167,31 @@ Full result: `docs/SCANGRADE_BETA7_BETA15_3_RELEASE_GATE_20260723.md`.
   completion, final two-slot behavior, bottom-bar visibility, and elapsed time.
   If ONNX.js WebGL fails, retain review-only behavior and do not loosen the
   policy or deploy a weaker recognizer.
+
+# 2026-08-08 — Orange-iPad legacy runtime diagnostic replay (local evidence only)
+
+- Fixture: saved P08 `SG-G1-LW-07 Dot Collections` capture, replayed through
+  the complete browser page under an iOS 12.5.7 Safari user agent. Expected
+  grouped answers are `5, 8, 12, 13, 16, 19`.
+- Provider matrix on desktop Chromium: WASM `2.16 s`; ORT WebGL `4.67 s`;
+  ONNX.js WebGL `4.54 s`; ONNX.js CPU `15.89 s`. Every path produced the same
+  twelve slot digits `[5, blank, 8, blank, 1, 2, 1, 3, 1, 6, 1, 9]`, all six
+  grouped answers correct, no review, and no fallback. CPU's twelve
+  preprocess-variant operations measured about `1.1 s` each on this host.
+- Interpretation: this rules out an output-shape/normalization mismatch,
+  ordinary confidence veto, or P08 model-quality change in the controlled
+  replay. It does not establish old-iPad speed, cache freshness, or runtime
+  success. The production all-yellow state is generated only after a
+  digit-engine error/timeout and is not the ordinary confidence policy.
+- Candidate instrumentation records provider/init/crop timing and retains an
+  ONNX.js-WebGL failure when CPU succeeds. Candidate correction code uses
+  canonical IDs throughout post-manual-correction state rebuilding; candidate
+  autosave code converts missing/stale 401 credentials into a safe reconnect
+  state. No model, threshold, answer-key, OCR geometry, or capture policy was
+  changed.
+- Verification: real ONNX.js CPU companion integration test plus focused
+  runtime/correction/debug suite `48/48`, clean diff check, and Vite build.
+  No deployment or old-iPad support claim was made. Required next evidence is
+  a fresh physical Safari/PWA P08 debug bundle with provider, model asset
+  metadata, trace, yellow count, timing, final `19` persistence, and Debug
+  saved/reconnect result.

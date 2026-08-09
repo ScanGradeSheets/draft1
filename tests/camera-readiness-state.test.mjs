@@ -7,20 +7,23 @@ import {
   shouldShowStudentCameraError,
 } from '../src/v3/camera-readiness-state.js'
 
-test('hides a stale readiness warning over a recovering live viewfinder', () => {
+test('does not show a transient readiness warning over a recovering live viewfinder', () => {
   assert.equal(shouldShowStudentCameraError({
     error: 'Camera is still warming up. Try again.',
     streamActive: true,
+    cameraReady: false,
   }), false)
   assert.equal(shouldShowStudentCameraError({
     error: 'Camera not ready. Try again.',
+    streamActive: true,
     cameraReady: true,
   }), false)
 })
 
-test('keeps real camera and capture-quality failures visible', () => {
+test('still shows real camera and capture-quality failures', () => {
   assert.equal(shouldShowStudentCameraError({
     error: 'Camera access failed. Use file upload instead.',
+    streamActive: false,
   }), true)
   assert.equal(shouldShowStudentCameraError({
     error: 'Image is still blurry. Hold steady and try again.',

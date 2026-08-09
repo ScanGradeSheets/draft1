@@ -32,6 +32,19 @@ test('iOS-capable export shares a JSON file instead of relying on an anchor down
   assert.equal(shared.files[0].type, 'application/json')
 })
 
+test('legacy iOS Web Share sends the JSON as text when file capability cannot be proven', async () => {
+  let shared = null
+  const navigatorLike = {
+    share: async (payload) => { shared = payload },
+  }
+  const result = await exportDebugJson({ digit: 7 }, {
+    filename: 'scan.json', navigatorLike, BlobCtor: TestBlob, FileCtor: TestFile,
+  })
+  assert.equal(result.method, 'share-text')
+  assert.equal(shared.text, serializeDebugJson({ digit: 7 }))
+  assert.equal('files' in shared, false)
+})
+
 test('desktop fallback clicks a download link and delays URL revocation', async () => {
   let clicked = false
   let revoked = null

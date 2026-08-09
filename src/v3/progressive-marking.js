@@ -45,6 +45,8 @@ export function teacherIndicatorBounds(rect, seed, dimensions = {}) {
   const width = Math.max(1, finite(dimensions.width) || 1)
   const height = Math.max(1, finite(dimensions.height) || 1)
   const anchor = indicatorAnchor(rect, seed, width, height)
+  // Includes every rotated/jittered check or X point plus the multi-pass ink
+  // bleed. This is intentionally a clearing bound, not a visible hit target.
   const radius = anchor.size * 0.76
   const x = Math.max(0, Math.floor(anchor.x - radius))
   const y = Math.max(0, Math.floor(anchor.y - radius))

@@ -32,6 +32,10 @@ function parseArgs(argv) {
     coreCropEvidence: false,
     deferredCorroboration: false,
     sharedFrameProcessing: false,
+    reuseSelectedGeometry: null,
+    frameDecodeWorker: false,
+    frameFusionEvidence: null,
+    stitchedOnDemandReview: false,
     frameRegistrationMode: null,
   }
   for (let index = 0; index < argv.length; index += 1) {
@@ -54,6 +58,10 @@ function parseArgs(argv) {
     else if (value === '--core-crop-evidence') options.coreCropEvidence = true
     else if (value === '--deferred-corroboration') options.deferredCorroboration = true
     else if (value === '--shared-frame-processing') options.sharedFrameProcessing = true
+    else if (value === '--reuse-selected-geometry') options.reuseSelectedGeometry = argv[++index] || 'direct'
+    else if (value === '--frame-decode-worker') options.frameDecodeWorker = true
+    else if (value === '--frame-fusion-evidence') options.frameFusionEvidence = argv[++index] || 'median'
+    else if (value === '--stitched-on-demand-review') options.stitchedOnDemandReview = true
     else if (value === '--frame-registration-mode') options.frameRegistrationMode = argv[++index]
     else throw new Error(`unknown argument: ${value}`)
   }
@@ -161,6 +169,10 @@ function main() {
     ...(options.coreCropEvidence ? { v3CoreCropEvidence: '1' } : {}),
     ...(options.deferredCorroboration ? { v3DeferredCorroboration: '1' } : {}),
     ...(options.sharedFrameProcessing ? { v3SharedFrameProcessing: '1' } : {}),
+    ...(options.reuseSelectedGeometry ? { v3ReuseSelectedGeometry: options.reuseSelectedGeometry } : {}),
+    ...(options.frameDecodeWorker ? { v3FrameDecodeWorker: '1' } : {}),
+    ...(options.frameFusionEvidence ? { v3FrameFusionEvidence: options.frameFusionEvidence } : {}),
+    ...(options.stitchedOnDemandReview ? { v3StitchedOnDemandReview: '1' } : {}),
     ...(options.frameRegistrationMode ? { v3FrameRegistrationMode: options.frameRegistrationMode } : {}),
   }).toString()
   for (const packetId of options.packets) {

@@ -37,7 +37,7 @@ The public ScanGrade site sends debug bundles through a dedicated upload-only
 HTTPS ingress:
 
 ```text
-https://hobbes-mac-mini.tail9a3379.ts.net:8443/
+https://hobbes-mac-mini.tail415e0b.ts.net:8443/
 ```
 
 Tailscale Funnel exposes only the restricted proxy on `127.0.0.1:8793`. It
@@ -52,6 +52,14 @@ confirm Tailscale Funnel still exposes HTTPS port 8443.
 
 The Mac Mini normally keeps both services running through the private
 `com.scangrade.mission-control` and `com.scangrade.debug-upload-proxy`
+
+Legacy Safari note: the browser first attempts the authenticated JSON upload.
+If old WebKit rejects its cross-origin preflight, ScanGrade retries with a
+CORS-safelisted `text/plain` envelope. The private token remains in the HTTPS
+request body (never the URL), and the proxy applies the same origin, token,
+size, and rate-limit checks before forwarding only the unwrapped JSON payload.
+On iOS versions that expose Web Share without file sharing, manual Export
+shares compact debug JSON as text instead of producing an empty attachment.
 LaunchAgents. Their shared token is stored outside the repository. Do not
 commit or publish it.
 
@@ -60,7 +68,7 @@ commit or publish it.
 Open a URL like this on the scanning device:
 
 ```text
-https://scangrade.io/?liveOcrDebug=1#debugAutoUpload=1&debugUploadUrl=https%3A%2F%2Fhobbes-mac-mini.tail9a3379.ts.net%3A8443%2F&debugUploadToken=PRIVATE_TOKEN
+https://scangrade.io/?liveOcrDebug=1#debugAutoUpload=1&debugUploadUrl=https%3A%2F%2Fhobbes-mac-mini.tail415e0b.ts.net%3A8443%2F&debugUploadToken=PRIVATE_TOKEN
 ```
 
 The private values are carried in the URL fragment, which is not sent to

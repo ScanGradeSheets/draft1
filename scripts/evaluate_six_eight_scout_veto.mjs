@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import {
+  ACCEPTED_ANSWER_ONE_SEVEN_SCOUT_MIN_PROBABILITY,
   acceptedAnswerSafetyDecision,
   acceptedAnswerSafetyRoute,
 } from '../src/v3/accepted-answer-safety.js'
@@ -196,7 +197,7 @@ const report = {
     action: 'preserve the browser read but require yellow review',
     minimumScoutProbabilityByConflict: {
       sixEight: 0.90,
-      oneToSeven: 0.99,
+      oneToSeven: ACCEPTED_ANSWER_ONE_SEVEN_SCOUT_MIN_PROBABILITY,
     },
     physicalSlotCount: 1,
     conflictPairs: ['6→8', '8→6', '1→7'],
@@ -235,7 +236,8 @@ const report = {
     oneSevenTargetDemotedToReview: oneSevenIncident.decision.automatic === false,
     oneSevenTargetTranscriptionPreserved: oneSevenIncident.decision.read === '1',
     oneSevenTargetScoutIndependentRead:
-      oneSevenIncident.scout.read === '7' && oneSevenIncident.scout.probability >= 0.99,
+      oneSevenIncident.scout.read === '7' &&
+      oneSevenIncident.scout.probability >= ACCEPTED_ANSWER_ONE_SEVEN_SCOUT_MIN_PROBABILITY,
     answerKeyBlind: true,
   },
 }

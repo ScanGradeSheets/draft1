@@ -127,17 +127,26 @@ const server = createServer(async (req, res) => {
     sendJson(res, 405, { error: 'Method not allowed' }, origin)
     return
   }
-  if (!secureTokenMatch(String(req.headers['x-scangrade-debug-token'] || ''))) {
-    sendJson(res, 401, { error: 'Unauthorized' }, origin)
-    return
-  }
-  if (!rateLimitAllows(req)) {
-    sendJson(res, 429, { error: 'Too many uploads; try again shortly' }, origin)
-    return
-  }
-
   try {
-    const body = await collectBody(req)
+    let body = await collectBody(req)
+    let suppliedToken = String(req.headers['x-scangrade-debug-token'] || '')
+    const contentType = String(req.headers['content-type'] || '').toLowerCase()
+    if (!secureTokenMatch(suppliedToken) && contentType.startsWith('text/plain')) {
+      let envelope = null
+      try { envelope = JSON.parse(body.toString('utf8')) } catch { /* rejected below */ }
+      suppliedToken = String(envelope?.debugUploadToken || '')
+      if (secureTokenMatch(suppliedToken) && envelope?.payload && typeof envelope.payload === 'object') {
+        body = Buffer.from(JSON.stringify(envelope.payload))
+      }
+    }
+    if (!secureTokenMatch(suppliedToken)) {
+      sendJson(res, 401, { error: 'Unauthorized' }, origin)
+      return
+    }
+    if (!rateLimitAllows(req)) {
+      sendJson(res, 429, { error: 'Too many uploads; try again shortly' }, origin)
+      return
+    }
     const upstream = await forwardToPrivateReceiver(body, TOKEN)
     if (upstream.status < 200 || upstream.status >= 300 || upstream.payload?.ok === false) {
       sendJson(res, upstream.status >= 400 ? upstream.status : 502, {

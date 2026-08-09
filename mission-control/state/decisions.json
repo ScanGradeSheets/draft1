@@ -48,7 +48,7 @@
       "id": "worksheet-design-deep-dive",
       "priority": "can defer",
       "queue": "Can defer",
-      "status": "open",
+      "status": "answered",
       "question": "What makes a ScanGrade worksheet feel high quality enough for Tony to use, sell, and put the brand on?",
       "why": "Worksheet quality is a major unresolved product area: white space, density, fonts, illustrations, color, fun vs academic tone, and what makes Tony reject a TPT worksheet.",
       "options": [
@@ -56,7 +56,8 @@
         "Let Codex draft 3 visual directions first",
         "Defer until after student handwriting tests"
       ],
-      "recommendation": "Schedule a dedicated worksheet-design interview after the first real sample test, then let Codex turn it into templates."
+      "recommendation": "Schedule a dedicated worksheet-design interview after the first real sample test, then let Codex turn it into templates.",
+      "answer": "Defer until after student handwriting tests"
     },
     {
       "id": "mission-control-question-flow",
@@ -104,7 +105,7 @@
       "id": "trust-thresholds",
       "priority": "must answer soon",
       "queue": "Must answer soon",
-      "status": "open",
+      "status": "answered",
       "question": "What should ScanGrade do at different confidence levels: auto-grade, flag for review, or refuse to grade?",
       "why": "Trust thresholds are central to teacher trust, student feedback, practice mode, assessment mode, and whether review saves time.",
       "options": [
@@ -112,13 +113,14 @@
         "Practice-friendly: auto-grade more, allow rescan",
         "Assessment-safe: refuse or require teacher review when uncertain"
       ],
-      "recommendation": "Use different thresholds by mode: more forgiving in practice, conservative in assessment, and always review/refuse when the app cannot explain itself."
+      "recommendation": "Use different thresholds by mode: more forgiving in practice, conservative in assessment, and always review/refuse when the app cannot explain itself.",
+      "answer": "Codex’s recommendation"
     },
     {
       "id": "student-sample-retention",
       "priority": "can defer",
       "queue": "Can defer",
-      "status": "open",
+      "status": "answered",
       "question": "How long should we keep original student worksheet photos after they are tested?",
       "why": "Student samples are useful evidence, but they should stay private and not become permanent clutter or accidental public material.",
       "options": [
@@ -126,8 +128,9 @@
         "Keep only redacted samples after the first evaluation summary",
         "Defer to Codex recommendation"
       ],
-      "recommendation": "Keep originals locally until the first pilot is complete, keep them out of git/public surfaces, and revisit retention after the first real sample report."
+      "recommendation": "Keep originals locally until the first pilot is complete, keep them out of git/public surfaces, and revisit retention after the first real sample report.",
+      "answer": "Keep originals until the first classroom pilot is complete"
     }
   ],
-  "updated_at": "2026-05-31T00:44:22.088Z"
+  "updated_at": "2026-05-31T13:57:03.251Z"
 }

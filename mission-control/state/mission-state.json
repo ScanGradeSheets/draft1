@@ -1,20 +1,120 @@
 {
-  "current_mission": "Use Tony's latest real worksheet photos to improve confident two-digit OCR reads without allowing confident wrong reads.",
+  "current_mission": "Reduce the now-measured orange-iPad scan latency without weakening conservative teacher review, using Beta 15.94 stage telemetry to select the bottleneck before changing OCR or geometry.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
-  "next_best_move": "Tony: test build 2026.06.07-1841-EDT-sg3-old-ipad-review-save on the old iPad. The 1745 build still hit the grading-engine load message, proving the problem is likely the primary ONNX/WASM engine on old Safari rather than capture or the auxiliary right-slot model.",
-  "plain_english_status": "The clean 9-photo benchmark is solved for this evidence set: the current policy reads all 90 handwritten answers correctly and auto-clears 89/90 answers with 89/89 confident accuracy and 0 confident wrong reads. Tony's 2026-06-07 live iPhone batches exposed a harder classroom problem: rough live captures are safe but still too review-heavy. The sharp-auto build should prevent the app from submitting half-focused scans. Tony's old iPad then exposed a separate reliability issue: the scan image and QR flow look good, but the primary digit grading engine can fail to finish loading on old Safari. Build 2026.06.07-1841-EDT-sg3-old-ipad-review-save keeps the OCR/capture policy intact and, if the primary digit engine cannot initialize or run after a recognized capture, saves a scoreless teacher-review scan with all slots marked yellow instead of showing Try again.",
+  "next_best_move": "When Tony is home, confirm Beta 15.94 on the orange iPad, repeat P08 without correcting before the result settles, and manually Export. Compare its ocrStageTrace with the modern Chromium/WebKit baseline before choosing any latency optimization.",
+  "plain_english_status": "Orange-iPad automatic grading passed physically on Beta 15.93: five automatic checks and one conservative yellow, using ONNX.js WebGL rather than the all-yellow fallback. The measured capture-to-result time was 39.814 seconds: 12.794 seconds in the digit engine and 27.020 seconds elsewhere. A ten-page cold-load comparison measured 2.142 seconds median in modern Chromium and 2.401 seconds in modern WebKit, making the old iPad roughly 17-19 times slower end to end. Beta 15.94 is now live with passive per-stage timing only; all 472 tests pass. Tony did not notice the prior annotation flash but will confirm at home. Auto-save remains unsupported on iOS 12, so compact manual Export remains the evidence path.",
+  "launch_plan": {
+    "target_launch": "September 2026 Teachers Pay Teachers launch",
+    "minimum_weekly_time": "6 hours/week average, with the final school-week data sprint as the exception",
+    "ideal_weekly_time": "8-12 hours/week from late July through late August",
+    "wedding_buffer": "July 8-21: protect wedding time; no critical-path work should depend on this window",
+    "summary": "Use the last classroom week to collect as much real Grade 1 evidence as possible, then spend summer turning evidence into reliability fixes, teacher workflow polish, product packaging, and launch assets.",
+    "weeks": [
+      {
+        "window": "June 18-24, 2026",
+        "hours": "8-12 hours total plus classroom testing",
+        "type": "validation",
+        "focus": "Final classroom evidence sprint",
+        "todos": [
+          "Print and use the Grade 1 last-week packet.",
+          "Scan before manual corrections whenever possible.",
+          "Save raw debug JSON, crop preview, screenshot, device, sheet ID, and brief classroom notes together.",
+          "Separate app detection accuracy from math correctness."
+        ]
+      },
+      {
+        "window": "June 25-30, 2026",
+        "hours": "6-8 hours",
+        "type": "validation",
+        "focus": "Score and classify classroom evidence",
+        "todos": [
+          "Inventory scans and remove manually corrected JSON from accuracy scoring unless originalDigit is present.",
+          "Classify failures by capture, layout, crop, OCR, confidence policy, and old-device loading.",
+          "Freeze the July reliability backlog from evidence, not guesses."
+        ]
+      },
+      {
+        "window": "July 1-7, 2026",
+        "hours": "8-10 hours",
+        "type": "app",
+        "focus": "Reliability fixes from evidence",
+        "todos": [
+          "Fix the highest-frequency failure class first.",
+          "Run replay tests before and after every OCR/capture/layout change.",
+          "Keep zero confident wrong reads as the safety gate."
+        ]
+      },
+      {
+        "window": "July 8-21, 2026",
+        "hours": "0-5 hours/week",
+        "type": "tony",
+        "focus": "Wedding buffer",
+        "todos": [
+          "Do only low-risk review, notes, or small docs if time exists.",
+          "Do not put release-critical work in this window."
+        ]
+      },
+      {
+        "window": "July 22-August 11, 2026",
+        "hours": "8-12 hours/week",
+        "type": "app",
+        "focus": "Beta hardening",
+        "todos": [
+          "Retest old iPad and iPhone paths.",
+          "Harden scan retry and review-save behavior.",
+          "Confirm variable one-slot and two-slot worksheet support.",
+          "Keep Mission Control and handoff files current."
+        ]
+      },
+      {
+        "window": "August 12-25, 2026",
+        "hours": "8-10 hours/week",
+        "type": "tpt",
+        "focus": "Product packaging",
+        "todos": [
+          "Finalize first TPT worksheet pack scope.",
+          "Prepare preview images, answer keys, teacher instructions, and support/privacy notes.",
+          "Avoid claims that outrun classroom evidence."
+        ]
+      },
+      {
+        "window": "August 26-September 1, 2026",
+        "hours": "6-8 hours/week",
+        "type": "validation",
+        "focus": "Launch candidate freeze",
+        "todos": [
+          "Run full smoke tests on the public GitHub Pages URL.",
+          "Verify QR codes load the public app and correct layouts.",
+          "Prepare beta feedback checklist and final go/no-go notes."
+        ]
+      },
+      {
+        "window": "September 2026 launch week",
+        "hours": "4-6 hours",
+        "type": "marketing",
+        "focus": "Launch and monitor",
+        "todos": [
+          "Publish only the validated product scope.",
+          "Monitor support issues and scan failures.",
+          "Turn the first teacher feedback into the next prioritized fix list."
+        ]
+      }
+    ]
+  },
   "needs_tony": [
-    "Test build 2026.06.07-1841-EDT-sg3-old-ipad-review-save on the old iPad; expected fallback if the digit engine still cannot run is a saved teacher-review scan with no score, not Try again.",
-    "For any sheet that fails in the live app, also send one normal camera photo of the same physical page if convenient.",
-    "Keep using normal student pencil/spacing; imperfect handwriting is the useful test.",
-    "If possible, note whether a scan was from the live app, a phone photo, or an iPad photo."
+      "Scan the fresh private Beta 15.93 activation QR with the orange iPad and open it in Safari.",
+      "Confirm Beta 15.93, scan P08 Dot Collections, do not correct before timing the initial automatic result, then manually Export the compact trace; auto-save is not reliable on this Safari.",
+    "If asked to label evidence, focus on handwritten truth and ambiguous shapes, not whether the math answer is correct.",
+    "Keep private student evidence local and out of git/public surfaces."
   ],
   "blocked_or_risky": [
-    "The active 9-photo target is met, but nine photos is still too narrow to claim classroom-trustworthy generalization.",
-    "The latest rough live iPhone still replay is safe but conservative: 53/90 confident answers, 53/53 confident accuracy, and 0 confident wrong reads.",
-    "The sharp-auto-capture candidate is verified against still replays for no OCR regression, but its benefit can only be proven with new live camera scans.",
+    "The active 9-photo target was met, but the broader classroom packet shows reliability is uneven across worksheet formats.",
+    "Expected leading 1s remain a major failure family; broad answer-key correction is unsafe because some students really write wrong answers.",
+    "The varied classroom packet exposed layout/crop/format failures on visual sheets such as ten frames, dots, number bonds, and patterns. The answer-region contract is now the gate for future worksheet designs.",
+    "Old iPad Safari remains a compatibility risk until live device tests prove the fallback path is acceptable.",
     "OCR/capture/homography files contain large tracked modifications and should not be changed or pushed casually.",
     "Debug crop export specs create local artifacts when run, so only run them intentionally.",
+    "The answer-box bakeoff is synthetic-authentic, not printed classroom proof. Treat the separate-cell result as directional evidence only.",
     "Codex thread history has disappeared after updates more than once, so current work must be recorded in SCANGRADE_ACTIVE_HANDOFF.md."
   ],
   "focus_board": [
@@ -22,11 +122,11 @@
       "column": "Now",
       "cards": [
         {
-          "title": "Verify old iPad review-save fallback",
-          "type": "validation",
+          "title": "Decide separate-cell direction",
+          "type": "app",
           "owner": "Codex",
-          "summary": "Current candidate is build 2026.06.07-1841-EDT-sg3-old-ipad-review-save, which saves a scoreless teacher-review scan if the primary digit engine fails on old Safari.",
-          "detail": "The clean 9-photo target is still met at 89/90 confident with 0 confident wrong reads. Tony's old iPad retest of the 1745 build still showed a good scan image followed by the grading-engine load error, so this patch handles primary engine failure after capture by preserving the scan and marking every answer for teacher review."
+          "summary": "The synthetic-authentic bakeoff gives separate cells a small edge, but not a market-readiness breakthrough.",
+          "detail": "Result folder: private-evidence/reports/answer-box-bakeoff-synthetic-20260704. Separate cells scored 131/186 filled digits and 70/120 exact questions, versus joined/open-divider at 129/186 filled digits and 68/120 exact questions. Blank slots were 54/54 clean for both. Use this to guide future worksheet design, not as proof of September classroom performance."
         }
       ]
     },
@@ -34,11 +134,11 @@
       "column": "Waiting on Tony",
       "cards": [
         {
-          "title": "Send more student sheets when convenient",
+          "title": "Hold extra packets for validation",
           "type": "tony",
           "owner": "Tony",
-          "summary": "More real completed A/B/C sheets will make OCR tuning less likely to overfit one student or one photo.",
-          "detail": "Good enough: full page visible, corners included, not badly blurred. Perfect lighting is not required. If a live app scan fails, a normal camera photo of the same page helps separate capture issues from OCR recognition."
+          "summary": "The current saved corpus is enough for the active pass; untouched authentic packets are valuable later as validation/holdout evidence.",
+          "detail": "If more scans are requested later, keep the raw scan before manual corrections and note device/build/page type."
         }
       ]
     },
@@ -46,11 +146,11 @@
       "column": "Codex Next",
       "cards": [
         {
-          "title": "Patch only with truth-score replay",
+          "title": "Improve digit-model robustness next",
           "type": "app",
           "owner": "Codex",
-          "summary": "Use npm run score:sg3-ocr and npm run score:live-ocr-truth after every OCR/review change.",
-          "detail": "The clean benchmark is private-evidence/sg3-9-photo-confidence-20260606/old-ipad-engine-fallback-1745. The live still benchmark is private-evidence/sg3-iphone-live-20260607/old-ipad-engine-fallback-1745. A patch only counts as progress if confident wrong answers stay at 0 and handwritten-truth accuracy or safe confident coverage improves on new evidence."
+          "summary": "The answer-box bakeoff suggests the box format is not the main remaining limiter.",
+          "detail": "Separate cells are likely the cleaner future format, but the larger reliability gap is handwritten digit recognition and review flow. Next technical work should focus on model robustness for primary handwriting and preserving near-zero confident wrong reads."
         }
       ]
     },
@@ -344,5 +444,5 @@
     }
   ],
   "codex_autonomy_rule": "Codex should keep moving every 15 minutes when useful: inspect repo state, choose the safest high-value work from the mission/kanban, and prefer small reversible packets. Safe autonomous lanes include tests, diagnosis, docs, Mission Control upkeep, worksheet/TPT/marketing drafts, market research, and careful planning. Tony has locked the current app UI for now, so do not make further app UI/style/layout changes autonomously. Tony remains final authority for vision, brand, major UX, launch/pricing/claims, worksheet-format decisions, and risky OCR/capture/homography/model/backend changes. Never delete/clean untracked work, never run git clean -fd or git reset --hard, and preserve paper-first teacher trust over feature expansion.",
-  "updated_at": "2026-05-30T23:44:21.700Z"
+  "updated_at": "2026-08-09T13:20:00.000-04:00"
 }

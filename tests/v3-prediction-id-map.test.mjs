@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  predictionForId,
   predictionIdKey,
   predictionIndexMapById,
   predictionMapById,
@@ -27,4 +28,11 @@ test('string worksheet ids match numeric prediction ids', () => {
   const byId = predictionMapById(predictions)
   assert.equal(byId.get(predictionIdKey('10'))?.digit, 1)
   assert.equal(byId.get(predictionIdKey('11'))?.digit, 9)
+})
+
+test('lookup accepts canonical and old raw-keyed prediction maps', () => {
+  const prediction = { id: '19', digit: 9 }
+  assert.equal(predictionForId(predictionMapById([prediction]), 19), prediction)
+  assert.equal(predictionForId(new Map([['19', prediction]]), 19), prediction)
+  assert.equal(predictionForId(new Map([[19, prediction]]), '19'), prediction)
 })

@@ -7470,3 +7470,312 @@ Next action:
   thresholds or use the answer key to rescue recognition. If CPU inference is
   too slow or fails on iOS 12.5.7, classify that device as unsupported or
   review-only rather than weakening the frozen safety policy.
+
+### 2026-08-08 orange-iPad runtime diagnostics and narrow repair candidates (local only; not deployed)
+
+- A controlled full-page replay used the saved P08 `SG-G1-LW-07 Dot
+  Collections` capture with an iOS 12.5.7 Safari user agent. It produced the
+  same correct answers (`5`, `8`, `12`, `13`, `16`, `19`), no review flags,
+  and no digit-engine fallback through each available local provider:
+  WASM about **2.16 s**, ORT WebGL about **4.67 s**, ONNX.js WebGL about
+  **4.54 s**, and ONNX.js CPU about **15.89 s** wall-clock on this desktop
+  Chromium host. These are provider/path checks only, not old-iPad speed or
+  acceptance evidence.
+- The real ONNX.js 0.1.8 CPU path now has a regression that stages modern
+  engine failures, lets ONNX.js WebGL fail, loads the shipped opset-9 primary
+  companion, and verifies a finite declared `output` tensor of length 10.
+  This shows that the checked-in adapter's Map/output alias is sufficient in
+  that controlled path. The uncommitted broad output normalizer in
+  `src/ocr-pipeline.js` was pre-existing worktree state; this investigation
+  found no iPad-specific evidence that it is the required fix.
+- The all-yellow path is an explicit recovery path: any digit-engine
+  initialization/inference exception creates null, zero-confidence,
+  review-needed predictions for the whole structured page. It is therefore
+  distinct from a confidence/veto review. P08 provider parity does not prove
+  the orange iPad is free of a runtime error, stale asset/cache, or
+  device-performance failure.
+- Local candidate diagnostics now export `digitEngineTrace`: model-init
+  timing, execution provider, and a timed record for every logical crop
+  operation (including the 30-second guard, failure message, and variant
+  count). Runtime metadata now retains an ONNX.js-WebGL failure even when CPU
+  later succeeds, for both primary and right-slot model loads. No threshold,
+  model weight, answer-key rule, or capture/homography behavior changed.
+- A separate legacy-ID candidate repairs the final manual correction path:
+  the writer already matched numeric layout ids to string prediction ids, but
+  post-correction correctness/review/answer-group/annotation rebuilding did
+  not. Canonical lookup now spans that re-derivation path, so a corrected
+  final `19` cannot be reinterpreted as missing solely due to ID type.
+- `Debug auto-save failed: Unauthorized` is a public-proxy HTTP 401, not
+  CORS/PNA/transport. The client candidate treats active auto-save as requiring
+  URL + key + opt-in; a missing key makes no request, and a 401 clears the
+  stale local key/opt-in and exposes **Connect**. It does not weaken proxy or
+  Mission Control authentication and never displays a key.
+- Verification: focused local suite **48/48**, `git diff --check`, and
+  `npm run build` passed. This work is not deployed and does not constitute a
+  physical old-iPad fix.
+- Required physical gate: on the exact orange iPad, use ordinary Safari and
+  the installed-PWA context separately, reconnect Debug auto-save with a
+  fresh activation link, scan P08, and retain the saved debug bundle. Record
+  provider, model SHA/asset metadata, `digitEngineTrace`, total time, yellow
+  count, and first failing crop/error if any. Then enter `5, 8, 12, 13, 16,
+  19` manually and confirm the final F answer stays settled after navigation
+  or a short wait. For a remaining 401, compare proxy/private receiver token
+  fingerprints operationally without printing either secret.
+
+### 2026-08-08 Beta 15.90 orange-iPad runtime-trace release (deployed; physical acceptance pending)
+
+- The local diagnostic/compatibility candidate was tightened without changing
+  OCR weights, confidence thresholds, answer-key separation, capture gates, or
+  homography behavior. The single broad-suite failure was a stale source-text
+  assertion for the now-multiline model-init call; the test was made
+  formatting-tolerant without changing production behavior.
+- Verification: focused real ONNX.js CPU/model execution passed; complete
+  repository suite **465/465**; `git diff --check` passed; deploy-pruned Vite
+  build passed. The release contains the timed `digitEngineTrace`, retained
+  ONNX.js WebGL failure metadata before CPU success, canonical legacy ID lookup
+  through final correction re-derivation, and safe reconnect behavior after a
+  missing/rejected debug-upload key.
+- Build label: `2026.08.08-legacy-ipad-runtime-trace-beta-15-90`.
+  Production immutable deployment: `https://cc86c6fd.scangrade.pages.dev/`.
+  Public production: `https://scangrade.io/`. Static preview:
+  `https://180340ee.scangrade.pages.dev/`.
+- Local, immutable, and public HTML are byte-identical at SHA-256
+  `3526d6befaf61af53b976d44ff0b28f3df6491aaa84268f2c6630a3f9f5030cf`;
+  public JavaScript is byte-identical at SHA-256
+  `40ff02a0583d6905ee272e64f3e24f754f4b36831751c2aa4c951edbc3425df6`.
+  `/api/submissions` and `/review-model/health` return that same static app
+  shell, so no D1 Function, Mac Mini grader, or public recognition backend is
+  attached.
+- Deployment safety: the first preview was rejected after a repository-root
+  Wrangler launch discovered the dormant D1 Function and returned 503 at
+  `/api/submissions`. It never reached production. The same verified artifact
+  was immediately redeployed from inside an isolated 254-file static directory;
+  only this static deployment was promoted.
+- Evidence-path blocker: Mission Control and the restricted local upload proxy
+  are running, but Tailscale reports Funnel permission disabled for the
+  tailnet. The saved port-8443 mapping therefore fails during TLS before it can
+  reach ScanGrade. The Tailscale approval page is open for the tailnet owner;
+  re-enable that existing upload-only Funnel before relying on auto-save.
+- **Not accepted yet.** Required physical gate remains: on the exact orange
+  iPad, confirm Beta 15.90, reconnect Debug auto-save, scan P08 in ordinary
+  Safari and the installed-app context, retain the debug bundle, and record
+  provider, model asset/hash metadata, operation timings, total time, yellow
+  count, and first error. Automatic grading—not blanket yellow—must be seen on
+  the device. If every local provider fails or exceeds a practical classroom
+  time budget in the captured trace, classify this iPad honestly as review-only
+  or unsupported rather than weakening the frozen safety policy.
+- Rollback remains Beta 15.89 at
+  `https://6981ec24.scangrade.pages.dev/`. No success claim has been made.
+
+### 2026-08-08 Beta 15.91 restored live debug ingress (deployed; physical acceptance pending)
+
+- Re-enabling Funnel exposed a concrete hostname drift. The Mac's active
+  tailnet is now `tail415e0b.ts.net`; Beta 15.90 still targeted the former
+  `tail9a3379.ts.net` port-8443 hostname, whose TLS handshake failed.
+- Beta 15.91 changes only the restricted debug-upload endpoint and migration
+  rule. Existing devices holding either the old private Mission Control URL or
+  the old public port-8443 URL migrate to the active endpoint. Recognition,
+  capture, homography, model weights, confidence, grading, and answer-key
+  separation are unchanged.
+- The new Funnel endpoint returned the exact browser preflight contract:
+  HTTP 204 for origin `https://scangrade.io`, POST/OPTIONS, and the authenticated
+  JSON headers. Proxy and Mission Control token fingerprints matched without
+  printing either key. A non-student end-to-end POST returned 201 and saved
+  receiver-smoke bundle
+  `2026-08-09_02-50-05-016-receiver-smoke-4e4b0e1d`.
+- Verification: complete repository suite **465/465** and deploy-pruned build
+  pass. Build label:
+  `2026.08.08-legacy-ipad-live-ingress-beta-15-91`.
+- Static preview: `https://dd252536.scangrade.pages.dev/`. Production immutable:
+  `https://d11e247b.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`.
+- Local/immutable/public HTML SHA-256:
+  `202def3999949defa65cfc29b5728f5999e9f406712272d998e437bdb07aa913`.
+  Public JavaScript SHA-256:
+  `e2ec2a7a45991806c208db4170eb13ac85bdb88c7d25e13b0f1c8ea027164a92`.
+  `/api/submissions` remains the byte-identical static shell. A production
+  browser smoke mounted the exact label with zero console errors.
+- The private activation URL was copied to the Mac clipboard without printing
+  its key. On the orange iPad, paste it into Safari or into Debug Scan's
+  **Connect** prompt, then run P08 Dot Collections. Do not accept the device
+  until automatic marks appear and the saved bundle proves the runtime path,
+  or the trace rigorously establishes an unacceptable failure/time budget.
+- Status: **not physically accepted**. Beta 15.90 rollback is
+  `https://cc86c6fd.scangrade.pages.dev/`; Beta 15.89 rollback is
+  `https://6981ec24.scangrade.pages.dev/`.
+
+### 2026-08-09 Beta 15.92 evidence recovery after first orange-iPad run (deployed; acceptance still pending)
+
+- The first physical orange-iPad Beta 15.91 scan completed its scanning stage
+  in about **45 seconds** but marked all six P08 Dot Collections questions
+  yellow. This is a failed compatibility result, not automatic grading and not
+  acceptance.
+- Debug auto-save also failed. The running proxy received no request from the
+  iPad, while an independent public preflight still returned HTTP 204. The
+  likely legacy-WebKit failure boundary is therefore the cross-origin
+  preflight/request path before the proxy, not Mission Control authentication
+  or storage.
+- Manual Export exposed a separate reproducible iOS 12 defect: Safari exposes
+  `navigator.share` but not file-sharing capability. The app assumed an absent
+  `canShare` meant file sharing worked, so AirDrop produced a 24-byte text file
+  containing only `ScanGrade OCR debug JSON`. The scan trace was not recovered.
+- Beta 15.92 adds three narrow, tested repairs without changing recognition,
+  capture, homography, model weights, confidence, or grading policy:
+  1. If the authenticated JSON upload/preflight fails, Safari retries a
+     CORS-safelisted `text/plain` envelope. The token remains inside the HTTPS
+     body, never the URL; the proxy still enforces exact origin, constant-time
+     token matching, size limit, and rate limit, then forwards only unwrapped
+     JSON.
+  2. Legacy Web Share now sends compact debug JSON as text instead of claiming
+     to share an unsupported file attachment.
+  3. Manual correction closes the resolved editor immediately but waits until
+     its replacement check/X is drawn before showing the next yellow focus,
+     removing the observed brief mark/focus discontinuity.
+- Both normal-header and legacy-text receiver formats passed real authenticated
+  end-to-end smoke uploads:
+  `2026-08-09_12-26-56-126-receiver-smoke-c25d66a0` and
+  `2026-08-09_12-26-56-147-receiver-smoke-6520d144`.
+- Verification: complete repository suite **468/468**, deploy-pruned build, and
+  `git diff --check` pass. Build label:
+  `2026.08.09-legacy-ipad-evidence-recovery-beta-15-92`.
+- Static preview: `https://df44fd26.scangrade.pages.dev/`. Production
+  immutable: `https://f89c4b3f.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`. An intermediate `main`-branch upload
+  (`https://10897db6.scangrade.pages.dev/`) was classified as Preview and never
+  changed the custom domain; the configured production branch remains
+  `autobuild/safe-20260223`.
+- Local/preview/immutable/public HTML SHA-256:
+  `ac471c41782d5a73fd624b6d6c00767028af5e0c15fc80a8ea6cc9492db4d19b`.
+  JavaScript `assets/index-DC1qQwa1.js` SHA-256:
+  `6f8735af1b92dcf0bd2070ecbde605fd452d2df282cfe9dbebb7a10164d1ab8e`.
+  `/api/submissions` and `/review-model/health` are byte-identical static shell.
+- **Not accepted yet.** Repeat P08 on the exact orange iPad after confirming
+  Beta 15.92. The decisive evidence remains automatic marks plus a saved trace,
+  or a trace showing that every compatible provider fails or exceeds an
+  acceptable classroom time/reliability standard. Blanket yellow remains a
+  failure, not a compatibility success.
+
+### 2026-08-09 Beta 15.93 validates inference before accepting a provider (deployed; physical gate pending)
+
+- The second physical orange-iPad run on Beta 15.92 again produced all six
+  yellow questions. It felt slightly smoother, but auto-save still failed and
+  manual correction marks still disappeared/reappeared. This remains failed
+  compatibility, not acceptance.
+- Beta 15.92's compact-text export worked. The 188,797-byte JSON is preserved
+  at
+  `private-evidence/debug-scans/2026-08-09/2026-08-09-orange-ipad-beta15-92-manual-export/debug.json`
+  with SHA-256
+  `36f872be0376470ce03a761158a749ce415295632dfa8c69967ac73adf869296`.
+- The trace identifies the exact runtime failure on iOS 12.5.4 / Safari 12.1.2:
+  ORT WASM cannot parse (`invalid opcode 192`); ORT WebGL then initializes in
+  1,553 ms but its first real inference fails after 244 ms with
+  `Unpacked shape is needed when using channels > 1`. The old selector accepted
+  a provider after session creation, so that run-time failure never continued
+  to ONNX.js and forced the whole page into review.
+- Beta 15.93 makes provider selection run one real zero-input
+  `[1,1,28,28]`/10-class inference before accepting WASM, ORT WebGL, ONNX.js
+  WebGL, or ONNX.js CPU. A provider that creates a session but fails inference
+  is recorded and the chain continues. The shipped opset-9 ONNX.js CPU model
+  still executes with finite output in the real integration smoke.
+- iOS 12 correction transitions now keep the live entered answer and existing
+  marks mounted while a predecoded static settled frame is composed. That
+  frame includes the completed question mark and appears once; only iOS 12
+  skips the unreliable correction pen animation. Modern devices retain the
+  animated flow.
+- Auto-save still did not reach the proxy even through the no-preflight body
+  fallback. Treat live cross-origin auto-save as unsupported on this Safari for
+  now; the verified compact manual export is the reliable evidence route.
+- Verification: complete repository suite **471/471**, deploy-pruned build,
+  `git diff --check`, staged provider-initializes-but-first-inference-fails
+  regression, and real ONNX.js CPU integration smoke pass. Build label:
+  `2026.08.09-legacy-inference-validated-fallback-beta-15-93`.
+- Static preview: `https://22c74830.scangrade.pages.dev/`. Production
+  immutable: `https://a2a4b8a8.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`. HTML SHA-256:
+  `73ab7403598b9c3866a325b199e7ea461e788be1b8df145635416c7326bda7da`.
+  JavaScript `assets/index-DlMAGwLM.js` SHA-256:
+  `46d0c465c397ae46f9a7f3e8881f79b808f6fc116d31488a44031f00d79262cd`.
+  `/api/submissions` and `/review-model/health` remain the identical static
+  shell.
+- **Not accepted yet.** The next P08 physical scan must show whether the iPad
+  reaches ONNX.js CPU, its per-operation/total time, and whether any answers are
+  automatically marked. If CPU fails or is too slow/unreliable, this trace path
+  now provides rigorous evidence for review-only/unsupported classification.
+
+### 2026-08-09 Beta 15.93 orange-iPad physical compatibility gate passed
+
+- The exact orange iPad (iOS 12.5.4 / Safari 12.1.2) physically completed a
+  Beta 15.93 P08 scan using real local automatic inference. This was not the
+  digit-engine fallback and not a blanket-yellow result.
+- The manual export is preserved at
+  `private-evidence/debug-scans/2026-08-09/2026-08-09-orange-ipad-beta15-93-manual-export/debug.json`
+  (239,111 bytes; SHA-256
+  `8b2b6581307996dce81552bd4cffc090ec01b369ede92a34b9413f21e96147ca`).
+- Runtime evidence: ORT WASM failed to parse and ORT WebGL failed its validation
+  inference as expected; provider validation then continued to
+  `onnxjs-webgl`, which initialized in 5,487 ms and completed all 12 digit
+  operations. `digitEngineFallback` and `reviewOnlyFallback` are false.
+- Before manual correction, five questions were automatically checked and one
+  question (Q6) was routed to yellow review. The decisive retained pre-correction
+  state is `questionReviewCount: 1`. Q6's final digit was conservatively flagged
+  as `two-digit-mismatch-low-trust-review`: a shape heuristic proposed 2 while
+  the preprocessing majority and several strong variants read 9. Tony corrected
+  the displayed 12 to 19; the export correctly retains `originalDigit: 2` and
+  `correctedSlots: [1]`.
+- Do not reinterpret the post-correction `reviewNeeded: false` or all-true
+  `questionCorrect` fields as the original automatic state. Manual correction
+  intentionally settles those fields. The retained `questionReviewCount: 1`,
+  correction record, original digit, review reason, and provider trace together
+  establish the physical automatic-grading result.
+- Compatibility conclusion: the orange iPad can perform conservative automatic
+  grading locally. It achieved five automatic decisions plus one targeted
+  teacher review instead of the previous six-yellow engine fallback. The
+  automatic-grading compatibility gate is therefore passed for this device and
+  build. Capture-to-result remains roughly 40 seconds and is a performance issue,
+  not evidence that the engine fell back.
+- Remaining non-gating issues: cross-origin debug auto-save still does not reach
+  the proxy on this Safari (compact manual Export is the supported evidence path),
+  and Tony still needs to report whether Beta 15.93's iOS-12 static correction
+  transition eliminated the disappearing/reappearing annotation flash.
+
+### 2026-08-09 orange-iPad performance baseline and stage telemetry
+
+- The physical Beta 15.93 trace measured 39.814 seconds from captured image to
+  generated result: 5.487 seconds provider/model initialization, 7.307 seconds
+  across all 12 digit operations, and 27.020 seconds outside the timed engine.
+- A timing-only ten-page comparison on current Mac browsers used cold page loads
+  and the same 12-slot worksheet workload. Chromium/ORT WASM SIMD measured
+  2.142 seconds median (3.529 seconds p90) and WebKit/ORT WASM SIMD measured
+  2.401 seconds median (3.541 seconds p90). The orange iPad was about 17–19×
+  slower end to end and 45–56× slower in digit-engine work.
+- A forced legacy control on modern headless Chromium could not use ONNX.js
+  WebGL and fell to CPU. It took about 16 seconds per page, confirming CPU is
+  not an acceptable optimization target; it does not invalidate the orange
+  iPad's successful and faster ONNX.js WebGL execution.
+- Passive `ocrStageTrace` telemetry now records elapsed time through image load,
+  pixel read, QR/layout, marker/homography processing, crop preparation, model
+  initialization, digit inference, review checks, and result readiness. It does
+  not change OCR, capture, homography, provider selection, confidence, or marks.
+- Focused telemetry/provider/real-ONNX.js-CPU tests pass. A modern smoke populated
+  every stage and read the selected P08 capture 6/6. On that run, marker detection,
+  homography, and crop extraction consumed 1.753 of 2.328 seconds (75%). Do not
+  assume the same share on iOS 12 until its next physical export measures it.
+- Full methodology and raw Chromium/WebKit reports are preserved under
+  `private-evidence/reports/orange-ipad-performance-comparison-20260809/`.
+- Beta 15.94 is deployed with timing telemetry only. Build label:
+  `2026.08.09-legacy-ipad-stage-timing-beta-15-94`. Complete suite **472/472**,
+  focused real ONNX.js CPU integration, deploy-pruned build, browser stage-trace
+  smoke, and `git diff --check` pass.
+- Static preview: `https://7348487d.scangrade.pages.dev/`. Production immutable:
+  `https://cce485a8.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`. Local/preview/immutable/public HTML SHA-256:
+  `19e10e9a4b2b14ef8d22a888040afd396cfc6923b27fe63d2746838bc394186e`.
+  JavaScript `assets/index-Cmj72aaG.js` SHA-256:
+  `6b80a50b1fd1268a88e44a8b8ad05d4f75814f7a3fbc320afb9d077600c35dda`.
+  Deployment used the isolated 254-file static directory, not the repository
+  root. API-shaped paths remain static Pages responses; no recognition backend
+  was attached.
+- Next physical step: confirm Beta 15.94, repeat P08 without correcting before
+  the automatic result settles, then manually Export. Use `ocrStageTrace` to
+  select a regression-backed optimization; do not reduce preprocessing variants
+  or alter homography speculatively.

@@ -56,9 +56,18 @@ test('manual correction digits use the lighter settled teacher-ink renderer', as
     new URL('../src/v3/manual-correction-ink.js', import.meta.url),
     'utf8',
   )
-  assert.match(correctionInkSource, /ctx\.font = `600 /)
+  assert.match(correctionInkSource, /rect\.y \+ rect\.h \* 0\.53/)
+  assert.match(correctionInkSource, /ctx\.font = `500 /)
   assert.match(correctionInkSource, /ctx\.globalAlpha = 0\.92/)
   assert.match(correctionInkSource, /ctx\.globalAlpha = 0\.1/)
+})
+
+test('camera startup controls and revealed readings share blue while viewfinder guidance stays dark', () => {
+  assert.match(cameraSource, /v-if="!streamActive && !capturedImage && !isLoading"/)
+  assert.match(cameraSource, /\.controls--student \.btn-primary\s*\{[^}]*background:\s*var\(--sg-interface-blue, #245aa4\)/s)
+  assert.match(cameraSource, /\.overlay-frame--warming \.overlay-frame-text,[\s\S]*background:\s*rgba\(0, 0, 0, 0\.56\)/)
+  assert.match(cameraSource, /\.overlay-frame--ready \.overlay-frame-text\s*\{[^}]*background:\s*rgba\(18, 108, 57, 0\.9\)/s)
+  assert.match(cameraSource, /\.recognition-read-label\s*\{[^}]*color:\s*var\(--sg-interface-blue, #245aa4\)/s)
 })
 
 test('the completion date appears once at its final opacity with a stationary completion glow', () => {
@@ -73,7 +82,14 @@ test('the completion date appears once at its final opacity with a stationary co
   assert.match(cameraSource, /worksheet-completion-glow 180ms/)
   assert.doesNotMatch(cameraSource, /worksheet-stamp-impact/)
   assert.doesNotMatch(cameraSource, /captured-image-wrap--stamp-impact/)
-  assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*420\)/)
+  assert.match(cameraSource, /window\.setTimeout\(advanceProgressiveMarking,\s*520\)/)
+})
+
+test('the final flattened worksheet is decoded before the live marking layers are retired', () => {
+  assert.match(cameraSource, /await imageElementFromUrl\(finalAnnotatedImage\)/)
+  assert.match(cameraSource, /progressiveBaseImageOverride\.value = finalAnnotatedImage[\s\S]*await nextTick\(\)[\s\S]*progressiveMarkingComplete\.value = true/)
+  assert.doesNotMatch(cameraSource, /progressiveMarkingComplete\.value = true[\s\S]{0,180}progressiveBaseImageOverride\.value = ''/)
+  assert.match(cameraSource, /: progressiveBaseImageOverride\.value\s*\? progressiveBaseImageOverride\.value/)
 })
 
 test('the final date stamp uses a viewfinder-green glow without moving the page or stamp ink', () => {
@@ -250,6 +266,27 @@ test('an X draws top-left to bottom-right, then crosses only after the first str
   assert.match(cameraSource, /startMeasuredProgressiveStrokeSequence/)
 })
 
+test('manual replacement cleanup encloses every pixel path of the old X', () => {
+  const dimensions = { width: 800, height: 1100 }
+  const focusRect = { x: 250, y: 360, w: 62, h: 58 }
+  const seed = 131
+  const [step] = progressiveMarkingSteps(
+    [{ questionNum: 3, status: 'incorrect', reviewNeeded: false }],
+    [{ questionNum: 3, x: 220, y: 330, w: 122, h: 118, focusX: focusRect.x, focusY: focusRect.y, focusW: focusRect.w, focusH: focusRect.h }],
+    dimensions,
+  )
+  const bounds = teacherIndicatorBounds(focusRect, seed, dimensions)
+  const coordinates = step.strokes.flatMap((stroke) =>
+    Array.from(stroke.d.matchAll(/(?:M|L)\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g))
+      .map((match) => [Number(match[1]), Number(match[2])])
+  )
+  assert.ok(coordinates.length >= 6)
+  for (const [x, y] of coordinates) {
+    assert.ok(x >= bounds.x && x <= bounds.x + bounds.w)
+    assert.ok(y >= bounds.y && y <= bounds.y + bounds.h)
+  }
+})
+
 test('a settled review answer uses one left-to-right highlighter swipe', () => {
   const [step] = progressiveMarkingSteps(
     [{ questionNum: 2, status: 'review', reviewNeeded: true }],
@@ -301,7 +338,7 @@ test('runtime manual correction keeps the settled black answer in its animation 
   )
   assert.match(
     cameraSource,
-    /context\.drawImage\(\s*completed,\s*clearRect\.x,[\s\S]*?clearRect\.h,\s*\)/,
+    /const completedPatchRect = includeCompletedQuestionMark[\s\S]*?context\.drawImage\(\s*completed,\s*completedPatchRect\.x,[\s\S]*?completedPatchRect\.h,\s*\)/,
   )
   assert.match(cameraSource, /revealAnswerQuestionNums:\s*\[\]/)
   assert.ok(
@@ -311,9 +348,36 @@ test('runtime manual correction keeps the settled black answer in its animation 
   )
   assert.match(cameraSource, /ref="displayedResultImageRef"/)
   assert.match(cameraSource, /await waitForDisplayedCorrectionBase\(correctionAnimationBaseUrl\)/)
+  assert.match(cameraSource, /await preloadCorrectionAnimationBase\(correctionAnimationBaseUrl\)/)
+  assert.ok(
+    cameraSource.indexOf('await preloadCorrectionAnimationBase(correctionAnimationBaseUrl)') <
+      cameraSource.indexOf('startManualCorrectionAnimation(correctedQuestionNum, correctionAnimationBaseUrl)'),
+    'the stable correction base must be decoded before old WebKit switches frames',
+  )
   assert.match(cameraSource, /async function waitForDisplayedCorrectionBase/)
   assert.match(cameraSource, /image\.addEventListener\('load',\s*finishAfterPaint/)
   assert.match(cameraSource, /requestAnimationFrame\(\(\) => window\.requestAnimationFrame\(resolve\)\)/)
+})
+
+test('a repeated manual correction removes the old question mark and score before drawing replacements', () => {
+  assert.match(cameraSource, /function manualCorrectionQuestionRect\(questionNum, dimensions = \{\}\)/)
+  assert.match(
+    cameraSource,
+    /const questionRect = manualCorrectionQuestionRect\(questionNum, \{ width, height \}\)[\s\S]*?context\.drawImage\(\s*clean,\s*questionRect\.x,/,
+  )
+  assert.match(
+    cameraSource,
+    /teacherIndicatorBounds\(focusRect, \(Math\.max\(0, groupIndex\) \+ 1\) \* 131, \{ width, height \}\)/,
+  )
+  assert.match(
+    cameraSource,
+    /const scoreRect = teacherScorePlacement\(\{[\s\S]*?\}\)\?\.safetyRect[\s\S]*?context\.drawImage\(\s*clean,\s*scoreRect\.x,/,
+  )
+  assert.ok(
+    cameraSource.indexOf('const questionRect = manualCorrectionQuestionRect') <
+      cameraSource.indexOf('context.drawImage(\n      completed,'),
+    'old ink must be cleared before the corrected answer patch is copied',
+  )
 })
 
 test('grading pen strokes remain animated when the device requests reduced motion', () => {

@@ -90,11 +90,14 @@ export function drawManualCorrectionInk(ctx, rects, cells, seed) {
     const minimumSize = digitText.length > 1 ? 30 : 38
     const fontSize = Math.max(minimumSize, Math.min(rect.h * 0.86, rect.w * widthScale))
     const x = rect.x + rect.w * 0.52 + jitter(seed + index * 17, rect.w * 0.035)
-    const y = rect.y + rect.h * 0.58 + jitter(seed + index * 19, rect.h * 0.035)
+    // Keep the teacher entry optically centered inside the correction tape.
+    // Marker Felt's visual mass sits below its typographic center, so this
+    // small lift prevents descenders/curves from hanging over the lower edge.
+    const y = rect.y + rect.h * 0.53 + jitter(seed + index * 19, rect.h * 0.028)
     ctx.save()
     ctx.translate(x, y)
     ctx.rotate(jitter(seed + index * 23, 0.03))
-    ctx.font = `600 ${fontSize}px "Marker Felt", "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif`
+    ctx.font = `500 ${fontSize}px "Marker Felt", "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.lineJoin = 'round'

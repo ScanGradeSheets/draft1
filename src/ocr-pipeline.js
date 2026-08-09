@@ -654,6 +654,7 @@ export async function initDigitModel() {
     modelRuntimeInfo.runtime.executionProvider = primary.executionProvider;
     modelRuntimeInfo.runtime.wasmFallbackError = primary.wasmFallbackError || null;
     modelRuntimeInfo.runtime.webglFallbackError = primary.webglFallbackError || null;
+    modelRuntimeInfo.runtime.legacyWebglFallbackError = primary.legacyWebglFallbackError || null;
     modelRuntimeInfo.runtime.legacyFallbackError = primary.legacyFallbackError || null;
     modelRuntimeInfo.runtime.legacyAsset = primary.legacyAsset || null;
     if (modelPath === DEFAULT_MODEL_PATH && primary.sha256 && primary.sha256 !== KNOWN_WORKSHEET_SHA256) {
@@ -737,6 +738,10 @@ async function getRightSlotDigitSession() {
       matchesKnownModel: !!loaded.sha256 && loaded.sha256 === KNOWN_RIGHT_SLOT_SHA256,
       loaded: true,
       executionProvider: loaded.executionProvider,
+      wasmFallbackError: loaded.wasmFallbackError || null,
+      webglFallbackError: loaded.webglFallbackError || null,
+      legacyWebglFallbackError: loaded.legacyWebglFallbackError || null,
+      legacyFallbackError: loaded.legacyFallbackError || null,
       routing: 'digitIndex === 1'
     };
   }
@@ -812,8 +817,16 @@ async function loadDigitSession(modelPath) {
             sha256: fallbackSha256
           };
           return fallbackBuffer;
-        }
+      }
       : null,
+    validateSession: async ({ session, runtime }) => {
+      const probe = new runtime.Tensor(
+        'float32',
+        new Float32Array(MNIST_DIGIT_LEN),
+        [1, 1, MNIST_DIGIT_SIZE, MNIST_DIGIT_SIZE]
+      );
+      await runDigitSessionAsProbs(session, probe);
+    },
     forceWebgl: shouldForceWebglDigitEngine(),
     forceLegacy: shouldForceLegacyDigitEngine(),
   });
@@ -828,6 +841,7 @@ async function loadDigitSession(modelPath) {
     executionProvider: created.provider,
     wasmFallbackError: created.wasmError?.message || null,
     webglFallbackError: created.webglError?.message || null,
+    legacyWebglFallbackError: created.legacyWebglError?.message || null,
     legacyFallbackError: created.legacyError?.message || null,
     webglAsset: loadedWebglAsset,
     legacyAsset: loadedLegacyAsset
@@ -2416,8 +2430,22 @@ async function runDigitDataAsProbs(data, options = {}) {
 async function runDigitSessionAsProbs(session, tensor) {
   const feeds = { [session.inputNames[0]]: tensor };
   const results = await session.run(feeds);
-  const outTensor = results[session.outputNames[0]];
-  return softmax(outTensor.data);
+  const declaredOutput = session.outputNames?.[0];
+  let outTensor = declaredOutput ? results?.[declaredOutput] : null;
+  if (!outTensor && results && typeof results.get === 'function') {
+    outTensor = declaredOutput ? results.get(declaredOutput) : null;
+    if (!outTensor && typeof results.values === 'function') {
+      outTensor = results.values().next().value;
+    }
+  }
+  if (!outTensor && results && typeof results === 'object') {
+    outTensor = Object.values(results)[0];
+  }
+  const outputData = outTensor?.data ?? outTensor?.floatData ?? outTensor?.numberData ?? outTensor;
+  if (!outputData || typeof outputData.length !== 'number' || outputData.length < 10) {
+    throw new Error('Digit model returned no usable output tensor');
+  }
+  return softmax(outputData);
 }
 
 /**

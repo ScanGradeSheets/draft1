@@ -75,7 +75,7 @@ export function teacherScoreSmoothPathD(points) {
     const midY = (points[index][1] + points[index + 1][1]) / 2
     commands.push(`Q ${points[index][0].toFixed(2)} ${points[index][1].toFixed(2)} ${midX.toFixed(2)} ${midY.toFixed(2)}`)
   }
-  const last = points.at(-1)
+  const last = points[points.length - 1]
   commands.push(`Q ${last[0].toFixed(2)} ${last[1].toFixed(2)} ${last[0].toFixed(2)} ${last[1].toFixed(2)}`)
   return commands.join(' ')
 }
@@ -212,7 +212,7 @@ export function buildTeacherScoreStrokePlan({
     text: chars.join(''),
     strokes: Object.freeze(strokes),
     durationMs: strokes.length
-      ? strokes.at(-1).delayMs + strokes.at(-1).durationMs
+      ? strokes[strokes.length - 1].delayMs + strokes[strokes.length - 1].durationMs
       : 0,
   })
 }

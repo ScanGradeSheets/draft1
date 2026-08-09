@@ -140,6 +140,42 @@ const result = await page.evaluate(async ({ debug }) => {
         skipRuleArtifactCleanup: true,
         skipPrintedLineCleanup: true
       })
+    },
+    {
+      name: 'connected-edge-strokes',
+      options: (crop) => ({
+        protectInteriorStrokes: crop.isVirtualDigitBox === true,
+        strictLineRemoval: crop.isVirtualDigitBox === true,
+        preserveConnectedEdgeStrokes: true
+      })
+    },
+    {
+      name: 'connected-edge-no-rule',
+      options: (crop) => ({
+        protectInteriorStrokes: crop.isVirtualDigitBox === true,
+        strictLineRemoval: crop.isVirtualDigitBox === true,
+        preserveConnectedEdgeStrokes: true,
+        skipRuleArtifactCleanup: true
+      })
+    },
+    {
+      name: 'connected-edge-no-component',
+      options: (crop) => ({
+        protectInteriorStrokes: crop.isVirtualDigitBox === true,
+        strictLineRemoval: crop.isVirtualDigitBox === true,
+        preserveConnectedEdgeStrokes: true,
+        skipPrintedLineCleanup: true
+      })
+    },
+    {
+      name: 'connected-edge-gentle',
+      options: (crop) => ({
+        protectInteriorStrokes: crop.isVirtualDigitBox === true,
+        strictLineRemoval: crop.isVirtualDigitBox === true,
+        preserveConnectedEdgeStrokes: true,
+        skipRuleArtifactCleanup: true,
+        skipPrintedLineCleanup: true
+      })
     }
   ];
   for (const crop of processed.rawCrops) {
@@ -149,12 +185,14 @@ const result = await page.evaluate(async ({ debug }) => {
     });
     const variants = [];
     for (const variant of preprocessVariants) {
+      window.__SCANGRADE_DEBUG_PREPROCESS_STATS = [];
       const variantOut = preprocessToMNISTWithDebug(crop.image, variant.options(crop));
       variants.push({
         name: variant.name,
         ink: matDataUrl(variantOut.debug.inkMask),
         tensor: tensorDataUrl(variantOut.tensor),
-        prediction: await classifyTensor(variantOut.tensor)
+        prediction: await classifyTensor(variantOut.tensor),
+        preprocessStats: window.__SCANGRADE_DEBUG_PREPROCESS_STATS.at(-1) || null
       });
       variantOut.debug.gray.delete();
       variantOut.debug.inkMask.delete();

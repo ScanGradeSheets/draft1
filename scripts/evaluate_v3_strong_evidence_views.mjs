@@ -175,7 +175,7 @@ async function main() {
   const report = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
-    purpose: 'Key-blind matched-view adapted-TrOCR benchmark before any distillation.',
+    purpose: manifest.purpose || 'Key-blind matched-view adapted-TrOCR benchmark before any distillation.',
     sourceManifest: path.relative(ROOT, manifestPath),
     teacherUrl,
     teacherIdentity: {
@@ -184,7 +184,10 @@ async function main() {
     },
     requestItemFields: ['id', 'questionNum', 'imageDataUrl'],
     answerKeyProvidedToTeacher: false,
-    p05Used: false,
+    p05Used: Boolean(
+      manifest.p05PostTruthDevelopmentOnly
+      || selectedEntries.some(row => String(row.packetId || '').toUpperCase() === 'P05')
+    ),
     lockedPacketsUsed: false,
     views,
     byView,

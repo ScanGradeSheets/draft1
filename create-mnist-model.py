@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Create a simple MNIST ONNX model for digit recognition.
+LEGACY / DEBUG ONLY:
+Create a random-weight MNIST-shaped ONNX model for pipeline smoke tests.
+
+This script does NOT train a model and should not be used for production OCR quality.
+Use scripts/train_worksheet_digits.py for a real trained worksheet model.
 """
 
 import numpy as np
@@ -8,7 +12,7 @@ import onnx
 from onnx import helper, TensorProto
 
 def create_mnist_model():
-    """Create a simple 2-layer MLP for MNIST digit recognition."""
+    """Create a random-weight 2-layer MLP for debug-only testing."""
     
     np.random.seed(42)
     
@@ -49,10 +53,17 @@ def create_mnist_model():
         vals=b2.tolist()
     )
     
-    # Create nodes
+    # Create nodes: Flatten [1,1,28,28] -> [1, 784] then MatMul
+    flatten = helper.make_node(
+        'Flatten',
+        inputs=['input'],
+        outputs=['flat'],
+        name='Flatten',
+        axis=1
+    )
     matmul1 = helper.make_node(
         'MatMul',
-        inputs=['input', 'W1'],
+        inputs=['flat', 'W1'],
         outputs=['matmul1'],
         name='MatMul1'
     )
@@ -88,7 +99,7 @@ def create_mnist_model():
     # Create graph with correct API
     graph = helper.make_graph(
         nodes=[
-            matmul1, add1, relu1,
+            flatten, matmul1, add1, relu1,
             matmul2, add2
         ],
         name='mnist-digit-recognition',
@@ -109,9 +120,13 @@ def create_mnist_model():
     
     # Validate and save
     onnx.checker.check_model(model)
-    onnx.save(model, '/Users/openclaw/.openclaw/workspace/scan-grade/models/mnist-model.onnx')
+    import os
+    out_dir = os.path.join(os.path.dirname(__file__), 'public', 'models')
+    os.makedirs(out_dir, exist_ok=True)
+    onnx.save(model, os.path.join(out_dir, 'mnist-model.onnx'))
     
-    print('✅ MNIST model created: models/mnist-model.onnx')
+    print('⚠️ Legacy debug model created: public/models/mnist-model.onnx')
+    print('   This model has random weights and is NOT production quality.')
     print(f'   Input: [1, 1, 28, 28]')
     print(f'   Output: [1, 10] (digit probabilities)')
 

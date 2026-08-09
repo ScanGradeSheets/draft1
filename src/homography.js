@@ -31,6 +31,20 @@ function anchorsPassCornerValidation(anchors, cols, rows, toleranceFrac = 0.22) 
   });
 }
 
+export function anchorsHaveConsistentMarkerScale(anchors, minimumRatio = 0.42) {
+  if (!Array.isArray(anchors) || anchors.length !== 4) return false;
+  const sides = anchors
+    .map((anchor) => Math.sqrt(Number(anchor?.width) * Number(anchor?.height)))
+    .filter((side) => Number.isFinite(side) && side > 0)
+    .sort((a, b) => a - b);
+  if (sides.length !== 4) return false;
+  const median = (sides[1] + sides[2]) / 2;
+  return sides.every((side) => (
+    side >= median * minimumRatio &&
+    side <= median / minimumRatio
+  ));
+}
+
 function markerAreaRange(cols, rows, layout) {
   const markerSizeNorm = layout?.homography?.marker_size != null && layout.homography.marker_size <= 1
     ? layout.homography.marker_size
@@ -378,7 +392,16 @@ function detectCornerMarkersByCornerWindows(src, pageRect, minArea, maxArea) {
         const score = area * density * (0.7 + 0.3 * squareness) - d * 120;
         if (score > bestScore) {
           bestScore = score;
-          best = { id: win.id, x: cx + roiX, y: cy + roiY };
+          best = {
+            id: win.id,
+            x: cx + roiX,
+            y: cy + roiY,
+            area,
+            width: rect.width,
+            height: rect.height,
+            fillRatio,
+            inkRatio
+          };
         }
         cnt.delete();
       }
@@ -415,6 +438,7 @@ export function detectCornerMarkers(src, layout, options = {}) {
   );
   const fullFrameCornerValid =
     anchorsPassCornerValidation(fullFrameCornerAnchors, src.cols, src.rows, 0.30) &&
+    anchorsHaveConsistentMarkerScale(fullFrameCornerAnchors) &&
     anchorsFormPlausiblePageQuad(fullFrameCornerAnchors, src.cols, src.rows, layout);
   if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_MARKERS) {
     window.__SCANGRADE_DEBUG_FULL_FRAME_ANCHORS = fullFrameCornerAnchors;
@@ -570,13 +594,13 @@ export function detectCornerMarkers(src, layout, options = {}) {
   hierarchy.delete();
   if (ownsMarkerSrc) markerSrc.delete();
   const cornerWindowAnchors = detectCornerMarkersByCornerWindows(src, pageRect, minArea, maxArea);
-  const cornerWindowValid = anchorsPassCornerValidation(
-    cornerWindowAnchors
-      ? cornerWindowAnchors.map((a) => ({ id: a.id, x: a.x - roiX, y: a.y - roiY }))
-      : null,
-    workCols,
-    workRows
-  );
+  const localCornerWindowAnchors = cornerWindowAnchors
+    ? cornerWindowAnchors.map((a) => ({ ...a, x: a.x - roiX, y: a.y - roiY }))
+    : null;
+  const cornerWindowValid =
+    anchorsPassCornerValidation(localCornerWindowAnchors, workCols, workRows) &&
+    anchorsHaveConsistentMarkerScale(localCornerWindowAnchors) &&
+    anchorsFormPlausiblePageQuad(localCornerWindowAnchors, workCols, workRows, layout);
   const tryFallback = () => {
     if (!allowFallback) {
       if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_MARKERS) {
@@ -1352,8 +1376,15 @@ function buildVirtualDigitBoxRects(warped, layout, expectedRects, options = {}) 
     }
   }
 
-  if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
-    window.__SCANGRADE_DEBUG_VIRTUAL_FRAMES = virtualFrameDebug;
+  if (typeof window !== 'undefined') {
+    window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(assignments.entries()).map(([id, rect]) => ({
+      id,
+      method: rect.answerFrameAssignmentMethod || 'virtual-template-fallback',
+      rect
+    }));
+    if (window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+      window.__SCANGRADE_DEBUG_VIRTUAL_FRAMES = virtualFrameDebug;
+    }
   }
   return assignments;
 }
@@ -1926,7 +1957,7 @@ function detectAnswerBoxRects(warped, expectedRects, options = {}) {
 
     const columnAssignments = assignAnswerBoxesByColumnOrder(deduped, expectedRects, expW, expH, options);
     if (columnAssignments) {
-      if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+      if (typeof window !== 'undefined') {
         window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(columnAssignments.entries()).map(([id, rect]) => ({
           id,
           method: rect.answerFrameAssignmentMethod || 'column-order',
@@ -1938,7 +1969,7 @@ function detectAnswerBoxRects(warped, expectedRects, options = {}) {
 
     const gridAssignments = assignAnswerBoxesByGridOrder(deduped, expectedRects, expW, expH);
     if (gridAssignments) {
-      if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+      if (typeof window !== 'undefined') {
         window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(gridAssignments.entries()).map(([id, rect]) => ({
           id,
           method: rect.answerFrameAssignmentMethod || 'grid-order',
@@ -1971,8 +2002,10 @@ function detectAnswerBoxRects(warped, expectedRects, options = {}) {
     }
     const coherentResult = trustCoherentAnswerBoxAssignments(assignments, expectedRects, expW, expH);
     const finalAssignments = coherentResult.assignments;
-    if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
-      window.__SCANGRADE_DEBUG_ANSWER_BOX_COHERENCE = coherentResult.stats;
+    if (typeof window !== 'undefined') {
+      if (window.__SCANGRADE_DEBUG_ANSWER_BOXES) {
+        window.__SCANGRADE_DEBUG_ANSWER_BOX_COHERENCE = coherentResult.stats;
+      }
       window.__SCANGRADE_DEBUG_ANSWER_BOX_ASSIGNMENTS = Array.from(finalAssignments.entries()).map(([id, rect]) => ({
         id,
         method: rect.answerFrameAssignmentMethod || 'nearest-fallback',
@@ -2848,8 +2881,15 @@ function extractWorksheetInk(boxImg, options = {}) {
     }
   }
 
-  removeLongEdgeLinesFromInk(ink, width, height);
-  removeDashedEdgeGuidesFromInk(ink, width, height);
+  const connectedEdgeProtection = options.preserveConnectedEdgeStrokes === true
+    ? connectedDiagonalEdgeStrokeMask(ink, width, height, 0.08)
+    : null;
+  removeLongEdgeLinesFromInk(ink, width, height, {
+    protectedPixels: connectedEdgeProtection
+  });
+  removeDashedEdgeGuidesFromInk(ink, width, height, {
+    protectedPixels: connectedEdgeProtection
+  });
   if (!skipRuleArtifactCleanup && options.strictLineRemoval === true && preserveFaintInk) {
     removeVirtualDigitRuleArtifactsFromInk(ink, width, height, {
       eraseBelow: options.ruleArtifactEraseBelow
@@ -2881,6 +2921,9 @@ function extractWorksheetInk(boxImg, options = {}) {
       bg,
       localRadius,
       scale,
+      connectedEdgeProtectedPixels: connectedEdgeProtection
+        ? connectedEdgeProtection.reduce((sum, value) => sum + value, 0)
+        : 0,
       inkMean: Array.from(ink).reduce((sum, value) => sum + value, 0) / Math.max(1, ink.length),
       inkMax: Math.max(...ink),
       luminanceMin: Math.min(...luminance),
@@ -2919,8 +2962,9 @@ function getDisplayPixelSource(mat) {
   };
 }
 
-function removeLongEdgeLinesFromInk(ink, width, height) {
+function removeLongEdgeLinesFromInk(ink, width, height, options = {}) {
   const threshold = 0.35;
+  const protectedPixels = options.protectedPixels || null;
   const rowLimit = width * 0.55;
   const colLimit = height * 0.55;
 
@@ -2933,7 +2977,10 @@ function removeLongEdgeLinesFromInk(ink, width, height) {
     if (count >= rowLimit && (y < height * 0.18 || y > height * 0.82)) {
       for (let yy = Math.max(0, y - 1); yy < Math.min(height, y + 2); yy++) {
         const offset = yy * width;
-        for (let x = 0; x < width; x++) ink[offset + x] = 0;
+        for (let x = 0; x < width; x++) {
+          const idx = offset + x;
+          if (!protectedPixels?.[idx]) ink[idx] = 0;
+        }
       }
     }
   }
@@ -2947,15 +2994,83 @@ function removeLongEdgeLinesFromInk(ink, width, height) {
       for (let y = 0; y < height; y++) {
         const offset = y * width;
         for (let xx = Math.max(0, x - 1); xx < Math.min(width, x + 2); xx++) {
-          ink[offset + xx] = 0;
+          const idx = offset + xx;
+          if (!protectedPixels?.[idx]) ink[idx] = 0;
         }
       }
     }
   }
 }
 
-function removeDashedEdgeGuidesFromInk(ink, width, height) {
+function connectedDiagonalEdgeStrokeMask(ink, width, height, threshold = 0.22) {
+  const protectedPixels = new Uint8Array(width * height);
+  const visited = new Uint8Array(width * height);
+  const xEdge = Math.max(2, Math.round(width * 0.18));
+  const yEdge = Math.max(2, Math.round(height * 0.18));
+
+  for (let start = 0; start < ink.length; start++) {
+    if (visited[start] || ink[start] <= threshold) continue;
+    const stack = [start];
+    visited[start] = 1;
+    const pixels = [];
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    while (stack.length) {
+      const idx = stack.pop();
+      pixels.push(idx);
+      const y = Math.floor(idx / width);
+      const x = idx - y * width;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(height - 1, y + 1); yy++) {
+        for (let xx = Math.max(0, x - 1); xx <= Math.min(width - 1, x + 1); xx++) {
+          const next = yy * width + xx;
+          if (!visited[next] && ink[next] > threshold) {
+            visited[next] = 1;
+            stack.push(next);
+          }
+        }
+      }
+    }
+
+    const spanX = maxX - minX + 1;
+    const spanY = maxY - minY + 1;
+    const touchesHorizontalEdgeBand = minY <= yEdge || maxY >= height - yEdge - 1;
+    const avoidsFullWidthFrame = minX > 1 && spanX < width * 0.90;
+    if (
+      !touchesHorizontalEdgeBand ||
+      !avoidsFullWidthFrame ||
+      spanY < height * 0.34 ||
+      spanX < width * 0.12 ||
+      spanX > width * 0.90
+    ) continue;
+
+    const topCut = minY + spanY * 0.28;
+    const bottomCut = minY + spanY * 0.58;
+    const topXs = [];
+    const bottomXs = [];
+    for (const idx of pixels) {
+      const y = Math.floor(idx / width);
+      const x = idx - y * width;
+      if (y <= topCut) topXs.push(x);
+      if (y >= bottomCut) bottomXs.push(x);
+    }
+    if (!topXs.length || !bottomXs.length) continue;
+    const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+    const diagonalShift = Math.abs(mean(topXs) - mean(bottomXs));
+    if (diagonalShift < width * 0.08) continue;
+    for (const idx of pixels) protectedPixels[idx] = 1;
+  }
+  return protectedPixels;
+}
+
+function removeDashedEdgeGuidesFromInk(ink, width, height, options = {}) {
   const threshold = 0.22;
+  const protectedPixels = options.protectedPixels || null;
   const xEdge = Math.max(2, Math.round(width * 0.18));
   const yEdge = Math.max(2, Math.round(height * 0.18));
   const colLimit = height * 0.16;
@@ -2992,7 +3107,8 @@ function removeDashedEdgeGuidesFromInk(ink, width, height) {
       for (let yy = Math.max(0, y - 1); yy < Math.min(height, y + 2); yy++) {
         const rowOffset = yy * width;
         for (let x = 0; x < width; x++) {
-          if (ink[rowOffset + x] < 0.9) ink[rowOffset + x] = 0;
+          const idx = rowOffset + x;
+          if (!protectedPixels?.[idx] && ink[idx] < 0.9) ink[idx] = 0;
         }
       }
     }
@@ -3688,11 +3804,27 @@ function buildProcessedCropTensors(crop) {
     protectInteriorStrokes: isVirtualDigitBox,
     strictLineRemoval: isVirtualDigitBox
   };
+  const connectedEdgeEnabled = typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('connectedEdgePreservation') !== '0';
   const tensor = preprocessToMNISTCore(crop.image, false, baseOptions);
   if (!isVirtualDigitBox) {
+    const connectedEdgeTensor = connectedEdgeEnabled
+      ? preprocessToMNISTCore(crop.image, false, {
+        ...baseOptions,
+        preserveConnectedEdgeStrokes: true
+      })
+      : null;
+    const connectedEdgeDiffers = connectedEdgeTensor?.some((value, index) => (
+      Math.abs(value - tensor[index]) > 1e-6
+    )) === true;
     return {
       tensor,
-      tensorVariants: [{ name: 'base', tensor }]
+      tensorVariants: [
+        { name: 'strict', tensor },
+        ...(connectedEdgeDiffers
+          ? [{ name: 'connected-edge-strokes', tensor: connectedEdgeTensor }]
+          : [])
+      ]
     };
   }
 

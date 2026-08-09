@@ -24,6 +24,9 @@ export function shouldShowStudentCameraError({
   cameraReady = false,
 } = {}) {
   if (!error) return false
+  // Mobile WebKit can miss one drawable frame and recover immediately. Do not
+  // put a red readiness warning over an active/recovered viewfinder. Genuine
+  // permission, startup, and final-quality failures remain visible.
   if ((streamActive || cameraReady) && isTransientCameraReadinessError(error)) return false
   return true
 }

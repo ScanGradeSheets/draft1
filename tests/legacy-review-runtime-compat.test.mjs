@@ -18,16 +18,19 @@ test('legacy-critical review paths avoid unsupported Array.at and Promise.finall
   }
 })
 
-test('manual review advances before optional legacy image and animation awaits', async () => {
+test('manual review settles before optional legacy image awaits and advances only after replacement ink', async () => {
   const source = await readFile(cameraPath, 'utf8')
   const start = source.indexOf('async function applyManualCorrectionCells')
   const end = source.indexOf('\nfunction clearAutoCaptureInterval', start)
   assert.ok(start >= 0 && end > start)
   const body = source.slice(start, end)
-  const advance = body.indexOf('const nextReviewGroup = nextYellowReviewGroup')
+  const settle = body.indexOf('ocrResult.value = settledCorrectionState')
+  const closeEditor = body.indexOf('cancelCorrection()', settle)
   const compose = body.indexOf('await composeStudentAnnotatedImage')
   const animation = body.indexOf('await manualCorrectionAnimationBase')
-  assert.ok(advance >= 0)
-  assert.ok(compose > advance, 'review advance must precede image composition')
-  assert.ok(animation > advance, 'review advance must precede animation preparation')
+  assert.ok(settle >= 0)
+  assert.ok(closeEditor > settle)
+  assert.ok(compose > closeEditor, 'settled review state must precede image composition')
+  assert.ok(animation > closeEditor, 'settled review state must precede animation preparation')
+  assert.match(source, /function advanceProgressiveMarking\(\)[\s\S]*?const nextReviewGroup = nextYellowReviewGroup[\s\S]*?openCorrectionByGroupSlot\(nextReviewGroup\)/)
 })

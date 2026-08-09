@@ -13,8 +13,10 @@ function readerEvidence(value) {
 function terminalZeroNineConflict(left, right) {
   if (left.length < 2 || left.length !== right.length) return false
   if (left.slice(0, -1) !== right.slice(0, -1)) return false
-  return new Set([left.at(-1), right.at(-1)]).size === 2 &&
-    [left.at(-1), right.at(-1)].every((digit) => digit === '0' || digit === '9')
+  const leftLast = left[left.length - 1]
+  const rightLast = right[right.length - 1]
+  return new Set([leftLast, rightLast]).size === 2 &&
+    [leftLast, rightLast].every((digit) => digit === '0' || digit === '9')
 }
 
 /**

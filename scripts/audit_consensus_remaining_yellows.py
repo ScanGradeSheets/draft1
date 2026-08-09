@@ -18,6 +18,7 @@ DEFAULT_SCORE = ROOT / "private-evidence/reports/consensus-integration-four-pack
 SCORE = ROOT / os.environ.get("SG_YELLOW_SCORE", str(DEFAULT_SCORE.relative_to(ROOT)))
 OUT = ROOT / os.environ.get("SG_YELLOW_OUT", "private-evidence/reports/consensus-yellow-audit-20260714")
 NONROW_ONLY = os.environ.get("SG_NONROW_ONLY") == "1"
+BROWSER_ONLY = os.environ.get("SG_BROWSER_ONLY") == "1"
 PANEL_W = 1500
 PANEL_H = 430
 ROWS_PER_SHEET = 7
@@ -130,7 +131,7 @@ def render_panel(index: int, row: dict, debug: dict, promotion: dict, decision: 
     draw.text((18, 12), f"{index:02d}. {row['packetId']}  {short_layout}  Q{row['questionNum']}", fill="#111827", font=BOLD)
     draw.text(
         (18, 48),
-        f"truth {row['truthText']}   browser {row['readText']}   large {decision.get('sequenceRead')}   compact {decision.get('compactRead')}",
+        f"truth {row['truthText']}   browser {decision.get('slotRead')}   large {decision.get('sequenceRead')}   compact {decision.get('compactRead')}",
         fill="#111827",
         font=FONT,
     )
@@ -191,7 +192,7 @@ def main():
     rows = [
         row for row in score["rows"]
         if row.get("scorable")
-        and not row.get("automatic")
+        and (BROWSER_ONLY or not row.get("automatic"))
         and (not NONROW_ONLY or row.get("layoutFamily") == "non-row")
     ]
     records = []
@@ -200,13 +201,16 @@ def main():
     layout_counts = Counter()
     evidence_counts = Counter()
     visual_counts = Counter()
-    for index, row in enumerate(rows, 1):
+    for row in rows:
         debug = load_json(ROOT / row["debugFile"])
         promotion = next(item for item in debug["v3Shadow"]["consensusPromotionDecisions"] if int(item["questionNum"]) == row["questionNum"])
         decision = next(item for item in debug["v3Shadow"]["decisions"] if int(item["questionNum"]) == row["questionNum"])
+        if BROWSER_ONLY and promotion.get("reason") == "already-automatic-not-a-promotion-candidate":
+            continue
+        index = len(records) + 1
         large_truth = decision.get("sequenceRead") == row["truthText"]
         compact_truth = decision.get("compactRead") == row["truthText"]
-        browser_truth = row["readText"] == row["truthText"]
+        browser_truth = decision.get("slotRead") == row["truthText"]
         reason_counts[promotion["reason"]] += 1
         layout_counts[row["layoutId"]] += 1
         evidence_counts[f"large={large_truth}|compact={compact_truth}|browser={browser_truth}"] += 1
@@ -238,7 +242,7 @@ def main():
 
     summary = {
         "schemaVersion": 1,
-        "purpose": "Private visual and evidence inventory of every scorable answer left for review by the deployed consensus candidate.",
+        "purpose": "Private visual and evidence inventory of every scorable browser-only yellow answer." if BROWSER_ONLY else "Private visual and evidence inventory of every scorable answer left for review by the deployed consensus candidate.",
         "answerKeyUsedForRecognition": False,
         "truthUsedOnlyForAudit": True,
         "remainingReview": len(records),

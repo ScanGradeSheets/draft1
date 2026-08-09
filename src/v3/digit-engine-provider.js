@@ -7,6 +7,7 @@ export async function createDigitInferenceSession({
   legacyRuntime,
   loadLegacyRuntime,
   loadLegacyBuffer,
+  validateSession,
   forceWebgl = false,
   forceLegacy = false,
 } = {}) {
@@ -18,6 +19,7 @@ export async function createDigitInferenceSession({
       const session = await wasmRuntime.InferenceSession.create(buffer, {
         executionProviders: ['wasm'],
       })
+      if (validateSession) await validateSession({ session, runtime: wasmRuntime, provider: 'wasm' })
       return { session, runtime: wasmRuntime, provider: 'wasm', wasmError: null }
     } catch (error) {
       wasmError = error
@@ -31,6 +33,7 @@ export async function createDigitInferenceSession({
       const session = await resolvedWebglRuntime.InferenceSession.create(webglBuffer, {
         executionProviders: ['webgl'],
       })
+      if (validateSession) await validateSession({ session, runtime: resolvedWebglRuntime, provider: 'webgl' })
       return { session, runtime: resolvedWebglRuntime, provider: 'webgl', wasmError, webglBuffer }
     } catch (error) {
       webglError = error
@@ -57,6 +60,7 @@ export async function createDigitInferenceSession({
     const session = await resolvedLegacyRuntime.InferenceSession.create(legacyBuffer, {
       executionProviders: ['webgl'],
     })
+    if (validateSession) await validateSession({ session, runtime: resolvedLegacyRuntime, provider: 'onnxjs-webgl' })
     return {
       session,
       runtime: resolvedLegacyRuntime,
@@ -77,6 +81,7 @@ export async function createDigitInferenceSession({
     const session = await resolvedLegacyRuntime.InferenceSession.create(legacyBuffer, {
       executionProviders: ['cpu'],
     })
+    if (validateSession) await validateSession({ session, runtime: resolvedLegacyRuntime, provider: 'onnxjs-cpu' })
     return {
       session,
       runtime: resolvedLegacyRuntime,

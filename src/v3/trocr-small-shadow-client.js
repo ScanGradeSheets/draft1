@@ -491,7 +491,7 @@ export async function requestBrowserLocalStrongPersistentBatchShadow(
       selected.slice(offset, offset + maximumBatchSize),
       config,
     ))
-    if (results.at(-1)?.status !== 'complete') break
+    if (results[results.length - 1]?.status !== 'complete') break
   }
   return {
     version: `${BROWSER_LOCAL_STRONG_SHADOW_VERSION}-batch-experiment`,

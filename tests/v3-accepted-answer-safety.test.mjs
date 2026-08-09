@@ -154,7 +154,7 @@ test('public safety routes only a near-certain 1 to 7 scout conflict', () => {
 
   for (const scout of [
     { read: '1', sequenceProbability: 0.9999 },
-    { read: '7', sequenceProbability: 0.9899 },
+    { read: '7', sequenceProbability: 0.9849 },
   ]) {
     assert.equal(acceptedAnswerSafetyRoute({
       currentAutomatic: true,
@@ -164,6 +164,29 @@ test('public safety routes only a near-certain 1 to 7 scout conflict', () => {
       policyScope: 'six-eight-only',
     }).route, false)
   }
+})
+
+test('prospective 7 to 1 incident is demoted without changing the browser transcription', () => {
+  const route = acceptedAnswerSafetyRoute({
+    currentAutomatic: true,
+    currentRead: '1',
+    scout: { read: '7', sequenceProbability: 0.9866875215558674 },
+    slotCount: 1,
+    policyScope: 'six-eight-only',
+  })
+  assert.equal(route.route, true)
+
+  const decision = acceptedAnswerSafetyDecision({
+    routed: route.route,
+    currentRead: '1',
+    scout: { read: '7', sequenceProbability: 0.9866875215558674 },
+    slotCount: 1,
+    policyScope: 'six-eight-only',
+  })
+  assert.equal(decision.veto, true)
+  assert.equal(decision.requiresTeacherReview, true)
+  assert.equal(decision.evidence.browserRead, '1')
+  assert.equal('automaticText' in decision, false)
 })
 
 test('public safety scope cannot activate broader experimental vetoes', () => {

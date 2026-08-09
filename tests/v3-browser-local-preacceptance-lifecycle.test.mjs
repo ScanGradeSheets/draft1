@@ -43,7 +43,10 @@ test('public critical-confusion safety check holds marks until its final key-bli
 
 test('candidate failure remains a Beta 15.3 fail-open result before completion', () => {
   const failure = source.indexOf("status: 'fail-open'")
-  const resultAssignment = source.indexOf('ocrResult.value = { ...payload }', failure)
+  const resultAssignment = source.indexOf(
+    'ocrResult.value = mergeAsyncOcrPayloadPreservingTeacherState(ocrResult.value, payload)',
+    failure,
+  )
   const completionAwait = source.indexOf('await candidatePresentationPromise')
 
   assert.ok(failure >= 0)

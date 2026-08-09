@@ -400,7 +400,7 @@
          The bottom app bar owns manual export; this compact status is the only
          extra debug UI shown over the page. -->
     <p
-      v-if="studentMode && liveOcrDebugExportEnabled && debugUploadConfig.autoUpload && ['uploading', 'saved', 'failed'].includes(debugAutoUploadState)"
+      v-if="studentMode && liveOcrDebugExportEnabled && ['uploading', 'saved', 'failed'].includes(debugAutoUploadState)"
       class="debug-auto-upload-toast"
       :class="`debug-auto-upload-status--${debugAutoUploadState}`"
       role="status"
@@ -620,6 +620,10 @@ import {
 } from '../v3/teacher-ink-style.js'
 import { copyDebugJson, exportDebugJson } from '../v3/debug-json-export.js'
 import {
+  debugAutoUploadFailure,
+  debugAutoUploadIsConfigured,
+} from '../v3/debug-auto-upload-status.js'
+import {
   startMeasuredProgressiveStroke,
   startMeasuredProgressiveStrokeSequence,
 } from '../v3/progressive-svg-stroke.js'
@@ -629,7 +633,9 @@ import {
 import { manuallyConfirmedAllSlots, requiredSlotsNeedReview } from '../v3/required-slot-review.js'
 import { reconcileManualReviewState, resolvedPageReviewState } from '../v3/manual-review-resolution.js'
 import { mergeAsyncOcrPayloadPreservingTeacherState } from '../v3/async-ocr-result-install.js'
+import { needsLegacyStaticCorrectionTransition } from '../v3/legacy-correction-transition.js'
 import {
+  predictionForId,
   predictionIdKey,
   predictionIndexMapById,
   predictionMapById,
@@ -891,7 +897,8 @@ const DEBUG_UPLOAD_TOKEN_KEY = 'scangrade.debugUploadToken.v1'
 const DEBUG_AUTO_UPLOAD_KEY = 'scangrade.debugAutoUpload.v1'
 const REVIEW_ACCESS_TOKEN_SESSION_KEY = 'scangrade.reviewAccessToken.v1'
 const LEGACY_PRIVATE_DEBUG_UPLOAD_URL = 'https://hobbes-mac-mini.tail9a3379.ts.net/mission-control/api/debug-scans'
-const PUBLIC_DEBUG_UPLOAD_URL = 'https://hobbes-mac-mini.tail9a3379.ts.net:8443/'
+const LEGACY_PUBLIC_DEBUG_UPLOAD_URL = 'https://hobbes-mac-mini.tail9a3379.ts.net:8443/'
+const PUBLIC_DEBUG_UPLOAD_URL = 'https://hobbes-mac-mini.tail415e0b.ts.net:8443/'
 const DEBUG_UPLOAD_TIMEOUT_MS = 75_000
 
 function parseDebugBoolean(value) {
@@ -945,7 +952,12 @@ function migrateDebugUploadUrl(value) {
   try {
     const url = new URL(configured)
     const legacyUrl = new URL(LEGACY_PRIVATE_DEBUG_UPLOAD_URL)
-    if (url.origin === legacyUrl.origin && url.pathname.replace(/\/$/, '') === legacyUrl.pathname) {
+    const legacyPublicUrl = new URL(LEGACY_PUBLIC_DEBUG_UPLOAD_URL)
+    const isLegacyPrivate = url.origin === legacyUrl.origin &&
+      url.pathname.replace(/\/$/, '') === legacyUrl.pathname
+    const isLegacyPublic = url.origin === legacyPublicUrl.origin &&
+      url.pathname.replace(/\/$/, '') === legacyPublicUrl.pathname.replace(/\/$/, '')
+    if (isLegacyPrivate || isLegacyPublic) {
       return PUBLIC_DEBUG_UPLOAD_URL
     }
   } catch {
@@ -1404,13 +1416,13 @@ const debugExportBusy = ref(false)
 const debugExportStatus = ref('')
 const lastCaptureQuality = ref(null)
 const debugUploadConfig = initDebugUploadConfig()
-const debugAutoUploadConfigured = ref(
-  !!(debugUploadConfig.autoUpload && debugUploadConfig.url && debugUploadConfig.token)
-)
-const debugAutoUploadState = ref(debugUploadConfig.autoUpload && debugUploadConfig.url ? 'ready' : 'idle')
+const debugAutoUploadConfigured = ref(debugAutoUploadIsConfigured(debugUploadConfig))
+const debugAutoUploadState = ref(debugAutoUploadConfigured.value ? 'ready' : 'idle')
 const debugAutoUploadStatus = ref(
-  debugUploadConfig.autoUpload && debugUploadConfig.url
+  debugAutoUploadConfigured.value
     ? 'Debug auto-save ready'
+    : debugUploadConfig.autoUpload && debugUploadConfig.url
+      ? 'Debug auto-save needs a key'
     : 'Debug auto-save needs an upload URL'
 )
 const autoStartCameraBlocked = ref(false)
@@ -2131,7 +2143,7 @@ function isAnswerSlotEditable(group, slotIndex) {
 function reviewSlotIndexesForGroup(group) {
   if (!isAnswerGroupEditable(group)) return []
   const ids = Array.isArray(group?.digitBoxIds) ? group.digitBoxIds : []
-  const byId = new Map((ocrResult.value?.predictions || []).map((prediction) => [prediction.id, prediction]))
+  const byId = predictionMapById(ocrResult.value?.predictions || [])
   return ids
     .map((id, slotIndex) => ({ id, slotIndex }))
     .filter(({ slotIndex }) => slotNeedsReview(group, ids, slotIndex, byId))
@@ -2142,9 +2154,9 @@ function shouldUseWholeAnswerCorrection(group) {
   if (!isAnswerGroupEditable(group)) return false
   const ids = Array.isArray(group?.digitBoxIds) ? group.digitBoxIds : []
   const reviewSlots = reviewSlotIndexesForGroup(group)
-  const byId = new Map((ocrResult.value?.predictions || []).map((prediction) => [prediction.id, prediction]))
+  const byId = predictionMapById(ocrResult.value?.predictions || [])
   const hasWholeAnswerSuggestion = ids.some((id) => {
-    const prediction = byId.get(id)
+    const prediction = predictionForId(byId, id)
     return Array.isArray(prediction?.wholeAnswerReviewSuggestions)
       ? prediction.wholeAnswerReviewSuggestions.length > 0
       : !!prediction?.wholeAnswerReviewSuggestion
@@ -2178,10 +2190,10 @@ function preferredCorrectionSlotIndex(group, region = null) {
       ? region.digitBoxIds
       : []
   if (!ids.length) return 0
-  const byId = new Map((ocrResult.value?.predictions || []).map((prediction) => [prediction.id, prediction]))
-  const reviewIndex = ids.findIndex((id) => byId.get(id)?.reviewNeeded)
+  const byId = predictionMapById(ocrResult.value?.predictions || [])
+  const reviewIndex = ids.findIndex((id) => predictionForId(byId, id)?.reviewNeeded)
   if (reviewIndex >= 0) return reviewIndex
-  const manualIndex = ids.findIndex((id) => byId.get(id)?.manualCorrected)
+  const manualIndex = ids.findIndex((id) => predictionForId(byId, id)?.manualCorrected)
   if (manualIndex >= 0) return manualIndex
   return 0
 }
@@ -2372,6 +2384,9 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   const annotationGeometry = result?.annotationGeometry
   if (!result || !group || !annotationGeometry || !Array.isArray(result.predictions)) return
   const previousAnnotatedImageUrl = result.annotatedImageUrl || result.annotationBaseUrl || capturedImage.value
+  const legacyStaticCorrection = needsLegacyStaticCorrectionTransition(
+    typeof navigator !== 'undefined' ? navigator : null
+  )
 
   const ids = Array.isArray(group.digit_box_ids) ? group.digit_box_ids : []
   if (!ids.length) return
@@ -2538,23 +2553,11 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     settledCorrectionState.correct = nextPredictions.map((prediction) => prediction.correct)
   }
 
-  // Teacher input is authoritative. Commit the resolved prediction/review
-  // state before any canvas or image decode await so slow legacy WebKit cannot
-  // redraw from the stale yellow result and reopen the final question.
-  ocrResult.value = settledCorrectionState
-
-  // Advance the review transaction before any optional image composition or
-  // pen-animation work. Legacy WebKit can stall while decoding a canvas/image;
-  // teacher input must still close the resolved yellow (or advance to the next
-  // one) immediately and must never be reopened by that visual work.
-  const nextReviewGroup = nextYellowReviewGroup(
-    answerGroups,
-    questionReview,
-    correctedQuestionNum,
-  )
-  if (nextReviewGroup) {
-    openCorrectionByGroupSlot(nextReviewGroup)
-  } else {
+  if (!legacyStaticCorrection) {
+    // Modern engines can commit immediately and animate the replacement mark.
+    // iOS 12 keeps the live correction mounted until its static replacement is
+    // decoded, avoiding the physical mark disappearance seen on that WebKit.
+    ocrResult.value = settledCorrectionState
     cancelCorrection()
   }
 
@@ -2605,17 +2608,34 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     previousAnnotatedImageUrl,
     annotatedImageUrl,
     correctedQuestionNum,
+    { includeCompletedQuestionMark: legacyStaticCorrection },
   )
   await preloadCorrectionAnimationBase(correctionAnimationBaseUrl)
-  // Install the stable animation base first. Switching the result before this
-  // override is active lets old WebKit briefly paint an unmarked intermediate
-  // image, making already completed checks disappear.
-  startManualCorrectionAnimation(correctedQuestionNum, correctionAnimationBaseUrl)
-  ocrResult.value = nextResult
-  // Keep the live white-tape preview over the answer until Safari has loaded
-  // and painted the equivalent correction-animation base underneath it.
-  // Removing the preview earlier produces a one-frame missing-digit flash.
-  await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)
+  if (legacyStaticCorrection) {
+    clearProgressiveMarkingTimer()
+    progressiveCorrectionQuestionNum.value = null
+    progressiveRevealedQuestionNums.value = []
+    progressiveScoreRevealed.value = false
+    progressiveDateStampRevealed.value = false
+    progressiveMarkingComplete.value = true
+    progressiveBaseImageOverride.value = correctionAnimationBaseUrl
+    ocrResult.value = nextResult
+    cancelCorrection()
+    await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)
+    const nextReviewGroup = nextYellowReviewGroup(answerGroups, questionReview, correctedQuestionNum)
+    if (nextReviewGroup) {
+      openCorrectionByGroupSlot(nextReviewGroup)
+    } else if (annotatedImageUrl) {
+      await preloadCorrectionAnimationBase(annotatedImageUrl)
+      progressiveBaseImageOverride.value = annotatedImageUrl
+    }
+  } else {
+    // Install the stable animation base first. Switching the result before this
+    // override is active lets WebKit briefly paint an unmarked intermediate.
+    startManualCorrectionAnimation(correctedQuestionNum, correctionAnimationBaseUrl)
+    ocrResult.value = nextResult
+    await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)
+  }
   if (lastLiveOcrDebug.value) {
     lastLiveOcrDebug.value = {
       ...lastLiveOcrDebug.value,
@@ -3979,6 +3999,7 @@ async function manualCorrectionAnimationBase(
   previousAnnotatedImageUrl,
   completedAnnotatedImageUrl,
   questionNum,
+  { includeCompletedQuestionMark = false } = {},
 ) {
   const cleanBaseUrl = ocrResult.value?.annotationBaseUrl || capturedImage.value
   const rect = manualCorrectionFocusRect(questionNum)
@@ -4106,16 +4127,19 @@ async function manualCorrectionAnimationBase(
       clearRect.w,
       clearRect.h,
     )
+    const completedPatchRect = includeCompletedQuestionMark
+      ? unionRects([questionRect, clearRect].filter(Boolean))
+      : clearRect
     context.drawImage(
       completed,
-      clearRect.x,
-      clearRect.y,
-      clearRect.w,
-      clearRect.h,
-      clearRect.x,
-      clearRect.y,
-      clearRect.w,
-      clearRect.h,
+      completedPatchRect.x,
+      completedPatchRect.y,
+      completedPatchRect.w,
+      completedPatchRect.h,
+      completedPatchRect.x,
+      completedPatchRect.y,
+      completedPatchRect.w,
+      completedPatchRect.h,
     )
     // Lossless encoding keeps the settled correction pixel-identical while
     // focus chrome disappears and its check/X begins drawing.
@@ -5051,7 +5075,7 @@ function answerDigitCount(answer) {
 function groupAnswerTextOverride(group, predictionById) {
   const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
   const values = ids
-    .map((id) => predictionById.get(id)?.answerTextOverride)
+    .map((id) => predictionForId(predictionById, id)?.answerTextOverride)
     .filter((value) => /^\d{1,4}$/.test(String(value || '')))
   if (!values.length || !values.every((value) => String(value) === String(values[0]))) return null
   return String(values[0])
@@ -5060,7 +5084,7 @@ function groupAnswerTextOverride(group, predictionById) {
 function groupHasRequiredSlotReview(group, ids, predictionById) {
   return requiredSlotsNeedReview({
     answer: group?.answer,
-    predictions: Array.isArray(ids) ? ids.map((id) => predictionById.get(id)) : [],
+    predictions: Array.isArray(ids) ? ids.map((id) => predictionForId(predictionById, id)) : [],
     hasAnswerTextOverride: !!groupAnswerTextOverride(group, predictionById),
   })
 }
@@ -5068,7 +5092,7 @@ function groupHasRequiredSlotReview(group, ids, predictionById) {
 function slotNeedsReview(group, ids, slotIndex, predictionById) {
   if (!Array.isArray(ids) || slotIndex < 0 || slotIndex >= ids.length) return true
   const id = ids[slotIndex]
-  const prediction = predictionById.get(id)
+  const prediction = predictionForId(predictionById, id)
   if (prediction?.manualCorrected === true) return false
   if (prediction?.reviewNeeded) return true
   const expectedDigitCount = answerDigitCount(group?.answer)
@@ -5158,7 +5182,7 @@ function acceptedResponsesForGroup(group, slotCount) {
 function predictionCellsForIds(ids, byId) {
   const cells = []
   for (const id of ids) {
-    const prediction = byId.get(id)
+    const prediction = predictionForId(byId, id)
     if (!prediction) return null
     const normalized = normalizeGradingDigit(
       prediction.blank === true || prediction.empty === true ? null : prediction.digit
@@ -5480,7 +5504,7 @@ function applyOptionalSingleDigitBlankOverrides(questionGroups, boxes, predictio
 
 function buildQuestionCorrect(questionGroups, predictions) {
   if (!Array.isArray(questionGroups) || questionGroups.length === 0) return null
-  const byId = new Map(predictions.map((prediction) => [prediction.id, prediction]))
+  const byId = predictionMapById(predictions)
   const out = []
   for (const group of questionGroups) {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
@@ -5497,7 +5521,7 @@ function buildQuestionCorrect(questionGroups, predictions) {
       out.push(acceptedResponses.some((response) => gradingCellsMatch(predictionCells, response)))
       continue
     }
-    const groupPredictions = ids.map((id) => byId.get(id))
+    const groupPredictions = ids.map((id) => predictionForId(byId, id))
     if (groupPredictions.some((prediction) => prediction?.correct === undefined)) return null
     out.push(groupPredictions.every((prediction) => prediction.correct === true))
   }
@@ -5505,14 +5529,14 @@ function buildQuestionCorrect(questionGroups, predictions) {
 }
 
 function questionRequiresTeacherReview(group, ids, predictionById) {
-  const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
+  const groupPredictions = ids.map((id) => predictionForId(predictionById, id)).filter(Boolean)
   return groupPredictions.some((prediction) => prediction?.reviewNeeded) ||
     groupHasRequiredSlotReview(group, ids, predictionById)
 }
 
 function buildQuestionReviewFlags(questionGroups, predictions, questionCorrect = null) {
   if (!Array.isArray(questionGroups) || questionGroups.length === 0) return null
-  const byId = new Map(predictions.map((prediction) => [prediction.id, prediction]))
+  const byId = predictionMapById(predictions)
   return questionGroups.map((group, index) => {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
     const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
@@ -5522,12 +5546,12 @@ function buildQuestionReviewFlags(questionGroups, predictions, questionCorrect =
 
 function buildAnswerGroups(questionGroups, predictions, questionCorrect = null, layoutId = '') {
   if (!Array.isArray(questionGroups) || questionGroups.length === 0) return null
-  const byId = new Map(predictions.map((prediction) => [prediction.id, prediction]))
+  const byId = predictionMapById(predictions)
   return questionGroups.map((group, index) => {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
-    const groupPredictions = ids.map((id) => byId.get(id))
+    const groupPredictions = ids.map((id) => predictionForId(byId, id))
     const predictionCells = ids.map((id) => {
-      const prediction = byId.get(id)
+      const prediction = predictionForId(byId, id)
       const normalized = normalizeGradingDigit(
         prediction?.blank === true || prediction?.empty === true ? null : prediction?.digit
       )
@@ -5553,7 +5577,7 @@ function buildAnswerGroups(questionGroups, predictions, questionCorrect = null, 
     const displayDigits = normalizeDisplayDigits(effectiveCells, displaySlotCount)
     const predictedAnswerText = answerTextOverride || cellsToAnswerText(predictionCells)
     const slotStatuses = normalizeDisplayDigits(ids.map((id, slotIndex) => {
-      const prediction = byId.get(id)
+      const prediction = predictionForId(byId, id)
       if (prediction?.reviewNeeded || slotNeedsReview(group, ids, slotIndex, byId)) return 'review'
       if (prediction?.correct === true) return 'correct'
       if (prediction?.correct === false) return 'incorrect'
@@ -6032,7 +6056,7 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
   const warpedW = annotationGeometry?.warpedW || 1
   const warpedH = annotationGeometry?.warpedH || 1
   const cropById = new Map(crops.map((crop, index) => [crop.id ?? index, crop]))
-  const predictionById = new Map((predictions || []).map((prediction, index) => [prediction.id ?? index, prediction]))
+  const predictionById = predictionMapById(predictions)
   if (!Array.isArray(questionGroups) || !questionGroups.length) return []
 
   return questionGroups.flatMap((group, index) => {
@@ -6048,7 +6072,7 @@ function buildAnnotationRegions(questionGroups, annotationGeometry, predictions,
     const slotRegions = ids.map((id, slotIndex) => {
       const crop = cropById.get(id)
       const slotRect = annotationRectForCrop(crop)
-      const prediction = predictionById.get(id)
+      const prediction = predictionForId(predictionById, id)
       if (!slotRect) return null
       const slotManualCorrected = !!prediction?.manualCorrected
       const slotReviewNeeded = slotNeedsReview(group, ids, slotIndex, predictionById)
@@ -6157,7 +6181,7 @@ function buildOverlayDebugSnapshot({
   const warpedW = annotationGeometry?.warpedW || 1
   const warpedH = annotationGeometry?.warpedH || 1
   const cropById = new Map(crops.map((crop, index) => [crop.id ?? index, crop]))
-  const predictionById = new Map((predictions || []).map((prediction, index) => [prediction.id ?? index, prediction]))
+  const predictionById = predictionMapById(predictions)
 
   const questionMarks = groups.map((group, index) => {
     const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
@@ -6167,7 +6191,7 @@ function buildOverlayDebugSnapshot({
       return rect ? { digitBoxId: id, ...cloneRect(rect) } : null
     }).filter(Boolean)
     const answerRect = unionRects(slotRects)
-    const groupPredictions = ids.map((id) => predictionById.get(id)).filter(Boolean)
+    const groupPredictions = ids.map((id) => predictionForId(predictionById, id)).filter(Boolean)
     const correct = Array.isArray(questionCorrect) ? questionCorrect[index] : undefined
     const reviewNeeded =
       Array.isArray(questionReview) && typeof questionReview[index] === 'boolean'
@@ -8109,6 +8133,7 @@ function buildLiveOcrErrorDebugPackage(err, partialDebug) {
     answerKey: partialDebug?.answerKey || null,
     markerDebugSnapshot: markerDebugSnapshot.value || null,
     modelInfo: modelInfoSnapshot.value || null,
+    digitEngineTrace: partialDebug?.digitEngineTrace || null,
     runtime: getRuntimeDebugInfo(),
     generatedAt: new Date().toISOString()
   }
@@ -8202,8 +8227,11 @@ async function runModelSanityTest() {
   }
 }
 
-async function withDigitEngineTimeout(promise, label, timeoutMs = DIGIT_ENGINE_OPERATION_TIMEOUT_MS) {
+async function withDigitEngineTimeout(promise, label, timeoutMs = DIGIT_ENGINE_OPERATION_TIMEOUT_MS, onSettled = null) {
   let timer = null
+  const startedAt = performance.now()
+  let outcome = 'completed'
+  let errorMessage = null
   try {
     return await Promise.race([
       promise,
@@ -8213,8 +8241,23 @@ async function withDigitEngineTimeout(promise, label, timeoutMs = DIGIT_ENGINE_O
         }, timeoutMs)
       })
     ])
+  } catch (error) {
+    outcome = 'failed'
+    errorMessage = String(error?.message || error)
+    throw error
   } finally {
     if (timer != null) window.clearTimeout(timer)
+    try {
+      onSettled?.({
+        label,
+        timeoutMs,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        outcome,
+        error: errorMessage,
+      })
+    } catch {
+      // Debug telemetry must never affect a classroom scan.
+    }
   }
 }
 
@@ -8248,8 +8291,10 @@ const runRealOCR = async () => {
   // Assigned only by a pre-acceptance local-reader path and awaited in
   // `finally` before the completion event is emitted.
   let candidatePresentationPromise = null
+  const ocrStageTrace = [{ stage: 'starting', atMs: 0, durationMs: null }]
   const partialDebug = {
     stage: 'starting',
+    ocrStageTrace,
     scanSessionId: activeScanSessionId,
     ...evaluationMetadata,
     layoutUrl: null,
@@ -8287,10 +8332,17 @@ const runRealOCR = async () => {
     hybridBurstFrameDataUrls: pendingHybridBurstFrames.map((frame) => frame.imageDataUrl),
     hybridBurstFrameMetadata: pendingHybridBurstFrames.map(({ imageDataUrl: _imageDataUrl, ...metadata }) => metadata)
   }
+  const setOcrStage = (stage) => {
+    const atMs = Math.round(performance.now() - start)
+    const previous = ocrStageTrace[ocrStageTrace.length - 1]
+    if (previous && previous.durationMs == null) previous.durationMs = Math.max(0, atMs - previous.atMs)
+    ocrStageTrace.push({ stage, atMs, durationMs: null })
+    partialDebug.stage = stage
+  }
 
   try {
     // Load image
-    partialDebug.stage = 'loading image'
+    setOcrStage('loading image')
     const img = new Image()
     img.src = capturedImage.value
     await new Promise((resolve, reject) => {
@@ -8305,11 +8357,11 @@ const runRealOCR = async () => {
     const ctx = canvas.getContext('2d')
     ctx.drawImage(img, 0, 0)
 
-    partialDebug.stage = 'reading image pixels'
+    setOcrStage('reading image pixels')
     const src = cv.imread(canvas)
 
     // Try to decode QR from image (payload-only); fallback to default layout when no QR
-    partialDebug.stage = 'decoding QR'
+    setOcrStage('decoding QR')
     let qrPayload = decodeQrFromCanvas(canvas)
     if (!qrPayload && typeof window !== 'undefined') {
       qrPayload = decodeQrFromPageUrl(window.location.href)
@@ -8328,7 +8380,7 @@ const runRealOCR = async () => {
         ? layoutUrlForId(MISSING_QR_FALLBACK_SEED_LAYOUT_ID)
         : DEFAULT_LAYOUT_URL
     partialDebug.layoutUrl = layoutUrl
-    partialDebug.stage = 'loading layout'
+    setOcrStage('loading layout')
     let layout = await fetchLayoutJson(layoutUrl)
     if (!layout && !missingQrLayoutFallback) {
       layoutUrl = DEFAULT_LAYOUT_URL
@@ -8368,7 +8420,7 @@ const runRealOCR = async () => {
     }
 
     // Run homography + crops with normalized layout
-    partialDebug.stage = 'finding worksheet markers'
+    setOcrStage('finding worksheet markers')
     const result = processWorksheet(src, layout, worksheetProcessingOptions(qrPayload?.qr_location || null))
     if (hybridV3Enabled()) replaceWithFreshV3Warp(result, src, layout)
 
@@ -8400,7 +8452,7 @@ const runRealOCR = async () => {
       } catch (_) {}
     }
     if (missingQrLayoutFallback) {
-      partialDebug.stage = 'identifying known worksheet title'
+      setOcrStage('identifying known worksheet title')
       const titleMatch = classifyKnownWorksheetLayoutFromWarped(warpedImage)
       partialDebug.printedTitleFallback = titleMatch
       if (titleMatch?.accepted) {
@@ -8532,10 +8584,10 @@ const runRealOCR = async () => {
         }
       }
     }
-    partialDebug.stage = 'preparing OCR crops'
+    setOcrStage('preparing OCR crops')
     const cropQuality = processedTensors.map((proc) => bestTensorInkQuality(proc))
     partialDebug.cropQuality = cropQuality
-    partialDebug.stage = 'checking OCR crop quality'
+    setOcrStage('checking OCR crop quality')
     const twoDigitCropFailure = detectTwoDigitCropFailure(layout.question_groups, cropQuality)
     partialDebug.twoDigitCropFailure = twoDigitCropFailure
     if (twoDigitCropFailure) {
@@ -8703,6 +8755,17 @@ const runRealOCR = async () => {
     let predictions = []
     const MNIST_LEN = 28 * 28
     let digitEngineFallbackReview = false
+    const digitEngineTrace = {
+      operationTimeoutMs: DIGIT_ENGINE_OPERATION_TIMEOUT_MS,
+      operations: [],
+    }
+    partialDebug.digitEngineTrace = digitEngineTrace
+    const recordDigitEngineOperation = (operation, details = null) => {
+      digitEngineTrace.operations.push({
+        ...operation,
+        ...(details || {}),
+      })
+    }
     const buildDigitEngineFallbackPredictions = (reason, err) => {
       const message = String(err?.message || err || reason)
       forcedFallbackReviewReason = forcedFallbackReviewReason || reason
@@ -8744,11 +8807,17 @@ const runRealOCR = async () => {
     }
 
     try {
-      partialDebug.stage = 'initializing digit model'
-      await withDigitEngineTimeout(initDigitModel(), 'initializing digit model')
+      setOcrStage('initializing digit model')
+      await withDigitEngineTimeout(
+        initDigitModel(),
+        'initializing digit model',
+        DIGIT_ENGINE_OPERATION_TIMEOUT_MS,
+        recordDigitEngineOperation,
+      )
       modelInfoSnapshot.value = getDigitModelInfo()
+      digitEngineTrace.executionProvider = modelInfoSnapshot.value?.runtime?.executionProvider || null
 
-      partialDebug.stage = 'running digit model'
+      setOcrStage('running digit model')
       for (const proc of processedTensors) {
         const src = proc.tensor
         const data = new Float32Array(MNIST_LEN)
@@ -8765,12 +8834,28 @@ const runRealOCR = async () => {
             recognizeDigitsWithPreprocessVariants(proc.tensorVariants, null, {
               digitIndex: proc.digitIndex
             }),
-            `recognizing digit ${proc.id}`
+            `recognizing digit ${proc.id}`,
+            DIGIT_ENGINE_OPERATION_TIMEOUT_MS,
+            (operation) => recordDigitEngineOperation(operation, {
+              kind: 'preprocess-variants',
+              cropId: proc.id,
+              questionNum: proc.questionNum,
+              digitIndex: proc.digitIndex,
+              variantCount: proc.tensorVariants.length,
+            }),
           )
         } else {
           digitResult = await withDigitEngineTimeout(
             recognizeDigits(data),
-            `recognizing digit ${proc.id}`
+            `recognizing digit ${proc.id}`,
+            DIGIT_ENGINE_OPERATION_TIMEOUT_MS,
+            (operation) => recordDigitEngineOperation(operation, {
+              kind: 'single-pass',
+              cropId: proc.id,
+              questionNum: proc.questionNum,
+              digitIndex: proc.digitIndex,
+              variantCount: 1,
+            }),
           )
           const baseTopK = digitResult[0].topK || []
           const baseTopGap = baseTopK.length >= 2 ? (baseTopK[0].confidence - baseTopK[1].confidence) : 1
@@ -8778,7 +8863,15 @@ const runRealOCR = async () => {
           if (forceRobust || digitResult[0].confidence < ROBUST_RETRY_CONFIDENCE_THRESHOLD || baseTopGap < ROBUST_RETRY_MARGIN_THRESHOLD) {
             digitResult = await withDigitEngineTimeout(
               recognizeDigitsRobust(data, digitResult[0], { force: forceRobust }),
-              `checking digit ${proc.id}`
+              `checking digit ${proc.id}`,
+              DIGIT_ENGINE_OPERATION_TIMEOUT_MS,
+              (operation) => recordDigitEngineOperation(operation, {
+                kind: 'robust-check',
+                cropId: proc.id,
+                questionNum: proc.questionNum,
+                digitIndex: proc.digitIndex,
+                variantCount: 1,
+              }),
             )
           }
         }
@@ -8908,7 +9001,7 @@ const runRealOCR = async () => {
     applyConfidenceSafetyVetoes(predictions, confidenceClearanceVetoRecords)
     partialDebug.confidenceClearanceVetoes = confidenceClearanceVetoRecords
     partialDebug.predictions = predictions
-    partialDebug.stage = 'checking OCR recognition quality'
+    setOcrStage('checking OCR recognition quality')
     const twoDigitRecognitionFailure = detectTwoDigitRecognitionFailure(
       layout.question_groups,
       cropQuality,
@@ -8932,7 +9025,7 @@ const runRealOCR = async () => {
     }
 
     const totalTime = (performance.now() - start).toFixed(2)
-    partialDebug.stage = 'checking OCR scan usability'
+    setOcrStage('checking OCR scan usability')
     const baseNeedsReview =
       typeof window !== 'undefined' &&
       !!window.__SCANGRADE_DEBUG_PAGE_RECT_ESTIMATE_USED
@@ -8940,7 +9033,7 @@ const runRealOCR = async () => {
       ? null
       : buildQuestionCorrect(layout.question_groups, predictions)
     const questionReview = buildQuestionReviewFlags(layout.question_groups, predictions, questionCorrect)
-    partialDebug.stage = 'checking optional whole-answer review model'
+    setOcrStage('checking optional whole-answer review model')
     let v3SequenceItems = []
     let wholeAnswerReviewSuggestions = []
     if (hybridV3Enabled()) {
@@ -9155,6 +9248,7 @@ const runRealOCR = async () => {
       markedSheetAvailable: !!payload.annotatedImageUrl
     })
 
+    setOcrStage('result ready')
     if (liveOcrDebugExportEnabled.value) {
       lastLiveOcrDebug.value = {
         capturedImageDataUrl: capturedImage.value,
@@ -9206,6 +9300,8 @@ const runRealOCR = async () => {
         forcedFallbackReviewReason,
         digitEngineFallback: partialDebug.digitEngineFallback === true,
         digitEngineError: partialDebug.digitEngineError || null,
+        digitEngineTrace: partialDebug.digitEngineTrace || null,
+        ocrStageTrace: partialDebug.ocrStageTrace || [],
         activeHomography: partialDebug.activeHomography,
         answerBoxRegistration: partialDebug.answerBoxRegistration || null,
         warpOrientation: window.__SCANGRADE_DEBUG_WARP_ORIENTATION || null,
@@ -10864,55 +10960,108 @@ function currentDebugPageUrl() {
   }
 }
 
+function requireDebugAutoUploadReconnect(failure) {
+  debugUploadConfig.token = ''
+  debugUploadConfig.autoUpload = false
+  safeStorageSet(DEBUG_UPLOAD_TOKEN_KEY, '')
+  safeStorageSet(DEBUG_AUTO_UPLOAD_KEY, '0')
+  debugAutoUploadConfigured.value = false
+  debugAutoUploadState.value = 'failed'
+  debugAutoUploadStatus.value = failure.message
+}
+
 async function uploadLiveOcrDebug(data, uploadReason = 'ocr-complete') {
   if (!liveOcrDebugExportEnabled.value || !debugUploadConfig.autoUpload || !data) return { ok: false }
-  if (!debugUploadConfig.url) {
-    debugAutoUploadState.value = 'failed'
-    debugAutoUploadStatus.value = 'Debug auto-save needs an upload URL'
-    return { ok: false }
+  if (!debugAutoUploadIsConfigured(debugUploadConfig)) {
+    const failure = debugAutoUploadFailure({
+      hasUrl: !!String(debugUploadConfig.url || '').trim(),
+      hasToken: !!String(debugUploadConfig.token || '').trim(),
+    })
+    if (failure.reconnect) {
+      requireDebugAutoUploadReconnect(failure)
+    } else {
+      debugAutoUploadState.value = 'failed'
+      debugAutoUploadStatus.value = failure.message
+    }
+    return { ok: false, error: failure.code }
   }
 
   debugAutoUploadState.value = 'uploading'
   debugAutoUploadStatus.value = 'Saving debug bundle...'
 
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
-  let timeout = null
+  const uploadPayload = {
+    source: 'scangrade-browser-debug',
+    uploadReason,
+    pageUrl: currentDebugPageUrl(),
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+    debug: data
+  }
+  const requestUpload = async ({ headers, body }) => {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+    let timeout = null
+    try {
+      const uploadRequest = fetch(debugUploadConfig.url, {
+        method: 'POST',
+        headers,
+        ...(controller ? { signal: controller.signal } : {}),
+        body,
+      })
+      const timeoutRequest = new Promise((_, reject) => {
+        timeout = window.setTimeout(() => {
+          controller?.abort()
+          reject(new Error('Upload timed out'))
+        }, DEBUG_UPLOAD_TIMEOUT_MS)
+      })
+      return await Promise.race([uploadRequest, timeoutRequest])
+    } finally {
+      if (timeout != null) window.clearTimeout(timeout)
+    }
+  }
+
   try {
     const headers = { 'Content-Type': 'application/json' }
     if (debugUploadConfig.token) headers['X-ScanGrade-Debug-Token'] = debugUploadConfig.token
-    const uploadRequest = fetch(debugUploadConfig.url, {
-      method: 'POST',
-      headers,
-      ...(controller ? { signal: controller.signal } : {}),
-      body: JSON.stringify({
-        source: 'scangrade-browser-debug',
-        uploadReason,
-        pageUrl: currentDebugPageUrl(),
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-        debug: data
+    let response
+    try {
+      response = await requestUpload({
+        headers,
+        body: JSON.stringify(uploadPayload),
       })
-    })
-    const timeoutRequest = new Promise((_, reject) => {
-      timeout = window.setTimeout(() => {
-        controller?.abort()
-        reject(new Error('Upload timed out'))
-      }, DEBUG_UPLOAD_TIMEOUT_MS)
-    })
-    const response = await Promise.race([uploadRequest, timeoutRequest])
+    } catch (primaryError) {
+      // Old Safari can reject a cross-origin preflight before POSTing. Retry as
+      // a CORS-safelisted request, keeping the secret in the HTTPS body rather
+      // than putting it in the URL. The receiver unwraps and authenticates it.
+      response = await requestUpload({
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: JSON.stringify({
+          debugUploadToken: debugUploadConfig.token,
+          payload: uploadPayload,
+        }),
+      })
+    }
     const payload = await response.json().catch(() => ({}))
     if (!response.ok || payload?.ok === false) {
-      throw new Error(payload?.error || `Upload failed (${response.status})`)
+      const error = new Error(payload?.error || `Upload failed (${response.status})`)
+      error.status = response.status
+      throw error
     }
     debugAutoUploadState.value = 'saved'
     debugAutoUploadStatus.value = payload?.id ? `Debug saved: ${payload.id}` : 'Debug saved'
     return { ok: true, id: payload?.id || null }
   } catch (err) {
-    debugAutoUploadState.value = 'failed'
-    debugAutoUploadStatus.value = `Debug auto-save failed: ${err?.message || err}`
+    const failure = debugAutoUploadFailure({
+      hasUrl: !!String(debugUploadConfig.url || '').trim(),
+      hasToken: !!String(debugUploadConfig.token || '').trim(),
+      status: err?.status,
+    })
+    if (failure.reconnect) {
+      requireDebugAutoUploadReconnect(failure)
+    } else {
+      debugAutoUploadState.value = 'failed'
+      debugAutoUploadStatus.value = failure.message
+    }
     console.warn('[ScanGrade] live OCR debug upload failed:', err)
-    return { ok: false, error: err?.message || String(err) }
-  } finally {
-    if (timeout != null) window.clearTimeout(timeout)
+    return { ok: false, error: failure.code, status: err?.status || null }
   }
 }
 
@@ -10964,6 +11113,8 @@ async function exportLiveOcrDebugJson() {
     const result = await exportDebugJson(data)
     debugExportStatus.value = result.method === 'share'
       ? 'Share sheet opened. Save or attach the JSON file.'
+      : result.method === 'share-text'
+        ? 'Share sheet opened with compact debug JSON.'
       : result.method === 'copy'
         ? 'Debug JSON copied.'
         : 'Debug JSON downloaded.'

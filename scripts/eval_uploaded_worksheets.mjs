@@ -139,7 +139,13 @@ function sanitizeName(value) {
 }
 
 function worksheetId(file) {
-  const parentSlug = sanitizeName(path.basename(path.dirname(file)));
+  const parentDirectory = path.dirname(file);
+  const parentName = path.basename(parentDirectory);
+  const parentSlug = sanitizeName(
+    parentName === 'burst-frames'
+      ? path.basename(path.dirname(parentDirectory))
+      : parentName
+  );
   // Session directories often end in the same "-captured" suffix. Retaining
   // the start keeps their unique scan id and prevents one replay from silently
   // overwriting another page's debug evidence.
@@ -329,6 +335,7 @@ for (const file of files) {
       const accepted = await page.evaluate((items) => window.__SCANGRADE_SET_V3_BURST_FRAMES?.(items) || 0, frames);
       if (accepted !== frames.length) throw new Error(`V3 burst replay hook accepted ${accepted}/${frames.length} frames`);
     }
+    const automaticResultStartedAt = performance.now();
     await page.setInputFiles('input[type=file]', file);
     await page.waitForFunction(
       () => {
@@ -339,6 +346,7 @@ for (const file of files) {
       undefined,
       { timeout: 60000 }
     );
+    const automaticResultReadyMs = performance.now() - automaticResultStartedAt;
     if (new URLSearchParams(EXTRA_QUERY).get('hybridV3') === '1') {
       await page.waitForFunction(
         () => ['complete', 'unavailable'].includes(window.__SCANGRADE_LIVE_OCR_DEBUG?.v3Shadow?.status),
@@ -376,6 +384,8 @@ for (const file of files) {
       })),
       questionGroups: data.debug.answerGroups || data.debug.questionGroups || null,
       modelInfo: data.debug.modelInfo || null,
+      digitEngineTrace: data.debug.digitEngineTrace || null,
+      automaticResultReadyMs: Number(automaticResultReadyMs.toFixed(1)),
       layoutId: data.debug.layoutId || null,
       v3AnswerZoneCount: data.debug.v3AnswerZones?.length || 0,
       v3Shadow: data.debug.v3Shadow || null
@@ -399,7 +409,7 @@ for (const file of files) {
       }
     }
     const score = rowQuestionScore(row);
-    console.log(`[ok] ${id}: ${score.correct}/${score.total} pred=${score.predicted.join(',')}`);
+    console.log(`[ok] ${id}: ${score.correct}/${score.total} pred=${score.predicted.join(',')} ready=${row.automaticResultReadyMs}ms`);
   } catch (error) {
     const message = String(error?.message || error);
     rows.push({ id, file, ok: false, error: message });

@@ -401,7 +401,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.06-legacy-onnxjs-cpu-fallback-beta-15-89'
+const APP_BUILD_LABEL = '2026.08.09-legacy-ipad-stage-timing-beta-15-94'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices

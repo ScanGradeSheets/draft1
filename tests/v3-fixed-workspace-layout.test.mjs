@@ -12,7 +12,7 @@ test('capture stage precedes the reachable bottom action bar', () => {
   assert.ok(barStart > cameraStart)
   assert.match(appSource, /scan-grade--capture[\s\S]*overflow: hidden/)
   assert.match(appSource, /body\.scan-grade-capture-lock[\s\S]*position: fixed/)
-  assert.match(appSource, /watch\(showStudentCaptureUi, setCaptureViewportLock/)
+  assert.match(appSource, /watch\(showStudentCaptureUi, \(active\) => \{[\s\S]*setCaptureViewportLock\(active\)[\s\S]*updateLegacyStudentViewport\(\)/)
 })
 
 test('normal scans keep recognition on the sheet instead of expanding a result card', () => {
@@ -20,6 +20,21 @@ test('normal scans keep recognition on the sheet instead of expanding a result c
   assert.doesNotMatch(cameraSource, /class="student-result"/)
   assert.match(appSource, /ocrResult && studentDebugMode/)
   assert.match(appSource, /@click="exportStudentDebug"/)
+})
+
+test('result navigation uses one centered mirrored-chevron geometry and a matching back arrow', () => {
+  const backButton = appSource.indexOf('aria-label="Back to ScanGrade home"')
+  const stageBranch = appSource.indexOf('<div v-if="studentScanStage"')
+  assert.ok(backButton >= 0 && backButton < stageBranch, 'back control must remain outside the stage/result branch')
+  assert.match(appSource, /class="student-back-icon"/)
+  assert.match(appSource, /points="16,3 7,12 16,21"/)
+  assert.match(appSource, /showRecognitionOverlay \? '4,10 12,2 20,10' : '4,10 12,18 20,10'/)
+  assert.match(appSource, /\.student-reading-chevron\s*\{[^}]*stroke-width:\s*1\.7;/s)
+  assert.match(appSource, /\.student-back-icon\s*\{[^}]*stroke-width:\s*2\.15;/s)
+  assert.match(appSource, /\.student-scan-grading\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*8px;/s)
+  assert.match(appSource, /\.student-recognition-toggle\s*\{[^}]*position:\s*absolute;[^}]*left:\s*50%;[^}]*top:\s*50%;[^}]*transform:\s*translate\(-50%, -50%\)/s)
+  assert.match(appSource, /\.student-scan-actions\s*\{[^}]*grid-column:\s*3;/s)
+  assert.match(appSource, /\.student-scan-bar--debug-result:not\(\.student-scan-bar--grading\) \.student-scan-actions\s*\{[^}]*grid-column:\s*4;/s)
 })
 
 test('landing has a centered hero header while capture keeps the compact fixed header', () => {

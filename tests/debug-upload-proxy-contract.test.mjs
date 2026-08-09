@@ -19,3 +19,10 @@ test('public response strips Mission Control filesystem paths', () => {
   assert.match(source, /\{ ok: true, id: upstream\.payload\?\.id \|\| null \}/)
   assert.doesNotMatch(source, /sendJson\(res, 201, upstream\.payload/)
 })
+
+test('public ingress accepts the authenticated text envelope used by legacy Safari', () => {
+  assert.match(source, /const contentType = String\(req\.headers\['content-type'\][\s\S]*?contentType\.startsWith\('text\/plain'\)/)
+  assert.match(source, /envelope\?\.debugUploadToken/)
+  assert.match(source, /JSON\.stringify\(envelope\.payload\)/)
+  assert.doesNotMatch(source, /url\.searchParams\.get\(['"]debugUploadToken/)
+})

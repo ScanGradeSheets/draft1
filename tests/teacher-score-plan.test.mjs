@@ -102,7 +102,11 @@ test('CameraCapture draws live score ink directly instead of revealing a complet
   assert.match(source, /progressive-score-ink/)
   assert.doesNotMatch(source, /progressive-score-mask/)
   assert.match(source, /buildTeacherScoreInkPlan\s*\(/)
-  assert.equal((source.match(/teacherScorePlacement\s*\(/g) || []).length, 2)
+  assert.equal(
+    (source.match(/teacherScorePlacement\s*\(/g) || []).length,
+    3,
+    'live ink, settled ink, and correction-transition cleanup share the same placement contract',
+  )
   assert.doesNotMatch(source, /const scoreGlyphs\s*=/)
   assert.doesNotMatch(source, /const scoreGlyphAlternates\s*=/)
 })

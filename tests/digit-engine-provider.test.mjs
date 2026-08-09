@@ -135,3 +135,27 @@ test('falls back to the legacy ONNX.js CPU backend when legacy WebGL fails', asy
   assert.equal(result.legacyBuffer, legacyBuffer)
   assert.match(result.legacyWebglError.message, /legacy WebGL unavailable/)
 })
+
+test('falls through when a provider initializes but fails its first real inference', async () => {
+  const wasm = runtime('wasm', async () => { throw new Error('wasm unavailable') })
+  const webgl = runtime('webgl', async () => ({ id: 'ort-webgl-session' }))
+  const legacy = runtime('onnxjs', async (_buffer, options) => ({
+    id: `onnxjs-${options.executionProviders[0]}-session`,
+  }))
+  const validated = []
+  const result = await createDigitInferenceSession({
+    buffer: new ArrayBuffer(2),
+    wasmRuntime: wasm,
+    webglRuntime: webgl,
+    legacyRuntime: legacy,
+    validateSession: async ({ provider }) => {
+      validated.push(provider)
+      if (provider === 'webgl') throw new Error('Unpacked shape is needed when using channels > 1')
+      if (provider === 'onnxjs-webgl') throw new Error('legacy WebGL inference failed')
+    },
+  })
+  assert.equal(result.provider, 'onnxjs-cpu')
+  assert.deepEqual(validated, ['webgl', 'onnxjs-webgl', 'onnxjs-cpu'])
+  assert.match(result.webglError.message, /Unpacked shape/)
+  assert.match(result.legacyWebglError.message, /legacy WebGL inference failed/)
+})
