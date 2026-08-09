@@ -7814,3 +7814,47 @@ Next action:
 - Next physical step: confirm the Beta 15.95 label and that the worksheet,
   correction keypad, and complete footer all fit comfortably on the orange iPad.
   Then collect one uncorrected P08 `ocrStageTrace` export for latency work.
+
+### 2026-08-09 Beta 15.95 physical stage trace and Beta 15.96 fixed workspace
+
+- Tony physically retested P08 on the orange iPad and reported about 40 seconds.
+  The manual export is preserved at
+  `private-evidence/debug-scans/2026-08-09/2026-08-09-orange-ipad-beta15-95-stage-trace/debug.json`
+  (239,988 bytes; SHA-256
+  `e5bc01caa059248c61ba97025b52b0a1fee1f7b6512d6d17f46517593891450f`).
+- Automatic grading again passed rather than falling back: execution provider
+  `onnxjs-webgl`, `digitEngineFallback: false`, `reviewOnlyFallback: false`,
+  five automatic decisions, and one yellow question before Tony corrected Q6
+  to 19. `questionReviewCount` is 1.
+- Passive timing reached `result ready` at 35.214 seconds. The dominant stage is
+  `finding worksheet markers` (including marker/homography processing) at
+  22.021 seconds. Model initialization was 3.229 seconds and digit inference
+  was 6.240 seconds. This is now the measured optimization target; do not alter
+  geometry or preprocessing without first reproducing and profiling it against
+  the saved physical capture.
+- Tony's screenshots confirmed the Beta 15.95 worksheet and complete bottom bar
+  fit, but requested a higher, non-scrolling landing cluster; a lower and larger
+  capture header; and a footer lifted from the screen edge.
+- Beta 15.96 applies those changes only when the existing old-Safari capability
+  gate is active. The legacy root is locked to the measured visible viewport,
+  the landing cluster starts 72 px below the app top, the capture top padding is
+  12 px, logo/title are 38/19 px, and the 50 px footer has 12 px below it.
+  Current-browser dimensions remain the prior 44 px logo and 60 px footer.
+- No OCR, capture criteria, homography, inference, confidence, grading, marks,
+  correction behavior, or modern-device layout changed. Complete suite
+  **474/474**, focused old-Safari/correction tests, deploy-pruned build, and
+  `git diff --check` pass. Source commit `7fbba68` is pushed.
+- Build label: `2026.08.09-legacy-ipad-fixed-workspace-beta-15-96`. Preview:
+  `https://1ac35be2.scangrade.pages.dev/`. Production immutable:
+  `https://41bc3bfa.scangrade.pages.dev/`. Public: `https://scangrade.io/`.
+- Local/preview/immutable/public HTML SHA-256:
+  `04a5a2fa0580151c401b12ef7c5a05eec0d38f6894a3224fa86d3eed114cb98b`.
+  JavaScript `assets/index-DyaNVDzj.js` SHA-256:
+  `f02123578d10e6e5cf41425212d1de9f9bed860b2bac412be7f719d3e7c55888`.
+  CSS `assets/index-DqJTo1dY.css` SHA-256:
+  `395ff402f20833d49b3daa4d40541298c9c2ee55eafce9eec61fa87c8a8afa60`.
+  Deployment used the isolated 254-file static directory; API-shaped routes
+  return the identical static HTML and no Functions bundle is attached.
+- Next physical step: reload ordinary Safari, confirm Beta 15.96, and report
+  whether landing and capture placement now feel correct. No new OCR scan is
+  required solely for this CSS/layout acceptance check.
