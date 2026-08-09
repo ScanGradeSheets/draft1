@@ -560,17 +560,10 @@ export function detectCornerMarkers(src, layout, options = {}) {
       const canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      const id = ctx.getImageData(0, 0, w, h);
-      for (let r = 0; r < h; r++) {
-        for (let c = 0; c < w; c++) {
-          const v = binary.ucharAt(r, c);
-          const i = (r * w + c) * 4;
-          id.data[i] = id.data[i + 1] = id.data[i + 2] = v;
-          id.data[i + 3] = 255;
-        }
-      }
-      ctx.putImageData(id, 0, 0);
+      // Preserve the exact debug PNG while avoiding one JS→OpenCV call per
+      // pixel. That bridge is especially expensive in Safari 12 and this
+      // diagnostic raster is not recognition or grading input.
+      cv.imshow(canvas, binary);
       window.__SCANGRADE_DEBUG_BINARY_URL = canvas.toDataURL('image/png');
     } catch (e) {
       window.__SCANGRADE_DEBUG_BINARY_ERROR = String(e);
@@ -3718,6 +3711,8 @@ export function preprocessToMNISTWithDebug(boxImg, options = {}) {
  * @returns {Object|null} - Pipeline results or null if detection failed
  */
 export function processWorksheet(input, layout, options = {}) {
+  const notifyStage = typeof options.onStage === 'function' ? options.onStage : () => {};
+  notifyStage('cloning source image');
   // Convert input to cv.Mat if needed
   let src;
   if (input instanceof cv.Mat) {
@@ -3729,6 +3724,7 @@ export function processWorksheet(input, layout, options = {}) {
   }
 
   // Step 1: Detect corner markers
+  notifyStage('detecting corner markers');
   const anchors = detectCornerMarkers(src, layout);
   if (!anchors) {
     src.delete();
@@ -3738,16 +3734,19 @@ export function processWorksheet(input, layout, options = {}) {
   // Step 2: Warp to template. Uploaded classroom photos may arrive rotated
   // sideways, so choose the marker-label orientation whose answer boxes line
   // up best with the template before cropping.
+  notifyStage('selecting page orientation');
   const warpResult = warpToBestTemplateOrientation(src, anchors, layout, options);
   const warped = warpResult.warped;
   const sourceAnchors = warpResult.anchors || anchors;
 
   // Step 3: Crop boxes
+  notifyStage('registering answer boxes');
   const crops = cropBoxes(warped, layout, options);
 
   // Step 4: Preprocess each crop. Two-digit worksheet cells are intentionally
   // run through a small family of line-cleanup settings because old iPad
   // captures can make the answer-box guide line look stronger than pencil.
+  notifyStage('preparing recognition tensors');
   const processed = crops.map(crop => {
     const tensors = buildProcessedCropTensors(crop);
     return {
@@ -3768,6 +3767,7 @@ export function processWorksheet(input, layout, options = {}) {
   // finalized. Keeping this as a second pass prevents extra OpenCV allocations
   // or cleanup work from perturbing the primary preprocessing batch.
   if (options.experimentalFidelityCrops === true) {
+    notifyStage('preparing optional review crops');
     for (let index = 0; index < crops.length; index += 1) {
       const reviewVariants = buildReviewSuggestionCropTensors(warped, crops[index]);
       if (reviewVariants.length) processed[index].tensorVariants.push(...reviewVariants);
@@ -3776,6 +3776,7 @@ export function processWorksheet(input, layout, options = {}) {
 
   // Clean up source (warped kept for preview, caller must delete)
   src.delete();
+  notifyStage('worksheet processing complete');
 
   return {
     warpedImage: warped,

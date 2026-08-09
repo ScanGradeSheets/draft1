@@ -8148,6 +8148,8 @@ function buildLiveOcrErrorDebugPackage(err, partialDebug) {
     markerDebugSnapshot: markerDebugSnapshot.value || null,
     modelInfo: modelInfoSnapshot.value || null,
     digitEngineTrace: partialDebug?.digitEngineTrace || null,
+    ocrStageTrace: partialDebug?.ocrStageTrace || [],
+    worksheetStageTrace: partialDebug?.worksheetStageTrace || [],
     runtime: getRuntimeDebugInfo(),
     generatedAt: new Date().toISOString()
   }
@@ -8309,6 +8311,7 @@ const runRealOCR = async () => {
   const partialDebug = {
     stage: 'starting',
     ocrStageTrace,
+    worksheetStageTrace: [],
     scanSessionId: activeScanSessionId,
     ...evaluationMetadata,
     layoutUrl: null,
@@ -8435,7 +8438,20 @@ const runRealOCR = async () => {
 
     // Run homography + crops with normalized layout
     setOcrStage('finding worksheet markers')
-    const result = processWorksheet(src, layout, worksheetProcessingOptions(qrPayload?.qr_location || null))
+    let worksheetStageStartedAt = performance.now()
+    const recordWorksheetStage = (stage) => {
+      const atMs = Math.round(performance.now() - start)
+      const previous = partialDebug.worksheetStageTrace[partialDebug.worksheetStageTrace.length - 1]
+      if (previous && previous.durationMs == null) {
+        previous.durationMs = Math.max(0, Math.round(performance.now() - worksheetStageStartedAt))
+      }
+      partialDebug.worksheetStageTrace.push({ stage, atMs, durationMs: null })
+      worksheetStageStartedAt = performance.now()
+    }
+    const result = processWorksheet(src, layout, {
+      ...worksheetProcessingOptions(qrPayload?.qr_location || null),
+      onStage: recordWorksheetStage,
+    })
     if (hybridV3Enabled()) replaceWithFreshV3Warp(result, src, layout)
 
     if (!result) {
@@ -9316,6 +9332,7 @@ const runRealOCR = async () => {
         digitEngineError: partialDebug.digitEngineError || null,
         digitEngineTrace: partialDebug.digitEngineTrace || null,
         ocrStageTrace: partialDebug.ocrStageTrace || [],
+        worksheetStageTrace: partialDebug.worksheetStageTrace || [],
         activeHomography: partialDebug.activeHomography,
         answerBoxRegistration: partialDebug.answerBoxRegistration || null,
         warpOrientation: window.__SCANGRADE_DEBUG_WARP_ORIENTATION || null,

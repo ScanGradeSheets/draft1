@@ -20,6 +20,7 @@ test('legacy debug bundle records full OCR stage timing without changing stage b
   assert.match(cameraSource, /setOcrStage\('initializing digit model'\)/)
   assert.match(cameraSource, /setOcrStage\('result ready'\)/)
   assert.match(cameraSource, /ocrStageTrace: partialDebug\.ocrStageTrace \|\| \[\]/)
+  assert.match(cameraSource, /worksheetStageTrace: partialDebug\.worksheetStageTrace \|\| \[\]/)
 })
 
 test('CPU success retains the preceding ONNX.js WebGL failure in runtime debug metadata', () => {
