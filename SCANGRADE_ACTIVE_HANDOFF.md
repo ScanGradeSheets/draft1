@@ -7858,3 +7858,44 @@ Next action:
 - Next physical step: reload ordinary Safari, confirm Beta 15.96, and report
   whether landing and capture placement now feel correct. No new OCR scan is
   required solely for this CSS/layout acceptance check.
+
+### 2026-08-09 Beta 15.97 diagnostic-raster speed candidate (deployed; physical timing pending)
+
+- Profiling the 22.021-second physical aggregate exposed a debug-only hot path:
+  successful Debug Scans converted the 1080×1398 marker binary into a PNG using
+  about 1.5 million individual `binary.ucharAt(...)` JavaScript-to-OpenCV calls.
+  The diagnostic PNG does not feed marker selection, homography, crops,
+  recognition, confidence, or grading.
+- Beta 15.97 replaces only that raster copy with `cv.imshow(canvas, binary)`.
+  The permanent browser benchmark at
+  `scripts/benchmark_marker_debug_raster.mjs` compares both implementations at
+  the physical image size. Chromium measured 34.1 ms versus 14.0 ms (2.4×) and
+  WebKit 50.0 ms versus 16.0 ms (3.1×). Both produced identical PNG data and
+  zero mismatched RGBA bytes. These modern timings validate the replacement but
+  do not predict the old iPad's absolute saving.
+- A preserved physical worksheet replay remained 8/8, with result-ready at
+  2.422 seconds. Its 1.760-second aggregate worksheet stage split into 0.234
+  seconds marker detection, 0.624 orientation selection, 0.117 answer-box
+  registration, and 0.784 tensor preparation.
+- Passive `worksheetStageTrace` now exports those same boundaries on physical
+  Debug Scans. It does not change processing options or control flow and is also
+  retained in failure exports.
+- No marker acceptance, page geometry, warp, orientation scoring, crop,
+  preprocessing, model, confidence, review, or grading behavior changed.
+  Complete suite **476/476**, exact raster pixel-equivalence benchmark, physical
+  worksheet replay, deploy-pruned build, and `git diff --check` pass. Source
+  commit `00ee514` is pushed.
+- Build label: `2026.08.09-legacy-debug-raster-speed-beta-15-97`. Preview:
+  `https://366ff3ce.scangrade.pages.dev/`. Production immutable:
+  `https://3bbd4588.scangrade.pages.dev/`. Public: `https://scangrade.io/`.
+- Local/preview/immutable/public HTML SHA-256:
+  `260402b9756fa9143780002713f7f082963e09a26e75edad7da598148d2fc340`.
+  JavaScript `assets/index-DWlxJY31.js` SHA-256:
+  `e164cbf84c814289508588db321bbfebdc7992f7cd24be60eb8d03c160ec0293`.
+  CSS `assets/index-C5uXJUVT.css` SHA-256:
+  `dcf3d3eabc64747759defd8c15b85931c9a4a0e80ece561b965f1485efd6b35a`.
+  Deployment used the isolated 254-file static directory; API-shaped routes
+  return identical static HTML and no Functions bundle is attached.
+- **Do not claim a physical speedup yet.** Next step: one P08 Debug Scan on the
+  orange iPad, record capture-to-result time, and manually Export before
+  correction. Use `worksheetStageTrace` to select any next optimization.
