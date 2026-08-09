@@ -6,6 +6,7 @@
       'scan-grade--student': isStudentMode,
       'scan-grade--landing': isStudentMode && studentView === 'landing',
       'scan-grade--capture': showStudentCaptureUi,
+      'scan-grade--legacy-student': isStudentMode && legacyStudentLayout,
       'scan-grade--legacy-capture': showStudentCaptureUi && legacyStudentCaptureLayout
     }"
   >
@@ -402,7 +403,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.09-legacy-ipad-viewport-fit-beta-15-95'
+const APP_BUILD_LABEL = '2026.08.09-legacy-ipad-fixed-workspace-beta-15-96'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -438,6 +439,7 @@ const showTeacherUi = ref(!isStudentMode.value)
 const studentView = ref(isStudentMode.value ? 'landing' : 'capture')
 const showStudentCaptureUi = computed(() => isStudentMode.value && studentView.value === 'capture')
 const legacyStudentViewportStyle = ref({})
+const legacyStudentLayout = ref(false)
 const legacyStudentCaptureLayout = ref(false)
 const ocrResult = ref(null)
 const studentCameraProcessing = ref(false)
@@ -1201,15 +1203,25 @@ const setCaptureViewportLock = (active) => {
   document.body.classList.toggle('scan-grade-capture-lock', active)
 }
 
+const setLegacyStudentViewportLock = (active) => {
+  document.documentElement.classList.toggle('scan-grade-legacy-lock', active)
+  document.body.classList.toggle('scan-grade-legacy-lock', active)
+}
+
 const updateLegacyStudentViewport = () => {
-  const useLegacyLayout = Boolean(
-    showStudentCaptureUi.value &&
+  const useLegacyStudentLayout = Boolean(
+    isStudentMode.value &&
     typeof window !== 'undefined' &&
     needsLegacyCaptureViewport(window.CSS)
   )
-  legacyStudentCaptureLayout.value = useLegacyLayout
+  const useLegacyCaptureLayout = Boolean(
+    showStudentCaptureUi.value && useLegacyStudentLayout
+  )
+  legacyStudentLayout.value = useLegacyStudentLayout
+  legacyStudentCaptureLayout.value = useLegacyCaptureLayout
+  setLegacyStudentViewportLock(useLegacyStudentLayout)
   if (
-    !useLegacyLayout
+    !useLegacyStudentLayout
   ) {
     legacyStudentViewportStyle.value = {}
     return
@@ -1238,6 +1250,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   setCaptureViewportLock(false)
+  setLegacyStudentViewportLock(false)
   window.removeEventListener('resize', handleLegacyViewportChange)
   window.removeEventListener('orientationchange', handleLegacyViewportChange)
 })
@@ -1283,6 +1296,19 @@ onUnmounted(() => {
   inset: 0;
 }
 
+:global(html.scan-grade-legacy-lock),
+:global(body.scan-grade-legacy-lock),
+:global(body.scan-grade-legacy-lock #app) {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+:global(body.scan-grade-legacy-lock) {
+  position: fixed;
+  inset: 0;
+}
+
 .header {
   text-align: center;
   margin-bottom: 30px;
@@ -1322,26 +1348,26 @@ onUnmounted(() => {
    height after its persistent browser chrome. Compact only that capture UI;
    current Safari/Chrome keep the modern dimensions above. */
 .scan-grade--legacy-capture {
-  padding: 3px 8px;
+  padding: 12px 8px 3px;
 }
 
 .scan-grade--legacy-capture .header {
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .scan-grade--legacy-capture .brand-logo {
-  width: 30px;
-  height: 30px;
-  margin-bottom: 0;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 1px;
 }
 
 .scan-grade--legacy-capture .header h1 {
-  font-size: 16px;
+  font-size: 19px;
 }
 
 .scan-grade--legacy-capture .build-label {
   margin-top: 1px;
-  font-size: 7px;
+  font-size: 8px;
 }
 
 .scan-grade--student.scan-grade--landing {
@@ -1374,6 +1400,12 @@ onUnmounted(() => {
   min-height: auto;
   width: 100%;
   padding-bottom: 0;
+}
+
+.scan-grade--legacy-student.scan-grade--landing {
+  justify-content: flex-start;
+  padding: 72px 10px 0;
+  overflow: hidden;
 }
 
 .header h1 {
@@ -2001,7 +2033,7 @@ button.student-home-scan-btn:focus-visible {
 
 .scan-grade--legacy-capture .student-scan-bar {
   height: 50px;
-  margin-top: 4px;
+  margin: 4px auto 12px;
   padding: 3px 6px;
 }
 
