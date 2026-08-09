@@ -7779,3 +7779,38 @@ Next action:
   the automatic result settles, then manually Export. Use `ocrStageTrace` to
   select a regression-backed optimization; do not reduce preprocessing variants
   or alter homography speculatively.
+
+### 2026-08-09 Beta 15.95 old-iPad viewport fit (deployed; physical fit check pending)
+
+- Tony's orange-iPad screenshots showed that Safari's persistent browser chrome,
+  the app header, an over-conservative 148 px legacy bottom reserve, and the
+  60 px app footer left the worksheet materially smaller than necessary.
+- The patch is strictly gated by the existing old-Safari capability test
+  (`100dvh` or `aspect-ratio` unavailable). In legacy capture only, the preview
+  bottom reserve is 96 px, the logo is 30 px, and the app footer is 50 px.
+  Current browsers retain the prior 44 px logo, 60 px footer, and modern preview
+  calculations. Safari's own address and tab bars cannot be changed by the app.
+- No OCR, capture criteria, homography, inference, confidence, grading, marks,
+  correction behavior, or modern-device CSS changed. Regression coverage locks
+  both the legacy compaction and the unchanged modern dimensions.
+- Verification: focused layout/correction/runtime tests, complete repository
+  suite **474/474**, deploy-pruned production build, built-app modern-browser
+  dimension check, and `git diff --check` pass. Source commit `6eafee7` is pushed
+  on `autobuild/safe-20260223`.
+- Build label: `2026.08.09-legacy-ipad-viewport-fit-beta-15-95`. Corrected
+  static-only preview: `https://be149e6e.scangrade.pages.dev/`. Production
+  immutable: `https://c2e91eca.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`.
+- Local/preview/immutable/public HTML SHA-256:
+  `dd3c588ced36d74760800a4d21fb24fb77adfeaf595a3d0d9a0aa96aced9520b`.
+  JavaScript `assets/index-BsHlLNJa.js` SHA-256:
+  `d045d010002c080f46e76702b091ae46e869dc3fda5b512750ee62bea0bc1dc6`.
+  `/api/submissions` and `/review-model/health` return the same static HTML.
+- An initial preview `397c1c6c` accidentally picked up dormant repository
+  Functions because Wrangler was launched from the repository root. Integrity
+  checking caught it before production. It was superseded by `be149e6e`, run
+  from inside the isolated 254-file static directory; production used that same
+  safe directory and contains no Functions bundle.
+- Next physical step: confirm the Beta 15.95 label and that the worksheet,
+  correction keypad, and complete footer all fit comfortably on the orange iPad.
+  Then collect one uncorrected P08 `ocrStageTrace` export for latency work.
