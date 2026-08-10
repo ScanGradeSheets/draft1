@@ -7941,7 +7941,25 @@ Next action:
   preserved physical worksheet remained 8/8. Complete suite **483/483**,
   deploy-pruned build, and `git diff --check` pass.
 - Build label:
-  `2026.08.09-legacy-qr-tensor-speed-beta-15-98`. **Do not claim the orange
-  iPad is under 20 seconds yet.** The next gate is one physical P08 Debug Scan
-  after deployment, with capture-to-marking time and an export before manual
-  correction. The trace will show whether another exact optimization is needed.
+  `2026.08.09-legacy-qr-tensor-speed-beta-15-98`. Source commit `8fb85cc` is
+  pushed on `autobuild/safe-20260223`. Static preview:
+  `https://5ca0ae0b.scangrade.pages.dev/`. Production immutable:
+  `https://6a819d3a.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`.
+- Local/preview/immutable/public HTML SHA-256:
+  `b8ac6518187e0e370d46193f6ca1e306be32ea45679cf55bf22fa101372df2d4`.
+  JavaScript `assets/index-BGZ5vkiG.js` SHA-256:
+  `39973a5df002cebea346a3192c2348dcc02077ff6cbf3702897e7cf05abc52b7`.
+  CSS `assets/index-CGXVU6lz.css` SHA-256:
+  `24cd4c1218c7f2425aa2478e1bafd8edd408176c23c992a4fbf336966634d652`.
+  ONNX JavaScript `assets/onnx.min-QMqBnv2M.js` SHA-256:
+  `b08dcf125e58cc4f4e7c6e1c25a2861333029fa091d5f3092185f114c4c1041d`.
+  Deployment used the isolated 254-file static directory; `/api/submissions`
+  and `/review-model/health` return the identical static app shell, confirming
+  that no dormant Functions bundle is attached. A `main`-branch upload was a
+  preview only and never reached the custom domain; the final production upload
+  used the configured `autobuild/safe-20260223` production branch.
+- **Do not claim the orange iPad is under 20 seconds yet.** The next gate is one
+  physical P08 Debug Scan, with capture-to-marking time, automatic/yellow result
+  count, and an export before manual correction. The trace will show whether
+  another exact optimization is needed.
