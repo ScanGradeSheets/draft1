@@ -36,5 +36,6 @@ test('Debug Scan statistics retain their finalized pixel count after prefix shar
 
   assert.match(body, /const total = width \* height;/)
   assert.match(body, /window\.__SCANGRADE_DEBUG_PREPROCESS_STATS\.push/)
-  assert.match(body, /inkMean:[\s\S]*Math\.max\(1, ink\.length\)/)
+  assert.match(body, /summarizePreprocessDebugStats\(\{[\s\S]*total/)
+  assert.match(source, /inkMean: inkSum \/ Math\.max\(1, ink\.length\)/)
 })

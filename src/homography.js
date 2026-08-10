@@ -2963,6 +2963,60 @@ function buildWorksheetInkBase(boxImg, options = {}) {
   };
 }
 
+export function summarizePreprocessDebugStats({
+  ink,
+  luminance,
+  connectedEdgeProtection = null,
+  data,
+  channels,
+  total
+}) {
+  let connectedEdgeProtectedPixels = 0;
+  if (connectedEdgeProtection) {
+    for (let i = 0; i < connectedEdgeProtection.length; i++) {
+      connectedEdgeProtectedPixels += connectedEdgeProtection[i];
+    }
+  }
+
+  let inkSum = 0;
+  let inkMax = -Infinity;
+  for (let i = 0; i < ink.length; i++) {
+    const value = ink[i];
+    inkSum += value;
+    if (value > inkMax) inkMax = value;
+  }
+
+  let luminanceMin = Infinity;
+  let luminanceMax = -Infinity;
+  for (let i = 0; i < luminance.length; i++) {
+    const value = luminance[i];
+    if (value < luminanceMin) luminanceMin = value;
+    if (value > luminanceMax) luminanceMax = value;
+  }
+
+  let alphaMin = null;
+  let alphaMax = null;
+  if (channels >= 4 && total > 0) {
+    alphaMin = Infinity;
+    alphaMax = -Infinity;
+    for (let i = 0; i < total; i++) {
+      const value = data[i * channels + 3];
+      if (value < alphaMin) alphaMin = value;
+      if (value > alphaMax) alphaMax = value;
+    }
+  }
+
+  return {
+    connectedEdgeProtectedPixels,
+    inkMean: inkSum / Math.max(1, ink.length),
+    inkMax,
+    luminanceMin,
+    luminanceMax,
+    alphaMin,
+    alphaMax
+  };
+}
+
 function extractWorksheetInk(boxImg, options = {}, sharedInkBase = null) {
   const base = sharedInkBase || buildWorksheetInkBase(boxImg, options);
   const {
@@ -3005,10 +3059,14 @@ function extractWorksheetInk(boxImg, options = {}, sharedInkBase = null) {
     minValueToRemove: preserveFaintInk ? 0.74 : 0.82
   });
   if (typeof window !== 'undefined' && window.__SCANGRADE_DEBUG_PREPROCESS_STATS) {
-    const alphaValues = [];
-    if (channels >= 4) {
-      for (let i = 0; i < total; i++) alphaValues.push(data[i * channels + 3]);
-    }
+    const summary = summarizePreprocessDebugStats({
+      ink,
+      luminance,
+      connectedEdgeProtection,
+      data,
+      channels,
+      total
+    });
     window.__SCANGRADE_DEBUG_PREPROCESS_STATS.push({
       width,
       height,
@@ -3016,15 +3074,7 @@ function extractWorksheetInk(boxImg, options = {}, sharedInkBase = null) {
       bg,
       localRadius,
       scale,
-      connectedEdgeProtectedPixels: connectedEdgeProtection
-        ? connectedEdgeProtection.reduce((sum, value) => sum + value, 0)
-        : 0,
-      inkMean: Array.from(ink).reduce((sum, value) => sum + value, 0) / Math.max(1, ink.length),
-      inkMax: Math.max(...ink),
-      luminanceMin: Math.min(...luminance),
-      luminanceMax: Math.max(...luminance),
-      alphaMin: alphaValues.length ? Math.min(...alphaValues) : null,
-      alphaMax: alphaValues.length ? Math.max(...alphaValues) : null,
+      ...summary,
       firstPixels: Array.from(data.slice(0, Math.min(data.length, channels * 8)))
     });
   }
