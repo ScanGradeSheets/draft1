@@ -1,5 +1,45 @@
 # ScanGrade Active Handoff
 
+## 2026-08-10 Beta 15.102 public/debug separation — release-candidate preparation
+
+- Beta 15.101 is the first physically verified orange-iPad candidate to finish
+  browser-local automatic grading with all six answers automatic and zero
+  yellow fallback. Tony timed the physical run at about 20 seconds. The saved
+  trace reached `result-ready` at **19.005 seconds**. Its preserved Debug Scan is
+  `private-evidence/debug-scans/2026-08-10/2026-08-10-orange-ipad-beta15-101-under-20-success/debug.json`
+  (239,772 bytes; SHA-256
+  `1e373b0f43077856bd350a61edf53d5d7a4ffdbfb9636a2dc7b0180eacef31cc`).
+- The trace's main costs were marker aggregation 10.206 s, tensor preparation
+  7.386 s, model inference 4.326 s, and final/optional work 1.503 s. This is the
+  accepted legacy-device reference, not a universal speed promise. Do not
+  optimize it further before the broader locked-device qualification establishes
+  whether a real product problem remains.
+- Before Beta 15.102 edits, the complete workspace was copied to
+  `/Volumes/Tony's Rugged HD/Codex/ScanGrade Offloads/2026-08-10-beta15-101-release-candidate-checkpoint/repository/`:
+  179,405 files and 29,674,860,433 bytes. An exact checksum rsync dry run was
+  empty after excluding only `.git/fsmonitor--daemon.ipc`, a transient live
+  socket. A separately verified all-branches Git bundle is
+  `scan-grade-beta15-101.bundle` in the same checkpoint directory (SHA-256
+  `a0e51d74972fc6135be08701792e7731b42358553afb3b8ec3e91df0216e11a5`).
+- Beta 15.102 changes presentation only. The ordinary landing at `/` contains
+  Start Scan and Get Worksheets; diagnostic capture now lives at `/debug`, with
+  a Regular ScanGrade return link. The diagnostic result-bar Export control is
+  moved from grid column 3 to column 2 and left-aligned so it cannot overlap the
+  absolutely centred recognition arrow. No OCR, capture, homography,
+  confidence, grading, annotation, or legacy-iPad inference logic changed.
+- Reproducible checks before publication: dedicated route/layout tests 6/6,
+  complete repository suite **489/489**, production build passes, and
+  `git diff --check` is clean. Old-iPad-sized local browser checks confirmed the
+  two distinct landing pages and the `/debug` return link. The Export placement
+  still requires physical confirmation after a completed Debug Scan.
+- The locked device/packet qualification protocol is
+  `docs/SCANGRADE_RELEASE_CANDIDATE_DEVICE_TEST_PROTOCOL_20260810.md`. Session 0
+  uses already opened sheets on the orange iPad, black iPad, and iPhone 16.
+  Only after it passes should one randomly selected untouched packet be used
+  for the 30-run three-device crossover. Current records expect P01, P04, P06,
+  and P07 to remain untouched, but Tony must confirm the physical labels.
+- Candidate label: `2026.08.10-dedicated-debug-route-beta-15-102`.
+
 ## 2026-08-04 Beta 15.85 legacy-iPad review-state repair — public physical-test candidate
 
 - The orange-iPad Beta 15.84 retest reproduced two real interface/state defects:

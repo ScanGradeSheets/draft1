@@ -19,14 +19,27 @@
     <main class="main" :class="{ 'main--student': isStudentMode }">
       <section v-if="isStudentMode && studentView === 'landing'" class="student-home">
         <div class="student-home-actions">
-          <button type="button" class="btn btn-primary student-home-btn student-home-scan-btn" @click="beginGuestScan">
+          <button
+            v-if="!debugRouteEnabled"
+            type="button"
+            class="btn btn-primary student-home-btn student-home-scan-btn"
+            @click="beginGuestScan"
+          >
             Start Scan
           </button>
-          <button type="button" class="btn btn-secondary student-home-btn student-home-debug-btn" @click="beginDebugGuestScan">
+          <button
+            v-else
+            type="button"
+            class="btn btn-primary student-home-btn student-home-scan-btn"
+            @click="beginDebugGuestScan"
+          >
             Debug Scan (exports)
           </button>
-          <a class="btn btn-worksheet student-home-btn" :href="publicUrl('worksheets/')">
+          <a v-if="!debugRouteEnabled" class="btn btn-worksheet student-home-btn" :href="publicUrl('worksheets/')">
             Get Worksheets
+          </a>
+          <a v-else class="btn btn-secondary student-home-btn" :href="publicUrl('')">
+            Regular ScanGrade
           </a>
         </div>
       </section>
@@ -387,6 +400,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import CameraCapture from './components/CameraCapture.vue'
+import { isDebugRoutePathname } from './debug-route.js'
 import { publicUrl } from './public-paths.js'
 import {
   legacyVisibleViewportStyle,
@@ -403,8 +417,9 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.10-legacy-debug-stats-speed-beta-15-101'
+const APP_BUILD_LABEL = '2026.08.10-dedicated-debug-route-beta-15-102'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
+const debugRouteEnabled = typeof window !== 'undefined' && isDebugRoutePathname(window.location.pathname)
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -2136,7 +2151,8 @@ button.student-home-scan-btn:focus-visible {
 }
 
 .student-scan-bar--debug-result:not(.student-scan-bar--grading) .student-debug-export {
-  grid-column: 3;
+  grid-column: 2;
+  justify-self: start;
 }
 
 .student-scan-bar--debug-result:not(.student-scan-bar--grading) .student-scan-actions {
