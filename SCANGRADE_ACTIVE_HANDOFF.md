@@ -32,6 +32,16 @@
   `git diff --check` is clean. Old-iPad-sized local browser checks confirmed the
   two distinct landing pages and the `/debug` return link. The Export placement
   still requires physical confirmation after a completed Debug Scan.
+- Published from an isolated 254-file static directory at
+  `https://3a5dde87.scangrade.pages.dev/` and promoted to
+  `https://scangrade.io/`. Production root, `/debug`, and `/api/submissions`
+  return the byte-identical app shell (SHA-256
+  `20b89255a963aaeca097027f848801cc4d7a5bee7b8a9aac624bd9e5aca2adcb`),
+  and the public main asset `assets/index-2bm7JMnd.js` is byte-identical to the
+  frozen local build (SHA-256
+  `e50860f20af051d31e53542e58ce1f169dcf3f7bd2d44a433b80dc463b862b31`).
+  Production browser verification at a 768-by-954 legacy-iPad-sized viewport
+  confirmed the exact Beta 15.102 label and distinct public/debug controls.
 - The locked device/packet qualification protocol is
   `docs/SCANGRADE_RELEASE_CANDIDATE_DEVICE_TEST_PROTOCOL_20260810.md`. Session 0
   uses already opened sheets on the orange iPad, black iPad, and iPhone 16.
