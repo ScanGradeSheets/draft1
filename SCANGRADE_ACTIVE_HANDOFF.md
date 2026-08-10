@@ -8048,4 +8048,18 @@ Next action:
   request. Capture/grading placement and modern-device CSS remain unchanged.
 - Build label: `2026.08.10-legacy-debug-stats-hotfix-beta-15-100`. **Do not
   claim success until automatic grading and timing are physically verified on
-  the orange iPad.**
+  the orange iPad.** Complete suite **486/486**, the Chromium/WebKit Debug-Scan
+  statistics verifier, deploy-pruned build, and `git diff --check` pass. Source
+  commit `5ee0e6a` is pushed on `autobuild/safe-20260223`.
+- Static preview: `https://b6fe004d.scangrade.pages.dev/`. Production
+  immutable: `https://4f1cab2f.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`. Local/preview/immutable/public HTML SHA-256:
+  `a99463ad0d86cf98fc5035031f4cc86e374a73cbef81d3a7f98da08de333703b`.
+  JavaScript `assets/index-BPrPyP0O.js` SHA-256:
+  `53cd6ee6316653317accf626be205101714bbdb176a96b176cd9804f60224a8f`.
+  CSS `assets/index-x9tuAvbJ.css` SHA-256:
+  `37e9dc61cb3e8c81f6a06c5f9af61c149bf437c086428e18797d2dba3d971386`.
+  ONNX JavaScript `assets/onnx.min-C2otTiac.js` SHA-256:
+  `d4241e1ba7a65b3edae9a5025037e92f4464ceb266836df8b0dde12ed0ecf2e7`.
+  Deployment used the isolated 254-file static directory; API-shaped routes
+  return the identical current app shell and no Functions bundle is attached.
