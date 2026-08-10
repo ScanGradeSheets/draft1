@@ -37,7 +37,7 @@ test('legacy capture compaction is explicitly scoped away from modern layouts', 
 
   assert.match(appSource, /'scan-grade--legacy-student': isStudentMode && legacyStudentLayout/)
   assert.match(appSource, /'scan-grade--legacy-capture': showStudentCaptureUi && legacyStudentCaptureLayout/)
-  assert.match(appSource, /\.scan-grade--legacy-student\.scan-grade--landing\s*\{[^}]*justify-content:\s*flex-start;[^}]*padding:\s*96px 10px 0;[^}]*overflow:\s*hidden;/s)
+  assert.match(appSource, /\.scan-grade--legacy-student\.scan-grade--landing\s*\{[^}]*justify-content:\s*flex-start;[^}]*padding:\s*120px 10px 0;[^}]*overflow:\s*hidden;/s)
   assert.match(appSource, /scan-grade-legacy-lock[\s\S]*position:\s*fixed;[\s\S]*inset:\s*0;/)
   assert.match(appSource, /\.scan-grade--legacy-capture \.brand-logo\s*\{[^}]*width:\s*38px;[^}]*height:\s*38px;/s)
   assert.match(appSource, /\.scan-grade--legacy-capture \.header h1\s*\{[^}]*font-size:\s*19px;/s)

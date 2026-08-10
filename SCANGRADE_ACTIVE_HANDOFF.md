@@ -8019,3 +8019,33 @@ Next action:
 - **Do not claim an orange-iPad speedup or under-20 result until physically
   retested.** Next gate: reload Beta 15.99, run one P08 Debug Scan, time capture
   to marking, note automatic/yellow results before correction, and Export.
+
+### 2026-08-10 Beta 15.99 physical Debug-Scan failure and Beta 15.100 hotfix
+
+- Beta 15.99 failed immediately before marking on the orange iPad. The failure
+  export is preserved at
+  `private-evidence/debug-scans/2026-08-10/2026-08-10-orange-ipad-beta15-99-immediate-failure/debug.json`
+  (7,797 bytes; SHA-256
+  `00b17bff9d94abc12d1a379388602b76e377a86cce7ab5d15c1027b8d887150e`).
+  It is private/ignored and must not be committed.
+- The export identified the exact regression: `ReferenceError: Can't find
+  variable: total` inside the Debug-Scan-only preprocess statistics branch.
+  Shared-prefix refactoring moved `total` into the prefix builder, while the
+  statistics ending still referenced it. Normal saved-capture replays do not
+  enable `window.__SCANGRADE_DEBUG_PREPROCESS_STATS`, so the otherwise exact
+  ten-capture comparison did not execute this branch.
+- The physical trace nevertheless validates the new registration hot path:
+  marker detection took 0.415 seconds, decisive orientation 0.466 seconds, and
+  answer-box registration **0.676 seconds**, down from Beta 15.98's 9.272
+  seconds. Tensor preparation then threw before completing; no grading result
+  exists and Beta 15.99 must not be treated as a successful speed test.
+- Beta 15.100 restores `total = width * height` in the finalized extraction
+  scope. A permanent browser verifier enables the real statistics array and
+  executes `preprocessToMNISTWithDebug`; Chromium and WebKit both produced one
+  complete finite 96×112 statistics record and a finite 784-value tensor.
+  Static regression coverage also locks the scoped total declaration.
+- The old-Safari-only landing top padding moves from 96 px to 120 px at Tony's
+  request. Capture/grading placement and modern-device CSS remain unchanged.
+- Build label: `2026.08.10-legacy-debug-stats-hotfix-beta-15-100`. **Do not
+  claim success until automatic grading and timing are physically verified on
+  the orange iPad.**

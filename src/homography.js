@@ -2979,6 +2979,7 @@ function extractWorksheetInk(boxImg, options = {}, sharedInkBase = null) {
     localRadius,
     scale
   } = base;
+  const total = width * height;
   // Every cleanup branch must receive the exact same pre-cleanup values but
   // remain independently mutable, matching the formerly repeated extraction.
   const ink = new Float32Array(base.ink);

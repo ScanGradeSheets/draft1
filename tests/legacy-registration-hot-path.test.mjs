@@ -28,3 +28,13 @@ test('virtual digit cleanup variants share only their identical extraction prefi
   assert.equal((body.match(/}, sharedInkBase\)/g) || []).length, 3)
   assert.match(body, /name: 'gentle'[\s\S]*preprocessToMNISTCore\(crop\.image, false, \{[\s\S]*strictLineRemoval: false/)
 })
+
+test('Debug Scan statistics retain their finalized pixel count after prefix sharing', () => {
+  const start = source.indexOf('function extractWorksheetInk')
+  const end = source.indexOf('function getDisplayPixelSource', start)
+  const body = source.slice(start, end)
+
+  assert.match(body, /const total = width \* height;/)
+  assert.match(body, /window\.__SCANGRADE_DEBUG_PREPROCESS_STATS\.push/)
+  assert.match(body, /inkMean:[\s\S]*Math\.max\(1, ink\.length\)/)
+})
