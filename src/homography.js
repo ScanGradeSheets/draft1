@@ -1395,13 +1395,38 @@ function binaryFillRatio(binary, rect, insetFrac = 0) {
   const y1 = Math.min(binary.rows, rect.y + rect.height - insetY);
   let total = 0;
   let filled = 0;
+  const source = singleChannelMatByteSource(binary);
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       total++;
-      if (binary.ucharPtr(y, x)[0] > 0) filled++;
+      if (source
+        ? source.heap[source.offset + y * source.step + x] > 0
+        : binary.ucharPtr(y, x)[0] > 0) filled++;
     }
   }
   return total ? filled / total : 1;
+}
+
+function singleChannelMatByteSource(mat) {
+  try {
+    const step = Number(mat?.step?.[0]);
+    const offset = Number(mat?.data?.byteOffset);
+    const heap = typeof cv !== 'undefined' ? cv.HEAPU8 : null;
+    if (
+      mat?.cols > 0 &&
+      mat?.rows > 0 &&
+      getMatChannelCount(mat) === 1 &&
+      Number.isFinite(step) &&
+      step >= mat.cols &&
+      Number.isFinite(offset) &&
+      heap?.buffer === mat.data?.buffer
+    ) {
+      return { heap, offset, step };
+    }
+  } catch (_) {
+    // Retain ucharPtr on unusual OpenCV builds.
+  }
+  return null;
 }
 
 function binaryBandFillRatio(binary, x0, y0, x1, y1) {
@@ -1412,10 +1437,13 @@ function binaryBandFillRatio(binary, x0, y0, x1, y1) {
   const ey = clampNumber(Math.ceil(y1), sy, binary.rows);
   let total = 0;
   let filled = 0;
+  const source = singleChannelMatByteSource(binary);
   for (let y = sy; y < ey; y++) {
     for (let x = sx; x < ex; x++) {
       total++;
-      if (binary.ucharPtr(y, x)[0] > 0) filled++;
+      if (source
+        ? source.heap[source.offset + y * source.step + x] > 0
+        : binary.ucharPtr(y, x)[0] > 0) filled++;
     }
   }
   return total ? filled / total : 0;
@@ -1876,12 +1904,11 @@ function detectAnswerBoxRects(warped, expectedRects, options = {}) {
       const areaRatio = rectArea / expArea;
       const cx = rect.x + w / 2;
       const cy = rect.y + h / 2;
-      const filledRatio = binaryFillRatio(binary, rect, 0);
-      const innerFilledRatio = binaryFillRatio(binary, rect, 0.22);
-      const frameInk = binaryFrameStrength(binary, rect, 0.13);
-      const frameStrength = frameInk.horizontal * 2.2 + frameInk.vertical * 1.15 + frameInk.all * 0.75;
-
-      const plausible =
+      // Reject contours that cannot possibly satisfy the established detector
+      // before reading their pixels. On Safari 12, ucharPtr bridging over every
+      // unrelated contour dominated answer-frame registration. This preserves
+      // the exact original conjunction and therefore the exact candidates.
+      const geometryPlausible =
         cx >= minX &&
         cx <= maxX &&
         cy >= minY &&
@@ -1895,7 +1922,17 @@ function detectAnswerBoxRects(warped, expectedRects, options = {}) {
         aspect >= 0.45 &&
         aspect <= 2.20 &&
         fillRatio >= 0.015 &&
-        fillRatio <= 1.02 &&
+        fillRatio <= 1.02;
+      if (!geometryPlausible) {
+        cnt.delete();
+        continue;
+      }
+      const filledRatio = binaryFillRatio(binary, rect, 0);
+      const innerFilledRatio = binaryFillRatio(binary, rect, 0.22);
+      const frameInk = binaryFrameStrength(binary, rect, 0.13);
+      const frameStrength = frameInk.horizontal * 2.2 + frameInk.vertical * 1.15 + frameInk.all * 0.75;
+
+      const plausible =
         filledRatio >= 0.025 &&
         filledRatio <= 0.58 &&
         innerFilledRatio <= 0.42 &&
@@ -2760,14 +2797,14 @@ function eraseKnownVirtualDigitLines(crop, cropRect, digitRect, options = {}) {
  * @param {cv.Mat} boxImg - Cropped box image (RGBA)
  * @returns {Float32Array} - Normalized 28×28 MNIST-format tensor
  */
-function preprocessToMNISTCore(boxImg, withDebug = false, options = {}) {
+function preprocessToMNISTCore(boxImg, withDebug = false, options = {}, sharedInkBase = null) {
   if (!boxImg || boxImg.rows === 0 || boxImg.cols === 0) {
     return withDebug
       ? { tensor: new Float32Array(MNIST_SIZE * MNIST_SIZE), debug: null }
       : new Float32Array(MNIST_SIZE * MNIST_SIZE);
   }
   const debug = withDebug ? {} : null;
-  const extracted = extractWorksheetInk(boxImg, options);
+  const extracted = extractWorksheetInk(boxImg, options, sharedInkBase);
   const preserveFaintInk = options.protectInteriorStrokes === true;
   const tensor = centerInkToMNIST(
     extracted.ink,
@@ -2835,7 +2872,7 @@ function computeLocalMean(values, width, height, radius) {
   return out;
 }
 
-function extractWorksheetInk(boxImg, options = {}) {
+function buildWorksheetInkBase(boxImg, options = {}) {
   const pixelSource = getDisplayPixelSource(boxImg);
   const { width, height, channels, data } = pixelSource;
   const total = width * height;
@@ -2858,8 +2895,6 @@ function extractWorksheetInk(boxImg, options = {}) {
 
   const strict = options.strictLineRemoval === true;
   const preserveFaintInk = options.protectInteriorStrokes === true;
-  const skipRuleArtifactCleanup = options.skipRuleArtifactCleanup === true;
-  const skipPrintedLineCleanup = options.skipPrintedLineCleanup === true;
   const bg = quantile(luminance, strict ? (preserveFaintInk ? 0.82 : 0.76) : 0.82);
   const localRadius = Math.max(
     5,
@@ -2910,6 +2945,45 @@ function extractWorksheetInk(boxImg, options = {}) {
   removeDashedEdgeGuidesFromInk(ink, width, height, {
     protectedPixels: connectedEdgeProtection
   });
+
+  return {
+    ink,
+    gray,
+    width,
+    height,
+    channels,
+    data,
+    luminance,
+    connectedEdgeProtection,
+    strict,
+    preserveFaintInk,
+    bg,
+    localRadius,
+    scale
+  };
+}
+
+function extractWorksheetInk(boxImg, options = {}, sharedInkBase = null) {
+  const base = sharedInkBase || buildWorksheetInkBase(boxImg, options);
+  const {
+    gray,
+    width,
+    height,
+    channels,
+    data,
+    luminance,
+    connectedEdgeProtection,
+    strict,
+    preserveFaintInk,
+    bg,
+    localRadius,
+    scale
+  } = base;
+  // Every cleanup branch must receive the exact same pre-cleanup values but
+  // remain independently mutable, matching the formerly repeated extraction.
+  const ink = new Float32Array(base.ink);
+  const skipRuleArtifactCleanup = options.skipRuleArtifactCleanup === true;
+  const skipPrintedLineCleanup = options.skipPrintedLineCleanup === true;
   if (!skipRuleArtifactCleanup && options.strictLineRemoval === true && preserveFaintInk) {
     removeVirtualDigitRuleArtifactsFromInk(ink, width, height, {
       eraseBelow: options.ruleArtifactEraseBelow
@@ -3866,7 +3940,13 @@ function buildProcessedCropTensors(crop) {
   };
   const connectedEdgeEnabled = typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('connectedEdgePreservation') !== '0';
-  const tensor = preprocessToMNISTCore(crop.image, false, baseOptions);
+  // The first four production variants differ only in their cleanup ending.
+  // Share their mathematically identical luminance/local-mean/initial-ink
+  // prefix once; every branch still clones and produces its original tensor.
+  const sharedInkBase = isVirtualDigitBox
+    ? buildWorksheetInkBase(crop.image, baseOptions)
+    : null;
+  const tensor = preprocessToMNISTCore(crop.image, false, baseOptions, sharedInkBase);
   if (!isVirtualDigitBox) {
     const connectedEdgeTensor = connectedEdgeEnabled
       ? preprocessToMNISTCore(crop.image, false, {
@@ -3911,21 +3991,21 @@ function buildProcessedCropTensors(crop) {
         tensor: preprocessToMNISTCore(crop.image, false, {
           ...baseOptions,
           ruleArtifactEraseBelow: 1.01
-        })
+        }, sharedInkBase)
       },
       {
         name: 'no-rule-cleanup',
         tensor: preprocessToMNISTCore(crop.image, false, {
           ...baseOptions,
           skipRuleArtifactCleanup: true
-        })
+        }, sharedInkBase)
       },
       {
         name: 'no-component-cleanup',
         tensor: preprocessToMNISTCore(crop.image, false, {
           ...baseOptions,
           skipPrintedLineCleanup: true
-        })
+        }, sharedInkBase)
       },
       {
         name: 'gentle',

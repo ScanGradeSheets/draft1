@@ -7963,3 +7963,42 @@ Next action:
   physical P08 Debug Scan, with capture-to-marking time, automatic/yellow result
   count, and an export before manual correction. The trace will show whether
   another exact optimization is needed.
+
+### 2026-08-10 Beta 15.98 physical trace and Beta 15.99 exact-performance candidate
+
+- Tony physically ran Beta 15.98 on the orange iPad and reported about 34
+  seconds from capture until marking began. Five questions were automatic; only
+  the first digit of E was yellow. The compact export is preserved at
+  `private-evidence/debug-scans/2026-08-10/2026-08-10-orange-ipad-beta15-98-stage-trace/debug.json`
+  (240,089 bytes; SHA-256
+  `f5434c0b0f7fc3b4861669e2f37304920f0cf842ff5e3fbb8880578910c90aac`).
+  It is private/ignored and must not be committed.
+- The trace reached `result ready` at 32.342 seconds. The Beta 15.98 QR fast
+  path worked physically: orientation fell from 11.270 seconds to 0.577
+  seconds. The remaining dominant stages were answer-box registration at 9.272
+  seconds, tensor preparation at 8.442 seconds, inference at 5.378 seconds, and
+  model initialization at 2.993 seconds. Engine remained `onnxjs-webgl`, with
+  `digitEngineFallback:false` and `reviewOnlyFallback:false`.
+- Beta 15.99 preserves the detector's exact acceptance conjunction but rejects
+  geometrically impossible contours before reading their pixels. Accepted
+  binary regions use direct single-channel WASM-heap reads, with `ucharPtr`
+  retained as a fallback. This targets the Safari bridge calls exposed by the
+  9.272-second physical registration stage.
+- Four cleanup variants for each virtual digit previously recomputed the same
+  luminance, percentile, local mean, and initial ink mask. Beta 15.99 computes
+  that mathematically identical prefix once, clones its Float32 ink values, and
+  retains all four independent cleanup endings and every tensor variant.
+- Against untouched Beta 15.98, ten saved captures produced byte-identical
+  replay result JSON, crop geometry, model-input previews, raw-crop previews,
+  variant previews, and V3 zone artifacts. Candidate wall time was 18.66
+  seconds versus 22.03 seconds for the concurrently started control (15.3%
+  lower); an earlier sequential comparison was 17.41 versus 20.81 seconds.
+  These modern measurements validate work removal but do not predict the old
+  iPad's absolute saving.
+- Tony's landing screenshot confirmed the legacy landing cluster should move
+  slightly lower. Its old-Safari-only top padding is now 96 px instead of 72
+  px. Capture/grading placement and all current-browser landing dimensions are
+  unchanged.
+- Build label:
+  `2026.08.10-legacy-registration-tensor-speed-beta-15-99`. **Do not claim an
+  orange-iPad speedup or under-20 result until physically retested.**

@@ -403,7 +403,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.09-legacy-qr-tensor-speed-beta-15-98'
+const APP_BUILD_LABEL = '2026.08.10-legacy-registration-tensor-speed-beta-15-99'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
@@ -1404,7 +1404,7 @@ onUnmounted(() => {
 
 .scan-grade--legacy-student.scan-grade--landing {
   justify-content: flex-start;
-  padding: 72px 10px 0;
+  padding: 96px 10px 0;
   overflow: hidden;
 }
 
