@@ -8063,3 +8063,65 @@ Next action:
   `d4241e1ba7a65b3edae9a5025037e92f4464ceb266836df8b0dde12ed0ecf2e7`.
   Deployment used the isolated 254-file static directory; API-shaped routes
   return the identical current app shell and no Functions bundle is attached.
+
+### 2026-08-10 Beta 15.100 physical success and Beta 15.101 diagnostic-stat speed candidate
+
+- Tony physically ran Beta 15.100 on the orange iPad and reported about 28
+  seconds from capture until marking. This is the definitive compatibility
+  success required by the active mission: all six questions were graded
+  automatically, `questionReviewCount` was zero, every `questionReview` value
+  was false, every `questionCorrect` value was true, and neither
+  `digitEngineFallback` nor `reviewOnlyFallback` activated. The engine was the
+  intended legacy `onnxjs-webgl` route. This was not an all-yellow fallback.
+- The passive trace reached `result ready` at 23.315 seconds. Main stages were
+  marker detection 1.333 seconds, orientation 0.601 seconds, answer-box
+  registration 0.837 seconds, tensor preparation 7.262 seconds, model
+  initialization 2.931 seconds, inference 5.422 seconds, and final optional
+  result work 1.663 seconds. Debug export/save happens after `result ready`, so
+  it is not included in that 23.315-second OCR trace; Tony's approximately
+  28-second observation may additionally include marking/UI time and evidence
+  handling.
+- The compact physical export is preserved privately at
+  `private-evidence/debug-scans/2026-08-10/2026-08-10-orange-ipad-beta15-100-stage-trace/debug.json`
+  (239,838 bytes; SHA-256
+  `0e56a1cabd663fca67d4040aeddd829ce64a17f8bf30321b21e317de2092bb78`).
+  It is ignored and must not be committed.
+- Debug Scan, unlike ordinary Start Scan, computes and exports preprocessing
+  summaries for all 144 tensor variants. The old implementation repeatedly
+  converted typed arrays into ordinary arrays and used large spread calls.
+  Beta 15.101 replaces only those diagnostic reductions with allocation-free
+  scalar loops. A permanent parity test confirms the summaries are exactly
+  equal to the former calculation, and the real debug-preprocessing verifier
+  passes in Chromium and WebKit.
+- The physical-size 144-summary benchmark measured 91.0 ms versus 4.2 ms in
+  Chromium (21.7x) and 68.0 ms versus 4.0 ms in WebKit (17.0x). These modern
+  figures validate the removed work but do not predict the old iPad's absolute
+  saving. Recognition tensors, model calls, confidence, review policy, grading,
+  capture, homography, layout, UI, and modern-device behavior are unchanged.
+- Build label: `2026.08.10-legacy-debug-stats-speed-beta-15-101`. Complete suite
+  **487/487**, exact diagnostic parity, Chromium/WebKit real-path verification,
+  browser benchmarks, production build, and `git diff --check` pass.
+- Source commit `58cbb20` is pushed on `autobuild/safe-20260223`. Static-only
+  preview: `https://1677309f.scangrade.pages.dev/`. Production immutable:
+  `https://a642c969.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`. Local/preview/immutable/public HTML SHA-256:
+  `218807707ebb569d261dc188b1a4519063b77571171eabd20a0d4f86033a590d`.
+  JavaScript `assets/index-Cwmhi-Yn.js` SHA-256:
+  `dd5fc8b4f35c3cd8a8e3b48bfa9ad87248af4616a725e42e78e4a266ad359ae1`.
+  CSS `assets/index-BSf2uRRR.css` SHA-256:
+  `456d17d1f001a4fc0811f6579489b907c94a3e5089e70079ee6121c17c58892d`.
+  ONNX JavaScript `assets/onnx.min-lF6kYrbw.js` SHA-256:
+  `62ae1a2c6a6ad18684116f28b903ddd583429dfad575a215b6d311e06695d32a`.
+- Deployment used the isolated 254-file static directory. Root,
+  `/api/submissions`, and `/review-model/health` are byte-identical static app
+  shells. A first preview (`b9d3e4be`) was accidentally launched from the
+  repository working directory and therefore discovered the dormant D1
+  Function; the pre-production route check caught it. It was preview-only,
+  never reached the custom domain, and was superseded by launching Wrangler
+  from inside the isolated directory. The final preview and production uploads
+  showed no Functions compilation or upload.
+- **The original orange-iPad automatic-grading compatibility problem is now
+  physically solved, but the newer under-20-second target is not yet verified.**
+  After deployment, run one ordinary Start Scan for product-path timing, then
+  one Debug Scan only if an export is needed. Do not claim under 20 seconds
+  until the orange iPad physically demonstrates it.
