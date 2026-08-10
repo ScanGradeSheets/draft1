@@ -8000,5 +8000,22 @@ Next action:
   px. Capture/grading placement and all current-browser landing dimensions are
   unchanged.
 - Build label:
-  `2026.08.10-legacy-registration-tensor-speed-beta-15-99`. **Do not claim an
-  orange-iPad speedup or under-20 result until physically retested.**
+  `2026.08.10-legacy-registration-tensor-speed-beta-15-99`. Complete suite
+  **485/485**, deploy-pruned build, and `git diff --check` pass. Source commit
+  `e6dc22a` is pushed on `autobuild/safe-20260223`.
+- Static preview: `https://b2938f09.scangrade.pages.dev/`. Production
+  immutable: `https://1d9dedf6.scangrade.pages.dev/`. Public production:
+  `https://scangrade.io/`. Local/preview/immutable/public HTML SHA-256:
+  `d823f9bd603dab80db8f0a90bb70e07ad5865cd34c58df26ecea04b0d3d2f506`.
+  JavaScript `assets/index-D0l1GSlI.js` SHA-256:
+  `0cb613d65db8f09738ccd735b790b45bf6f1f228164ed64a2cac1eb8dc772cf6`.
+  CSS `assets/index-B-MtZWm5.css` SHA-256:
+  `60b1e52b9b8a2dd987fd0024030acfbc1d643ba15dc0ad49234cf83c9b8b93b9`.
+  ONNX JavaScript `assets/onnx.min-DOl_hElN.js` SHA-256:
+  `b7c971a2a2eff1c1333c741bc3c02d8e3475d9fc2a21677de3404206de6dbf35`.
+  Deployment used the isolated 254-file static directory; `/api/submissions`
+  and `/review-model/health` return the identical current static app shell, so
+  no dormant Functions bundle is attached.
+- **Do not claim an orange-iPad speedup or under-20 result until physically
+  retested.** Next gate: reload Beta 15.99, run one P08 Debug Scan, time capture
+  to marking, note automatic/yellow results before correction, and Export.
