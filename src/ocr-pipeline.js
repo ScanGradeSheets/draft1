@@ -1803,10 +1803,24 @@ export async function recognizeDigitsWithPreprocessVariants(tensorVariants, base
   }
 
   const allVariantResults = [];
+  const identicalTensorResult = (data) => allVariantResults.find((candidate) => {
+    if (candidate.data.length !== data.length) return false;
+    for (let index = 0; index < data.length; index++) {
+      if (candidate.data[index] !== data[index]) return false;
+    }
+    return true;
+  });
   for (const variant of variants) {
     const name = variant.name || `variant-${allVariantResults.length + 1}`;
     const data = copyDigitTensorData(variant.tensor || variant.data || variant);
-    const probs = await runDigitDataAsProbs(data, options);
+    // Several cleanup lanes intentionally retain separate policy votes even
+    // when a particular crop makes their tensors byte-for-byte identical.
+    // Reuse the inference probabilities in that case while keeping every
+    // named result and its weighting exactly as before.
+    const matchingResult = identicalTensorResult(data);
+    const probs = matchingResult
+      ? matchingResult.result.probs
+      : await runDigitDataAsProbs(data, options);
     allVariantResults.push({
       name,
       data,

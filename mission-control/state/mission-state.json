@@ -1,8 +1,8 @@
 {
-  "current_mission": "Physically measure the diagnostic-only Beta 15.97 speedup and use its new worksheet substages to choose the next orange-iPad bottleneck without weakening recognition or geometry.",
+  "current_mission": "Deploy and physically measure Beta 15.98's exact-output orange-iPad performance optimizations, targeting under 20 seconds without weakening automatic grading.",
   "north_star": "Primary students scan completed worksheets on shared iPads; teachers review saved results only when needed.",
-  "next_best_move": "Run one Beta 15.97 Debug Scan of P08 on the orange iPad, time capture to result, and manually Export before correcting. Compare worksheetStageTrace to the Beta 15.95 22.021-second aggregate; do not optimize another substage until the physical trace identifies it.",
-  "plain_english_status": "Orange-iPad automatic grading remains physically verified: Beta 15.95 again used ONNX.js WebGL, made five automatic decisions, and routed only Q6 to yellow review. Its result-ready time was 35.214 seconds, including a 22.021-second aggregate worksheet-processing stage. Beta 15.97 replaces a debug-only 1.5-million-call marker-image loop with one bulk OpenCV canvas transfer; modern Chromium/WebKit measured 2.4x/3.1x faster rasterization with identical PNG bytes and zero pixel mismatches. A preserved physical worksheet still replayed 8/8. New passive substages separately time marker detection, orientation selection, box registration, and tensor preparation. Recognition, homography, confidence, grading, and modern layout are unchanged; all 476 tests pass. Physical orange-iPad speed improvement is not yet claimed.",
+  "next_best_move": "After Beta 15.98 is deployed, run one P08 Debug Scan on the orange iPad, time capture until marking begins, note automatic versus yellow results before correcting, then Export. Do not claim under 20 seconds until that physical trace proves it.",
+  "plain_english_status": "Beta 15.97 physically auto-graded five of six P08 questions on the orange iPad with only E yellow, but still measured 40.768 seconds to result-ready. The trace isolated orientation at 11.270 seconds and tensor preparation at 9.472 seconds. Beta 15.98 removes redundant work while preserving exact outputs: decisive QR rotation avoids three full warps, stride-aware OpenCV reads replace 144 canvas round-trips, exact linear percentile selection replaces full sorts, identical tensors reuse inference without dropping policy votes, model load overlaps post-capture setup, and disabled public review work is skipped. Ten saved layouts matched untouched Beta 15.97 exactly and local WebKit mean time fell 27.9%; all 483 tests and the pruned build pass. Physical speedup and the under-20-second target remain unverified until the orange iPad retest.",
   "launch_plan": {
     "target_launch": "September 2026 Teachers Pay Teachers launch",
     "minimum_weekly_time": "6 hours/week average, with the final school-week data sprint as the exception",
@@ -102,8 +102,7 @@
     ]
   },
   "needs_tony": [
-      "Scan the fresh private Beta 15.93 activation QR with the orange iPad and open it in Safari.",
-      "Confirm Beta 15.93, scan P08 Dot Collections, do not correct before timing the initial automatic result, then manually Export the compact trace; auto-save is not reliable on this Safari.",
+      "After deployment, confirm Beta 15.98 on the orange iPad, scan P08 Dot Collections, do not correct before timing and noting the initial automatic result, then manually Export; auto-save is not reliable on this Safari.",
     "If asked to label evidence, focus on handwritten truth and ambiguous shapes, not whether the math answer is correct.",
     "Keep private student evidence local and out of git/public surfaces."
   ],
@@ -444,5 +443,5 @@
     }
   ],
   "codex_autonomy_rule": "Codex should keep moving every 15 minutes when useful: inspect repo state, choose the safest high-value work from the mission/kanban, and prefer small reversible packets. Safe autonomous lanes include tests, diagnosis, docs, Mission Control upkeep, worksheet/TPT/marketing drafts, market research, and careful planning. Tony has locked the current app UI for now, so do not make further app UI/style/layout changes autonomously. Tony remains final authority for vision, brand, major UX, launch/pricing/claims, worksheet-format decisions, and risky OCR/capture/homography/model/backend changes. Never delete/clean untracked work, never run git clean -fd or git reset --hard, and preserve paper-first teacher trust over feature expansion.",
-  "updated_at": "2026-08-09T13:20:00.000-04:00"
+  "updated_at": "2026-08-09T23:45:00.000-04:00"
 }

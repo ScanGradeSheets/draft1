@@ -5,6 +5,9 @@
  * Uses pure geometric approach (no box contour detection)
  */
 
+import { selectDecisiveQrOrientation } from './qr-orientation-fast-path.js';
+import { exactQuantile } from './exact-quantile.js';
+
 const WARP_WIDTH = 1700;
 const WARP_HEIGHT = 2200;
 const MNIST_SIZE = 28;
@@ -2622,6 +2625,33 @@ function warpToBestTemplateOrientation(src, anchors, layout, options = {}) {
     };
   }
 
+  // A decoded QR gives us a rotation landmark for free. When its transformed
+  // position is both very close to the template location and far ahead of the
+  // runner-up, choose that rotation before doing any full-page warp. The
+  // selected candidate still goes through the exact same warp below; ambiguous
+  // or QR-less captures retain the established four-warp alignment fallback.
+  const qrCandidates = candidates.map((candidate) => ({
+    shift: candidate.shift,
+    anchors: candidate.anchors,
+    ...scoreQrPlacementForAnchors(candidate.anchors, layout, options.qrLocation)
+  }));
+  const decisiveQrCandidate = selectDecisiveQrOrientation(qrCandidates);
+  if (decisiveQrCandidate) {
+    const warped = warpToTemplate(src, decisiveQrCandidate.anchors, layout);
+    if (typeof window !== 'undefined') {
+      window.__SCANGRADE_DEBUG_WARP_ORIENTATION = {
+        selectedShift: decisiveQrCandidate.shift,
+        selectionMethod: 'decisive-qr-position',
+        detectedAnchors: anchors,
+        candidates: qrCandidates
+      };
+    }
+    return {
+      warped,
+      anchors: decisiveQrCandidate.anchors
+    };
+  }
+
   let best = null;
   const debug = [];
   for (const candidate of candidates) {
@@ -2765,10 +2795,7 @@ function getMatChannelCount(mat) {
 }
 
 function quantile(values, q) {
-  if (!values || values.length === 0) return 0;
-  const sorted = Array.from(values).sort((a, b) => a - b);
-  const idx = Math.max(0, Math.min(sorted.length - 1, Math.round((sorted.length - 1) * q)));
-  return sorted[idx];
+  return exactQuantile(values, q);
 }
 
 function computeLocalMean(values, width, height, radius) {
@@ -2930,6 +2957,38 @@ function extractWorksheetInk(boxImg, options = {}) {
 }
 
 function getDisplayPixelSource(mat) {
+  // OpenCV ROI Mats can be non-contiguous: `mat.data` then exposes only the
+  // first row correctly because subsequent rows begin at `mat.step[0]`.
+  // Copy those rows directly from the WASM heap. This is byte-identical to
+  // cv.imshow + getImageData, but avoids a canvas upload/readback for every
+  // preprocessing variant (144 times on the current two-digit worksheet).
+  try {
+    const width = mat.cols;
+    const height = mat.rows;
+    const channels = getMatChannelCount(mat);
+    const rowBytes = width * channels;
+    const step = Number(mat.step?.[0]);
+    const offset = Number(mat.data?.byteOffset);
+    const heap = typeof cv !== 'undefined' ? cv.HEAPU8 : null;
+    if (
+      width > 0 &&
+      height > 0 &&
+      channels > 0 &&
+      Number.isFinite(step) &&
+      step >= rowBytes &&
+      Number.isFinite(offset) &&
+      heap?.buffer === mat.data?.buffer
+    ) {
+      const data = new Uint8Array(width * height * channels);
+      for (let y = 0; y < height; y++) {
+        const sourceOffset = offset + y * step;
+        data.set(heap.subarray(sourceOffset, sourceOffset + rowBytes), y * rowBytes);
+      }
+      return { width, height, channels, data };
+    }
+  } catch (_) {
+    // Retain the established canvas conversion on unusual OpenCV builds.
+  }
   if (typeof document !== 'undefined' && typeof cv !== 'undefined' && typeof cv.imshow === 'function') {
     try {
       const canvas = document.createElement('canvas');

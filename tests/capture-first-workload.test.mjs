@@ -24,12 +24,12 @@ test('student mount does not race model warmup against automatic camera startup'
   assert.equal(mounted.includes('warmWholeSlotScout('), false)
 })
 
-test('recognition still initializes its model after a capture is committed', () => {
+test('recognition starts and awaits its model only after a capture is committed', () => {
   const recognition = between('const runRealOCR = async', 'const retake =')
-  assert.match(
-    recognition,
-    /withDigitEngineTimeout\(\s*initDigitModel\(\),\s*'initializing digit model'/,
-  )
+  const warmupIndex = recognition.indexOf('const digitModelWarmupPromise = initDigitModel()')
+  const awaitIndex = recognition.indexOf("withDigitEngineTimeout(\n        digitModelWarmupPromise,\n        'initializing digit model'")
+  assert.ok(warmupIndex >= 0)
+  assert.ok(awaitIndex > warmupIndex)
 })
 
 test('automatic capture preserves its triggering full-resolution frame before announcing capture', () => {

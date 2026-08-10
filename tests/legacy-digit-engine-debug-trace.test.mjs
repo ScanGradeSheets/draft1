@@ -23,8 +23,20 @@ test('legacy debug bundle records full OCR stage timing without changing stage b
   assert.match(cameraSource, /worksheetStageTrace: partialDebug\.worksheetStageTrace \|\| \[\]/)
 })
 
+test('digit model warmup overlaps post-capture setup and public scans skip disabled review work', () => {
+  assert.match(cameraSource, /const digitModelWarmupPromise = initDigitModel\(\)/)
+  assert.match(cameraSource, /withDigitEngineTimeout\([\s\S]*digitModelWarmupPromise/)
+  assert.match(cameraSource, /if \(optionalWholeAnswerReviewUrl\(\)\) \{[\s\S]*buildHybridBurstReviewItems/)
+})
+
 test('CPU success retains the preceding ONNX.js WebGL failure in runtime debug metadata', () => {
   assert.match(pipelineSource, /legacyWebglFallbackError: created\.legacyWebglError\?\.message \|\| null/)
   assert.match(pipelineSource, /runtime\.legacyWebglFallbackError = primary\.legacyWebglFallbackError \|\| null/)
   assert.match(pipelineSource, /legacyWebglFallbackError: loaded\.legacyWebglFallbackError \|\| null/)
+})
+
+test('identical preprocess tensors reuse inference without dropping policy variants', () => {
+  assert.match(pipelineSource, /const identicalTensorResult = \(data\) => allVariantResults\.find/)
+  assert.match(pipelineSource, /matchingResult\.result\.probs/)
+  assert.match(pipelineSource, /allVariantResults\.push\(\{/)
 })

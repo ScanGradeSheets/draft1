@@ -7899,3 +7899,49 @@ Next action:
 - **Do not claim a physical speedup yet.** Next step: one P08 Debug Scan on the
   orange iPad, record capture-to-result time, and manually Export before
   correction. Use `worksheetStageTrace` to select any next optimization.
+
+### 2026-08-09 Beta 15.97 physical trace and Beta 15.98 exact-performance candidate
+
+- Tony physically ran Beta 15.97 on the orange iPad and reported about 37
+  seconds from capture until marking began. The exported trace measured 40.768
+  seconds to `result ready`; five questions were automatic and only E required
+  review. The engine remained `onnxjs-webgl`, with `digitEngineFallback:false`
+  and `reviewOnlyFallback:false`. This is another physical automatic-grading
+  success, not an all-yellow fallback.
+- The compact export is preserved locally at
+  `private-evidence/debug-scans/2026-08-09/2026-08-09-orange-ipad-beta15-97-stage-trace/debug.json`
+  (242,166 bytes; SHA-256
+  `0f6f83a7438f3358af457cf9addac0c7d5c2572bb379170e346a65af50c469fd`).
+  It is private/ignored and must not be committed.
+- The physical worksheet substages identified the real bottlenecks: orientation
+  selection 11.270 seconds, tensor preparation 9.472 seconds, answer-box
+  registration 2.773 seconds, model initialization 5.428 seconds, digit
+  inference 6.287 seconds, and the post-recognition result work 1.700 seconds.
+- Beta 15.98 keeps recognition inputs and policy outputs exact while removing
+  redundant work:
+  - a decoded QR selects rotation early only when its template distance is at
+    most 0.08 and leads the runner-up by at least 0.18; ambiguous/QR-less pages
+    retain the four-warp alignment fallback. All 15 eligible historical traces
+    chose the same shift as the established full scorer;
+  - non-contiguous OpenCV crop rows are copied directly from the WASM heap using
+    `Mat.step`, avoiding 144 canvas upload/readbacks. Chromium and WebKit both
+    produced zero byte mismatches against `cv.imshow + getImageData`;
+  - exact linear-time percentile selection replaces full numeric sorts. It
+    returned the identical ranked value and measured 46.9x faster in Chromium
+    and 33.1x faster in WebKit on 144 physical-sized percentile selections;
+  - byte-identical tensor variants reuse one model inference while retaining
+    every named variant, probability, policy vote, and weight;
+  - the model begins loading only after capture is committed, overlapping image
+    decode/layout fetch, and public scans skip burst-review preparation when no
+    optional review endpoint exists. Live-viewfinder model exclusion remains.
+- An untouched Beta 15.97 build and Beta 15.98 processed the same ten saved
+  layouts in WebKit. All ten had exactly identical predictions, confidence
+  metadata, and question groups. Candidate mean result-ready time was 1.631
+  seconds versus 2.261 seconds for the control (27.9% lower); a separate
+  preserved physical worksheet remained 8/8. Complete suite **483/483**,
+  deploy-pruned build, and `git diff --check` pass.
+- Build label:
+  `2026.08.09-legacy-qr-tensor-speed-beta-15-98`. **Do not claim the orange
+  iPad is under 20 seconds yet.** The next gate is one physical P08 Debug Scan
+  after deployment, with capture-to-marking time and an export before manual
+  correction. The trace will show whether another exact optimization is needed.

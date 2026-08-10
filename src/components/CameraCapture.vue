@@ -8356,6 +8356,11 @@ const runRealOCR = async () => {
     ocrStageTrace.push({ stage, atMs, durationMs: null })
     partialDebug.stage = stage
   }
+  // Capture has already stopped, so begin the cached model load while image
+  // decode and layout fetch are in flight. The same promise is awaited at the
+  // established model boundary; recognition and fallback behavior are unchanged.
+  const digitModelWarmupPromise = initDigitModel()
+  void digitModelWarmupPromise.catch(() => {})
 
   try {
     // Load image
@@ -8839,7 +8844,7 @@ const runRealOCR = async () => {
     try {
       setOcrStage('initializing digit model')
       await withDigitEngineTimeout(
-        initDigitModel(),
+        digitModelWarmupPromise,
         'initializing digit model',
         DIGIT_ENGINE_OPERATION_TIMEOUT_MS,
         recordDigitEngineOperation,
@@ -9085,26 +9090,33 @@ const runRealOCR = async () => {
       }
       partialDebug.hybridBurstProcessing = []
     } else {
-      const hybridBurstReview = await buildHybridBurstReviewItems(
-        layout.question_groups,
-        questionReview,
-        rawCrops,
-        layout,
-        qrPayload?.qr_location || null
-      )
-      partialDebug.hybridBurstProcessing = hybridBurstReview.frames
-      const wholeAnswerReviewResults = await requestWholeAnswerReviewSuggestions(
-        layout.question_groups,
-        questionReview,
-        rawCrops,
-        hybridBurstReview.items
-      )
-      wholeAnswerReviewSuggestions = applyWholeAnswerReviewSuggestions(
-        layout.question_groups,
-        predictions,
-        wholeAnswerReviewResults,
-        { allowRelaxedMultiFrame: layout.question_groups.length === 8 }
-      )
+      // Public static hosting has no review-model endpoint. Do not spend time
+      // registering burst frames and encoding review crops when the optional
+      // request is disabled; private/explicit endpoints retain the full lane.
+      if (optionalWholeAnswerReviewUrl()) {
+        const hybridBurstReview = await buildHybridBurstReviewItems(
+          layout.question_groups,
+          questionReview,
+          rawCrops,
+          layout,
+          qrPayload?.qr_location || null
+        )
+        partialDebug.hybridBurstProcessing = hybridBurstReview.frames
+        const wholeAnswerReviewResults = await requestWholeAnswerReviewSuggestions(
+          layout.question_groups,
+          questionReview,
+          rawCrops,
+          hybridBurstReview.items
+        )
+        wholeAnswerReviewSuggestions = applyWholeAnswerReviewSuggestions(
+          layout.question_groups,
+          predictions,
+          wholeAnswerReviewResults,
+          { allowRelaxedMultiFrame: layout.question_groups.length === 8 }
+        )
+      } else {
+        partialDebug.hybridBurstProcessing = []
+      }
     }
     partialDebug.wholeAnswerReviewSuggestions = wholeAnswerReviewSuggestions
     const answerGroups = buildAnswerGroups(layout.question_groups, predictions, questionCorrect, layout.id)
