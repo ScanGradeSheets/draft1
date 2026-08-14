@@ -12,6 +12,14 @@ test('debug results remain in the fixed worksheet view and export from the botto
   assert.match(appSource, /cameraRef\.value\.exportLiveOcrDebugJson\(\)/)
 })
 
+test('private strong-reader evidence cannot be exported before it finishes', () => {
+  assert.match(cameraSource, /const debugComparisonPending = computed/)
+  assert.match(cameraSource, /'waiting-for-manual-review'/)
+  assert.match(cameraSource, /debugComparisonPending,/)
+  assert.match(appSource, /:disabled="studentDebugExportBusy \|\| cameraRef\?\.debugComparisonPending"/)
+  assert.match(appSource, /if \(cameraRef\.value\?\.debugComparisonPending\) return 'Finishing…'/)
+})
+
 test('private debug receiver setup accepts a URL fragment and immediately removes it', () => {
   assert.match(cameraSource, /fragmentParams = new URLSearchParams/)
   assert.match(cameraSource, /cleanUrl\.hash = ''/)

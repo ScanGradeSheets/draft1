@@ -1439,6 +1439,12 @@ const ocrDebugEnabled = ref(hasDebugQueryFlag('ocrdebug', 'liveOcrDebug', 'sgdeb
 const liveOcrDebugExportEnabled = computed(() =>
   hasDebugQueryFlag('ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug')
 )
+const debugComparisonPending = computed(() => [
+  'waiting-for-manual-review',
+  'pending',
+  'preparing',
+  'running',
+].includes(lastLiveOcrDebug.value?.v3BrowserLocalStrongShadow?.status))
 const ocrDebugSnapshot = ref(null)
 const markerDebugSnapshot = ref(null)
 const modelInfoSnapshot = ref(null)
@@ -1514,6 +1520,7 @@ defineExpose({
   connectDebugAutoUpload,
   debugAutoUploadConfigured,
   debugExportBusy,
+  debugComparisonPending,
 })
 
 const hasLowConfidence = computed(() =>

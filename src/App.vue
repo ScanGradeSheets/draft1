@@ -182,7 +182,7 @@
               v-if="ocrResult && studentDebugMode"
               type="button"
               class="student-scan-link student-debug-export"
-              :disabled="studentDebugExportBusy"
+              :disabled="studentDebugExportBusy || cameraRef?.debugComparisonPending"
               @click="exportStudentDebug"
             >
               {{ studentDebugExportLabel }}
@@ -513,6 +513,7 @@ const setLiveDebugInUrl = (enabled) => {
 
 const studentDebugExportLabel = computed(() => {
   if (studentDebugMode.value && cameraRef.value?.debugAutoUploadConfigured === false) return 'Connect'
+  if (cameraRef.value?.debugComparisonPending) return 'Finishing…'
   if (studentDebugExportBusy.value) return 'Preparing…'
   if (studentDebugExportState.value === 'saved') return 'Exported'
   if (studentDebugExportState.value === 'failed') return 'Try again'

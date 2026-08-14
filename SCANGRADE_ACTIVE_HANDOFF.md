@@ -1,5 +1,41 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 iPhone retained-frame result and debug-export evidence guard
+
+- Physical session `df6236d6-874b-41f5-becf-b89ab710b05b` reached primary
+  `result ready` in 6.745 seconds; Tony observed about seven seconds and five
+  yellow digits (C ones, both D digits, G ones, H ones). Correction advanced
+  automatically. The export is preserved at
+  `private-evidence/debug-scans/2026-08-14/iphone16-strong-shadow-df6236d6/manual-export.json`
+  with SHA-256
+  `c601eaf28fcf17b911cc2eaf743b9d9e60216915e41746b41db5c570a3025f8f`.
+- The export still says `waiting-for-manual-review` because it was created only
+  4.599 seconds after the final correction, before the 12 retained-frame reads
+  could finish. This is not another runtime failure. The temporary Funnel and
+  token server were closed immediately after receipt.
+- Exact local reconstruction of the app's `stitched-original-grayscale` items
+  produced C=`15` and D=`16` unanimously at >=0.9867 minimum token probability,
+  and H=`17` unanimously at >=0.9980. G was unstable (`12`, `12`, `18`) and
+  correctly fails the frozen three-frame rule. A yellow-only, exact 3/3,
+  minimum-0.90 policy would therefore reduce this scan from five yellow digits
+  to one without guessing G or touching an accepted primary answer.
+- Across the four retained iPhone sessions on this same writer/sheet, that
+  frozen rule would promote 9/12 originally yellow questions and remove 11/15
+  yellow digits (73.3%) with zero observed transcription errors, leaving four
+  digits for review. The reproducible private report is
+  `private-evidence/reports/iphone16-strong-shadow-trials-20260814.json`.
+  This is correlated retrospective evidence, not launch authority. The wider
+  345-answer audit also has zero known errors at the 0.90 threshold but was
+  retrospectively inspected and still requires untouched-packet validation.
+- Debug Export now becomes disabled and reads `Finishing…` while this explicit
+  private strong comparison is pending. That prevents another incomplete
+  `waiting-for-manual-review` export; normal Debug Scan and public product paths
+  are unchanged. Complete repository suite **495/495**, production build, and
+  `git diff --check` pass. Next meaningful gate is a private pre-acceptance
+  yellow-only candidate on untouched packets, followed by physical iPhone
+  latency and correctness checks. Do not publish or enable the strong reader
+  from same-sheet evidence alone.
+
 ## 2026-08-14 isolated iPhone shadow trial and retained-crop lifetime fix
 
 - Physical session `90c3a1bd-e0ac-44b6-a283-557f7a850ffb` reached the frozen
