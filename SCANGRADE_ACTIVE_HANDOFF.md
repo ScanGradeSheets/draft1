@@ -1,5 +1,54 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 iPhone 16 retained-frame / whole-answer-reader diagnostic
+
+- After Beta 15.103 passed its correction-transition checks on both the black
+  iPad and iPhone 16, repeated ordinary/debug scans of the same
+  `sg-g1-lw-02-add-2digit` sheet varied from two to five yellow digit slots.
+  Grading began in about one to two seconds, correction auto-advance remained
+  reliable, and corrected digits did not flash off. The modern-device concern
+  is therefore recognition coverage, not correction UX or inference latency.
+- Tony ran the explicit no-policy-change diagnostic at
+  `/debug?hybridV2=1`. Scan session
+  `94465de6-2ca2-4272-9498-a813dceed5ef` retained the best three of the existing
+  eight capture frames and produced four yellow digit slots: B ones, C ones,
+  and both D digits. The manual export is preserved at
+  `private-evidence/debug-scans/2026-08-14/iphone16-hybrid-v2-94465de6/manual-export.json`
+  (SHA-256
+  `3bbfc86c96ac72d50d09e1c79e5207547f2a43b749337061e41ff97a94c50b46`).
+  This is the pixel-bearing authority; receiver auto-saves preserve the
+  correction sequence but prune retained-frame image data.
+- Exact current-pipeline replay of the three frames falsified a lightweight
+  multi-frame vote. B read `12`, `17`, `17`; C read `16`, `16`, `16` instead of
+  the visible/manual `15`; and D read `18`, `13`, `16` while the student wrote
+  `16`. The selected frame was the best overall lightweight-model frame.
+- The resident 7.7 MiB whole-slot scout read B `12` and D `16` on all three
+  frames, but read C as `16`, `16`, `14`. Its minimum B/D probabilities were
+  only about 0.676/0.760. Historical exact-live evidence proves that scout-only
+  agreement can share confident errors, so it is not deployment authority.
+- The frozen 61.1 MiB browser-local whole-answer model then read all three
+  corrected questions correctly on every retained frame: B `12` with minimum
+  token probability `0.997737`, C `15` with `0.999696`, and D `16` with
+  `0.888513`. Desktop Chromium persistent-session replay took about 0.66-0.68 s
+  per answer after initialization; the first run spent about 1.97 s initializing
+  and 3.98 s total for the three yellow questions, while subsequent fresh
+  browser runs initialized in about 0.38-0.39 s and finished in about 2.41 s.
+  These are desktop diagnostic timings, not physical iPhone timings.
+- The existing all-packet three-frame rule requires exact 3/3 strong-reader
+  agreement at a 0.90 minimum. B and C satisfy that evidence shape; D misses
+  the floor on one frame. The stricter Candidate 7 also requires browser,
+  scout, stitched, and three-frame agreement and remains explicitly
+  non-deployable because its independent prospective frame gate is incomplete.
+  Do not lower thresholds or enable a grade-affecting reader from this one
+  favorable sheet.
+- `scripts/replay_live_ocr_captured.mjs` now has replay-only support for
+  `--burst-frame`, `SG_WHOLE_SLOT_SCOUT=1`, and
+  `SG_BROWSER_LOCAL_STRONG=1`. These options do not alter the application or
+  production behavior. Next use the remaining device/packet qualification as
+  a prediction-first shadow trial of the frozen strong reader; compare with
+  manual truth only after each scan is complete. No recognition deployment has
+  been authorized or made from this evidence.
+
 ## 2026-08-14 Beta 15.103 black-iPad correction transition — physical retest candidate
 
 - Session 0 on the approximately four-to-five-year-old black iPad found two

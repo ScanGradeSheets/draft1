@@ -8,6 +8,9 @@ const DEFAULT_URL = process.env.SG_REPLAY_URL || 'https://localhost:5174';
 const EXPERIMENTAL_FIDELITY_CROPS = process.env.SG_EXPERIMENTAL_FIDELITY_CROPS === '1';
 const EXPERIMENTAL_FRAME_REGISTRATION_MODE = process.env.SG_FRAME_REGISTRATION_MODE || 'current';
 const EXPERIMENTAL_EIGHT_FRAME_COLUMN_ORDER = process.env.SG_EIGHT_FRAME_COLUMN_ORDER === '1';
+const EXPERIMENTAL_WHOLE_SLOT_SCOUT = process.env.SG_WHOLE_SLOT_SCOUT === '1';
+const EXPERIMENTAL_BROWSER_LOCAL_STRONG = process.env.SG_BROWSER_LOCAL_STRONG === '1';
+const EXPERIMENTAL_BROWSER_LOCAL_STRONG_BASE = process.env.SG_BROWSER_LOCAL_STRONG_BASE || 'http://127.0.0.1:8792';
 const DEFAULT_EXCLUDED_IDS = new Set([
   '1777087500592'
 ]);
@@ -1483,6 +1486,7 @@ function parseArgs() {
   const captureIds = [];
   let offset = 0;
   let limit = null;
+  let burstFrame = null;
   for (let i = 2; i < process.argv.length; i++) {
     const arg = process.argv[i];
     if (arg === '--include-known-bad') {
@@ -1503,11 +1507,25 @@ function parseArgs() {
     } else if (arg === '--limit') {
       const parsed = Number(process.argv[++i]);
       limit = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    } else if (arg === '--burst-frame') {
+      const parsed = Number(process.argv[++i]);
+      burstFrame = Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
     } else {
       files.push(arg);
     }
   }
-  return { files, includeKnownBad, allowImperfect, url, outDir, truthManifest, captureIds, offset, limit };
+  return {
+    files,
+    includeKnownBad,
+    allowImperfect,
+    url,
+    outDir,
+    truthManifest,
+    captureIds,
+    offset,
+    limit,
+    burstFrame,
+  };
 }
 
 function replayUrl(baseUrl) {
@@ -1552,17 +1570,31 @@ for (const file of files) {
     continue;
   }
 
-  const debug = await loadDebugPayload(file);
+  const loadedDebug = await loadDebugPayload(file);
+  const debug = args.burstFrame == null
+    ? loadedDebug
+    : {
+        ...loadedDebug,
+        capturedImageDataUrl: loadedDebug.hybridBurstFrameDataUrls?.[args.burstFrame] || null,
+      };
   if (!debug.capturedImageDataUrl || !Array.isArray(debug.answerKey) || debug.answerKey.length === 0) {
-    rows.push({ file: replayFileLabel(file), skipped: true, reason: 'missing_capture_or_answer_key' });
+    rows.push({
+      file: replayFileLabel(file),
+      skipped: true,
+      reason: args.burstFrame == null
+        ? 'missing_capture_or_answer_key'
+        : `missing_burst_frame_${args.burstFrame}_or_answer_key`,
+    });
     skipped++;
     continue;
   }
 
   let result;
   try {
-    result = await page.evaluate(async ({ debug, experimentalFidelityCrops, experimentalFrameRegistrationMode, experimentalEightFrameColumnOrder }) => {
+    result = await page.evaluate(async ({ debug, experimentalFidelityCrops, experimentalFrameRegistrationMode, experimentalEightFrameColumnOrder, experimentalWholeSlotScout, experimentalBrowserLocalStrong, experimentalBrowserLocalStrongBase }) => {
     const { processWorksheet } = await import('/src/homography.js');
+    const { requestWholeSlotScout } = await import('/src/v3/whole-slot-scout-client.js');
+    const { requestBrowserLocalStrongPersistentShadow } = await import('/src/v3/trocr-small-shadow-client.js');
     const {
       initDigitModel,
       recognizeDigits,
@@ -2093,6 +2125,48 @@ for (const file of files) {
         image.delete();
       }
     }).filter(Boolean);
+    const wholeSlotScout = experimentalWholeSlotScout
+      ? await requestWholeSlotScout(v3AnswerZones.map((zone) => ({
+          id: `question-${zone.questionNum}-replay-scout`,
+          questionNum: Number(zone.questionNum),
+          imageDataUrl: zone.imageDataUrl,
+          slotCount: zone.digitBoxIds.length,
+          layoutFamily: 'row',
+        })), {
+          enabled: true,
+          modelUrl: '/models/v3-whole-slot-scout.onnx?v=beta-15-56',
+          timeoutMs: 30000,
+        })
+      : null;
+    const correctedQuestionNums = new Set(Object.values(debug.manualCorrections || {})
+      .map((correction) => Number(correction?.questionNum))
+      .filter(Number.isFinite));
+    const browserLocalStrong = experimentalBrowserLocalStrong
+      ? await requestBrowserLocalStrongPersistentShadow(v3AnswerZones
+          .filter((zone) => !correctedQuestionNums.size || correctedQuestionNums.has(Number(zone.questionNum)))
+          .map((zone) => ({
+            id: `question-${zone.questionNum}-replay-strong`,
+            questionNum: Number(zone.questionNum),
+            imageDataUrl: zone.imageDataUrl,
+            cropVariant: 'canonical-warp-continuous-grayscale',
+            contract: {
+              layoutFamily: 'row',
+              physicalSlotCount: zone.digitBoxIds.length,
+              maxHandwrittenDigits: zone.digitBoxIds.length,
+              optionalSlotIndices: [],
+            },
+          })), {
+          enabled: true,
+          encoderUrl: `${experimentalBrowserLocalStrongBase}/models/encoder-fp32.onnx`,
+          decoderUrl: `${experimentalBrowserLocalStrongBase}/models/decoder-int8.onnx`,
+          limit: 8,
+          timeoutMs: 60000,
+          deterministicResize: true,
+          persistentIdleMs: 30000,
+          persistentMaxInferences: 40,
+          forceNoSimd: false,
+        })
+      : null;
 
     const cropRects = processed.rawCrops.map((crop) => ({
       id: crop.id,
@@ -2244,6 +2318,8 @@ for (const file of files) {
       })),
       cropRects,
       v3AnswerZones,
+      wholeSlotScout,
+      browserLocalStrong,
       rawCropPreviewDataUrl: rawCropPreview,
       modelInputPreviewDataUrl: modelInputPreview,
       variantInputPreviewDataUrl: variantInputPreview
@@ -2252,7 +2328,10 @@ for (const file of files) {
       debug,
       experimentalFidelityCrops: EXPERIMENTAL_FIDELITY_CROPS,
       experimentalFrameRegistrationMode: EXPERIMENTAL_FRAME_REGISTRATION_MODE,
-      experimentalEightFrameColumnOrder: EXPERIMENTAL_EIGHT_FRAME_COLUMN_ORDER
+      experimentalEightFrameColumnOrder: EXPERIMENTAL_EIGHT_FRAME_COLUMN_ORDER,
+      experimentalWholeSlotScout: EXPERIMENTAL_WHOLE_SLOT_SCOUT,
+      experimentalBrowserLocalStrong: EXPERIMENTAL_BROWSER_LOCAL_STRONG,
+      experimentalBrowserLocalStrongBase: EXPERIMENTAL_BROWSER_LOCAL_STRONG_BASE,
     });
   } catch (error) {
     rows.push({
@@ -2346,6 +2425,8 @@ for (const file of files) {
     rawCropPreviewDataUrl: result.rawCropPreviewDataUrl,
     cropRects: result.cropRects,
     v3AnswerZones: result.v3AnswerZones || [],
+    wholeSlotScout: result.wholeSlotScout || null,
+    browserLocalStrong: result.browserLocalStrong || null,
     modelInputPreviewDataUrl: result.modelInputPreviewDataUrl,
     variantInputPreviewDataUrl: result.variantInputPreviewDataUrl,
     minConfidence: result.predictions.length
@@ -2449,6 +2530,8 @@ if (args.outDir) {
         optionalSingleDigitBlankOverrides: row.optionalSingleDigitBlankOverrides || [],
         contextAssistedLeadingOneRescues: row.contextAssistedLeadingOneRescues || [],
         groups: row.groups || [],
+        wholeSlotScout: row.wholeSlotScout || null,
+        browserLocalStrong: row.browserLocalStrong || null,
         guard: row.guard || null,
         questionScore: row.questionScore,
         questionReviewCount: row.questionReviewCount,
