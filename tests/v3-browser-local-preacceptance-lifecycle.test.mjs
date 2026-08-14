@@ -21,7 +21,7 @@ test('private browser-local candidate holds presentation and completion until it
 })
 
 test('public critical-confusion safety check holds marks until its final key-blind decision', () => {
-  assert.match(source, /acceptedSafetyRuntimeEnabled = acceptedSafetyConfig\.requested/)
+  assert.match(source, /acceptedSafetyRuntimeEnabled = !browserLocalStrongConfig\.requested &&\s+acceptedSafetyConfig\.requested/)
   assert.match(source, /acceptedSafetyConfig\.policyScope === 'six-eight-only'/)
   assert.match(source, /read === '1' \|\| read === '6' \|\| read === '8'/)
   const hold = source.indexOf('const holdAcceptedSafetyPresentation')

@@ -70,13 +70,29 @@ test('shadow is fail-open when browser workers are unavailable', async () => {
 
 test('retained-frame strong shadow stays detached from grading and V3 promotion', () => {
   const source = readFileSync(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
-  const start = source.indexOf('const browserLocalStrongConfig = browserLocalStrongShadowConfig()')
+  const start = source.indexOf('// Experimental browser-local larger-grayscale reader.')
   const end = source.indexOf('const v3LargeModelUrl = optionalWholeAnswerReviewUrl()', start)
   assert.ok(start >= 0 && end > start)
   const block = source.slice(start, end)
   assert.equal(block.includes('hybridV3Enabled() &&'), false)
   assert.match(block, /allowWithoutReviewUrl: true/)
+  assert.match(block, /status: browserLocalStrongConfig\.enabled \? 'waiting-for-manual-review'/)
+  assert.match(block, /waitForManualReviewSettlement/)
+  assert.match(block, /status: 'skipped-review-not-settled'/)
+  assert.match(block, /requestBrowserLocalStrongPersistentShadow/)
+  assert.ok((block.match(/resetBrowserLocalStrongPersistentShadow\(\)/g) || []).length >= 2)
   assert.match(block, /result\.affectsGrade = false/)
   assert.match(block, /result\.noUploads = true/)
   assert.equal(block.includes('ocrResult.value ='), false)
+})
+
+test('retained-frame strong shadow suppresses the other private safety reader', () => {
+  const source = readFileSync(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
+  const strongConfig = source.indexOf('const browserLocalStrongConfig = browserLocalStrongShadowConfig()')
+  const acceptedRuntime = source.indexOf('const acceptedSafetyRuntimeEnabled = !browserLocalStrongConfig.requested')
+  const strongExecution = source.indexOf('browserLocalStrongConfig.requested &&', acceptedRuntime)
+
+  assert.ok(strongConfig >= 0)
+  assert.ok(acceptedRuntime > strongConfig)
+  assert.ok(strongExecution > acceptedRuntime)
 })

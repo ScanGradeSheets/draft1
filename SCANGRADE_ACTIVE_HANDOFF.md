@@ -1,5 +1,54 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 iPhone shadow trial diagnosis and isolated retest candidate
+
+- Physical session `156f7aad-a250-4d70-84f1-6d46058fab9a` did **not** validate
+  the three-frame strong reader. The ordinary frozen grader reached `result
+  ready` in 6.833 seconds and produced two yellow slots (C ones and D ones),
+  but all worksheet marks disappeared during manual correction and the export
+  contained no `v3BrowserLocalStrongShadow` result. The exact 12.7 MB export is
+  preserved at
+  `private-evidence/debug-scans/2026-08-14/iphone16-strong-shadow-156f7aad/manual-export.json`
+  with SHA-256
+  `a90928a22dad95e053bd226ae04a92822697e5ba5564afe950f3b29f18a793a8`.
+- The export identifies a concrete confounder: because the temporary host ended
+  in `.ts.net`, the separate private accepted-answer safety reader defaulted on
+  beside the requested strong shadow. It spent 20.532 seconds in the background,
+  including 16.734 seconds initializing, while C was corrected 10.971 seconds
+  after result generation and D 19.323 seconds after generation. The two large
+  readers therefore overlapped the exact annotation-failure window. This trial
+  is rejected as an accidental dual-reader load test, not evidence that the
+  locked primary grader lost its prior reliability.
+- The private strong-shadow runtime is now isolated. Requesting it suppresses
+  the other private safety reader; it waits until every original yellow answer
+  is manually settled and the correction UI is closed; it then uses one bounded
+  persistent worker for the retained-frame reads and immediately terminates the
+  worker. If review does not settle within three minutes it records a fail-open
+  skip and performs no heavy inference. It remains grade-inert and cannot alter
+  predictions, marks, review flags, score, or `ocrResult`. Public
+  `scangrade.io` remains unchanged.
+- Exact replay of the three retained frames establishes a useful model-quality
+  result. The frozen primary read C/D as `16`/`16`, `16`/`16`, and `16`/`11`;
+  the larger whole-answer reader read visible transcription truth C=`15` and
+  D=`16` on all three frames. Its minimum token probabilities were at least
+  0.99963 for C and 0.94637 for D. This supports further prospective testing of
+  the stronger reader but does not authorize a grading-policy change.
+- Browser runtime checks on these exact six crops: persistent Chromium 6/6 in
+  4.446 seconds; persistent WebKit 6/6 in 4.275 seconds; disposable Chromium
+  6/6 in 6.933 seconds; disposable WebKit 6/6 in 6.492 seconds. A WebKit
+  resident-session endurance run completed 36/36 correct in 23.388 seconds
+  without a stall. Focused correction/legacy coverage passes 40/40, the full
+  repository suite passes **494/494**, production build passes, and
+  `git diff --check` is clean. A synthetic end-to-end file-upload harness was
+  rejected because it stalled before OCR and therefore supplies no physical UI
+  evidence.
+- Next gate: expose only the isolated private build and frozen two model files,
+  rescan the same already-opened sheet on iPhone, complete normal yellow
+  corrections first, then wait for the shadow to finish before exporting. Pass
+  requires continuous annotation visibility/normal auto-advance and a completed
+  six-read `v3BrowserLocalStrongShadow` result. Do not integrate or promote the
+  larger reader until that physical evidence is received.
+
 ## 2026-08-14 iPhone frozen-reader three-frame shadow candidate
 
 - Added a private, explicit `v3BrowserLocalStrongShadow` diagnostic that can

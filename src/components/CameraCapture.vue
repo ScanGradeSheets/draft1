@@ -658,8 +658,8 @@ import {
 } from '../v3/correction-keypad.js'
 import {
   browserLocalStrongShadowConfig,
+  resetBrowserLocalStrongPersistentShadow,
   requestBrowserLocalStrongPersistentShadow,
-  requestBrowserLocalStrongShadow,
 } from '../v3/trocr-small-shadow-client.js'
 import { browserLocalCandidateRuntimeConfig } from '../v3/browser-local-candidate-runtime.js'
 import { browserLocalStrongTier } from '../v3/browser-local-strong-capability.js'
@@ -8334,8 +8334,14 @@ const runRealOCR = async () => {
   activeScanSessionId = newScanSessionId()
   const evaluationMetadata = prospectiveEvaluationMetadata()
   const browserLocalCandidateConfig = browserLocalCandidateRuntimeConfig()
+  const browserLocalStrongConfig = browserLocalStrongShadowConfig()
   const acceptedSafetyConfig = wholeSlotScoutShadowConfig()
-  const acceptedSafetyRuntimeEnabled = acceptedSafetyConfig.requested && (
+  // Private reader experiments must be isolated. Running the accepted-answer
+  // scout beside the retained-frame strong reader caused both workers to load
+  // concurrently on iPhone Safari, obscuring the experiment and destabilizing
+  // correction rendering even though neither reader changed the grade.
+  const acceptedSafetyRuntimeEnabled = !browserLocalStrongConfig.requested &&
+    acceptedSafetyConfig.requested && (
     hybridV3Enabled() || acceptedSafetyConfig.policyScope === 'six-eight-only'
   )
   // Assigned only by a pre-acceptance local-reader path and awaited in
@@ -10236,10 +10242,10 @@ const runRealOCR = async () => {
     }
 
     // Experimental browser-local larger-grayscale reader. It is deliberately
-    // detached from grading and review promotion: a disposable worker reads
-    // only current yellow answers, records evidence, then terminates. Candidate
-    // 6 remains byte-for-byte authoritative even if this times out or crashes.
-    const browserLocalStrongConfig = browserLocalStrongShadowConfig()
+    // detached from grading and review promotion: after manual review settles,
+    // one bounded worker reads only the original yellow answers, records
+    // evidence, then terminates. Candidate 6 remains byte-for-byte authoritative
+    // even if this times out or crashes.
     if (
       browserLocalStrongConfig.requested &&
       !browserLocalCandidateConfig.requested
@@ -10260,38 +10266,79 @@ const runRealOCR = async () => {
       const selectedShadowByQuestion = new Map(selectedShadowItems
         .map((item) => [Number(item.questionNum), item]))
       payload.v3BrowserLocalStrongShadow = {
-        status: browserLocalStrongConfig.enabled ? 'pending' : 'configuration-error',
+        status: browserLocalStrongConfig.enabled ? 'waiting-for-manual-review' : 'configuration-error',
         affectsGrade: false,
         requested: selectedShadowItems.length,
         requestedFrameCount: browserLocalStrongConfig.frameCount,
       }
-      const shadowItemsPromise = browserLocalStrongConfig.frameCount > 1
-        ? buildHybridBurstReviewItems(
+      if (lastLiveOcrDebug.value) {
+        lastLiveOcrDebug.value.v3BrowserLocalStrongShadow = payload.v3BrowserLocalStrongShadow
+      }
+      const waitForManualReviewSettlement = async () => {
+        const startedAt = performance.now()
+        if (!selectedShadowItems.length) return { settled: true, elapsedMs: 0 }
+        const deadline = startedAt + 3 * 60 * 1000
+        while (performance.now() < deadline) {
+          const current = ocrResult.value
+          const remaining = displayedYellowQuestionNumbers(
             layout.question_groups,
-            shadowReviewFlags,
-            rawCrops,
-            layout,
-            qrPayload?.qr_location || null,
-            {
-              allowWithoutReviewUrl: true,
-              maximumFrames: browserLocalStrongConfig.frameCount,
-            },
-          ).then((burst) => ({
-            frameProcessing: burst.frames,
-            items: burst.items.map((item) => ({
-              ...selectedShadowByQuestion.get(Number(item.questionNum)),
-              ...item,
-              reviewOnly: true,
-            })),
-          }))
-        : Promise.resolve({ frameProcessing: [], items: selectedShadowItems })
+            current?.questionReview || questionReview,
+            current?.answerGroups || answerGroups,
+          )
+          if (!activeCorrectionQuestion.value && remaining.length === 0) {
+            return { settled: true, elapsedMs: performance.now() - startedAt }
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        }
+        return { settled: false, elapsedMs: performance.now() - startedAt }
+      }
+      const shadowItemsPromise = waitForManualReviewSettlement().then(async (reviewSettlement) => {
+        if (!reviewSettlement.settled) {
+          return { frameProcessing: [], items: [], reviewSettlement }
+        }
+        const prepared = browserLocalStrongConfig.frameCount > 1
+          ? await buildHybridBurstReviewItems(
+              layout.question_groups,
+              shadowReviewFlags,
+              rawCrops,
+              layout,
+              qrPayload?.qr_location || null,
+              {
+                allowWithoutReviewUrl: true,
+                maximumFrames: browserLocalStrongConfig.frameCount,
+              },
+            ).then((burst) => ({
+              frameProcessing: burst.frames,
+              items: burst.items.map((item) => ({
+                ...selectedShadowByQuestion.get(Number(item.questionNum)),
+                ...item,
+                reviewOnly: true,
+              })),
+            }))
+          : { frameProcessing: [], items: selectedShadowItems }
+        return { ...prepared, reviewSettlement }
+      })
       shadowItemsPromise
-        .then(async ({ frameProcessing, items }) => ({
+        .then(async ({ frameProcessing, items, reviewSettlement }) => ({
           frameProcessing,
-          result: await requestBrowserLocalStrongShadow(items, browserLocalStrongConfig),
+          reviewSettlement,
+          result: reviewSettlement.settled
+            ? await requestBrowserLocalStrongPersistentShadow(items, {
+                ...browserLocalStrongConfig,
+                persistentIdleMs: 30000,
+                persistentMaxInferences: 20,
+              })
+            : {
+                status: 'skipped-review-not-settled',
+                affectsGrade: false,
+                requested: selectedShadowItems.length,
+                completed: 0,
+                results: [],
+              },
         }))
-        .then(({ frameProcessing, result }) => {
+        .then(({ frameProcessing, reviewSettlement, result }) => {
           result.frameProcessing = frameProcessing
+          result.reviewSettlement = reviewSettlement
           result.requestedFrameCount = browserLocalStrongConfig.frameCount
           result.affectsGrade = false
           result.noUploads = true
@@ -10303,11 +10350,13 @@ const runRealOCR = async () => {
           if (lastLiveOcrDebug.value) {
             void uploadLiveOcrDebug(lastLiveOcrDebug.value, 'browser-local-strong-shadow-complete')
           }
+          resetBrowserLocalStrongPersistentShadow()
         })
         .catch((error) => {
           const result = { status: 'error', affectsGrade: false, error: String(error?.message || error), results: [] }
           payload.v3BrowserLocalStrongShadow = result
           if (lastLiveOcrDebug.value) lastLiveOcrDebug.value.v3BrowserLocalStrongShadow = result
+          resetBrowserLocalStrongPersistentShadow()
         })
     }
 
