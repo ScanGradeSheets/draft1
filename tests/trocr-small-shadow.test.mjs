@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { decodeNumericTrocrTokens, inferBlankOptionalSlots } from '../src/v3/trocr-number-tokens.js'
 import { browserLocalStrongShadowConfig, requestBrowserLocalStrongShadow } from '../src/v3/trocr-small-shadow-client.js'
 
@@ -32,6 +33,28 @@ test('shadow requires explicit secure model URLs and never defaults on', () => {
   assert.equal(noSimd.forceNoSimd, true)
 })
 
+test('shadow may use same-origin private-tailnet models and clamps retained frames', () => {
+  const location = {
+    href: 'https://mac-mini.tail9a3379.ts.net/debug?v3BrowserLocalStrongShadow=1&v3BrowserLocalStrongFrames=99',
+    origin: 'https://mac-mini.tail9a3379.ts.net',
+    hostname: 'mac-mini.tail9a3379.ts.net',
+    search: '?v3BrowserLocalStrongShadow=1&v3BrowserLocalStrongFrames=99',
+  }
+  const config = browserLocalStrongShadowConfig(location)
+  assert.equal(config.enabled, true)
+  assert.equal(config.frameCount, 3)
+  assert.equal(config.encoderUrl, 'https://mac-mini.tail9a3379.ts.net/local-model-probe/models/encoder-fp32.onnx')
+  assert.equal(config.decoderUrl, 'https://mac-mini.tail9a3379.ts.net/local-model-probe/models/decoder-int8.onnx')
+
+  const publicLocation = {
+    href: 'https://scangrade.io/debug?v3BrowserLocalStrongShadow=1',
+    origin: 'https://scangrade.io',
+    hostname: 'scangrade.io',
+    search: '?v3BrowserLocalStrongShadow=1',
+  }
+  assert.equal(browserLocalStrongShadowConfig(publicLocation).enabled, false)
+})
+
 test('shadow is fail-open when browser workers are unavailable', async () => {
   const original = globalThis.Worker
   try {
@@ -43,4 +66,17 @@ test('shadow is fail-open when browser workers are unavailable', async () => {
   } finally {
     if (original) globalThis.Worker = original
   }
+})
+
+test('retained-frame strong shadow stays detached from grading and V3 promotion', () => {
+  const source = readFileSync(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
+  const start = source.indexOf('const browserLocalStrongConfig = browserLocalStrongShadowConfig()')
+  const end = source.indexOf('const v3LargeModelUrl = optionalWholeAnswerReviewUrl()', start)
+  assert.ok(start >= 0 && end > start)
+  const block = source.slice(start, end)
+  assert.equal(block.includes('hybridV3Enabled() &&'), false)
+  assert.match(block, /allowWithoutReviewUrl: true/)
+  assert.match(block, /result\.affectsGrade = false/)
+  assert.match(block, /result\.noUploads = true/)
+  assert.equal(block.includes('ocrResult.value ='), false)
 })

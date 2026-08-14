@@ -1,5 +1,46 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 iPhone frozen-reader three-frame shadow candidate
+
+- Added a private, explicit `v3BrowserLocalStrongShadow` diagnostic that can
+  read up to three retained `hybridV2` frames for only the questions already
+  shown yellow by the frozen live grader. The larger reader remains wholly
+  grade-inert: it does not mutate predictions, review flags, annotations,
+  scores, or `ocrResult`, records `affectsGrade: false` and `noUploads: true`,
+  and writes its completed result into the Debug Scan evidence. It no longer
+  requires `hybridV3`, avoiding activation of unrelated private candidate or
+  promotion lanes.
+- On an explicit `.ts.net` request only, the shadow resolves the frozen model
+  from the existing same-origin `/local-model-probe` routes. Public
+  `scangrade.io` never receives a default model URL and cannot enable this
+  path from the short flag alone. The physical-test query is
+  `/debug?hybridV2=1&v3BrowserLocalStrongShadow=1&v3BrowserLocalStrongFrames=3&v3BrowserLocalStrongLimit=20&v3BrowserLocalStrongTimeoutMs=90000`.
+- Local focused tests cover the private same-origin gate, public fail-closed
+  behavior, three-frame clamp, worker fail-open behavior, yellow-only routing,
+  and the absence of any grade/presentation mutation. The production build
+  passes. The local probe server now has an explicit
+  `SG_TROCR_MODELS_ONLY=1` mode that disables `/sample.png`, `/samples/*`, and
+  `/manifest/*`; use that mode for this test so no fixed worksheet imagery is
+  exposed to the tailnet. The private model route has **not** been started for the physical
+  phone trial because exposing the proprietary model assets to the tailnet
+  requires Tony's explicit approval. This code is not published to
+  `scangrade.io` and makes no recognition-policy change.
+- Screened the existing resident lightweight/right-slot model assets on the
+  three saved iPhone captures from the same two-digit-addition sheet. The
+  visible transcription truth is `11, 12, 15, 16, 14, 16, 18, 17`; D is a
+  deliberately incorrect mathematical response, so answer-key accuracy is not
+  OCR truth. No existing lightweight replacement is safe. The generalist
+  right-slot candidate is repeatable but still reads C/D as `16`/`18`. The
+  SG3 and wide-CNN candidates sometimes repair C/D but introduce new wrong
+  reads such as `19` for `18`, `13`/`16` for `18`, and `11`/`15` for `14`,
+  including reduced-yellow outcomes. Keep the public primary/right-slot models
+  frozen; do not trade yellow coverage for these new transcription errors.
+- Next gate: with explicit approval, start the tailnet-only frozen model route,
+  open the query above on the iPhone, rescan this already-opened sheet once,
+  wait for the shadow completion, finish any normal yellow corrections, and
+  export Debug Scan. Compare frozen predictions with manual/visual truth only
+  after capture. Untouched qualification packets remain sealed.
+
 ## 2026-08-14 iPhone 16 retained-frame / whole-answer-reader diagnostic
 
 - After Beta 15.103 passed its correction-transition checks on both the black

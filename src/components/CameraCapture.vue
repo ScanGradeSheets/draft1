@@ -7563,8 +7563,19 @@ async function medianFusedFrameItems(sequenceItems, { align = false } = {}) {
   return fused
 }
 
-async function buildHybridBurstReviewItems(questionGroups, questionReview, selectedRawCrops, layout, qrLocation) {
-  if (!hybridV2Enabled() || !optionalWholeAnswerReviewUrl() || pendingHybridBurstFrames.length < 2) {
+async function buildHybridBurstReviewItems(
+  questionGroups,
+  questionReview,
+  selectedRawCrops,
+  layout,
+  qrLocation,
+  { allowWithoutReviewUrl = false, maximumFrames = null } = {},
+) {
+  if (
+    !hybridV2Enabled() ||
+    (!allowWithoutReviewUrl && !optionalWholeAnswerReviewUrl()) ||
+    pendingHybridBurstFrames.length < 2
+  ) {
     return {
       items: wholeAnswerReviewItemsForFrame(questionGroups, questionReview, selectedRawCrops),
       frames: [],
@@ -7586,6 +7597,7 @@ async function buildHybridBurstReviewItems(questionGroups, questionReview, selec
   }]
 
   for (const frame of pendingHybridBurstFrames) {
+    if (maximumFrames != null && frames.length >= maximumFrames) break
     if (frame === selectedFrame || frame.selected) continue
     let src = null
     let worksheet = null
@@ -10229,7 +10241,6 @@ const runRealOCR = async () => {
     // 6 remains byte-for-byte authoritative even if this times out or crashes.
     const browserLocalStrongConfig = browserLocalStrongShadowConfig()
     if (
-      hybridV3Enabled() &&
       browserLocalStrongConfig.requested &&
       !browserLocalCandidateConfig.requested
     ) {
@@ -10240,21 +10251,58 @@ const runRealOCR = async () => {
       )
       const shadowQuestionSet = new Set(shadowQuestionNums.map(Number))
       const shadowReviewFlags = layout.question_groups.map((group) => shadowQuestionSet.has(Number(group?.question_num)))
-      const shadowItems = browserLocalStrongShadowItems(
+      const selectedShadowItems = browserLocalStrongShadowItems(
         layout.question_groups,
         shadowReviewFlags,
         rawCrops,
         layout,
       )
+      const selectedShadowByQuestion = new Map(selectedShadowItems
+        .map((item) => [Number(item.questionNum), item]))
       payload.v3BrowserLocalStrongShadow = {
         status: browserLocalStrongConfig.enabled ? 'pending' : 'configuration-error',
         affectsGrade: false,
-        requested: shadowItems.length,
+        requested: selectedShadowItems.length,
+        requestedFrameCount: browserLocalStrongConfig.frameCount,
       }
-      requestBrowserLocalStrongShadow(shadowItems, browserLocalStrongConfig)
+      const shadowItemsPromise = browserLocalStrongConfig.frameCount > 1
+        ? buildHybridBurstReviewItems(
+            layout.question_groups,
+            shadowReviewFlags,
+            rawCrops,
+            layout,
+            qrPayload?.qr_location || null,
+            {
+              allowWithoutReviewUrl: true,
+              maximumFrames: browserLocalStrongConfig.frameCount,
+            },
+          ).then((burst) => ({
+            frameProcessing: burst.frames,
+            items: burst.items.map((item) => ({
+              ...selectedShadowByQuestion.get(Number(item.questionNum)),
+              ...item,
+              reviewOnly: true,
+            })),
+          }))
+        : Promise.resolve({ frameProcessing: [], items: selectedShadowItems })
+      shadowItemsPromise
+        .then(async ({ frameProcessing, items }) => ({
+          frameProcessing,
+          result: await requestBrowserLocalStrongShadow(items, browserLocalStrongConfig),
+        }))
+        .then(({ frameProcessing, result }) => {
+          result.frameProcessing = frameProcessing
+          result.requestedFrameCount = browserLocalStrongConfig.frameCount
+          result.affectsGrade = false
+          result.noUploads = true
+          return result
+        })
         .then((result) => {
           payload.v3BrowserLocalStrongShadow = result
           if (lastLiveOcrDebug.value) lastLiveOcrDebug.value.v3BrowserLocalStrongShadow = result
+          if (lastLiveOcrDebug.value) {
+            void uploadLiveOcrDebug(lastLiveOcrDebug.value, 'browser-local-strong-shadow-complete')
+          }
         })
         .catch((error) => {
           const result = { status: 'error', affectsGrade: false, error: String(error?.message || error), results: [] }

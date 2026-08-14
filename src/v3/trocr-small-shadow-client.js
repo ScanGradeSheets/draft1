@@ -103,16 +103,28 @@ function safeModelUrl(value, locationLike) {
   }
 }
 
+function sameOriginShadowUrls(locationLike) {
+  const hostname = String(locationLike?.hostname || '')
+  if (!hostname.endsWith('.ts.net')) return { encoderUrl: '', decoderUrl: '' }
+  const origin = String(locationLike?.origin || '')
+  return {
+    encoderUrl: safeModelUrl(`${origin}/local-model-probe/models/encoder-fp32.onnx`, locationLike),
+    decoderUrl: safeModelUrl(`${origin}/local-model-probe/models/decoder-int8.onnx`, locationLike),
+  }
+}
+
 export function browserLocalStrongShadowConfig(locationLike = null) {
   const location = locationLike || (typeof window !== 'undefined' ? window.location : null)
   const params = new URLSearchParams(String(location?.search || ''))
   const enabled = ['1', 'true', 'yes'].includes(String(params.get('v3BrowserLocalStrongShadow') || '').toLowerCase())
-  const encoderUrl = safeModelUrl(params.get('v3BrowserLocalStrongEncoderUrl'), location)
-  const decoderUrl = safeModelUrl(params.get('v3BrowserLocalStrongDecoderUrl'), location)
+  const defaults = enabled ? sameOriginShadowUrls(location) : { encoderUrl: '', decoderUrl: '' }
+  const encoderUrl = safeModelUrl(params.get('v3BrowserLocalStrongEncoderUrl') || defaults.encoderUrl, location)
+  const decoderUrl = safeModelUrl(params.get('v3BrowserLocalStrongDecoderUrl') || defaults.decoderUrl, location)
   const limit = Math.min(20, Math.max(1, Number(params.get('v3BrowserLocalStrongLimit')) || 8))
   const timeoutMs = Math.min(90000, Math.max(5000, Number(params.get('v3BrowserLocalStrongTimeoutMs')) || 15000))
+  const frameCount = Math.min(3, Math.max(1, Math.floor(Number(params.get('v3BrowserLocalStrongFrames')) || 1)))
   const forceNoSimd = ['1', 'true', 'yes'].includes(String(params.get('v3BrowserLocalStrongNoSimd') || '').toLowerCase())
-  return { enabled: enabled && !!encoderUrl && !!decoderUrl, requested: enabled, encoderUrl, decoderUrl, limit, timeoutMs, forceNoSimd }
+  return { enabled: enabled && !!encoderUrl && !!decoderUrl, requested: enabled, encoderUrl, decoderUrl, limit, timeoutMs, frameCount, forceNoSimd }
 }
 
 async function runDisposableWorker(item, config) {
