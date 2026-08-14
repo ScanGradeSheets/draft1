@@ -31,6 +31,15 @@
   deployment-pruned 254-file production build passes. Deployment verification
   and physical black-iPad confirmation remain required; do not resume
   untouched-packet testing yet.
+- Published from an isolated static directory at
+  `https://883a1071.scangrade.pages.dev/` and promoted to
+  `https://scangrade.io/`. Production root, `/debug`, and `/api/submissions`
+  serve the byte-identical app shell (SHA-256
+  `dfa332d5752eb8f2565dc88e9dec1e165e36c0cf4579725a753a279d37b08c70`),
+  and public `assets/index-Dg0Wb0Mm.js` is byte-identical to the frozen local
+  build (SHA-256
+  `bc2a86f3da37b0b3420d145a50f3439905ef252bd70cbf2822da79a688a67a39`).
+  No Pages Function or recognition backend is attached.
 - Candidate label:
   `2026.08.14-black-ipad-correction-transition-beta-15-103`.
 
