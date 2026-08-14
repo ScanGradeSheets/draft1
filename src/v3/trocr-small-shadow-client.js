@@ -117,6 +117,8 @@ export function browserLocalStrongShadowConfig(locationLike = null) {
   const location = locationLike || (typeof window !== 'undefined' ? window.location : null)
   const params = new URLSearchParams(String(location?.search || ''))
   const enabled = ['1', 'true', 'yes'].includes(String(params.get('v3BrowserLocalStrongShadow') || '').toLowerCase())
+  const applyRequested = ['1', 'true', 'yes'].includes(String(params.get('v3BrowserLocalStrongApply') || '').toLowerCase())
+  const privateTailnet = String(location?.hostname || '').endsWith('.ts.net')
   const defaults = enabled ? sameOriginShadowUrls(location) : { encoderUrl: '', decoderUrl: '' }
   const encoderUrl = safeModelUrl(params.get('v3BrowserLocalStrongEncoderUrl') || defaults.encoderUrl, location)
   const decoderUrl = safeModelUrl(params.get('v3BrowserLocalStrongDecoderUrl') || defaults.decoderUrl, location)
@@ -124,7 +126,19 @@ export function browserLocalStrongShadowConfig(locationLike = null) {
   const timeoutMs = Math.min(90000, Math.max(5000, Number(params.get('v3BrowserLocalStrongTimeoutMs')) || 15000))
   const frameCount = Math.min(3, Math.max(1, Math.floor(Number(params.get('v3BrowserLocalStrongFrames')) || 1)))
   const forceNoSimd = ['1', 'true', 'yes'].includes(String(params.get('v3BrowserLocalStrongNoSimd') || '').toLowerCase())
-  return { enabled: enabled && !!encoderUrl && !!decoderUrl, requested: enabled, encoderUrl, decoderUrl, limit, timeoutMs, frameCount, forceNoSimd }
+  const available = enabled && !!encoderUrl && !!decoderUrl
+  return {
+    enabled: available,
+    requested: enabled,
+    applyRequested,
+    apply: available && applyRequested && privateTailnet && frameCount === 3,
+    encoderUrl,
+    decoderUrl,
+    limit,
+    timeoutMs,
+    frameCount,
+    forceNoSimd,
+  }
 }
 
 async function runDisposableWorker(item, config) {

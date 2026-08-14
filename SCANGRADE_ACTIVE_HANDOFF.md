@@ -1,5 +1,28 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 private yellow-only three-frame application candidate
+
+- Added an explicit tailnet-only `v3BrowserLocalStrongApply=1` mode for the
+  already-tested strong reader. It holds the result before any marks are shown,
+  reads only answers already yellow in the frozen browser result across three
+  retained physical frames, and promotes only exact 3/3 agreement whose weakest
+  token probability is at least 0.90. Accepted answers are never revisited.
+- Missing frames, disagreement, malformed output, sub-threshold confidence,
+  safety vetoes, worker/model failure, timeout, unsupported configuration, or
+  any incomplete batch fail open to the unchanged browser result. The apply
+  flag cannot operate on `scangrade.io`; it requires the private `.ts.net`
+  origin, explicit shadow/apply flags, secure same-origin model assets, and
+  exactly three frames. Default strong-shadow behavior remains grade-inert.
+- The result remains hidden until the candidate completes, avoiding transient
+  marks or post-acceptance replacement. It records decisions, frame evidence,
+  promotions, timing, and the frozen policy name in Debug Export. Complete
+  repository suite **503/503**, production build, old-Safari compatibility,
+  correction/annotation lifecycle contracts, and `git diff --check` pass.
+- Build label is `2026.08.14-private-yellow-3frame-beta-15-104`. This is a
+  private familiar-sheet integration trial only, not a new prospective freeze
+  and not public deployment authority. Physical iPhone verification is still
+  required before freezing or touching an untouched packet.
+
 ## 2026-08-14 offline candidate safety and reproducibility battery
 
 - Untouched packets remained sealed and public `scangrade.io` remained

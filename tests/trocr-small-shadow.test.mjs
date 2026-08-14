@@ -45,6 +45,14 @@ test('shadow may use same-origin private-tailnet models and clamps retained fram
   assert.equal(config.frameCount, 3)
   assert.equal(config.encoderUrl, 'https://mac-mini.tail9a3379.ts.net/local-model-probe/models/encoder-fp32.onnx')
   assert.equal(config.decoderUrl, 'https://mac-mini.tail9a3379.ts.net/local-model-probe/models/decoder-int8.onnx')
+  assert.equal(config.apply, false)
+
+  const applying = browserLocalStrongShadowConfig({
+    ...location,
+    href: `${location.origin}/debug?v3BrowserLocalStrongShadow=1&v3BrowserLocalStrongApply=1&v3BrowserLocalStrongFrames=3`,
+    search: '?v3BrowserLocalStrongShadow=1&v3BrowserLocalStrongApply=1&v3BrowserLocalStrongFrames=3',
+  })
+  assert.equal(applying.apply, true)
 
   const publicLocation = {
     href: 'https://scangrade.io/debug?v3BrowserLocalStrongShadow=1',
@@ -53,6 +61,14 @@ test('shadow may use same-origin private-tailnet models and clamps retained fram
     search: '?v3BrowserLocalStrongShadow=1',
   }
   assert.equal(browserLocalStrongShadowConfig(publicLocation).enabled, false)
+
+  const publicApplying = browserLocalStrongShadowConfig({
+    ...publicLocation,
+    href: 'https://scangrade.io/debug?v3BrowserLocalStrongShadow=1&v3BrowserLocalStrongApply=1&v3BrowserLocalStrongFrames=3&v3BrowserLocalStrongEncoderUrl=https://models.test/e&v3BrowserLocalStrongDecoderUrl=https://models.test/d',
+    search: '?v3BrowserLocalStrongShadow=1&v3BrowserLocalStrongApply=1&v3BrowserLocalStrongFrames=3&v3BrowserLocalStrongEncoderUrl=https://models.test/e&v3BrowserLocalStrongDecoderUrl=https://models.test/d',
+  })
+  assert.equal(publicApplying.enabled, true)
+  assert.equal(publicApplying.apply, false)
 })
 
 test('shadow is fail-open when browser workers are unavailable', async () => {
@@ -70,28 +86,38 @@ test('shadow is fail-open when browser workers are unavailable', async () => {
 
 test('retained-frame strong shadow stays detached from grading and V3 promotion', () => {
   const source = readFileSync(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
-  const start = source.indexOf('// Experimental browser-local larger-grayscale reader.')
+  const start = source.indexOf('// Private browser-local larger-grayscale reader.')
   const end = source.indexOf('const v3LargeModelUrl = optionalWholeAnswerReviewUrl()', start)
   assert.ok(start >= 0 && end > start)
   const block = source.slice(start, end)
+  const defaultStart = block.indexOf('const waitForManualReviewSettlement')
+  assert.ok(defaultStart >= 0)
+  const defaultBlock = block.slice(defaultStart)
   assert.equal(block.includes('hybridV3Enabled() &&'), false)
-  assert.match(block, /allowWithoutReviewUrl: true/)
-  assert.match(block, /status: browserLocalStrongConfig\.enabled \? 'waiting-for-manual-review'/)
-  assert.match(block, /waitForManualReviewSettlement/)
+  assert.match(defaultBlock, /waitForManualReviewSettlement/)
+  assert.match(block, /browserLocalStrongConfig\.apply \? 'pending' : 'waiting-for-manual-review'/)
   assert.match(block, /selectedItems: selectedShadowItems/)
-  assert.match(block, /status: 'skipped-review-not-settled'/)
-  assert.match(block, /requestBrowserLocalStrongPersistentShadow/)
-  assert.ok((block.match(/resetBrowserLocalStrongPersistentShadow\(\)/g) || []).length >= 2)
-  assert.match(block, /result\.affectsGrade = false/)
-  assert.match(block, /result\.noUploads = true/)
-  assert.equal(block.includes('ocrResult.value ='), false)
+  assert.match(defaultBlock, /status: 'skipped-review-not-settled'/)
+  assert.match(defaultBlock, /requestBrowserLocalStrongPersistentShadow/)
+  assert.match(defaultBlock, /result\.affectsGrade = false/)
+  assert.match(defaultBlock, /result\.noUploads = true/)
+  assert.equal(defaultBlock.includes('ocrResult.value ='), false)
 
   const freezeSelected = block.indexOf('const selectedShadowItems = browserLocalStrongShadowItems(')
-  const waitForReview = block.indexOf('const shadowItemsPromise = waitForManualReviewSettlement()')
-  const strongInference = block.indexOf('requestBrowserLocalStrongPersistentShadow(')
+  const waitForReview = defaultBlock.indexOf('const shadowItemsPromise = waitForManualReviewSettlement()')
+  const strongInference = defaultBlock.indexOf('requestBrowserLocalStrongPersistentShadow(')
   assert.ok(freezeSelected >= 0)
   assert.ok(waitForReview > freezeSelected)
   assert.ok(strongInference > waitForReview)
+})
+
+test('private apply mode holds presentation and uses only the yellow 3-of-3 policy', () => {
+  const source = readFileSync(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
+  assert.match(source, /const holdStrongYellowPresentation =/)
+  assert.match(source, /browserLocalStrongConfig\.apply === true/)
+  assert.match(source, /browserLocalStrongYellowDecisions\(\{/)
+  assert.match(source, /policy: 'original-yellow-exact-three-of-three-min-0\.90'/)
+  assert.match(source, /status: 'fail-open'/)
 })
 
 test('retained-frame strong shadow suppresses the other private safety reader', () => {

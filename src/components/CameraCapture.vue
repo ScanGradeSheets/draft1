@@ -668,6 +668,7 @@ import { applyBrowserLocalCandidateToPredictions } from '../v3/browser-local-can
 import { browserLocalCoPrimaryEvidencePlan } from '../v3/browser-local-co-primary-planner.js'
 import { browserLocalCoPrimaryCandidate7Decision } from '../v3/browser-local-co-primary-candidate7.js'
 import { browserLocalThreeFrameConsensus } from '../v3/browser-local-frame-consensus.js'
+import { browserLocalStrongYellowDecisions } from '../v3/browser-local-strong-yellow.js'
 import { browserUniformAnswerViews } from '../v3/uniform-answer-view-browser.js'
 import {
   applyAcceptedAnswerSafetyVetoes,
@@ -9434,7 +9435,16 @@ const runRealOCR = async () => {
       acceptedSafetyConfig.enabled === true &&
       Array.isArray(layout?.question_groups) &&
       layout.question_groups.length > 0
-    if (!holdBrowserLocalCandidatePresentation && !holdAcceptedSafetyPresentation) {
+    const holdStrongYellowPresentation =
+      browserLocalStrongConfig.apply === true &&
+      !browserLocalCandidateConfig.requested &&
+      Array.isArray(layout?.question_groups) &&
+      layout.question_groups.length > 0
+    if (
+      !holdBrowserLocalCandidatePresentation &&
+      !holdAcceptedSafetyPresentation &&
+      !holdStrongYellowPresentation
+    ) {
       ocrResult.value = payload
     }
 
@@ -10254,12 +10264,11 @@ const runRealOCR = async () => {
       }
     }
 
-    // Experimental browser-local larger-grayscale reader. It is deliberately
-    // detached from grading and review promotion. The selected-frame image
-    // URLs are frozen while their OpenCV Mats are alive; after manual review
-    // settles, retained-frame preparation and one bounded worker read only the
-    // original yellow answers, record evidence, then terminate. Candidate 6
-    // remains byte-for-byte authoritative even if this times out or crashes.
+    // Private browser-local larger-grayscale reader. Its default shadow mode
+    // remains detached from grading and waits until manual review settles. An
+    // explicit tailnet-only apply flag instead holds presentation and may
+    // clear only an original yellow with exact 3/3 agreement at >= 0.90.
+    // Every incomplete/error path restores the unchanged browser result.
     if (
       browserLocalStrongConfig.requested &&
       !browserLocalCandidateConfig.requested
@@ -10280,15 +10289,177 @@ const runRealOCR = async () => {
       const selectedShadowByQuestion = new Map(selectedShadowItems
         .map((item) => [Number(item.questionNum), item]))
       payload.v3BrowserLocalStrongShadow = {
-        status: browserLocalStrongConfig.enabled ? 'waiting-for-manual-review' : 'configuration-error',
+        status: browserLocalStrongConfig.enabled
+          ? (browserLocalStrongConfig.apply ? 'pending' : 'waiting-for-manual-review')
+          : 'configuration-error',
         affectsGrade: false,
+        applyRequested: browserLocalStrongConfig.applyRequested === true,
+        apply: browserLocalStrongConfig.apply === true,
         requested: selectedShadowItems.length,
         requestedFrameCount: browserLocalStrongConfig.frameCount,
       }
       if (lastLiveOcrDebug.value) {
         lastLiveOcrDebug.value.v3BrowserLocalStrongShadow = payload.v3BrowserLocalStrongShadow
       }
-      const waitForManualReviewSettlement = async () => {
+      const prepareShadowItems = async () => {
+        if (browserLocalStrongConfig.frameCount <= 1) {
+          return { frameProcessing: [], items: selectedShadowItems }
+        }
+        const burst = await buildHybridBurstReviewItems(
+          layout.question_groups,
+          shadowReviewFlags,
+          rawCrops,
+          layout,
+          qrPayload?.qr_location || null,
+          {
+            allowWithoutReviewUrl: true,
+            maximumFrames: browserLocalStrongConfig.frameCount,
+            selectedItems: selectedShadowItems,
+          },
+        )
+        return {
+          frameProcessing: burst.frames,
+          items: burst.items.map((item) => ({
+            ...selectedShadowByQuestion.get(Number(item.questionNum)),
+            ...item,
+            reviewOnly: true,
+          })),
+        }
+      }
+
+      if (browserLocalStrongConfig.apply) {
+        const strongGradeStarted = performance.now()
+        candidatePresentationPromise = prepareShadowItems()
+          .then(async ({ frameProcessing, items }) => {
+            const result = await requestBrowserLocalStrongPersistentShadow(items, {
+              ...browserLocalStrongConfig,
+              limit: Math.max(browserLocalStrongConfig.limit, items.length),
+              persistentIdleMs: 30000,
+              persistentMaxInferences: 20,
+            })
+            if (
+              result?.status !== 'complete' ||
+              Number(result?.completed) !== Number(items.length) ||
+              (result?.results || []).some((row) => row?.status !== 'complete')
+            ) {
+              throw new Error('strong yellow reader incomplete; preserving browser result')
+            }
+            const decisions = browserLocalStrongYellowDecisions({
+              answerGroups,
+              predictions,
+              strongRows: result.results,
+            })
+            const application = applyBrowserLocalCandidateToPredictions({
+              questionGroups: layout.question_groups,
+              predictions,
+              decisions,
+            })
+            predictions = application.predictions
+            const nextQuestionCorrect = buildQuestionCorrect(
+              layout.question_groups,
+              predictions,
+            )
+            const nextQuestionReview = buildQuestionReviewFlags(
+              layout.question_groups,
+              predictions,
+              nextQuestionCorrect,
+            )
+            const nextAnswerGroups = buildAnswerGroups(
+              layout.question_groups,
+              predictions,
+              nextQuestionCorrect,
+              layout.id,
+            )
+            const nextAnnotationRegions = buildAnnotationRegions(
+              layout.question_groups,
+              annotationGeometry,
+              predictions,
+              nextQuestionCorrect,
+            )
+            payload.digits = predictions.map((prediction) => prediction.digit)
+            payload.confidences = predictions.map((prediction) => prediction.confidence)
+            payload.predictions = predictions
+            delete payload.correct
+            payload.questionCorrect = nextQuestionCorrect
+            payload.questionCount = nextQuestionCorrect?.length || 0
+            payload.questionScore = nextQuestionCorrect?.filter(Boolean).length || 0
+            payload.questionReview = nextQuestionReview
+            payload.questionReviewCount = nextQuestionReview?.filter(Boolean).length || 0
+            payload.answerGroups = nextAnswerGroups
+            payload.annotationRegions = nextAnnotationRegions
+            payload.needsReview = !!forcedFallbackReviewReason || baseNeedsReview ||
+              predictions.some((prediction) => prediction.reviewNeeded) ||
+              nextQuestionReview?.some(Boolean)
+            if (application.promoted.length && payload.annotationBaseUrl) {
+              payload.annotatedImageUrl = await composeStudentAnnotatedImage(
+                payload.annotationBaseUrl,
+                annotationWidth,
+                annotationHeight,
+                predictions,
+                annotationCrops,
+                annotationLayout,
+                nextQuestionCorrect,
+                payload.manualCorrections,
+                payload.annotationSeed,
+              )
+            }
+            const completed = {
+              ...result,
+              status: 'complete',
+              affectsGrade: application.promoted.length > 0,
+              noUploads: true,
+              policy: 'original-yellow-exact-three-of-three-min-0.90',
+              elapsedMs: performance.now() - strongGradeStarted,
+              requestedFrameCount: browserLocalStrongConfig.frameCount,
+              frameProcessing,
+              promoted: application.promoted,
+              decisions,
+            }
+            payload.v3BrowserLocalStrongShadow = completed
+            partialDebug.v3BrowserLocalStrongShadow = completed
+            partialDebug.predictions = predictions
+            partialDebug.questionCorrect = nextQuestionCorrect
+            partialDebug.questionReview = nextQuestionReview
+            partialDebug.answerGroups = nextAnswerGroups
+            partialDebug.annotationRegions = nextAnnotationRegions
+            if (lastLiveOcrDebug.value) {
+              lastLiveOcrDebug.value.v3BrowserLocalStrongShadow = completed
+              lastLiveOcrDebug.value.predictions = predictions
+              lastLiveOcrDebug.value.questionCorrect = nextQuestionCorrect
+              lastLiveOcrDebug.value.questionReview = nextQuestionReview
+              lastLiveOcrDebug.value.questionReviewCount = payload.questionReviewCount
+              lastLiveOcrDebug.value.answerGroups = nextAnswerGroups
+              lastLiveOcrDebug.value.annotationRegions = nextAnnotationRegions
+              lastLiveOcrDebug.value.markedSheetDataUrl = payload.annotatedImageUrl || null
+              void uploadLiveOcrDebug(lastLiveOcrDebug.value, 'browser-local-strong-yellow-complete')
+            }
+            ocrResult.value = mergeAsyncOcrPayloadPreservingTeacherState(
+              ocrResult.value,
+              payload,
+            )
+          })
+          .catch((error) => {
+            const result = {
+              status: 'fail-open',
+              affectsGrade: false,
+              noUploads: true,
+              elapsedMs: performance.now() - strongGradeStarted,
+              error: String(error?.message || error),
+              results: [],
+            }
+            payload.v3BrowserLocalStrongShadow = result
+            partialDebug.v3BrowserLocalStrongShadow = result
+            if (lastLiveOcrDebug.value) {
+              lastLiveOcrDebug.value.v3BrowserLocalStrongShadow = result
+            }
+            ocrResult.value = mergeAsyncOcrPayloadPreservingTeacherState(
+              ocrResult.value,
+              payload,
+            )
+          })
+          .then(() => resetBrowserLocalStrongPersistentShadow())
+      } else {
+        const waitForManualReviewSettlement = async () => {
         const startedAt = performance.now()
         if (!selectedShadowItems.length) return { settled: true, elapsedMs: 0 }
         const deadline = startedAt + 3 * 60 * 1000
@@ -10306,34 +10477,14 @@ const runRealOCR = async () => {
         }
         return { settled: false, elapsedMs: performance.now() - startedAt }
       }
-      const shadowItemsPromise = waitForManualReviewSettlement().then(async (reviewSettlement) => {
+        const shadowItemsPromise = waitForManualReviewSettlement().then(async (reviewSettlement) => {
         if (!reviewSettlement.settled) {
           return { frameProcessing: [], items: [], reviewSettlement }
         }
-        const prepared = browserLocalStrongConfig.frameCount > 1
-          ? await buildHybridBurstReviewItems(
-              layout.question_groups,
-              shadowReviewFlags,
-              rawCrops,
-              layout,
-              qrPayload?.qr_location || null,
-              {
-                allowWithoutReviewUrl: true,
-                maximumFrames: browserLocalStrongConfig.frameCount,
-                selectedItems: selectedShadowItems,
-              },
-            ).then((burst) => ({
-              frameProcessing: burst.frames,
-              items: burst.items.map((item) => ({
-                ...selectedShadowByQuestion.get(Number(item.questionNum)),
-                ...item,
-                reviewOnly: true,
-              })),
-            }))
-          : { frameProcessing: [], items: selectedShadowItems }
+        const prepared = await prepareShadowItems()
         return { ...prepared, reviewSettlement }
       })
-      shadowItemsPromise
+        shadowItemsPromise
         .then(async ({ frameProcessing, items, reviewSettlement }) => ({
           frameProcessing,
           reviewSettlement,
@@ -10373,6 +10524,7 @@ const runRealOCR = async () => {
           if (lastLiveOcrDebug.value) lastLiveOcrDebug.value.v3BrowserLocalStrongShadow = result
           resetBrowserLocalStrongPersistentShadow()
         })
+      }
     }
 
     const v3LargeModelUrl = optionalWholeAnswerReviewUrl()
