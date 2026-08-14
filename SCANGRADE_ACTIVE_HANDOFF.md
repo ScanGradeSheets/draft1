@@ -19,6 +19,13 @@
   or production behavior changed; the only new code is test coverage. The next
   non-correlated evidence remains a frozen, prediction-blinded physical trial
   on an untouched packet.
+- Current pipeline replay has exact decision parity on all 345 historical
+  answers (zero control or final-decision mismatches). The July Candidate 2
+  hash manifest correctly refuses to verify because the cascade file received
+  an August 9 old-Safari compatibility rewrite (`at(-1)` to indexed access).
+  That rewrite is behavior-equivalent in the 345-answer replay, but the old
+  freeze must not be reused. Create and verify a new dated hash freeze before
+  consuming any untouched packet; do not overwrite the historical freeze.
 
 ## 2026-08-14 iPhone retained-frame result and debug-export evidence guard
 
