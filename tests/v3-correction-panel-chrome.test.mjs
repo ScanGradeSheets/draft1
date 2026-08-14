@@ -50,7 +50,7 @@ test('a completed correction waits for its replacement mark before exposing the 
   const correctionAnimation = apply.indexOf('startManualCorrectionAnimation(correctedQuestionNum, correctionAnimationBaseUrl)')
   const updateResult = apply.indexOf('ocrResult.value = nextResult', correctionAnimation)
   const awaitPaint = apply.indexOf('await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)', correctionAnimation)
-  const cancelCurrent = apply.indexOf('cancelCorrection()', settleResult)
+  const cancelCurrent = apply.indexOf('cancelCorrection()', correctionAnimation)
   const legacyBranch = apply.indexOf('if (legacyStaticCorrection)', preloadAnimation)
   const legacyPaint = apply.indexOf('await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)', legacyBranch)
   const legacyOpenNext = apply.indexOf('openCorrectionByGroupSlot(nextReviewGroup)', legacyBranch)
@@ -67,7 +67,6 @@ test('a completed correction waits for its replacement mark before exposing the 
   // The resolved review state remains authoritative immediately, but the next
   // yellow focus must not appear until advanceProgressiveMarking has drawn the
   // replacement mark for this correction.
-  assert.ok(cancelCurrent > settleResult)
-  assert.ok(cancelCurrent < renderCorrection)
+  assert.ok(cancelCurrent > awaitPaint)
   assert.ok(legacyOpenNext > legacyPaint, 'iOS 12 may expose the next yellow only after the static replacement is painted')
 })

@@ -1,5 +1,39 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 Beta 15.103 black-iPad correction transition — physical retest candidate
+
+- Session 0 on the approximately four-to-five-year-old black iPad found two
+  real review-transition defects after an otherwise fast ordinary scan: about
+  13 seconds to marking, with C ones, both D digits, and H ones yellow. After D
+  was corrected the UI did not advance to H, and corrected black digits briefly
+  disappeared before reappearing with their check/X.
+- The exact reproduction is preserved at
+  `private-evidence/debug-scans/2026-08-14/2026-08-14_14-22-47-249-sg-g1-lw-02-add-2digit-87d46f8e/debug.json`.
+  It records Safari 15.4 at 810-by-1010 CSS pixels, scan session
+  `2ad160d1-946d-4d86-a272-8bca44c50eed`, and the C/D/H correction sequence.
+  C completed at 14:17:20.408Z, D at 14:17:24.901Z, and manually opened H at
+  14:17:59.169Z, preserving the reported 34-second stalled interval. The
+  attached manual export SHA-256 is
+  `b6743060dd78df73b80bc8cd5c6ffa3c3b51de458b38f03e44c9999aea692434`.
+- Root cause of the missed advance: after the corrected D mark finished, the
+  queue correctly found H, but the still-set correction-transition flag blocked
+  opening it. That branch also stopped its timer, leaving the queue stranded.
+  Beta 15.103 first flattens the completed correction, clears the transition,
+  recomputes the pending yellow, and then opens it.
+- Root cause of the digit flash: modern Safari's review state and editor were
+  dismissed before the predecoded correction-animation base had painted.
+  Beta 15.103 keeps the live black correction mounted until that stable image
+  is visibly installed, then dismisses the editor and draws the replacement
+  mark. The iOS 12 static compatibility transition remains unchanged.
+- Recognition, model assets, confidence, capture, homography, grading, answer
+  interpretation, and yellow policy are frozen. Focused transition/review tests
+  pass **47/47**, the complete repository suite passes **490/490**, and the
+  deployment-pruned 254-file production build passes. Deployment verification
+  and physical black-iPad confirmation remain required; do not resume
+  untouched-packet testing yet.
+- Candidate label:
+  `2026.08.14-black-ipad-correction-transition-beta-15-103`.
+
 ## 2026-08-10 Beta 15.102 public/debug separation — release-candidate preparation
 
 - Beta 15.101 is the first physically verified orange-iPad candidate to finish

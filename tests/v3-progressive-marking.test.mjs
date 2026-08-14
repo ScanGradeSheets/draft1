@@ -51,6 +51,16 @@ test('the first yellow opens automatically after automatic marks settle without 
   assert.doesNotMatch(cameraSource, /scrollIntoView|scrollBy|scrollTo|visualViewport/)
 })
 
+test('a completed manual mark finalizes before consistently opening the next yellow', () => {
+  const advanceStart = cameraSource.indexOf('function advanceProgressiveMarking()')
+  const advanceEnd = cameraSource.indexOf('function resetProgressiveMarking()', advanceStart)
+  const advance = cameraSource.slice(advanceStart, advanceEnd)
+  assert.match(
+    advance,
+    /if \(nextReviewGroup\)[\s\S]*?progressiveCorrectionQuestionNum\.value != null[\s\S]*?finishProgressiveMarkingSoon\(0, \{[\s\S]*?nextYellowReviewGroup\([\s\S]*?openCorrectionByGroupSlot\(pendingReviewGroup\)/,
+  )
+})
+
 test('manual correction digits use the lighter settled teacher-ink renderer', async () => {
   const correctionInkSource = await readFile(
     new URL('../src/v3/manual-correction-ink.js', import.meta.url),

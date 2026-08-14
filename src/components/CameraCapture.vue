@@ -2572,7 +2572,6 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     // iOS 12 keeps the live correction mounted until its static replacement is
     // decoded, avoiding the physical mark disappearance seen on that WebKit.
     ocrResult.value = settledCorrectionState
-    cancelCorrection()
   }
 
   let annotatedImageUrl = result.annotatedImageUrl
@@ -2649,6 +2648,10 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     startManualCorrectionAnimation(correctedQuestionNum, correctionAnimationBaseUrl)
     ocrResult.value = nextResult
     await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)
+    // Keep the live black correction mounted until its predecoded replacement
+    // has actually painted. Dismissing it earlier exposes the old flattened
+    // worksheet for one frame on mobile Safari.
+    cancelCorrection()
   }
   if (lastLiveOcrDebug.value) {
     lastLiveOcrDebug.value = {
@@ -3795,7 +3798,7 @@ function clearProgressiveMarkingTimer() {
   progressiveMarkingTimer = null
 }
 
-function finishProgressiveMarkingSoon(delayMs = 420) {
+function finishProgressiveMarkingSoon(delayMs = 420, { onFinished = null } = {}) {
   clearProgressiveMarkingTimer()
   const remaining = Math.max(0, progressiveMarkingEarliestFinish - Date.now())
   progressiveMarkingTimer = window.setTimeout(async () => {
@@ -3816,6 +3819,7 @@ function finishProgressiveMarkingSoon(delayMs = 420) {
     progressiveDateStampRevealed.value = false
     progressiveCorrectionQuestionNum.value = null
     progressiveMarkingTimer = null
+    if (typeof onFinished === 'function') onFinished()
   }, Math.max(delayMs, remaining))
 }
 
@@ -3855,6 +3859,24 @@ function advanceProgressiveMarking() {
   )
   if (nextReviewGroup) {
     clearProgressiveMarkingTimer()
+    if (!activeCorrectionQuestion.value && progressiveCorrectionQuestionNum.value != null) {
+      // A correction mark has finished, but its transition flag is still set.
+      // Flatten that mark first, then recompute and open the next yellow. The
+      // former branch stopped its timer here and left the queue stranded.
+      finishProgressiveMarkingSoon(0, {
+        onFinished: () => {
+          const pendingReviewGroup = nextYellowReviewGroup(
+            studentAnswerGroups.value,
+            ocrResult.value?.questionReview,
+            null,
+          )
+          if (pendingReviewGroup && !activeCorrectionQuestion.value) {
+            openCorrectionByGroupSlot(pendingReviewGroup)
+          }
+        },
+      })
+      return
+    }
     if (!activeCorrectionQuestion.value && progressiveCorrectionQuestionNum.value == null) {
       openCorrectionByGroupSlot(nextReviewGroup)
     }
