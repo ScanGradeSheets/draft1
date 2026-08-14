@@ -40,6 +40,16 @@
   wait for the shadow completion, finish any normal yellow corrections, and
   export Debug Scan. Compare frozen predictions with manual/visual truth only
   after capture. Untouched qualification packets remain sealed.
+- Tony explicitly approved both the private tailnet model delivery and GitHub
+  backup. Commit `5227fb8` is pushed to
+  `origin/autobuild/safe-20260223`. The Mac's active tailnet suffix is now
+  `tail415e0b.ts.net` (the older `tail9a3379` suffix is stale). The private app
+  and models-only route are running at
+  `https://hobbes-mac-mini.tail415e0b.ts.net/` and
+  `/local-model-probe`; live verification returned HTTP 200 for the app,
+  encoder, and decoder, while `/sample.png`, `/samples/0.png`, and
+  `/manifest/0.png` each returned HTTP 404. Physical iPhone shadow evidence is
+  still required before considering any recognition-policy change.
 
 ## 2026-08-14 iPhone 16 retained-frame / whole-answer-reader diagnostic
 
