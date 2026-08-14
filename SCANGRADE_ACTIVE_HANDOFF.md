@@ -1,5 +1,25 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 offline candidate safety and reproducibility battery
+
+- Untouched packets remained sealed and public `scangrade.io` remained
+  unchanged. The retrospective 345-answer audit was regenerated from its
+  source evidence and matched the prior report byte-for-byte after excluding
+  only `generatedAt`. At the frozen 0.90 threshold it again promotes 5/74
+  eligible historical yellows, all five correct, with zero known promotion
+  errors. This is deterministic retrospective evidence, not prospective proof.
+- Added direct fail-open coverage for the exact frozen-control boundary:
+  original-yellow eligibility, the 0.90 confidence edge, malformed reads,
+  missing/incomplete/conflicting frame evidence, NaN confidence, safety vetoes,
+  uniform/frame disagreement, and answer-key-shaped fields. An exhaustive
+  frame-only matrix also verifies that automatic rescue is impossible unless
+  every frozen prerequisite is true.
+- Complete repository suite **498/498**, production build, and
+  `git diff --check` pass. No OCR, capture, homography, layout, model, threshold,
+  or production behavior changed; the only new code is test coverage. The next
+  non-correlated evidence remains a frozen, prediction-blinded physical trial
+  on an untouched packet.
+
 ## 2026-08-14 iPhone retained-frame result and debug-export evidence guard
 
 - Physical session `df6236d6-874b-41f5-becf-b89ab710b05b` reached primary
