@@ -1,5 +1,33 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 isolated iPhone shadow trial and retained-crop lifetime fix
+
+- Physical session `90c3a1bd-e0ac-44b6-a283-557f7a850ffb` reached the frozen
+  primary `result ready` stage in 7.024 seconds. Tony observed roughly ten
+  seconds or a little more until visible marking and reported four yellow
+  digits: C ones, both D digits, and G ones. Manual truth recorded C=`15`,
+  D=`16`, and G=`18`. The 11 MB export is preserved at
+  `private-evidence/debug-scans/2026-08-14/iphone16-isolated-strong-shadow-90c3a1bd/manual-export.json`
+  with SHA-256
+  `2df51a36efe193cb52aacb35296729fa51dc6ccc2996f91b819ac7305378be66`.
+- The isolation change worked: the competing accepted-answer safety reader is
+  absent. The strong shadow itself did not produce recognition evidence; it
+  failed open with `cannot call emscripten binding method Mat.cols getter on
+  deleted object`. This trial therefore measures only the frozen primary and
+  must not be counted for or against strong-reader recognition quality.
+- Root cause is exact and reproducible from the export plus source lifetime:
+  waiting for manual review deferred selected-frame crop materialization until
+  after normal OCR cleanup had deleted the OpenCV Mats. The fix passes the
+  already-materialized selected-frame image URLs into retained-frame
+  preparation, so no deferred work accesses the released Mats. Retained-frame
+  registration and all large-model inference still wait until manual review is
+  settled; grading, marks, review flags, score, and `ocrResult` remain untouched.
+- Focused shadow coverage, the complete repository suite **494/494**, production
+  build, and `git diff --check` pass. A further physical same-sheet iPhone test
+  is still required. Pass requires a completed six-read strong-shadow result,
+  normal correction auto-advance, and continuously visible annotations. Do not
+  promote or integrate the strong reader from this fix alone.
+
 ## 2026-08-14 iPhone shadow trial diagnosis and isolated retest candidate
 
 - Physical session `156f7aad-a250-4d70-84f1-6d46058fab9a` did **not** validate

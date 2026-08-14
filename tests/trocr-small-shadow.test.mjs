@@ -78,12 +78,20 @@ test('retained-frame strong shadow stays detached from grading and V3 promotion'
   assert.match(block, /allowWithoutReviewUrl: true/)
   assert.match(block, /status: browserLocalStrongConfig\.enabled \? 'waiting-for-manual-review'/)
   assert.match(block, /waitForManualReviewSettlement/)
+  assert.match(block, /selectedItems: selectedShadowItems/)
   assert.match(block, /status: 'skipped-review-not-settled'/)
   assert.match(block, /requestBrowserLocalStrongPersistentShadow/)
   assert.ok((block.match(/resetBrowserLocalStrongPersistentShadow\(\)/g) || []).length >= 2)
   assert.match(block, /result\.affectsGrade = false/)
   assert.match(block, /result\.noUploads = true/)
   assert.equal(block.includes('ocrResult.value ='), false)
+
+  const freezeSelected = block.indexOf('const selectedShadowItems = browserLocalStrongShadowItems(')
+  const waitForReview = block.indexOf('const shadowItemsPromise = waitForManualReviewSettlement()')
+  const strongInference = block.indexOf('requestBrowserLocalStrongPersistentShadow(')
+  assert.ok(freezeSelected >= 0)
+  assert.ok(waitForReview > freezeSelected)
+  assert.ok(strongInference > waitForReview)
 })
 
 test('retained-frame strong shadow suppresses the other private safety reader', () => {

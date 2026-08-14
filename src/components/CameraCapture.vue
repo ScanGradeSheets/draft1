@@ -7569,7 +7569,7 @@ async function buildHybridBurstReviewItems(
   selectedRawCrops,
   layout,
   qrLocation,
-  { allowWithoutReviewUrl = false, maximumFrames = null } = {},
+  { allowWithoutReviewUrl = false, maximumFrames = null, selectedItems = null } = {},
 ) {
   if (
     !hybridV2Enabled() ||
@@ -7577,18 +7577,24 @@ async function buildHybridBurstReviewItems(
     pendingHybridBurstFrames.length < 2
   ) {
     return {
-      items: wholeAnswerReviewItemsForFrame(questionGroups, questionReview, selectedRawCrops),
+      items: selectedItems || wholeAnswerReviewItemsForFrame(questionGroups, questionReview, selectedRawCrops),
       frames: [],
     }
   }
 
   const selectedFrame = pendingHybridBurstFrames.find((frame) => frame.selected) || pendingHybridBurstFrames[0]
-  const items = wholeAnswerReviewItemsForFrame(
-    questionGroups,
-    questionReview,
-    selectedRawCrops,
-    selectedFrame?.index ?? null
-  )
+  const items = selectedItems
+    ? selectedItems.map((item) => ({
+        ...item,
+        id: `question-${item.questionNum}-frame-${selectedFrame?.index ?? 0}`,
+        frameIndex: selectedFrame?.index ?? null,
+      }))
+    : wholeAnswerReviewItemsForFrame(
+        questionGroups,
+        questionReview,
+        selectedRawCrops,
+        selectedFrame?.index ?? null
+      )
   const frames = [{
     frameIndex: selectedFrame?.index ?? null,
     selected: true,
@@ -10242,10 +10248,11 @@ const runRealOCR = async () => {
     }
 
     // Experimental browser-local larger-grayscale reader. It is deliberately
-    // detached from grading and review promotion: after manual review settles,
-    // one bounded worker reads only the original yellow answers, records
-    // evidence, then terminates. Candidate 6 remains byte-for-byte authoritative
-    // even if this times out or crashes.
+    // detached from grading and review promotion. The selected-frame image
+    // URLs are frozen while their OpenCV Mats are alive; after manual review
+    // settles, retained-frame preparation and one bounded worker read only the
+    // original yellow answers, record evidence, then terminate. Candidate 6
+    // remains byte-for-byte authoritative even if this times out or crashes.
     if (
       browserLocalStrongConfig.requested &&
       !browserLocalCandidateConfig.requested
@@ -10306,6 +10313,7 @@ const runRealOCR = async () => {
               {
                 allowWithoutReviewUrl: true,
                 maximumFrames: browserLocalStrongConfig.frameCount,
+                selectedItems: selectedShadowItems,
               },
             ).then((burst) => ({
               frameProcessing: burst.frames,
