@@ -1,5 +1,31 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 balanced modern capture/result spacing
+
+- Tony's physical iPhone screenshot showed the compact brand group slightly
+  too close to the top browser/safe-area edge and the bottom result bar slightly
+  too close to the lower edge. Beta 15.109 adds exactly 8 CSS px beyond each
+  device's real top and bottom safe-area inset on the modern capture workspace.
+  This moves the brand down and the bottom bar up symmetrically without changing
+  the worksheet scale, landing page, or measured original-iPad layout. Build:
+  `2026.08.15-balanced-capture-spacing-beta-15-109`.
+- Mobile-WebKit physical-capture replay measured equal 14px top/bottom insets in
+  its neutral 430x932 viewport. Its correction and completion-transition gates
+  also remain green: 233 grading frames, zero completion-control conflicts, one
+  final keypad removal, and no keypad replacement. Complete suite passes
+  515/515; the pruned build contains 254 files and no Worker, route manifest, or
+  Functions directory.
+- Source commit `ab5a3b7` is pushed. Static preview:
+  `https://050874ed.scangrade.pages.dev/`; production immutable:
+  `https://4418c1a2.scangrade.pages.dev/`; public: `https://scangrade.io/`.
+  Public/local SHA-256 matches exactly: HTML
+  `97751f4214ed8c00bc74ecb1043e4b352ee43d475351a2b88757855154c70d3d`,
+  JavaScript `assets/index-Dljy7A8x.js`
+  `808b6392d7982c745e7cb9278576f2adec02c0d486a5cda879fa31be888312aa`,
+  CSS `assets/index-Ber4JlBT.css`
+  `c005dcb6f1863b5541f9b6af465185ac5f71c0fe4441d7ad186b904e5db430a1`.
+  `/api/submissions` remains byte-identical to the static app shell.
+
 ## 2026-08-15 public grading/completion-bar sequencing repair
 
 - Tony physically observed `Grading`, the centered blue result chevron, and
