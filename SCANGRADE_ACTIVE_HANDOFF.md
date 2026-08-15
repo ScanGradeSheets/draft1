@@ -1,5 +1,52 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 known-material batch route and reconciled physical inventory
+
+- Tony's physical overview confirms two distinct authentic-student groups:
+  six pre-numbering packets (one A and five B packets) and numbered packets
+  P01-P09. Existing capture records classify the six pre-numbering packets plus
+  P02/P03/P05/P08/P09 as already used diagnostic material. P01/P04/P06/P07
+  remain the prospective holdouts and must not be scanned during this batch.
+  The overview photos are not being transcribed or used as tuning evidence.
+- Tony also located the original nine individual Grade 2 sheets. Their QR
+  families are the already-documented `SG-G2-A-001`, `SG-G2-B-001`, and
+  `SG-G2-C-001` three-sheet cohorts in
+  `docs/SG3_9_PHOTO_OCR_SCORECARD.md`. They add 90 known handwriting answers,
+  but must be scored separately as a legacy-format/backward-compatibility
+  cohort rather than mixed into the primary Grade 1 launch metric.
+- Beta 15.112 adds an unlinked `/debug/batch` route around the exact public
+  recognition/capture engine. It offers opaque cohort selectors A, B1-B5,
+  P02/P03/P05/P08/P09, and G2-9; writes the chosen cohort into `packetId`; and
+  enables `Next Page` only after debug auto-upload reports `saved`. This lets
+  Tony preserve the raw automatic result and move to the next sheet without
+  manually resolving yellows. Student names are not present in the route,
+  URL, or source. The ordinary `/` and `/debug` paths are unchanged apart from
+  the build label. OCR, capture, homography, confidence, grading, and model
+  decisions are unchanged.
+- Verification: 519/519 repository tests, deploy-pruned production build,
+  `git diff --check`, 254-file isolated static artifact, clean live packet
+  selection, and production mobile-WebKit mount all pass. Selecting P02 on the
+  live route produced `/debug/batch?packetId=P02&liveOcrDebug=1`, entered the
+  capture view, and raised no page errors. Build label:
+  `2026.08.15-known-packet-batch-beta-15-112`.
+- The first preview from the repository root accidentally let Wrangler discover
+  the unrelated repository `functions/` directory; it was rejected and never
+  promoted. The accepted preview and production deploys came from an isolated
+  directory containing only the 254 verified static files. Clean preview:
+  `https://36b387a1.scangrade.pages.dev/`; production immutable:
+  `https://faf7ed9b.scangrade.pages.dev/`; public:
+  `https://scangrade.io/`. Public root, `/debug/batch`, `/api/submissions`, the
+  immutable root, and local HTML are byte-identical at SHA-256
+  `9cd372eb8ebc34e7033bf79a07a528d20e775fe435ff6f3b696e9dc9b23fdbcc`.
+  JavaScript `assets/index-BOZmQbEd.js` SHA-256 is
+  `1eb6773fd739553c335bb1ce6b8aa5d3e2d15417dd3387d5dae03663a7466069`;
+  CSS `assets/index-Br5OipAB.css` SHA-256 is
+  `548545ae1f79bef33b80c44b1bb76572b21c01396ba9cc16261c3df52c70d2c0`.
+  Source commit `cf71300` is pushed. Receiver and restricted HTTPS ingress were
+  running/reachable before preparing the activation QR. Physical auto-upload
+  from the new route remains the next gate; do not claim it until one known
+  sheet shows `Debug saved: <id>` and the matching bundle arrives.
+
 ## 2026-08-15 landing alignment and final-score sequencing
 
 - Tony asked to move the modern public landing group up very slightly and
