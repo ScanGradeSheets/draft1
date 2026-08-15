@@ -26,6 +26,14 @@
   processing-session and misleading error-control defect, not a bad photo.
   Resume B2 from the mixed page after fully terminating/reopening Safari; do
   not rescan its first six successful pages and do not patch mid-cohort.
+- P02 later reproduced the same failure stage on its two-digit-addition page
+  after only three successful pages: direct QR/capture succeeded, then answer
+  box registration threw numeric exception `88861992`. This means the defect
+  must not be attributed solely to a six-page endurance threshold. Two retries
+  in the same Safari processing session completed only via
+  `two-digit-unusable-quality-fallback-review`, putting all 16 digits yellow.
+  Treat those retries as contaminated by the preceding failed session until a
+  fully terminated/reopened Safari run repeats or falsifies the result.
 
 - Physical auto-upload through the new route is now verified. Tony scanned the
   complete G2-9 legacy cohort on an iPhone running iOS 18.7 / Mobile Safari
