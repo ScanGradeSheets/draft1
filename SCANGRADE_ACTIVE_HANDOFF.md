@@ -2,6 +2,20 @@
 
 ## 2026-08-15 known-material batch route and reconciled physical inventory
 
+- Known Grade 1 batch collection is underway on the same iPhone. Packet A
+  arrived as ten distinct pages plus one deliberate repeat of its ten-frame
+  page; exclude the repeat from coverage totals but retain it as a
+  repeatability check. Packet B1 arrived as exactly ten distinct pages.
+  Do not tune or summarize the broader OCR result until the planned known
+  packets finish.
+- B1's final place-value page physically leaves question A unanswered, but the
+  public engine extracted the two printed box/divider regions as `11` and sent
+  the answer to yellow review. The complete saved bundle confirms this was not
+  handwriting. Product requirement: a reliably blank answer must be marked
+  incorrect rather than presented for manual transcription. Preserve this as
+  a reproducible blank-detection defect for offline analysis after collection;
+  do not patch recognition mid-cohort.
+
 - Physical auto-upload through the new route is now verified. Tony scanned the
   complete G2-9 legacy cohort on an iPhone running iOS 18.7 / Mobile Safari
   26.4. Nine distinct sessions arrived: three Addition, three Subtraction, and
