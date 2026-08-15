@@ -1,5 +1,35 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 continuous Grading status through manual review
+
+- Tony correctly reported that the blue result chevron could briefly replace
+  `Grading` between queued manual corrections. A strengthened physical-capture
+  WebKit replay reproduced the public Beta 15.109 defect: 15 animation frames
+  had the correction keypad mounted while `Grading` was absent and the chevron
+  / completion controls were exposed.
+- Beta 15.110 defines the student grading stage as the entire marking session,
+  including active manual correction, the flattened-mark handoff, queued-yellow
+  transition, replacement-mark animation, score, date stamp, and final-image
+  installation. `Grading` now remains continuous; the chevron and `New Scan`
+  appear only after the completed stamped sheet is installed. OCR, recognition,
+  grading decisions, corrections, ink, timing, spacing, and legacy rendering
+  are unchanged. Build: `2026.08.15-continuous-grading-status-beta-15-110`.
+- Fixed replay results: local 248, preview 247, and live 243 sampled grading
+  frames, with zero frames missing `Grading` while the keypad was mounted and
+  zero premature completion-control frames. Keypad continuity and final control
+  replacement also pass. Complete suite passes 516/516; pruned build has 254
+  files and no Worker, route manifest, or Functions directory.
+- Source commit `7a49620` is pushed. Preview:
+  `https://0b2a3697.scangrade.pages.dev/`; production immutable:
+  `https://a9f456db.scangrade.pages.dev/`; public: `https://scangrade.io/`.
+  Public/local hashes match: HTML
+  `e8705b1239f81ae6cf5565e9734eedfad287cef9af641502db66b78e917c8fe6`,
+  JavaScript `assets/index-B2w4AvDQ.js`
+  `f0f9dd3deb1266e1b1c98130b0391480a841a128e552d7e5b06b529b691054c4`,
+  CSS `assets/index-CzAj9hoa.css`
+  `789a8e387a34f7bc9466f7473eae097aa73064b7e506403b5f773c74f193a646`.
+  `/api/submissions` is byte-identical to the static app shell.
+
 ## 2026-08-15 balanced modern capture/result spacing
 
 - Tony's physical iPhone screenshot showed the compact brand group slightly
