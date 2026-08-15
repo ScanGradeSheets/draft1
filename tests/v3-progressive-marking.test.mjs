@@ -61,6 +61,17 @@ test('a completed manual mark finalizes before consistently opening the next yel
   )
 })
 
+test('the Grading stage remains continuous through every manual correction handoff', () => {
+  assert.match(
+    cameraSource,
+    /const progressiveGradingSessionActive = computed\(\(\) => \([\s\S]*progressiveMarkingActive\.value[\s\S]*activeCorrectionQuestion\.value[\s\S]*correctionQueueTransitionActive\.value[\s\S]*progressiveCorrectionQuestionNum\.value != null[\s\S]*\)\)/,
+  )
+  assert.match(
+    cameraSource,
+    /processing\.value \? 'scanning' : \(progressiveGradingSessionActive\.value \? 'grading' : ''\)/,
+  )
+})
+
 test('manual correction digits use the lighter settled teacher-ink renderer', async () => {
   const correctionInkSource = await readFile(
     new URL('../src/v3/manual-correction-ink.js', import.meta.url),

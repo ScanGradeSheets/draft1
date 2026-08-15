@@ -426,7 +426,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.15-balanced-capture-spacing-beta-15-109'
+const APP_BUILD_LABEL = '2026.08.15-continuous-grading-status-beta-15-110'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 const debugRouteEnabled = typeof window !== 'undefined' && isDebugRoutePathname(window.location.pathname)
 

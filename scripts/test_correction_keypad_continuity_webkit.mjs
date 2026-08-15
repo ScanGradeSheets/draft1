@@ -60,6 +60,8 @@ try {
       frameAbsent: 0,
       gradingSamples: 0,
       gradingCompletionControlConflicts: 0,
+      gradingMissingWhileKeypadMounted: 0,
+      completionControlsWhileKeypadMounted: 0,
       running: true,
     }
     const containsKeypad = (candidate) => candidate?.nodeType === 1 && (
@@ -85,6 +87,13 @@ try {
           document.querySelector('.student-recognition-toggle') ||
           document.querySelector('.student-scan-reset')
         ) state.gradingCompletionControlConflicts += 1
+      }
+      if (document.querySelector('.correction-keypad')) {
+        if (!grading) state.gradingMissingWhileKeypadMounted += 1
+        if (
+          document.querySelector('.student-recognition-toggle') ||
+          document.querySelector('.student-scan-reset')
+        ) state.completionControlsWhileKeypadMounted += 1
       }
       requestAnimationFrame(sample)
     }
@@ -132,6 +141,8 @@ try {
       frameAbsent: state.frameAbsent,
       gradingSamples: state.gradingSamples,
       gradingCompletionControlConflicts: state.gradingCompletionControlConflicts,
+      gradingMissingWhileKeypadMounted: state.gradingMissingWhileKeypadMounted,
+      completionControlsWhileKeypadMounted: state.completionControlsWhileKeypadMounted,
       finalMounted: Boolean(document.querySelector('.correction-keypad')),
       finalGradingVisible: Boolean(document.querySelector('.student-scan-grading')),
       finalRecognitionArrowVisible: Boolean(document.querySelector('.student-recognition-toggle')),
@@ -170,6 +181,8 @@ try {
       absentOnlyAfterFinalCorrection: continuity.frameAbsent > 0 && continuity.finalMounted === false,
       gradingObservedThroughCompletion: continuity.gradingSamples > 0,
       noCompletionControlsDuringGrading: continuity.gradingCompletionControlConflicts === 0,
+      gradingContinuousThroughCorrections: continuity.gradingMissingWhileKeypadMounted === 0,
+      noCompletionControlsBetweenCorrections: continuity.completionControlsWhileKeypadMounted === 0,
       completionControlsReplaceGrading: continuity.finalGradingVisible === false &&
         continuity.finalRecognitionArrowVisible === true &&
         continuity.finalNewScanVisible === true,

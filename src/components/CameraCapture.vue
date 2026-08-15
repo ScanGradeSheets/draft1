@@ -1619,6 +1619,18 @@ const progressiveMarkingActive = computed(() => (
   && !progressiveMarkingComplete.value
 ))
 
+const progressiveGradingSessionActive = computed(() => (
+  props.studentMode
+  && !!ocrResult.value
+  && !ocrResult.value?.error
+  && (
+    progressiveMarkingActive.value
+    || !!activeCorrectionQuestion.value
+    || correctionQueueTransitionActive.value
+    || progressiveCorrectionQuestionNum.value != null
+  )
+))
+
 const scanningDateStampSpec = computed(() => {
   const preview = scanningAnnotationPreview.value
   if (
@@ -3870,7 +3882,7 @@ watch(
 )
 
 watch(
-  () => processing.value ? 'scanning' : (progressiveMarkingActive.value ? 'grading' : ''),
+  () => processing.value ? 'scanning' : (progressiveGradingSessionActive.value ? 'grading' : ''),
   (stage) => {
     emit('student-stage-change', stage)
   },
@@ -3880,6 +3892,7 @@ watch(
 watch(
   () => [
     processing.value,
+    progressiveGradingSessionActive.value,
     progressiveMarkingActive.value,
     progressiveMarkingComplete.value,
     progressiveCorrectionQuestionNum.value,
