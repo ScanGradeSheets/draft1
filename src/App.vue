@@ -171,7 +171,7 @@
           >
             {{ studentDebugExportLabel }}
           </button>
-          <template v-else>
+          <template v-if="!studentScanStage">
             <button
               v-if="ocrResult && !ocrResult.error"
               type="button"
@@ -426,7 +426,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.15-keypad-continuity-beta-15-107'
+const APP_BUILD_LABEL = '2026.08.15-completion-bar-sequence-beta-15-108'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 const debugRouteEnabled = typeof window !== 'undefined' && isDebugRoutePathname(window.location.pathname)
 

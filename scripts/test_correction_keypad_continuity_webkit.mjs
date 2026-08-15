@@ -57,6 +57,8 @@ try {
       removed: 0,
       replaced: 0,
       frameAbsent: 0,
+      gradingSamples: 0,
+      gradingCompletionControlConflicts: 0,
       running: true,
     }
     const containsKeypad = (candidate) => candidate?.nodeType === 1 && (
@@ -75,6 +77,14 @@ try {
     const sample = () => {
       if (!state.running) return
       if (!document.querySelector('.correction-keypad')) state.frameAbsent += 1
+      const grading = document.querySelector('.student-scan-grading')
+      if (grading) {
+        state.gradingSamples += 1
+        if (
+          document.querySelector('.student-recognition-toggle') ||
+          document.querySelector('.student-scan-reset')
+        ) state.gradingCompletionControlConflicts += 1
+      }
       requestAnimationFrame(sample)
     }
     requestAnimationFrame(sample)
@@ -105,6 +115,11 @@ try {
     if (await page.locator('.correction-keypad').count() === 0) break
   }
 
+  await page.waitForFunction(() => (
+    !document.querySelector('.student-scan-grading') &&
+    !!document.querySelector('.student-recognition-toggle') &&
+    !!document.querySelector('.student-scan-reset')
+  ), null, { timeout: 30_000 })
   await page.waitForTimeout(250)
   const continuity = await page.evaluate(() => {
     const state = window.__SCANGRADE_KEYPAD_CONTINUITY
@@ -114,7 +129,12 @@ try {
       removed: state.removed,
       replaced: state.replaced,
       frameAbsent: state.frameAbsent,
+      gradingSamples: state.gradingSamples,
+      gradingCompletionControlConflicts: state.gradingCompletionControlConflicts,
       finalMounted: Boolean(document.querySelector('.correction-keypad')),
+      finalGradingVisible: Boolean(document.querySelector('.student-scan-grading')),
+      finalRecognitionArrowVisible: Boolean(document.querySelector('.student-recognition-toggle')),
+      finalNewScanVisible: Boolean(document.querySelector('.student-scan-reset')),
     }
   })
   const pageErrors = events.filter((event) => event.type === 'pageerror')
@@ -131,6 +151,11 @@ try {
       sameKeypadNodeThroughoutQueue: continuity.replaced === 0,
       neverRemovedBetweenYellows: continuity.removed === 1,
       absentOnlyAfterFinalCorrection: continuity.frameAbsent > 0 && continuity.finalMounted === false,
+      gradingObservedThroughCompletion: continuity.gradingSamples > 0,
+      noCompletionControlsDuringGrading: continuity.gradingCompletionControlConflicts === 0,
+      completionControlsReplaceGrading: continuity.finalGradingVisible === false &&
+        continuity.finalRecognitionArrowVisible === true &&
+        continuity.finalNewScanVisible === true,
       noPageErrors: pageErrors.length === 0,
     },
   }
