@@ -7,7 +7,8 @@ const input = process.argv[2]
 const baseUrl = process.env.SG_PRIVATE_TEST_URL || 'https://hobbes-mac-mini.tail415e0b.ts.net:8443/debug'
 if (!input) throw new Error('Usage: node scripts/reproduce_private_yellow_correction_webkit.mjs DEBUG_JSON')
 
-const debug = JSON.parse(await fs.readFile(input, 'utf8'))
+const parsed = JSON.parse(await fs.readFile(input, 'utf8'))
+const debug = parsed?.debug && typeof parsed.debug === 'object' ? parsed.debug : parsed
 const captureMatch = String(debug.capturedImageDataUrl || '').match(/^data:image\/(png|jpeg);base64,(.+)$/)
 if (!captureMatch) throw new Error('debug bundle has no captured image')
 const frames = (debug.hybridBurstFrameDataUrls || []).slice(0, 3).map((imageDataUrl, index) => ({

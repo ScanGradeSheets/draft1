@@ -54,6 +54,14 @@ test('shadow may use same-origin private-tailnet models and clamps retained fram
   })
   assert.equal(applying.apply, true)
 
+  const add2StitchedApplying = browserLocalStrongShadowConfig({
+    ...location,
+    href: `${location.origin}/debug?v3BrowserLocalStrongShadow=1&v3BrowserLocalAdd2StitchedApply=1&v3BrowserLocalStrongFrames=1`,
+    search: '?v3BrowserLocalStrongShadow=1&v3BrowserLocalAdd2StitchedApply=1&v3BrowserLocalStrongFrames=1',
+  })
+  assert.equal(add2StitchedApplying.add2StitchedApply, true)
+  assert.equal(add2StitchedApplying.apply, false)
+
   const publicLocation = {
     href: 'https://scangrade.io/debug?v3BrowserLocalStrongShadow=1',
     origin: 'https://scangrade.io',
@@ -69,6 +77,11 @@ test('shadow may use same-origin private-tailnet models and clamps retained fram
   })
   assert.equal(publicApplying.enabled, true)
   assert.equal(publicApplying.apply, false)
+  assert.equal(browserLocalStrongShadowConfig({
+    ...publicLocation,
+    href: 'https://scangrade.io/debug?v3BrowserLocalStrongShadow=1&v3BrowserLocalAdd2StitchedApply=1&v3BrowserLocalStrongFrames=1&v3BrowserLocalStrongEncoderUrl=https://models.test/e&v3BrowserLocalStrongDecoderUrl=https://models.test/d',
+    search: '?v3BrowserLocalStrongShadow=1&v3BrowserLocalAdd2StitchedApply=1&v3BrowserLocalStrongFrames=1&v3BrowserLocalStrongEncoderUrl=https://models.test/e&v3BrowserLocalStrongDecoderUrl=https://models.test/d',
+  }).add2StitchedApply, false)
 })
 
 test('shadow is fail-open when browser workers are unavailable', async () => {
@@ -95,7 +108,7 @@ test('retained-frame strong shadow stays detached from grading and V3 promotion'
   const defaultBlock = block.slice(defaultStart)
   assert.equal(block.includes('hybridV3Enabled() &&'), false)
   assert.match(defaultBlock, /waitForManualReviewSettlement/)
-  assert.match(block, /browserLocalStrongConfig\.apply \? 'pending' : 'waiting-for-manual-review'/)
+  assert.match(block, /strongYellowApply \? 'pending' : 'waiting-for-manual-review'/)
   assert.match(block, /selectedItems: selectedShadowItems/)
   assert.match(defaultBlock, /status: 'skipped-review-not-settled'/)
   assert.match(defaultBlock, /requestBrowserLocalStrongPersistentShadow/)
@@ -104,8 +117,8 @@ test('retained-frame strong shadow stays detached from grading and V3 promotion'
   assert.equal(defaultBlock.includes('ocrResult.value ='), false)
 
   const freezeSelected = block.indexOf('const selectedShadowItems = browserLocalStrongShadowItems(')
-  const waitForReview = defaultBlock.indexOf('const shadowItemsPromise = waitForManualReviewSettlement()')
-  const strongInference = defaultBlock.indexOf('requestBrowserLocalStrongPersistentShadow(')
+  const waitForReview = defaultStart + defaultBlock.indexOf('const shadowItemsPromise = waitForManualReviewSettlement()')
+  const strongInference = defaultStart + defaultBlock.indexOf('requestBrowserLocalStrongPersistentShadow(')
   assert.ok(freezeSelected >= 0)
   assert.ok(waitForReview > freezeSelected)
   assert.ok(strongInference > waitForReview)
@@ -116,8 +129,17 @@ test('private apply mode holds presentation and uses only the yellow 3-of-3 poli
   assert.match(source, /const holdStrongYellowPresentation =/)
   assert.match(source, /browserLocalStrongConfig\.apply === true/)
   assert.match(source, /browserLocalStrongYellowDecisions\(\{/)
-  assert.match(source, /policy: 'original-yellow-exact-three-of-three-min-0\.90'/)
+  assert.match(source, /: 'original-yellow-exact-three-of-three-min-0\.90'/)
   assert.match(source, /status: 'fail-open'/)
+})
+
+test('private add2 stitched apply mode is layout-gated and uses the frozen 0.999 policy', () => {
+  const source = readFileSync(new URL('../src/components/CameraCapture.vue', import.meta.url), 'utf8')
+  assert.match(source, /browserLocalStrongConfig\.add2StitchedApply === true/)
+  assert.match(source, /ADD2_STITCHED_YELLOW_LAYOUT_ID/)
+  assert.match(source, /browserLocalAdd2StitchedYellowDecisions\(\{/)
+  assert.match(source, /policy: add2StitchedApply/)
+  assert.match(source, /'add2-original-yellow-single-stitched-min-0\.999'/)
 })
 
 test('retained-frame strong shadow suppresses the other private safety reader', () => {

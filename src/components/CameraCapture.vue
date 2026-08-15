@@ -668,7 +668,11 @@ import { applyBrowserLocalCandidateToPredictions } from '../v3/browser-local-can
 import { browserLocalCoPrimaryEvidencePlan } from '../v3/browser-local-co-primary-planner.js'
 import { browserLocalCoPrimaryCandidate7Decision } from '../v3/browser-local-co-primary-candidate7.js'
 import { browserLocalThreeFrameConsensus } from '../v3/browser-local-frame-consensus.js'
-import { browserLocalStrongYellowDecisions } from '../v3/browser-local-strong-yellow.js'
+import {
+  ADD2_STITCHED_YELLOW_LAYOUT_ID,
+  browserLocalAdd2StitchedYellowDecisions,
+  browserLocalStrongYellowDecisions,
+} from '../v3/browser-local-strong-yellow.js'
 import { browserUniformAnswerViews } from '../v3/uniform-answer-view-browser.js'
 import {
   applyAcceptedAnswerSafetyVetoes,
@@ -9516,7 +9520,13 @@ const runRealOCR = async () => {
       Array.isArray(layout?.question_groups) &&
       layout.question_groups.length > 0
     const holdStrongYellowPresentation =
-      browserLocalStrongConfig.apply === true &&
+      (
+        browserLocalStrongConfig.apply === true ||
+        (
+          browserLocalStrongConfig.add2StitchedApply === true &&
+          String(layout?.layout_id || layout?.id || '') === ADD2_STITCHED_YELLOW_LAYOUT_ID
+        )
+      ) &&
       !browserLocalCandidateConfig.requested &&
       Array.isArray(layout?.question_groups) &&
       layout.question_groups.length > 0
@@ -10353,6 +10363,10 @@ const runRealOCR = async () => {
       browserLocalStrongConfig.requested &&
       !browserLocalCandidateConfig.requested
     ) {
+      const add2StitchedApply =
+        browserLocalStrongConfig.add2StitchedApply === true &&
+        String(layout?.layout_id || layout?.id || '') === ADD2_STITCHED_YELLOW_LAYOUT_ID
+      const strongYellowApply = browserLocalStrongConfig.apply === true || add2StitchedApply
       const shadowQuestionNums = displayedYellowQuestionNumbers(
         layout.question_groups,
         questionReview,
@@ -10370,11 +10384,12 @@ const runRealOCR = async () => {
         .map((item) => [Number(item.questionNum), item]))
       payload.v3BrowserLocalStrongShadow = {
         status: browserLocalStrongConfig.enabled
-          ? (browserLocalStrongConfig.apply ? 'pending' : 'waiting-for-manual-review')
+          ? (strongYellowApply ? 'pending' : 'waiting-for-manual-review')
           : 'configuration-error',
         affectsGrade: false,
         applyRequested: browserLocalStrongConfig.applyRequested === true,
-        apply: browserLocalStrongConfig.apply === true,
+        add2StitchedApplyRequested: browserLocalStrongConfig.add2StitchedApplyRequested === true,
+        apply: strongYellowApply,
         requested: selectedShadowItems.length,
         requestedFrameCount: browserLocalStrongConfig.frameCount,
       }
@@ -10407,7 +10422,7 @@ const runRealOCR = async () => {
         }
       }
 
-      if (browserLocalStrongConfig.apply) {
+      if (strongYellowApply) {
         const strongGradeStarted = performance.now()
         candidatePresentationPromise = prepareShadowItems()
           .then(async ({ frameProcessing, items }) => {
@@ -10424,11 +10439,18 @@ const runRealOCR = async () => {
             ) {
               throw new Error('strong yellow reader incomplete; preserving browser result')
             }
-            const decisions = browserLocalStrongYellowDecisions({
-              answerGroups,
-              predictions,
-              strongRows: result.results,
-            })
+            const decisions = add2StitchedApply
+              ? browserLocalAdd2StitchedYellowDecisions({
+                  layoutId: String(layout?.layout_id || layout?.id || ''),
+                  answerGroups,
+                  predictions,
+                  strongRows: result.results,
+                })
+              : browserLocalStrongYellowDecisions({
+                  answerGroups,
+                  predictions,
+                  strongRows: result.results,
+                })
             const application = applyBrowserLocalCandidateToPredictions({
               questionGroups: layout.question_groups,
               predictions,
@@ -10488,7 +10510,9 @@ const runRealOCR = async () => {
               status: 'complete',
               affectsGrade: application.promoted.length > 0,
               noUploads: true,
-              policy: 'original-yellow-exact-three-of-three-min-0.90',
+              policy: add2StitchedApply
+                ? 'add2-original-yellow-single-stitched-min-0.999'
+                : 'original-yellow-exact-three-of-three-min-0.90',
               elapsedMs: performance.now() - strongGradeStarted,
               requestedFrameCount: browserLocalStrongConfig.frameCount,
               frameProcessing,

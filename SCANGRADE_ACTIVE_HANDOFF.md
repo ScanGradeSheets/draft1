@@ -1,5 +1,48 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 internal add2 iPhone regression isolation and private candidate
+
+- Tony asked to exhaust the already-captured evidence before opening any sealed
+  packet. P01/P04/P06/P07 remain untouched; public `scangrade.io` was not
+  changed.
+- The remembered `>90%` result was a 320/345 (92.8%) retrospective decision
+  audit, not equivalent live-device execution. The matching historical live
+  WebKit replay was 268/345 (77.7%). Current full saved-page WebKit replay is
+  287/345 (83.2%) with six confident errors, all non-row. The recent iPhone
+  problem is therefore primarily a live crop/routing/coverage gap, not evidence
+  that the Candidate 7 model weights suddenly regressed.
+- A broad row rescue and an initial add2 `>=0.99` rescue were both rejected.
+  The latter would confidently turn the P05 handwritten `18` into `14` at
+  0.998289. The frozen private candidate is narrower: only layout
+  `sg-g1-lw-02-add-2digit`, only answers already yellow, one complete stitched
+  whole-answer crop, valid nonblank one/two-digit output, exact two-slot
+  contract, no safety veto, and minimum token probability `>=0.999`. It never
+  replaces an accepted browser answer and sees no answer key.
+- Retrospective falsification at the frozen boundary has zero observed errors:
+  canonical 345-answer integrated-yellow cohort 4/4; wider historical saved
+  yellow cohort 4/4; 44/44 selected stitched observations across eight recent
+  repeated iPhone captures. On the latest physical capture's five known yellow
+  questions, it selects B/C/D/H correctly and leaves G yellow (4/4 selected,
+  one manual review). The combined report is
+  `private-evidence/reports/add2-stitched-yellow-min-0999-evidence-20260815.json`.
+  These are observations with historical overlap, not 52 independent answers.
+- Added an explicit private-tailnet-only
+  `v3BrowserLocalAdd2StitchedApply=1` path with one frame. Other layouts, public
+  origins, missing/malformed evidence, duplicate rows, sub-threshold evidence,
+  model failure, and safety vetoes all fail open. The existing three-frame
+  candidate remains unchanged.
+- Exact saved-page mobile-WebKit integration passed on the latest iPhone debug:
+  candidate completed, held presentation while pending, made no wrong
+  promotion, and settled outside `Scanning`. Candidate work for its one replayed
+  yellow took 2.006 seconds; total replay was 11.431 seconds. The report is
+  `private-evidence/reports/add2-stitched-saved-page-webkit-20260815.json`.
+  The P05 counterexample replay also passed with no candidate promotion or
+  accepted-answer replacement. Complete suite **512/512**, production build,
+  and `git diff --check` pass.
+- This is still a private candidate, not a success claim or public-deployment
+  authority. Next: back up the narrow candidate, then physically verify it on
+  iPhone using the already-opened add2 sheet before consuming any sealed packet.
+
 ## 2026-08-15 public Debug Scan batch auto-save restored
 
 - Tony correctly distinguished the repeated disappearing-mark / stuck-Scanning

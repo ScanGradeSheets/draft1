@@ -118,6 +118,7 @@ export function browserLocalStrongShadowConfig(locationLike = null) {
   const params = new URLSearchParams(String(location?.search || ''))
   const enabled = ['1', 'true', 'yes'].includes(String(params.get('v3BrowserLocalStrongShadow') || '').toLowerCase())
   const applyRequested = ['1', 'true', 'yes'].includes(String(params.get('v3BrowserLocalStrongApply') || '').toLowerCase())
+  const add2StitchedApplyRequested = ['1', 'true', 'yes'].includes(String(params.get('v3BrowserLocalAdd2StitchedApply') || '').toLowerCase())
   const privateTailnet = String(location?.hostname || '').endsWith('.ts.net')
   const defaults = enabled ? sameOriginShadowUrls(location) : { encoderUrl: '', decoderUrl: '' }
   const encoderUrl = safeModelUrl(params.get('v3BrowserLocalStrongEncoderUrl') || defaults.encoderUrl, location)
@@ -132,6 +133,8 @@ export function browserLocalStrongShadowConfig(locationLike = null) {
     requested: enabled,
     applyRequested,
     apply: available && applyRequested && privateTailnet && frameCount === 3,
+    add2StitchedApplyRequested,
+    add2StitchedApply: available && add2StitchedApplyRequested && privateTailnet && frameCount === 1,
     encoderUrl,
     decoderUrl,
     limit,
