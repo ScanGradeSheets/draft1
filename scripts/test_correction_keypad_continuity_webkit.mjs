@@ -5,6 +5,7 @@ import { webkit } from 'playwright'
 
 const input = process.argv[2]
 const baseUrl = process.env.SG_TEST_URL || 'https://127.0.0.1:5174/debug'
+const screenshotPath = process.env.SG_TEST_SCREENSHOT || ''
 if (!input) throw new Error('Usage: node scripts/test_correction_keypad_continuity_webkit.mjs DEBUG_JSON')
 
 const parsed = JSON.parse(await fs.readFile(input, 'utf8'))
@@ -137,6 +138,21 @@ try {
       finalNewScanVisible: Boolean(document.querySelector('.student-scan-reset')),
     }
   })
+  const layout = await page.evaluate(() => {
+    const header = document.querySelector('.header')?.getBoundingClientRect()
+    const bar = document.querySelector('.student-scan-bar')?.getBoundingClientRect()
+    return {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      headerTop: header?.top ?? null,
+      headerBottom: header?.bottom ?? null,
+      barTop: bar?.top ?? null,
+      barBottom: bar?.bottom ?? null,
+      topInset: header?.top ?? null,
+      bottomInset: bar ? window.innerHeight - bar.bottom : null,
+    }
+  })
+  if (screenshotPath) await page.screenshot({ path: screenshotPath, fullPage: true })
   const pageErrors = events.filter((event) => event.type === 'pageerror')
   report = {
     schemaVersion: 1,
@@ -145,6 +161,7 @@ try {
     engine: 'playwright-webkit-mobile-emulation',
     sequence,
     continuity,
+    layout,
     events,
     gates: {
       correctedMultipleYellows: sequence.length >= 2,

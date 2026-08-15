@@ -45,3 +45,11 @@ test('landing has a centered hero header while capture keeps the compact fixed h
   assert.match(appSource, /\.scan-grade--student\.scan-grade--landing \.brand-logo\s*\{[^}]*width:\s*68px;[^}]*height:\s*68px/s)
   assert.match(appSource, /\.scan-grade--student\.scan-grade--landing \.header h1\s*\{[^}]*font-size:\s*30px/s)
 })
+
+test('modern capture spacing moves the brand and bottom bar inward without changing the legacy viewport', () => {
+  assert.match(
+    appSource,
+    /\.scan-grade--capture:not\(\.scan-grade--legacy-capture\)\s*\{[^}]*padding-top:\s*calc\(max\(6px, env\(safe-area-inset-top, 0px\)\) \+ 8px\);[^}]*padding-bottom:\s*calc\(max\(6px, env\(safe-area-inset-bottom, 0px\)\) \+ 8px\);/s,
+  )
+  assert.match(appSource, /\.scan-grade--legacy-capture\s*\{[^}]*padding:\s*12px 8px 3px;/s)
+})

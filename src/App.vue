@@ -426,7 +426,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.15-completion-bar-sequence-beta-15-108'
+const APP_BUILD_LABEL = '2026.08.15-balanced-capture-spacing-beta-15-109'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 const debugRouteEnabled = typeof window !== 'undefined' && isDebugRoutePathname(window.location.pathname)
 
@@ -1305,6 +1305,14 @@ onUnmounted(() => {
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
+}
+
+/* Bring the modern capture workspace slightly inward from both browser edges.
+   Equal top/bottom insets keep the compact brand and result bar balanced around
+   the worksheet. The original-iPad viewport has its own measured contract. */
+.scan-grade--capture:not(.scan-grade--legacy-capture) {
+  padding-top: calc(max(6px, env(safe-area-inset-top, 0px)) + 8px);
+  padding-bottom: calc(max(6px, env(safe-area-inset-bottom, 0px)) + 8px);
 }
 
 :global(html.scan-grade-capture-lock),
