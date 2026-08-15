@@ -417,7 +417,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.14-private-yellow-3frame-beta-15-104'
+const APP_BUILD_LABEL = '2026.08.14-private-yellow-atomic-beta-15-105'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 const debugRouteEnabled = typeof window !== 'undefined' && isDebugRoutePathname(window.location.pathname)
 

@@ -45,24 +45,38 @@ test('private strong-yellow apply mode holds marks until its final fail-open dec
     initialPresentation,
   )
   const completionAwait = source.indexOf('await candidatePresentationPromise')
+  const processingComplete = source.indexOf('processing.value = false', completionAwait)
+  const deferredPresentation = source.indexOf(
+    'if (deferredStrongYellowPresentation)',
+    processingComplete,
+  )
   const completionEmit = source.lastIndexOf("emit('ocr-complete', ocrResult.value)")
 
   assert.ok(hold >= 0)
   assert.ok(initialPresentation > hold)
   assert.ok(promiseAssignment > initialPresentation)
   assert.ok(completionAwait > promiseAssignment)
-  assert.ok(completionEmit > completionAwait)
+  assert.ok(processingComplete > completionAwait)
+  assert.ok(deferredPresentation > processingComplete)
+  assert.ok(completionEmit > deferredPresentation)
 })
 
 test('candidate failure remains a Beta 15.3 fail-open result before completion', () => {
   const failure = source.indexOf("status: 'fail-open'")
-  const resultAssignment = source.indexOf(
-    'ocrResult.value = mergeAsyncOcrPayloadPreservingTeacherState(ocrResult.value, payload)',
+  const deferredAssignment = source.indexOf(
+    'deferredStrongYellowPresentation = payload',
     failure,
   )
   const completionAwait = source.indexOf('await candidatePresentationPromise')
+  const processingComplete = source.indexOf('processing.value = false', completionAwait)
+  const resultAssignment = source.indexOf(
+    'ocrResult.value = mergeAsyncOcrPayloadPreservingTeacherState(',
+    processingComplete,
+  )
 
   assert.ok(failure >= 0)
-  assert.ok(resultAssignment > failure)
-  assert.ok(completionAwait > resultAssignment)
+  assert.ok(deferredAssignment > failure)
+  assert.ok(completionAwait > deferredAssignment)
+  assert.ok(processingComplete > completionAwait)
+  assert.ok(resultAssignment > processingComplete)
 })

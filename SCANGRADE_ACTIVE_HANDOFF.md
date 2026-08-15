@@ -1,5 +1,26 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 private iPhone pre-acceptance presentation ordering fix
+
+- Physical iPhone run on private build 15.104 reached visible marking in about
+  nine seconds with two yellow digits, but settled marks disappeared during
+  manual correction and the UI returned to an indefinite `Scanning` state
+  after review. This run is rejected as a UX/lifecycle regression despite its
+  speed and lower yellow count.
+- Root cause was a pre-acceptance ordering gap: the strong-yellow promise made
+  its result interactive immediately before the enclosing OCR lifecycle set
+  `processing=false`. During that gap, the displayed-image priority selected
+  the clean scanning preview instead of the settled correction base, explaining
+  both the disappearing marks and the stale `Scanning` bar.
+- The private strong-yellow apply path now defers installing both successful
+  and fail-open results until after its candidate promise has settled and
+  `processing` is false. Recognition models, crops, thresholds, safety vetoes,
+  and public behavior are unchanged. The complete repository suite passes
+  **503/503**, the production build passes, and `git diff --check` passes.
+  Build label is
+  `2026.08.14-private-yellow-atomic-beta-15-105`; physical iPhone verification
+  is required before accepting the fix.
+
 ## 2026-08-14 private yellow-only three-frame application candidate
 
 - Added an explicit tailnet-only `v3BrowserLocalStrongApply=1` mode for the

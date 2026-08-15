@@ -8361,6 +8361,10 @@ const runRealOCR = async () => {
   // Assigned only by a pre-acceptance local-reader path and awaited in
   // `finally` before the completion event is emitted.
   let candidatePresentationPromise = null
+  // The private strong-yellow result must not become interactive while the
+  // enclosing OCR lifecycle still reports `processing`. Otherwise a fast
+  // correction can expose the clean scanning preview and erase settled marks.
+  let deferredStrongYellowPresentation = null
   const ocrStageTrace = [{ stage: 'starting', atMs: 0, durationMs: null }]
   const partialDebug = {
     stage: 'starting',
@@ -10433,10 +10437,7 @@ const runRealOCR = async () => {
               lastLiveOcrDebug.value.markedSheetDataUrl = payload.annotatedImageUrl || null
               void uploadLiveOcrDebug(lastLiveOcrDebug.value, 'browser-local-strong-yellow-complete')
             }
-            ocrResult.value = mergeAsyncOcrPayloadPreservingTeacherState(
-              ocrResult.value,
-              payload,
-            )
+            deferredStrongYellowPresentation = payload
           })
           .catch((error) => {
             const result = {
@@ -10452,10 +10453,7 @@ const runRealOCR = async () => {
             if (lastLiveOcrDebug.value) {
               lastLiveOcrDebug.value.v3BrowserLocalStrongShadow = result
             }
-            ocrResult.value = mergeAsyncOcrPayloadPreservingTeacherState(
-              ocrResult.value,
-              payload,
-            )
+            deferredStrongYellowPresentation = payload
           })
           .then(() => resetBrowserLocalStrongPersistentShadow())
       } else {
@@ -11224,6 +11222,12 @@ const runRealOCR = async () => {
       await candidatePresentationPromise
     }
     processing.value = false
+    if (deferredStrongYellowPresentation) {
+      ocrResult.value = mergeAsyncOcrPayloadPreservingTeacherState(
+        ocrResult.value,
+        deferredStrongYellowPresentation,
+      )
+    }
     emit('ocr-complete', ocrResult.value)
   }
 }
