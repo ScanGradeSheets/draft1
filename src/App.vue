@@ -18,9 +18,28 @@
 
     <main class="main" :class="{ 'main--student': isStudentMode }">
       <section v-if="isStudentMode && studentView === 'landing'" class="student-home">
+        <div v-if="batchDebugRouteEnabled" class="batch-packet-picker">
+          <h2>Known-packet batch</h2>
+          <p>Choose the packet on the table. Do not use P01, P04, P06, or P07.</p>
+          <div class="batch-packet-grid">
+            <button
+              v-for="packet in batchPacketOptions"
+              :key="packet"
+              type="button"
+              class="btn btn-secondary batch-packet-btn"
+              @click="beginBatchPacket(packet)"
+            >
+              {{ packet }}
+            </button>
+          </div>
+          <p class="batch-packet-help">B1–B5 follow the private packet order supplied for this test.</p>
+          <a class="btn btn-secondary student-home-btn" :href="publicUrl('')">
+            Regular ScanGrade
+          </a>
+        </div>
         <div class="student-home-actions">
           <button
-            v-if="!debugRouteEnabled"
+            v-if="!debugRouteEnabled && !batchDebugRouteEnabled"
             type="button"
             class="btn btn-primary student-home-btn student-home-scan-btn"
             @click="beginGuestScan"
@@ -28,17 +47,17 @@
             Start Scan
           </button>
           <button
-            v-else
+            v-else-if="debugRouteEnabled"
             type="button"
             class="btn btn-primary student-home-btn student-home-scan-btn"
             @click="beginDebugGuestScan"
           >
             Debug Scan (exports)
           </button>
-          <a v-if="!debugRouteEnabled" class="btn btn-worksheet student-home-btn" :href="publicUrl('worksheets/')">
+          <a v-if="!debugRouteEnabled && !batchDebugRouteEnabled" class="btn btn-worksheet student-home-btn" :href="publicUrl('worksheets/')">
             Get Worksheets
           </a>
-          <a v-else class="btn btn-secondary student-home-btn" :href="publicUrl('')">
+          <a v-else-if="debugRouteEnabled" class="btn btn-secondary student-home-btn" :href="publicUrl('')">
             Regular ScanGrade
           </a>
         </div>
@@ -171,6 +190,15 @@
           >
             {{ studentDebugExportLabel }}
           </button>
+          <button
+            v-if="studentScanStage && ocrResult && batchDebugRouteEnabled"
+            type="button"
+            class="student-scan-link student-scan-reset student-batch-next"
+            :disabled="cameraRef?.debugAutoUploadState !== 'saved'"
+            @click="resetStudentScan"
+          >
+            {{ cameraRef?.debugAutoUploadState === 'saved' ? 'Next Page' : 'Saving…' }}
+          </button>
           <template v-if="!studentScanStage">
             <button
               v-if="ocrResult && !ocrResult.error"
@@ -201,9 +229,10 @@
                 v-if="ocrResult"
                 type="button"
                 class="student-scan-link student-scan-reset"
+                :disabled="batchDebugRouteEnabled && cameraRef?.debugAutoUploadState !== 'saved'"
                 @click="resetStudentScan"
               >
-                New Scan
+                {{ batchDebugRouteEnabled ? 'Next Page' : 'New Scan' }}
               </button>
             </div>
           </template>
@@ -409,7 +438,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import CameraCapture from './components/CameraCapture.vue'
-import { isDebugRoutePathname } from './debug-route.js'
+import { isBatchDebugRoutePathname, isDebugRoutePathname } from './debug-route.js'
 import { publicUrl } from './public-paths.js'
 import {
   legacyVisibleViewportStyle,
@@ -426,9 +455,11 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.15-final-score-sequence-beta-15-111'
+const APP_BUILD_LABEL = '2026.08.15-known-packet-batch-beta-15-112'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 const debugRouteEnabled = typeof window !== 'undefined' && isDebugRoutePathname(window.location.pathname)
+const batchDebugRouteEnabled = typeof window !== 'undefined' && isBatchDebugRoutePathname(window.location.pathname)
+const batchPacketOptions = Object.freeze(['A', 'B1', 'B2', 'B3', 'B4', 'B5', 'P02', 'P03', 'P05', 'P08', 'P09', 'G2-9'])
 
 // Optional local gateway sync for desk testing. GitHub Pages and classroom devices
 // should not depend on a local server.
@@ -649,6 +680,15 @@ const beginDebugGuestScan = () => {
   continueAsGuest()
 }
 
+const beginBatchPacket = (packetId) => {
+  if (!batchPacketOptions.includes(packetId) || typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  url.searchParams.set('packetId', packetId)
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  setLiveDebugInUrl(true)
+  continueAsGuest()
+}
+
 const continueAsGuest = () => {
   clearActiveScanResult()
   selectedStudentName.value = ''
@@ -665,6 +705,11 @@ const startNamedScan = () => {
 
 const returnToLanding = () => {
   setLiveDebugInUrl(false)
+  if (typeof window !== 'undefined' && batchDebugRouteEnabled) {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('packetId')
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  }
   clearActiveScanResult()
   selectedStudentName.value = ''
   activeStudentSession.value = null
@@ -2295,6 +2340,42 @@ button.student-home-scan-btn:focus-visible {
 .student-scan-reset:focus-visible {
   background: #0f5d31;
   color: #fff;
+}
+
+.student-batch-next {
+  position: absolute;
+  right: 12px;
+  z-index: 4;
+}
+
+.batch-packet-picker {
+  width: min(540px, calc(100vw - 32px));
+  text-align: center;
+}
+
+.batch-packet-picker h2 {
+  margin: 0 0 8px;
+}
+
+.batch-packet-picker p {
+  margin: 0 0 14px;
+}
+
+.batch-packet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.batch-packet-btn {
+  min-height: 52px;
+  font-weight: 700;
+}
+
+.batch-packet-help {
+  font-size: 0.82rem;
+  opacity: 0.72;
 }
 
 /* Student Mode: dedicated layout — stage takes most of the screen */

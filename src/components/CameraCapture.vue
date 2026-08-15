@@ -1534,6 +1534,7 @@ defineExpose({
   copyLiveOcrDebugJson,
   connectDebugAutoUpload,
   debugAutoUploadConfigured,
+  debugAutoUploadState,
   debugExportBusy,
   debugComparisonPending,
 })
