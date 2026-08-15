@@ -1,5 +1,39 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 expiring private Safari gateway and automatic evidence upload
+
+- Tony requested the earlier simple collection workflow: one Safari link that
+  works without Tailscale on the phone and automatically sends each Debug Scan
+  into the Mac mini evidence store. Public `scangrade.io` remains unchanged,
+  and P01/P04/P06/P07 remain sealed.
+- Added `scripts/private_add2_test_gateway.mjs` and
+  `scripts/start_private_add2_test_gateway.mjs`. The gateway is reachable only
+  through a random activation path, sets an expiring Secure/HttpOnly/Strict
+  cookie, then proxies the private app and only the two required model files.
+  Unauthenticated app and model requests return 404. The embedded upload key
+  stays in the HTTPS fragment and is not committed or printed by the scripts.
+- Port 10000 was cleared before reconfiguration so its stale direct model route
+  could not survive. Its Funnel now exposes only `127.0.0.1:8794`; the separate
+  restricted upload Funnel on 8443 remains intact. The active link expires
+  after two hours. Disable port 10000 after the physical batch.
+- External verification passed: unauthenticated root/model both returned 404;
+  activation loaded the app with HTTP 200; authenticated encoder and decoder
+  downloads returned HTTP 200; and an authenticated synthetic upload returned
+  HTTP 201 and arrived under
+  `private-evidence/debug-scans/2026-08-15/2026-08-15_15-03-23-789-private-gateway-smoke-62a06bb0/`.
+- A mobile-WebKit replay through the exact activation URL completed in 11.831
+  seconds. The narrow add2 candidate completed in 2.095 seconds, made no wrong
+  promotion, held the result while pending, and settled outside `Scanning`.
+  The app itself automatically delivered the replay evidence to the receiver,
+  confirming the activation fragment and upload route together. Report:
+  `/tmp/scangrade-private-gateway-webkit-report.json` (ephemeral).
+- Next physical step: open the current activation link in ordinary iPhone
+  Safari and scan the already-opened add2 sheet once. Wait for
+  `Debug saved: <id>`; no manual Export is needed. Report elapsed time, yellow
+  positions, automatic advance, and whether any marks disappear. Do not open a
+  sealed packet yet and do not claim the candidate successful until this
+  physical run passes.
+
 ## 2026-08-15 internal add2 iPhone regression isolation and private candidate
 
 - Tony asked to exhaust the already-captured evidence before opening any sealed
