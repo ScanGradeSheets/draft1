@@ -1,5 +1,23 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 known-material physical batch complete
+
+- Tony completed the entire intended known-material batch. Reconciled inventory:
+  119 canonical successful pages (9 G2-9 legacy pages, 60 pages from A and
+  B1-B5, and 50 pages from P02/P03/P05/P08/P09), three extra successful
+  repeats, and three error sessions, for 125 distinct `scanSessionId` values.
+  The normal two upload phases per session must be deduplicated rather than
+  counted as separate scans.
+- The extra successes are one deliberate A ten-frame repeat and two additional
+  P02 two-digit-addition attempts. Error sessions are B2 mixed, P02 two-digit
+  addition, and P09 single-digit addition. P01/P04/P06/P07 remain sealed and
+  must not be inspected or used for retrospective analysis.
+- The next step is analysis, not a recognition patch. The XHigh-ready forensic
+  prompt is `docs/SCANGRADE_XHIGH_KNOWN_PACKET_FORENSIC_PROMPT_20260815.md`.
+  It requires a truth-ledger audit, complete yellow taxonomy, confident-error
+  audit, pipeline-layer attribution, runtime/error analysis, and ranked
+  precision-preserving experiments before medium-reasoning implementation.
+
 ## 2026-08-15 known-material batch route and reconciled physical inventory
 
 - Known Grade 1 batch collection is underway on the same iPhone. Packet A
