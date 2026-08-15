@@ -2,6 +2,22 @@
 
 ## 2026-08-15 known-material batch route and reconciled physical inventory
 
+- Physical auto-upload through the new route is now verified. Tony scanned the
+  complete G2-9 legacy cohort on an iPhone running iOS 18.7 / Mobile Safari
+  26.4. Nine distinct sessions arrived: three Addition, three Subtraction, and
+  three Mixed. Each contains the full captured/warped/marked images, 20 raw
+  crops, 20 model inputs, predictions, QR/layout data, and telemetry. The two
+  upload phases per session are expected snapshots and were deduplicated by
+  `scanSessionId`.
+- Against the locked handwritten truth, the untouched automatic result was
+  66/90 questions resolved (73.3%) with 66/66 correct and zero confident wrong;
+  151/180 digit slots resolved (83.9%) with 151/151 correct and zero confident
+  wrong. The 24 reviewed questions contained 29 reviewed digit slots. This is
+  excellent precision but insufficient automatic coverage for the 90% target.
+  It is a separately scored legacy-format result, not the primary Grade 1
+  launch metric. Full record:
+  `docs/SCANGRADE_G2_9_IPHONE_BATCH_20260815.md`.
+
 - Tony's physical overview confirms two distinct authentic-student groups:
   six pre-numbering packets (one A and five B packets) and numbered packets
   P01-P09. Existing capture records classify the six pre-numbering packets plus
@@ -44,8 +60,8 @@
   `548545ae1f79bef33b80c44b1bb76572b21c01396ba9cc16261c3df52c70d2c0`.
   Source commit `cf71300` is pushed. Receiver and restricted HTTPS ingress were
   running/reachable before preparing the activation QR. Physical auto-upload
-  from the new route remains the next gate; do not claim it until one known
-  sheet shows `Debug saved: <id>` and the matching bundle arrives.
+  from the new route has now passed for all nine G2-9 sheets. This verifies the
+  batch evidence path, not the primary Grade 1 accuracy target.
 
 ## 2026-08-15 landing alignment and final-score sequencing
 
