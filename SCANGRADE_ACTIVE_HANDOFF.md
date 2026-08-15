@@ -15,6 +15,17 @@
   incorrect rather than presented for manual transcription. Preserve this as
   a reproducible blank-detection defect for offline analysis after collection;
   do not patch recognition mid-cohort.
+- B2 exposed a separate reproducible long-session failure after six successful
+  pages. The seventh page (`sg-g1-lw-05-mixed-20`) passed the camera gate with
+  direct QR decode, focus 928, and a complete captured image, then failed in
+  OpenCV/WASM while `registering answer boxes` / `finding worksheet markers`
+  with numeric exception message `64691176`. The error bundle arrived with no
+  warp, crops, predictions, or marked sheet. The UI nevertheless enabled
+  `Next Page` because the error evidence itself had saved, and the subsequent
+  camera returned to `Ready` but would not capture. Treat this as a poisoned
+  processing-session and misleading error-control defect, not a bad photo.
+  Resume B2 from the mixed page after fully terminating/reopening Safari; do
+  not rescan its first six successful pages and do not patch mid-cohort.
 
 - Physical auto-upload through the new route is now verified. Tony scanned the
   complete G2-9 legacy cohort on an iPhone running iOS 18.7 / Mobile Safari
