@@ -1,0 +1,99 @@
+{
+  "successComparisons": [
+    {
+      "case": "A-ten-frame-deliberate-repeat",
+      "sessionA": "90378b7f-c011-4f42-9da7-9bda4f866e8e",
+      "sessionB": "b8f4e601-3622-4418-b934-5dbecf78ebc0",
+      "roleA": "canonical-success",
+      "roleB": "extra-success-repeat",
+      "capturedPixelSimilarity": 0.970993,
+      "warpedPixelSimilarity": 0.996237,
+      "meanRawCropPixelSimilarity": 0.990912,
+      "minRawCropPixelSimilarity": 0.984457,
+      "predictionDigitAgreement": 11,
+      "predictionDigitDenominator": 12,
+      "medianConfidenceAbsDelta": 0.049636,
+      "maxConfidenceAbsDelta": 0.423867,
+      "questionSuggestionAgreement": 5,
+      "questionDenominator": 6,
+      "questionReviewAgreement": 6,
+      "forcedFallbackA": null,
+      "forcedFallbackB": null,
+      "evidenceA": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-03-12-625-sg-g1-lw-06-ten-frames-cf17c7d1",
+      "evidenceB": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-03-33-715-sg-g1-lw-06-ten-frames-0d63c1e7"
+    },
+    {
+      "case": "P02-add-two-digit-success-retry-vs-fresh-canonical",
+      "sessionA": "4c19b5fd-d2ad-4d41-906f-d592fb5c6d07",
+      "sessionB": "259d2d86-7f1c-4290-8c14-5f05c03180cc",
+      "roleA": "extra-success-session-contaminated-retry",
+      "roleB": "canonical-success",
+      "capturedPixelSimilarity": 0.983055,
+      "warpedPixelSimilarity": 0.948031,
+      "meanRawCropPixelSimilarity": 0.962746,
+      "minRawCropPixelSimilarity": 0.933287,
+      "predictionDigitAgreement": 10,
+      "predictionDigitDenominator": 16,
+      "medianConfidenceAbsDelta": 0.108855,
+      "maxConfidenceAbsDelta": 0.865276,
+      "questionSuggestionAgreement": 3,
+      "questionDenominator": 8,
+      "questionReviewAgreement": 7,
+      "forcedFallbackA": "two-digit-unusable-quality-fallback-review",
+      "forcedFallbackB": "two-digit-unusable-quality-fallback-review",
+      "evidenceA": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-43-12-566-sg-g1-lw-02-add-2digit-3707e06d",
+      "evidenceB": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-46-36-018-sg-g1-lw-02-add-2digit-e8e7177e"
+    },
+    {
+      "case": "P02-add-two-digit-success-retry-vs-fresh-canonical",
+      "sessionA": "6ea71909-53b6-4d37-ba51-d07da3583841",
+      "sessionB": "259d2d86-7f1c-4290-8c14-5f05c03180cc",
+      "roleA": "extra-success-session-contaminated-retry",
+      "roleB": "canonical-success",
+      "capturedPixelSimilarity": 0.984463,
+      "warpedPixelSimilarity": 0.960186,
+      "meanRawCropPixelSimilarity": 0.964564,
+      "minRawCropPixelSimilarity": 0.943251,
+      "predictionDigitAgreement": 9,
+      "predictionDigitDenominator": 16,
+      "medianConfidenceAbsDelta": 0.18458,
+      "maxConfidenceAbsDelta": 0.92435,
+      "questionSuggestionAgreement": 3,
+      "questionDenominator": 8,
+      "questionReviewAgreement": 6,
+      "forcedFallbackA": "two-digit-unusable-quality-fallback-review",
+      "forcedFallbackB": "two-digit-unusable-quality-fallback-review",
+      "evidenceA": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-43-31-800-sg-g1-lw-02-add-2digit-18acfaa7",
+      "evidenceB": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-46-36-018-sg-g1-lw-02-add-2digit-e8e7177e"
+    }
+  ],
+  "errorRecoveryComparisons": [
+    {
+      "case": "B2-05-mixed-20-error-to-nearest-success",
+      "errorSessionId": "dbe548d7-ae04-42c2-94f5-87304f44be96",
+      "recoverySessionId": "0a9b3e33-a32d-409c-bb8f-84fe4074b92d",
+      "capturedPixelSimilarity": 0.966963,
+      "elapsedBetweenBundlesMs": 410262,
+      "errorEvidence": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-18-06-117-sg-g1-lw-05-mixed-20-51567c79",
+      "recoveryEvidence": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-24-56-379-sg-g1-lw-05-mixed-20-f2a2907f"
+    },
+    {
+      "case": "P02-02-add-2digit-error-to-nearest-success",
+      "errorSessionId": "fd02b3a0-203a-4db9-bd85-0356ca870c20",
+      "recoverySessionId": "4c19b5fd-d2ad-4d41-906f-d592fb5c6d07",
+      "capturedPixelSimilarity": 0.951114,
+      "elapsedBetweenBundlesMs": 32557,
+      "errorEvidence": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-42-40-009-sg-g1-lw-02-add-2digit-3ff8057b",
+      "recoveryEvidence": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-43-12-566-sg-g1-lw-02-add-2digit-3707e06d"
+    },
+    {
+      "case": "P09-01-add-1digit-error-to-nearest-success",
+      "errorSessionId": "13f7a9e7-3e14-4f7a-8d91-4d5dfb36fc73",
+      "recoverySessionId": "2c8c8287-900e-44d1-812d-61584aed6d28",
+      "capturedPixelSimilarity": 0.978351,
+      "elapsedBetweenBundlesMs": 37275,
+      "errorEvidence": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-00-38-658-sg-g1-lw-01-add-1digit-fa07b015",
+      "recoveryEvidence": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-01-15-933-sg-g1-lw-01-add-1digit-40b694bc"
+    }
+  ]
+}

@@ -1,0 +1,577 @@
+{
+  "questionLevel": [
+    {
+      "id": "B2|sg-g1-lw-10-place-value-50|6",
+      "cohort": "primary-grade1",
+      "packetId": "B2",
+      "layoutId": "sg-g1-lw-10-place-value-50",
+      "layoutFamily": "10-place-value-50",
+      "questionNum": 6,
+      "questionPositionFraction": 1.0,
+      "pageColumn": "right",
+      "canonicalScanSessionId": "3f3da395-9528-45da-9387-39b6cc1e9f08",
+      "canonicalPageOrdinal": 10,
+      "physicalSlotCount": 2,
+      "visibleResponseCharacterCount": 2,
+      "visibleInscription": "41",
+      "mathematicalExpectedAnswer": "47",
+      "mathematicalAnswerCorrect": false,
+      "labelProvenance": "current-batch prediction-blind visual review; compared afterward with historical H01-like handwriting evidence",
+      "ambiguityFlag": false,
+      "ambiguityNote": null,
+      "notableCondition": null,
+      "slotPlacement": "two-character",
+      "suggestedTranscription": "47",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineReportedMathCorrect": true,
+      "preFallbackQuestionReviewField": false,
+      "slotStatuses": [
+        "correct",
+        "correct"
+      ],
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "captureFocusScore": 939.3821690311303,
+      "captureLumaMean": 161.2427902964278,
+      "registrationQualityBand": "coherent-max-residual-0-3px",
+      "registrationMaxResidualPx": 2.575034742130793,
+      "evidence": {
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/debug.json",
+        "capturedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/captured.png",
+        "warpedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/warped.png",
+        "rawCrops": [
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/raw-crops/raw-11.png",
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/raw-crops/raw-12.png"
+        ],
+        "modelInputs": [
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/model-inputs/model-11.png",
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/model-inputs/model-12.png"
+        ]
+      }
+    },
+    {
+      "id": "B5|sg-g1-lw-03-sub-1digit|5",
+      "cohort": "primary-grade1",
+      "packetId": "B5",
+      "layoutId": "sg-g1-lw-03-sub-1digit",
+      "layoutFamily": "03-sub-1digit",
+      "questionNum": 5,
+      "questionPositionFraction": 0.625,
+      "pageColumn": "right",
+      "canonicalScanSessionId": "70dee4e9-7028-4038-8719-574fc042d756",
+      "canonicalPageOrdinal": 5,
+      "physicalSlotCount": 1,
+      "visibleResponseCharacterCount": 1,
+      "visibleInscription": "5",
+      "mathematicalExpectedAnswer": "5",
+      "mathematicalAnswerCorrect": true,
+      "labelProvenance": "current-batch prediction-blind visual review; compared afterward with historical H04-like handwriting evidence",
+      "ambiguityFlag": false,
+      "ambiguityNote": null,
+      "notableCondition": "retraced but final visible inscription is 5",
+      "slotPlacement": null,
+      "suggestedTranscription": "8",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineReportedMathCorrect": false,
+      "preFallbackQuestionReviewField": false,
+      "slotStatuses": [
+        "incorrect"
+      ],
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "captureFocusScore": 887.4791904793922,
+      "captureLumaMean": 154.5874108364154,
+      "registrationQualityBand": "coherent-max-residual-3-6px",
+      "registrationMaxResidualPx": 3.51961845572549,
+      "evidence": {
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-30-558-sg-g1-lw-03-sub-1digit-2e8f6c37/debug.json",
+        "capturedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-30-558-sg-g1-lw-03-sub-1digit-2e8f6c37/captured.png",
+        "warpedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-30-558-sg-g1-lw-03-sub-1digit-2e8f6c37/warped.png",
+        "rawCrops": [
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-30-558-sg-g1-lw-03-sub-1digit-2e8f6c37/raw-crops/raw-05.png"
+        ],
+        "modelInputs": [
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-30-558-sg-g1-lw-03-sub-1digit-2e8f6c37/model-inputs/model-05.png"
+        ]
+      }
+    },
+    {
+      "id": "P05|sg-g1-lw-07-dot-collections|4",
+      "cohort": "primary-grade1",
+      "packetId": "P05",
+      "layoutId": "sg-g1-lw-07-dot-collections",
+      "layoutFamily": "07-dot-collections",
+      "questionNum": 4,
+      "questionPositionFraction": 0.6667,
+      "pageColumn": "right",
+      "canonicalScanSessionId": "0902f056-ccb3-4b34-b9d6-94efaebd7ab8",
+      "canonicalPageOrdinal": 1,
+      "physicalSlotCount": 2,
+      "visibleResponseCharacterCount": 2,
+      "visibleInscription": "13",
+      "mathematicalExpectedAnswer": "13",
+      "mathematicalAnswerCorrect": true,
+      "labelProvenance": "current-batch visual second pass over the verified July five-packet manifest; August crops control on any conflict",
+      "ambiguityFlag": false,
+      "ambiguityNote": null,
+      "notableCondition": null,
+      "slotPlacement": "two-character",
+      "suggestedTranscription": "17",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineReportedMathCorrect": false,
+      "preFallbackQuestionReviewField": false,
+      "slotStatuses": [
+        "correct",
+        "incorrect"
+      ],
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "captureFocusScore": 1313.5914408659987,
+      "captureLumaMean": 156.78350769076957,
+      "registrationQualityBand": "coherent-max-residual-0-3px",
+      "registrationMaxResidualPx": 2.9098559458728865,
+      "evidence": {
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/debug.json",
+        "capturedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/captured.png",
+        "warpedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/warped.png",
+        "rawCrops": [
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/raw-crops/raw-07.png",
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/raw-crops/raw-08.png"
+        ],
+        "modelInputs": [
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/model-inputs/model-07.png",
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/model-inputs/model-08.png"
+        ]
+      }
+    },
+    {
+      "id": "P08|sg-g1-lw-10-place-value-50|2",
+      "cohort": "primary-grade1",
+      "packetId": "P08",
+      "layoutId": "sg-g1-lw-10-place-value-50",
+      "layoutFamily": "10-place-value-50",
+      "questionNum": 2,
+      "questionPositionFraction": 0.3333,
+      "pageColumn": "left",
+      "canonicalScanSessionId": "843d088c-5504-421c-b3b4-ff87ed36de68",
+      "canonicalPageOrdinal": 10,
+      "physicalSlotCount": 2,
+      "visibleResponseCharacterCount": 2,
+      "visibleInscription": "40",
+      "mathematicalExpectedAnswer": "40",
+      "mathematicalAnswerCorrect": true,
+      "labelProvenance": "current-batch visual second pass over July development labels; August crops control on any conflict",
+      "ambiguityFlag": false,
+      "ambiguityNote": null,
+      "notableCondition": null,
+      "slotPlacement": "two-character",
+      "suggestedTranscription": "41",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineReportedMathCorrect": false,
+      "preFallbackQuestionReviewField": false,
+      "slotStatuses": [
+        "correct",
+        "incorrect"
+      ],
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "captureFocusScore": 806.8818328514758,
+      "captureLumaMean": 153.38147663956846,
+      "registrationQualityBand": "coherent-max-residual-0-3px",
+      "registrationMaxResidualPx": 1.3669920988659352,
+      "evidence": {
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/debug.json",
+        "capturedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/captured.png",
+        "warpedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/warped.png",
+        "rawCrops": [
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/raw-crops/raw-03.png",
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/raw-crops/raw-04.png"
+        ],
+        "modelInputs": [
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/model-inputs/model-03.png",
+          "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/model-inputs/model-04.png"
+        ]
+      }
+    }
+  ],
+  "digitSlotLevel": [
+    {
+      "id": "A|sg-g1-lw-06-ten-frames|3|slot-1",
+      "questionId": "A|sg-g1-lw-06-ten-frames|3",
+      "cohort": "primary-grade1",
+      "packetId": "A",
+      "layoutId": "sg-g1-lw-06-ten-frames",
+      "layoutFamily": "06-ten-frames",
+      "questionNum": 3,
+      "questionPositionFraction": 0.5,
+      "pageColumn": "left",
+      "canonicalScanSessionId": "90378b7f-c011-4f42-9da7-9bda4f866e8e",
+      "canonicalPageOrdinal": 2,
+      "physicalSlotCount": 2,
+      "slotIndex": 1,
+      "physicalSide": "right",
+      "slotSemantic": "right-optional",
+      "visibleSlotInscription": null,
+      "truthDigitClass": "blank",
+      "displayedDigit": "1",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineSlotStatus": "correct",
+      "pageForcedReview": false,
+      "ambiguityFlag": false,
+      "labelProvenance": "current-batch prediction-blind visual review; compared afterward with historical H02-like handwriting evidence",
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "registrationQualityBand": "coherent-max-residual-over-6px",
+      "prediction": {
+        "digit": 1,
+        "confidence": 0.6760262846946716,
+        "topGap": 0.6039141416549683,
+        "reviewNeeded": false,
+        "preprocessDisagreement": false,
+        "preprocessReviewReason": null,
+        "structuralReview": false,
+        "unexpectedLeadingDigitReview": false,
+        "highRiskMismatchReview": false,
+        "topK": [
+          {
+            "digit": 1,
+            "confidence": 0.6760262846946716
+          },
+          {
+            "digit": 6,
+            "confidence": 0.07211214303970337
+          },
+          {
+            "digit": 5,
+            "confidence": 0.047693394124507904
+          }
+        ]
+      },
+      "evidence": {
+        "rawCrop": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-03-12-625-sg-g1-lw-06-ten-frames-cf17c7d1/raw-crops/raw-06.png",
+        "modelInput": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-03-12-625-sg-g1-lw-06-ten-frames-cf17c7d1/model-inputs/model-06.png",
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-03-12-625-sg-g1-lw-06-ten-frames-cf17c7d1/debug.json"
+      }
+    },
+    {
+      "id": "B2|sg-g1-lw-10-place-value-50|6|slot-1",
+      "questionId": "B2|sg-g1-lw-10-place-value-50|6",
+      "cohort": "primary-grade1",
+      "packetId": "B2",
+      "layoutId": "sg-g1-lw-10-place-value-50",
+      "layoutFamily": "10-place-value-50",
+      "questionNum": 6,
+      "questionPositionFraction": 1.0,
+      "pageColumn": "right",
+      "canonicalScanSessionId": "3f3da395-9528-45da-9387-39b6cc1e9f08",
+      "canonicalPageOrdinal": 10,
+      "physicalSlotCount": 2,
+      "slotIndex": 1,
+      "physicalSide": "right",
+      "slotSemantic": "ones",
+      "visibleSlotInscription": "1",
+      "truthDigitClass": "1",
+      "displayedDigit": "7",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineSlotStatus": "correct",
+      "pageForcedReview": false,
+      "ambiguityFlag": false,
+      "labelProvenance": "current-batch prediction-blind visual review; compared afterward with historical H01-like handwriting evidence",
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "registrationQualityBand": "coherent-max-residual-0-3px",
+      "prediction": {
+        "digit": 7,
+        "confidence": 0.88,
+        "topGap": 0.42,
+        "reviewNeeded": false,
+        "preprocessDisagreement": true,
+        "preprocessReviewReason": null,
+        "structuralReview": false,
+        "unexpectedLeadingDigitReview": false,
+        "highRiskMismatchReview": false,
+        "topK": [
+          {
+            "digit": 7,
+            "confidence": 0.88
+          },
+          {
+            "digit": 9,
+            "confidence": 0.52
+          },
+          {
+            "digit": 1,
+            "confidence": 0.43000000000000005
+          }
+        ]
+      },
+      "evidence": {
+        "rawCrop": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/raw-crops/raw-12.png",
+        "modelInput": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/model-inputs/model-12.png",
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85/debug.json"
+      }
+    },
+    {
+      "id": "B5|sg-g1-lw-03-sub-1digit|5|slot-0",
+      "questionId": "B5|sg-g1-lw-03-sub-1digit|5",
+      "cohort": "primary-grade1",
+      "packetId": "B5",
+      "layoutId": "sg-g1-lw-03-sub-1digit",
+      "layoutFamily": "03-sub-1digit",
+      "questionNum": 5,
+      "questionPositionFraction": 0.625,
+      "pageColumn": "right",
+      "canonicalScanSessionId": "70dee4e9-7028-4038-8719-574fc042d756",
+      "canonicalPageOrdinal": 5,
+      "physicalSlotCount": 1,
+      "slotIndex": 0,
+      "physicalSide": "single",
+      "slotSemantic": "single-physical-slot",
+      "visibleSlotInscription": "5",
+      "truthDigitClass": "5",
+      "displayedDigit": "8",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineSlotStatus": "incorrect",
+      "pageForcedReview": false,
+      "ambiguityFlag": false,
+      "labelProvenance": "current-batch prediction-blind visual review; compared afterward with historical H04-like handwriting evidence",
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "registrationQualityBand": "coherent-max-residual-3-6px",
+      "prediction": {
+        "digit": 8,
+        "confidence": 0.8757321238517761,
+        "topGap": 0.8127201050519943,
+        "reviewNeeded": false,
+        "preprocessDisagreement": false,
+        "preprocessReviewReason": null,
+        "structuralReview": false,
+        "unexpectedLeadingDigitReview": false,
+        "highRiskMismatchReview": false,
+        "topK": [
+          {
+            "digit": 8,
+            "confidence": 0.8757321238517761
+          },
+          {
+            "digit": 9,
+            "confidence": 0.0630120187997818
+          },
+          {
+            "digit": 5,
+            "confidence": 0.026824263855814934
+          }
+        ]
+      },
+      "evidence": {
+        "rawCrop": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-30-558-sg-g1-lw-03-sub-1digit-2e8f6c37/raw-crops/raw-05.png",
+        "modelInput": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-30-558-sg-g1-lw-03-sub-1digit-2e8f6c37/model-inputs/model-05.png",
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-30-558-sg-g1-lw-03-sub-1digit-2e8f6c37/debug.json"
+      }
+    },
+    {
+      "id": "P05|sg-g1-lw-07-dot-collections|4|slot-1",
+      "questionId": "P05|sg-g1-lw-07-dot-collections|4",
+      "cohort": "primary-grade1",
+      "packetId": "P05",
+      "layoutId": "sg-g1-lw-07-dot-collections",
+      "layoutFamily": "07-dot-collections",
+      "questionNum": 4,
+      "questionPositionFraction": 0.6667,
+      "pageColumn": "right",
+      "canonicalScanSessionId": "0902f056-ccb3-4b34-b9d6-94efaebd7ab8",
+      "canonicalPageOrdinal": 1,
+      "physicalSlotCount": 2,
+      "slotIndex": 1,
+      "physicalSide": "right",
+      "slotSemantic": "ones",
+      "visibleSlotInscription": "3",
+      "truthDigitClass": "3",
+      "displayedDigit": "7",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineSlotStatus": "incorrect",
+      "pageForcedReview": false,
+      "ambiguityFlag": false,
+      "labelProvenance": "current-batch visual second pass over the verified July five-packet manifest; August crops control on any conflict",
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "registrationQualityBand": "coherent-max-residual-0-3px",
+      "prediction": {
+        "digit": 7,
+        "confidence": 0.9887938499450684,
+        "topGap": 0.9812164125032723,
+        "reviewNeeded": false,
+        "preprocessDisagreement": false,
+        "preprocessReviewReason": null,
+        "structuralReview": false,
+        "unexpectedLeadingDigitReview": false,
+        "highRiskMismatchReview": false,
+        "topK": [
+          {
+            "digit": 7,
+            "confidence": 0.9887938499450684
+          },
+          {
+            "digit": 2,
+            "confidence": 0.007577437441796064
+          },
+          {
+            "digit": 3,
+            "confidence": 0.0016192140756174922
+          }
+        ]
+      },
+      "evidence": {
+        "rawCrop": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/raw-crops/raw-08.png",
+        "modelInput": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/model-inputs/model-08.png",
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990/debug.json"
+      }
+    },
+    {
+      "id": "P08|sg-g1-lw-10-place-value-50|2|slot-1",
+      "questionId": "P08|sg-g1-lw-10-place-value-50|2",
+      "cohort": "primary-grade1",
+      "packetId": "P08",
+      "layoutId": "sg-g1-lw-10-place-value-50",
+      "layoutFamily": "10-place-value-50",
+      "questionNum": 2,
+      "questionPositionFraction": 0.3333,
+      "pageColumn": "left",
+      "canonicalScanSessionId": "843d088c-5504-421c-b3b4-ff87ed36de68",
+      "canonicalPageOrdinal": 10,
+      "physicalSlotCount": 2,
+      "slotIndex": 1,
+      "physicalSide": "right",
+      "slotSemantic": "ones",
+      "visibleSlotInscription": "0",
+      "truthDigitClass": "0",
+      "displayedDigit": "1",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineSlotStatus": "incorrect",
+      "pageForcedReview": false,
+      "ambiguityFlag": false,
+      "labelProvenance": "current-batch visual second pass over July development labels; August crops control on any conflict",
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "registrationQualityBand": "coherent-max-residual-0-3px",
+      "prediction": {
+        "digit": 1,
+        "confidence": 0.9731483459472656,
+        "topGap": 0.9602203723043203,
+        "reviewNeeded": false,
+        "preprocessDisagreement": false,
+        "preprocessReviewReason": null,
+        "structuralReview": false,
+        "unexpectedLeadingDigitReview": false,
+        "highRiskMismatchReview": false,
+        "topK": [
+          {
+            "digit": 1,
+            "confidence": 0.9731483459472656
+          },
+          {
+            "digit": 5,
+            "confidence": 0.01292797364294529
+          },
+          {
+            "digit": 4,
+            "confidence": 0.0037970147095620632
+          }
+        ]
+      },
+      "evidence": {
+        "rawCrop": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/raw-crops/raw-04.png",
+        "modelInput": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/model-inputs/model-04.png",
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68/debug.json"
+      }
+    },
+    {
+      "id": "P09|sg-g1-lw-09-number-patterns|5|slot-1",
+      "questionId": "P09|sg-g1-lw-09-number-patterns|5",
+      "cohort": "primary-grade1",
+      "packetId": "P09",
+      "layoutId": "sg-g1-lw-09-number-patterns",
+      "layoutFamily": "09-number-patterns",
+      "questionNum": 5,
+      "questionPositionFraction": 0.8333,
+      "pageColumn": "right",
+      "canonicalScanSessionId": "66e27d95-f560-4be0-8e7c-defeec87dabf",
+      "canonicalPageOrdinal": 9,
+      "physicalSlotCount": 2,
+      "slotIndex": 1,
+      "physicalSide": "right",
+      "slotSemantic": "ones",
+      "visibleSlotInscription": "0",
+      "truthDigitClass": "0",
+      "displayedDigit": "2",
+      "automatic": true,
+      "reviewed": false,
+      "ocrScorable": true,
+      "ocrCorrect": false,
+      "engineSlotStatus": "correct",
+      "pageForcedReview": false,
+      "ambiguityFlag": false,
+      "labelProvenance": "current-batch visual second pass over July primary labels; August crops control on any conflict",
+      "forcedFallbackReason": null,
+      "captureQualityBand": "accepted-focus-800-plus",
+      "registrationQualityBand": "coherent-max-residual-0-3px",
+      "prediction": {
+        "digit": 2,
+        "confidence": 0.55,
+        "topGap": 0.030000000000000027,
+        "reviewNeeded": false,
+        "preprocessDisagreement": true,
+        "preprocessReviewReason": "right-slot-expected-edge-default",
+        "structuralReview": false,
+        "unexpectedLeadingDigitReview": false,
+        "highRiskMismatchReview": false,
+        "topK": [
+          {
+            "digit": 2,
+            "confidence": 0.55
+          },
+          {
+            "digit": 7,
+            "confidence": 0.52
+          },
+          {
+            "digit": 5,
+            "confidence": 0.43000000000000005
+          }
+        ]
+      },
+      "evidence": {
+        "rawCrop": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-03-22-201-sg-g1-lw-09-number-patterns-07b1d59f/raw-crops/raw-10.png",
+        "modelInput": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-03-22-201-sg-g1-lw-09-number-patterns-07b1d59f/model-inputs/model-10.png",
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-03-22-201-sg-g1-lw-09-number-patterns-07b1d59f/debug.json"
+      }
+    }
+  ]
+}

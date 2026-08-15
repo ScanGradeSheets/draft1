@@ -1,0 +1,104 @@
+[
+  {
+    "packetId": "B2",
+    "layoutId": "sg-g1-lw-05-mixed-20",
+    "scanSessionId": "dbe548d7-ae04-42c2-94f5-87304f44be96",
+    "numericException": "64691176",
+    "lastOcrStage": {
+      "stage": "finding worksheet markers",
+      "atMs": 182,
+      "durationMs": null
+    },
+    "lastWorksheetStage": {
+      "stage": "registering answer boxes",
+      "atMs": 294,
+      "durationMs": null
+    },
+    "captureQualityBand": "accepted-focus-800-plus",
+    "focusScore": 928.0407954010624,
+    "answerBoxRegistrationPersisted": false,
+    "digitInferenceStarted": false,
+    "observedPipelineLayer": "9-browser-runtime/WASM-state-during-layer-3-answer-box-registration",
+    "mostLikelyClass": "OpenCV.js/WASM resource-lifetime or exception-marshalling failure inside answer-box registration",
+    "evidenceStrength": "moderate: identical terminal stage and numeric-only exception shape across three layouts; no stack or heap telemetry",
+    "notDemonstrated": [
+      "a six-page endurance threshold",
+      "a recognition-model failure",
+      "bad capture as the trigger",
+      "the exact leaking or double-freed object"
+    ],
+    "smallestRepro": "Replay the saved chronological page prefix into a registration-only harness in persistent Mobile Safari/WebKit state, then cold-run the failing page; instrument cv.Mat/delete ownership, WASM heap size, stage entry/exit, and thrown values. Assert identical output and stable heap over 50 loops and after an injected registration failure.",
+    "evidence": {
+      "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-18-06-117-sg-g1-lw-05-mixed-20-51567c79/debug.json",
+      "capturedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-18-06-117-sg-g1-lw-05-mixed-20-51567c79/captured.png"
+    }
+  },
+  {
+    "packetId": "P02",
+    "layoutId": "sg-g1-lw-02-add-2digit",
+    "scanSessionId": "fd02b3a0-203a-4db9-bd85-0356ca870c20",
+    "numericException": "88861992",
+    "lastOcrStage": {
+      "stage": "finding worksheet markers",
+      "atMs": 181,
+      "durationMs": null
+    },
+    "lastWorksheetStage": {
+      "stage": "registering answer boxes",
+      "atMs": 293,
+      "durationMs": null
+    },
+    "captureQualityBand": "accepted-focus-650-799",
+    "focusScore": 782.0588650574867,
+    "answerBoxRegistrationPersisted": false,
+    "digitInferenceStarted": false,
+    "observedPipelineLayer": "9-browser-runtime/WASM-state-during-layer-3-answer-box-registration",
+    "mostLikelyClass": "OpenCV.js/WASM resource-lifetime or exception-marshalling failure inside answer-box registration",
+    "evidenceStrength": "moderate: identical terminal stage and numeric-only exception shape across three layouts; no stack or heap telemetry",
+    "notDemonstrated": [
+      "a six-page endurance threshold",
+      "a recognition-model failure",
+      "bad capture as the trigger",
+      "the exact leaking or double-freed object"
+    ],
+    "smallestRepro": "Replay the saved chronological page prefix into a registration-only harness in persistent Mobile Safari/WebKit state, then cold-run the failing page; instrument cv.Mat/delete ownership, WASM heap size, stage entry/exit, and thrown values. Assert identical output and stable heap over 50 loops and after an injected registration failure.",
+    "evidence": {
+      "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-42-40-009-sg-g1-lw-02-add-2digit-3ff8057b/debug.json",
+      "capturedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-42-40-009-sg-g1-lw-02-add-2digit-3ff8057b/captured.png"
+    }
+  },
+  {
+    "packetId": "P09",
+    "layoutId": "sg-g1-lw-01-add-1digit",
+    "scanSessionId": "13f7a9e7-3e14-4f7a-8d91-4d5dfb36fc73",
+    "numericException": "192220584",
+    "lastOcrStage": {
+      "stage": "finding worksheet markers",
+      "atMs": 181,
+      "durationMs": null
+    },
+    "lastWorksheetStage": {
+      "stage": "registering answer boxes",
+      "atMs": 439,
+      "durationMs": null
+    },
+    "captureQualityBand": "accepted-focus-650-799",
+    "focusScore": 782.8566529953607,
+    "answerBoxRegistrationPersisted": false,
+    "digitInferenceStarted": false,
+    "observedPipelineLayer": "9-browser-runtime/WASM-state-during-layer-3-answer-box-registration",
+    "mostLikelyClass": "OpenCV.js/WASM resource-lifetime or exception-marshalling failure inside answer-box registration",
+    "evidenceStrength": "moderate: identical terminal stage and numeric-only exception shape across three layouts; no stack or heap telemetry",
+    "notDemonstrated": [
+      "a six-page endurance threshold",
+      "a recognition-model failure",
+      "bad capture as the trigger",
+      "the exact leaking or double-freed object"
+    ],
+    "smallestRepro": "Replay the saved chronological page prefix into a registration-only harness in persistent Mobile Safari/WebKit state, then cold-run the failing page; instrument cv.Mat/delete ownership, WASM heap size, stage entry/exit, and thrown values. Assert identical output and stable heap over 50 loops and after an injected registration failure.",
+    "evidence": {
+      "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-00-38-658-sg-g1-lw-01-add-1digit-fa07b015/debug.json",
+      "capturedPage": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-00-38-658-sg-g1-lw-01-add-1digit-fa07b015/captured.png"
+    }
+  }
+]

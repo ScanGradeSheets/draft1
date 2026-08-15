@@ -1,0 +1,849 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Prediction-blind raw-crop contact sheets for handwriting-truth QA",
+  "forbiddenPacketsRead": [],
+  "reconciliation": {
+    "distinctSessions": 125,
+    "canonicalSuccesses": 119,
+    "extraSuccesses": 3,
+    "errors": 3
+  },
+  "sheets": [
+    {
+      "packetId": "A",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/A-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "cddea6c7-6501-4bf3-bb4e-e8545d1b05fc",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-03-55-822-sg-g1-lw-01-add-1digit-d88b2be9",
+          "questionCount": 8
+        },
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "c41473f9-dc2f-42cb-9cd2-4e106200b8af",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-04-16-387-sg-g1-lw-02-add-2digit-fcd8db54",
+          "questionCount": 8
+        },
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "bbccb159-1ba0-4a33-9bfd-45a94207e32d",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-04-34-664-sg-g1-lw-03-sub-1digit-c6140bd5",
+          "questionCount": 8
+        },
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "a01dceb7-f9ef-4c3e-a18f-5b6569ccb4ee",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-04-53-020-sg-g1-lw-04-sub-2digit-dad60d4c",
+          "questionCount": 8
+        },
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "598218e3-0867-4120-8110-f93c9fd5bd27",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-05-12-685-sg-g1-lw-05-mixed-20-5f7a3e95",
+          "questionCount": 8
+        },
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "90378b7f-c011-4f42-9da7-9bda4f866e8e",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-03-12-625-sg-g1-lw-06-ten-frames-cf17c7d1",
+          "questionCount": 6
+        },
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "d96bc19c-6d00-4e33-94cd-8d9df2799547",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-02-56-587-sg-g1-lw-07-dot-collections-9d55f2a0",
+          "questionCount": 6
+        },
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "8025078e-3931-41fb-a32e-6314708bc9fe",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-05-39-114-sg-g1-lw-08-number-bonds-bf571a73",
+          "questionCount": 6
+        },
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "75020937-c9d5-4d75-980e-d5943cd0a7a0",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-05-56-923-sg-g1-lw-09-number-patterns-390a7642",
+          "questionCount": 6
+        },
+        {
+          "packetId": "A",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "a827b2ec-9f49-439d-84d2-f3589cb09b68",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-06-13-648-sg-g1-lw-10-place-value-50-371c9876",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "B1",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/B1-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "a053ec1c-3dd9-48ce-8e89-f64cc69c266a",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-10-20-221-sg-g1-lw-01-add-1digit-ed2df9fd",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "5eec0ffa-66f7-4f2d-8709-8dec676777a1",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-10-39-335-sg-g1-lw-02-add-2digit-653f6954",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "c49e8881-f767-43eb-842a-61958040fa12",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-10-55-827-sg-g1-lw-03-sub-1digit-b84934cf",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "01c0985d-1204-42c0-b583-5a72524c7494",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-11-21-427-sg-g1-lw-04-sub-2digit-347a2d1c",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "259e183b-686f-40a9-af76-e6e6786637f4",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-11-41-562-sg-g1-lw-05-mixed-20-5e3a0969",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "b0c29cc0-f6eb-459c-9b03-0265808573b6",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-10-03-595-sg-g1-lw-06-ten-frames-4635f0ae",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "412dfbe4-9ff1-44f7-bb1a-1384cd8b0e38",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-09-49-255-sg-g1-lw-07-dot-collections-7d546243",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "45b4033c-96a8-43d6-ba5f-cc86a2189f08",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-11-55-467-sg-g1-lw-08-number-bonds-3c836873",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "a4c36136-a755-4d9e-b636-0f04dd155433",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-12-11-753-sg-g1-lw-09-number-patterns-4531585c",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B1",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "9dcdab2f-d47c-4332-a061-2c5f48529707",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-12-29-160-sg-g1-lw-10-place-value-50-bfdaee0d",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "B2",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/B2-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "87f4e1e8-8e9f-432c-a541-b9a669e1bd6f",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-17-01-471-sg-g1-lw-01-add-1digit-1b6bfb81",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "9565c98e-7250-44a1-8c47-fcc0f0b7c1d2",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-17-19-178-sg-g1-lw-02-add-2digit-455e07a0",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "6eb249a5-be73-4ca4-b20f-3f58475ce3b5",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-17-37-921-sg-g1-lw-03-sub-1digit-189976f5",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "0f42ca6f-f1d8-4960-b95a-a0cb0beba524",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-17-54-745-sg-g1-lw-04-sub-2digit-31e8b044",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "0a9b3e33-a32d-409c-bb8f-84fe4074b92d",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-24-56-379-sg-g1-lw-05-mixed-20-f2a2907f",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "61b5e1d6-87df-4919-8002-a0a7a2521422",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-16-44-801-sg-g1-lw-06-ten-frames-5018cf99",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "da6e4c20-669e-4b4a-94a6-1c11a0276b62",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-16-24-143-sg-g1-lw-07-dot-collections-4cc27047",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "48c663bd-d04b-4c33-86a0-a774c469d798",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-13-769-sg-g1-lw-08-number-bonds-aeeb7b63",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "5464ae8d-5065-4aa7-a637-003b190de3b8",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-32-063-sg-g1-lw-09-number-patterns-c6956407",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B2",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "3f3da395-9528-45da-9387-39b6cc1e9f08",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-25-51-691-sg-g1-lw-10-place-value-50-328e3f85",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "B3",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/B3-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "5d223664-945a-4efb-8824-c9e02ca65b6a",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-28-39-224-sg-g1-lw-01-add-1digit-239010b4",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "4233aedc-8ec7-422d-a9c3-3fd275deef51",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-28-58-939-sg-g1-lw-02-add-2digit-9f0ca46e",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "770b65e7-cecd-4a82-9326-4a553ba2cecb",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-29-15-799-sg-g1-lw-03-sub-1digit-27917ac4",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "c848daf5-8fa1-486c-87c9-318d870b8ddb",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-29-38-458-sg-g1-lw-04-sub-2digit-28677a26",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "a3f5be93-d3ef-45a1-96bb-b1eb23e8c904",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-29-55-860-sg-g1-lw-05-mixed-20-42b22a9b",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "a9419e0a-f252-47c2-95ee-1a0217f91be0",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-28-15-263-sg-g1-lw-06-ten-frames-cd25cde7",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "545ac184-64d5-4dc1-b4f5-7e0d1a625524",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-27-58-942-sg-g1-lw-07-dot-collections-0282c8b7",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "5c507ab9-fc42-41c0-baa9-4ea931e90c6f",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-30-19-652-sg-g1-lw-08-number-bonds-0a44fcff",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "e64eb06a-880e-403e-975b-8dec7426f578",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-30-38-480-sg-g1-lw-09-number-patterns-b014c0c4",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B3",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "8e0fcf57-9299-41c1-8229-97541ce7dfd9",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-31-02-827-sg-g1-lw-10-place-value-50-a82d7b72",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "B4",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/B4-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "d4c48212-7140-48fe-97d6-8514f1c484ec",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-31-50-210-sg-g1-lw-01-add-1digit-3466d3c1",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "b5a886aa-2879-4d38-a144-0b90f42e8091",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-32-11-499-sg-g1-lw-02-add-2digit-490ddc7c",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "a49af5ea-a775-4c26-b259-3678dcc2ec41",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-32-36-192-sg-g1-lw-03-sub-1digit-52aefaa7",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "78c282f1-1262-47af-b468-d74d38139a9e",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-32-58-985-sg-g1-lw-04-sub-2digit-26e86100",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "cbcf3916-6462-46ab-9f8f-023784b0a6af",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-33-19-520-sg-g1-lw-05-mixed-20-d2091451",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "9dc98ccc-4e41-40b4-adfb-107ad5e2c2a5",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-31-32-013-sg-g1-lw-06-ten-frames-33e7d386",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "3f67ad08-b901-471e-a0c5-a1c056ddf58b",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-35-03-348-sg-g1-lw-07-dot-collections-2840f9a6",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "aabee39f-1076-40b0-b8b2-afd69a0abc01",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-33-36-373-sg-g1-lw-08-number-bonds-58cf4ed4",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "756c3ddb-98c5-44c0-8de1-d0e4eafd9f80",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-34-00-659-sg-g1-lw-09-number-patterns-dff4264f",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B4",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "b33f2a49-6315-4486-9ea9-ec6feeb87ed3",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-34-27-078-sg-g1-lw-10-place-value-50-9f2c4a19",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "B5",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/B5-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "47ee71d9-840e-4ecb-905b-94d56d6503d2",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-36-49-061-sg-g1-lw-01-add-1digit-ee94d68f",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "534b36d3-459a-4e6b-8132-ecde4b5b5edf",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-11-669-sg-g1-lw-02-add-2digit-7829c8bf",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "70dee4e9-7028-4038-8719-574fc042d756",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-37-30-558-sg-g1-lw-03-sub-1digit-2e8f6c37",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "093d3bce-8cfd-4abc-a14a-7ed80b97d1d9",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-38-01-074-sg-g1-lw-04-sub-2digit-c4c8a7ae",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "15082102-cb8b-4b0f-8fa1-70cfee188c42",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-38-23-928-sg-g1-lw-05-mixed-20-b25718c1",
+          "questionCount": 8
+        },
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "e8e73a68-9e61-4b9a-8b7b-90445ba92f18",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-36-34-234-sg-g1-lw-06-ten-frames-2bfbccd1",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "9cf94fc7-3215-4dac-95f3-59f87aad4c7f",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-36-16-061-sg-g1-lw-07-dot-collections-6186d3c9",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "3b6cd4ae-bbf5-4873-8399-eaf84d8d73c5",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-38-44-932-sg-g1-lw-08-number-bonds-ab58a5c2",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "3f10801f-5b4e-491e-bc87-f583f8630e0f",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-39-02-786-sg-g1-lw-09-number-patterns-3363a5a5",
+          "questionCount": 6
+        },
+        {
+          "packetId": "B5",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "fa504fac-e741-4d7c-8ab6-20d0612f87c9",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-39-20-671-sg-g1-lw-10-place-value-50-54c727be",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "P02",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/P02-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "0f730cc8-b7ab-425d-93c0-fe103a1d8ca9",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-42-31-776-sg-g1-lw-01-add-1digit-0d69d3f1",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "259d2d86-7f1c-4290-8c14-5f05c03180cc",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-46-36-018-sg-g1-lw-02-add-2digit-e8e7177e",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "d734fa58-49f3-4806-8e6b-66e58e5aa084",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-47-14-154-sg-g1-lw-03-sub-1digit-0e5fe65a",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "4c256f1a-6415-4b35-bf85-cb8e5d727fe6",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-47-35-930-sg-g1-lw-04-sub-2digit-d08caec3",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "967724a4-6d68-40a6-95ca-1705a154ac52",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-47-55-370-sg-g1-lw-05-mixed-20-573391df",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "282b9677-1123-4ed0-b134-14a065f50896",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-42-12-147-sg-g1-lw-06-ten-frames-82b43215",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "ac6181ad-256c-4515-aa33-4fe8ae7e50b9",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-41-50-791-sg-g1-lw-07-dot-collections-f89f8058",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "140339ff-10f3-499c-b189-de9cee71e187",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-48-13-757-sg-g1-lw-08-number-bonds-90144d16",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "8b74ff55-a8c5-4017-b451-385d3aa3c013",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-48-30-623-sg-g1-lw-09-number-patterns-a18af3f3",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P02",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "0d2009d7-7b78-48ef-a24a-109aa9a2f730",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-48-46-735-sg-g1-lw-10-place-value-50-636dfdda",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "P03",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/P03-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "efcd8ce9-b367-4934-8a5e-5a27d865d9bc",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-50-41-603-sg-g1-lw-01-add-1digit-cce30a4f",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "192f8dd4-7970-46da-a006-7964b4b73142",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-50-59-055-sg-g1-lw-02-add-2digit-965733f0",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "9c47f5df-7aae-4a2e-94cc-a6bc9a73658b",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-51-20-927-sg-g1-lw-03-sub-1digit-cab9753c",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "ff344f88-0624-41df-aab5-d822afad466a",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-51-43-446-sg-g1-lw-04-sub-2digit-59393727",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "e626e23a-7e5f-476b-b4aa-909e0327202f",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-52-01-088-sg-g1-lw-05-mixed-20-9fd0b142",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "de8d773d-4b6a-451c-bc4e-c23b749dace1",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-50-22-321-sg-g1-lw-06-ten-frames-8e970610",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "532880a5-57b9-4e0a-aa3c-b23bd2626e26",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-50-01-645-sg-g1-lw-07-dot-collections-28c30de9",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "91e89dae-19ca-4b70-b797-eb881434e19c",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-52-21-364-sg-g1-lw-08-number-bonds-971dcb0b",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "c9a5703a-ae70-400e-b6fc-ee231a0b9727",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-52-36-654-sg-g1-lw-09-number-patterns-30e71644",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P03",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "9c2b1284-4b0b-4611-aa3a-4eb77b5f38fd",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-52-52-947-sg-g1-lw-10-place-value-50-f049cd04",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "P05",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/P05-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "e946b411-3ccb-4e65-9cd0-14cee28147c1",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-53-244-sg-g1-lw-01-add-1digit-c8d7ac49",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "17892114-91fc-4197-9a62-a35023c75416",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-54-15-143-sg-g1-lw-02-add-2digit-e25422ef",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "4544ca01-2922-4c42-afa0-32f663227f80",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-54-32-368-sg-g1-lw-03-sub-1digit-9693ac76",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "59934e22-fad6-4307-aab6-63c39e318ace",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-54-51-565-sg-g1-lw-04-sub-2digit-37906395",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "773a3543-b19a-4846-9cd6-0d07f686cde2",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-55-09-916-sg-g1-lw-05-mixed-20-a23c5aed",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "149ca71f-ae2d-4f92-a98e-25f5072637b0",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-35-386-sg-g1-lw-06-ten-frames-4272d038",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "0902f056-ccb3-4b34-b9d6-94efaebd7ab8",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-53-19-765-sg-g1-lw-07-dot-collections-b6e18990",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "7f8b1654-f263-44a8-90a3-7020af518de7",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-55-28-944-sg-g1-lw-08-number-bonds-50cab7a2",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "627db744-78c9-4e12-80b9-7dc667066b16",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-55-51-278-sg-g1-lw-09-number-patterns-2c69ba1e",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P05",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "98675456-0c67-41dd-9936-9d39fc652f22",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-56-12-648-sg-g1-lw-10-place-value-50-29e178d4",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "P08",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/P08-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "cb31a169-c1a3-46a1-88f3-2f02d7abe515",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-57-24-177-sg-g1-lw-01-add-1digit-5a2f3224",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "d54738d2-4447-4529-928f-19d3321b9a95",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-57-43-847-sg-g1-lw-02-add-2digit-e817b9cb",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "cd17f42d-c885-4a66-973b-3173e2dbfd11",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-58-01-624-sg-g1-lw-03-sub-1digit-f4bb6eda",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "4b283fb0-14ef-4c63-9a2b-c2e335e70664",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-58-20-388-sg-g1-lw-04-sub-2digit-6b4222ef",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "a0c9a22d-f09f-4c48-95ad-8b6f39c267ab",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-58-39-107-sg-g1-lw-05-mixed-20-324de7ab",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "473f796d-d46e-45a4-a0e6-f7120d215ded",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-57-01-334-sg-g1-lw-06-ten-frames-1ae7c547",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "854ee74e-d819-4c46-9ddb-71e5b9a4898f",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-56-44-810-sg-g1-lw-07-dot-collections-ff211911",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "a8d9fe23-f4b5-43c6-9066-e041f0efbc0f",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-03-900-sg-g1-lw-08-number-bonds-23425ac6",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "afa8481c-2a08-4f03-8552-d5ac8cce3219",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-22-439-sg-g1-lw-09-number-patterns-39879483",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P08",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "843d088c-5504-421c-b3b4-ff87ed36de68",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-59-42-132-sg-g1-lw-10-place-value-50-6868af68",
+          "questionCount": 6
+        }
+      ]
+    },
+    {
+      "packetId": "P09",
+      "path": "private-evidence/reports/known-packet-forensic-20260815/contact-sheets/P09-answer-crops.png",
+      "pages": [
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-01-add-1digit",
+          "scanSessionId": "2c8c8287-900e-44d1-812d-61584aed6d28",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-01-15-933-sg-g1-lw-01-add-1digit-40b694bc",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-02-add-2digit",
+          "scanSessionId": "733f895d-b36e-4a68-a518-08b81f517bb2",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-01-36-137-sg-g1-lw-02-add-2digit-23a61e5c",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-03-sub-1digit",
+          "scanSessionId": "84e0faf5-fb87-4366-97ca-950cf3a0824a",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-01-59-113-sg-g1-lw-03-sub-1digit-c1740c36",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-04-sub-2digit",
+          "scanSessionId": "19ae9c6c-d283-427a-8df2-40df6122c6a1",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-02-16-110-sg-g1-lw-04-sub-2digit-d21e66ca",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-05-mixed-20",
+          "scanSessionId": "46927714-1a60-4fa7-a35d-5715ffc4a35d",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-02-43-553-sg-g1-lw-05-mixed-20-733ce446",
+          "questionCount": 8
+        },
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-06-ten-frames",
+          "scanSessionId": "4059b7ad-4e88-4835-a970-f665f91a7ffd",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-00-28-787-sg-g1-lw-06-ten-frames-ee2f9180",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-07-dot-collections",
+          "scanSessionId": "0db51996-5d27-4739-888a-640dc3f73ebb",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-00-10-582-sg-g1-lw-07-dot-collections-fee835f5",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-08-number-bonds",
+          "scanSessionId": "6024eb74-d992-46b3-aa09-16e8cc9013ad",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-03-03-084-sg-g1-lw-08-number-bonds-61e1c71c",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-09-number-patterns",
+          "scanSessionId": "66e27d95-f560-4be0-8e7c-defeec87dabf",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-03-22-201-sg-g1-lw-09-number-patterns-07b1d59f",
+          "questionCount": 6
+        },
+        {
+          "packetId": "P09",
+          "layoutId": "sg-g1-lw-10-place-value-50",
+          "scanSessionId": "6b823012-bd57-470c-a07c-4d8d7a013ee4",
+          "evidenceDir": "private-evidence/debug-scans/2026-08-15/2026-08-15_19-03-39-525-sg-g1-lw-10-place-value-50-176f2137",
+          "questionCount": 6
+        }
+      ]
+    }
+  ]
+}

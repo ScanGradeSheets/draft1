@@ -1,0 +1,271 @@
+{
+  "cases": [
+    {
+      "scanSessionId": "259d2d86-7f1c-4290-8c14-5f05c03180cc",
+      "layoutId": "sg-g1-lw-02-add-2digit",
+      "forcedFallbackReason": "two-digit-unusable-quality-fallback-review",
+      "recognitionRegistrationCoherent": true,
+      "recognitionRegistrationMaxResidualPx": 0.9550082641393878,
+      "recognitionRegistrationMedianResidualPx": 0.5732867599993328,
+      "annotationBaseMode": "source-capture",
+      "annotationRectSourceCounts": {
+        "trusted-physical-frame": 16
+      },
+      "annotationMinusExpectedRect": [
+        {
+          "id": 0,
+          "dx": -1.595,
+          "dy": -2.401,
+          "dw": 1.615,
+          "dh": 6.389
+        },
+        {
+          "id": 1,
+          "dx": 0.779,
+          "dy": -2.406,
+          "dw": 1.603,
+          "dh": 6.393
+        },
+        {
+          "id": 2,
+          "dx": -0.005,
+          "dy": -0.794,
+          "dw": 0.81,
+          "dh": 4.746
+        },
+        {
+          "id": 3,
+          "dx": 1.57,
+          "dy": -0.796,
+          "dw": 0.802,
+          "dh": 4.748
+        },
+        {
+          "id": 4,
+          "dx": -1.582,
+          "dy": -2.36,
+          "dw": 1.597,
+          "dh": 5.495
+        },
+        {
+          "id": 5,
+          "dx": 0.772,
+          "dy": -2.36,
+          "dw": 1.587,
+          "dh": 5.498
+        },
+        {
+          "id": 6,
+          "dx": -2.35,
+          "dy": -1.562,
+          "dw": 1.594,
+          "dh": 6.224
+        },
+        {
+          "id": 7,
+          "dx": -0.008,
+          "dy": -1.56,
+          "dw": 1.582,
+          "dh": 6.227
+        },
+        {
+          "id": 8,
+          "dx": -0.005,
+          "dy": -3.211,
+          "dw": 1.608,
+          "dh": 4.809
+        },
+        {
+          "id": 9,
+          "dx": 1.577,
+          "dy": -3.215,
+          "dw": 1.621,
+          "dh": 4.812
+        },
+        {
+          "id": 10,
+          "dx": -1.585,
+          "dy": -3.182,
+          "dw": 3.181,
+          "dh": 5.559
+        },
+        {
+          "id": 11,
+          "dx": 1.566,
+          "dy": -3.186,
+          "dw": 3.2,
+          "dh": 5.562
+        },
+        {
+          "id": 12,
+          "dx": -0.79,
+          "dy": -3.153,
+          "dw": 2.379,
+          "dh": 4.725
+        },
+        {
+          "id": 13,
+          "dx": 1.563,
+          "dy": -3.154,
+          "dw": 2.395,
+          "dh": 4.727
+        },
+        {
+          "id": 14,
+          "dx": -0.792,
+          "dy": -2.345,
+          "dw": 1.587,
+          "dh": 5.462
+        },
+        {
+          "id": 15,
+          "dx": 0.767,
+          "dy": -2.344,
+          "dw": 1.6,
+          "dh": 5.464
+        }
+      ],
+      "observedMarkedImageFinding": "Yellow fill rectangles are visibly partial/offset against printed answer frames on the saved marked sheet.",
+      "layerAttribution": "layer 8 annotation rendering/registration, downstream of coherent layer-3 recognition registration",
+      "evidence": {
+        "markedImage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-46-36-018-sg-g1-lw-02-add-2digit-e8e7177e/marked-sheet.jpg",
+        "overlayDebug": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-46-36-018-sg-g1-lw-02-add-2digit-e8e7177e/overlay-debug.json",
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-46-36-018-sg-g1-lw-02-add-2digit-e8e7177e/debug.json"
+      }
+    },
+    {
+      "scanSessionId": "4c256f1a-6415-4b35-bf85-cb8e5d727fe6",
+      "layoutId": "sg-g1-lw-04-sub-2digit",
+      "forcedFallbackReason": "two-digit-unusable-quality-fallback-review",
+      "recognitionRegistrationCoherent": true,
+      "recognitionRegistrationMaxResidualPx": 4.897535539128973,
+      "recognitionRegistrationMedianResidualPx": 1.3303763655483545,
+      "annotationBaseMode": "source-capture",
+      "annotationRectSourceCounts": {
+        "trusted-physical-frame": 16
+      },
+      "annotationMinusExpectedRect": [
+        {
+          "id": 0,
+          "dx": -1.677,
+          "dy": -2.448,
+          "dw": 2.579,
+          "dh": 6.53
+        },
+        {
+          "id": 1,
+          "dx": 1.554,
+          "dy": -2.491,
+          "dw": 2.557,
+          "dh": 6.518
+        },
+        {
+          "id": 2,
+          "dx": -0.826,
+          "dy": -0.822,
+          "dw": 1.707,
+          "dh": 4.067
+        },
+        {
+          "id": 3,
+          "dx": 1.589,
+          "dy": -0.863,
+          "dw": 1.692,
+          "dh": 4.059
+        },
+        {
+          "id": 4,
+          "dx": -2.492,
+          "dy": -3.217,
+          "dw": 2.55,
+          "dh": 5.679
+        },
+        {
+          "id": 5,
+          "dx": 0.725,
+          "dy": -3.279,
+          "dw": 2.528,
+          "dh": 5.668
+        },
+        {
+          "id": 6,
+          "dx": -4.029,
+          "dy": -0.763,
+          "dw": 2.814,
+          "dh": 16.848
+        },
+        {
+          "id": 7,
+          "dx": -0.819,
+          "dy": -0.837,
+          "dw": 2.782,
+          "dh": 16.824
+        },
+        {
+          "id": 8,
+          "dx": -0.078,
+          "dy": -4.056,
+          "dw": 1.696,
+          "dh": 5.668
+        },
+        {
+          "id": 9,
+          "dx": 1.516,
+          "dy": -4.074,
+          "dw": 1.682,
+          "dh": 5.659
+        },
+        {
+          "id": 10,
+          "dx": -1.667,
+          "dy": -4.041,
+          "dw": 3.281,
+          "dh": 5.674
+        },
+        {
+          "id": 11,
+          "dx": 1.513,
+          "dy": -4.091,
+          "dw": 3.258,
+          "dh": 5.664
+        },
+        {
+          "id": 12,
+          "dx": -1.663,
+          "dy": -4.01,
+          "dw": 2.468,
+          "dh": 4.842
+        },
+        {
+          "id": 13,
+          "dx": 0.718,
+          "dy": -4.054,
+          "dw": 2.45,
+          "dh": 4.834
+        },
+        {
+          "id": 14,
+          "dx": -1.643,
+          "dy": -3.179,
+          "dw": 1.687,
+          "dh": 5.6
+        },
+        {
+          "id": 15,
+          "dx": -0.058,
+          "dy": -3.213,
+          "dw": 1.673,
+          "dh": 5.592
+        }
+      ],
+      "observedMarkedImageFinding": "Yellow fill rectangles are visibly partial/offset against printed answer frames on the saved marked sheet.",
+      "layerAttribution": "layer 8 annotation rendering/registration, downstream of coherent layer-3 recognition registration",
+      "evidence": {
+        "markedImage": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-47-35-930-sg-g1-lw-04-sub-2digit-d08caec3/marked-sheet.jpg",
+        "overlayDebug": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-47-35-930-sg-g1-lw-04-sub-2digit-d08caec3/overlay-debug.json",
+        "debugJson": "private-evidence/debug-scans/2026-08-15/2026-08-15_18-47-35-930-sg-g1-lw-04-sub-2digit-d08caec3/debug.json"
+      }
+    }
+  ],
+  "interpretation": "The yellow drawing defect must not be counted as an OCR miss or as the cause of the all-yellow recognition fallback."
+}

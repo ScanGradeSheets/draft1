@@ -1,6 +1,45 @@
 # ScanGrade Active Handoff
 
-## 2026-08-15 known-material physical batch complete
+## 2026-08-15 known-packet forensic analysis complete
+
+- The analysis-only audit is complete at
+  `docs/SCANGRADE_KNOWN_PACKET_FORENSIC_ANALYSIS_20260815.md`, with the
+  reproducible ledgers, classifications, error enumeration, and QA under
+  `private-evidence/reports/known-packet-forensic-20260815/`. It reconciles
+  exactly 125 distinct `scanSessionId` values: 119 canonical successes, three
+  diagnostic repeat successes, and three terminal errors. P01/P04/P06/P07
+  remain sealed and unread.
+- On the primary known Grade 1 cohort, untouched Beta 15.112 automatically
+  handled 519/770 questions (67.4%). Five truth rows are genuinely ambiguous;
+  514/518 scorable automatic reads were correct and four were confidently
+  wrong (99.2% precision). Slot results were 982/1,320 automatic, with 972/978
+  scorable automatic slots correct and six wrong (99.4%). The legacy G2-9
+  cohort reproduces separately at 66/90 automatic questions, 66/66 correct,
+  and 151/180 automatic slots, 151/151 correct. This is not a 90% or launch
+  result.
+- The four automatic question failures are B2 place value `41→47` (a false
+  correct), B5 subtraction `5→8`, P05 dots `13→17`, and P08 place value
+  `40→41`. Most yellows are not safe threshold releases: only 38/247 scorable
+  reviewed Grade 1 question suggestions match visible truth. Three page-level
+  two-digit fallbacks have good focus/coherent recognition registration and
+  only 4/24 correct question suggestions, so disabling the fallback is unsafe.
+- Three numeric-only terminal failures occur during answer-box registration
+  after successful capture/orientation and before inference. The supported
+  hypothesis is transient browser/OpenCV-WASM state, resource lifetime, or
+  exception marshalling; the exact object is unknown. P02's offset yellow
+  rectangles are a separate downstream source-capture annotation-transform
+  defect and did not cause recognition failure.
+- The exact next experiment is an offline, key-blind accepted-answer
+  safety-veto replay. It may only demote automatic reads to review, never
+  replace the student's inscription. Develop on A/B1-B5/P02/P03/P05/P09,
+  reveal P08 once as confirmation, and stop unless all four confident question
+  errors are caught with no new automatic error. Do not edit production policy
+  in the first patch. Separately, build the 50-loop registration-only WebKit
+  ownership/heap soak before changing homography or runtime logic.
+- This audit changed no OCR, confidence, grading, capture, homography, iPad,
+  annotation, UI, production asset, or deployment behavior.
+
+## 2026-08-15 known-material physical batch collection complete
 
 - Tony completed the entire intended known-material batch. Reconciled inventory:
   119 canonical successful pages (9 G2-9 legacy pages, 60 pages from A and
@@ -12,11 +51,10 @@
   P02 two-digit-addition attempts. Error sessions are B2 mixed, P02 two-digit
   addition, and P09 single-digit addition. P01/P04/P06/P07 remain sealed and
   must not be inspected or used for retrospective analysis.
-- The next step is analysis, not a recognition patch. The XHigh-ready forensic
-  prompt is `docs/SCANGRADE_XHIGH_KNOWN_PACKET_FORENSIC_PROMPT_20260815.md`.
-  It requires a truth-ledger audit, complete yellow taxonomy, confident-error
-  audit, pipeline-layer attribution, runtime/error analysis, and ranked
-  precision-preserving experiments before medium-reasoning implementation.
+- The completed forensic response is
+  `docs/SCANGRADE_KNOWN_PACKET_FORENSIC_ANALYSIS_20260815.md`; it supersedes the
+  analysis request in
+  `docs/SCANGRADE_XHIGH_KNOWN_PACKET_FORENSIC_PROMPT_20260815.md`.
 
 ## 2026-08-15 known-material batch route and reconciled physical inventory
 

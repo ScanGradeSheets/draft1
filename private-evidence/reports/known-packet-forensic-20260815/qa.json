@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "hardChecks": {
+    "reconciliation": {
+      "passed": true,
+      "observed": {
+        "distinctSessions": 125,
+        "canonicalSuccesses": 119,
+        "extraSuccesses": 3,
+        "errors": 3
+      },
+      "expected": {
+        "distinctSessions": 125,
+        "canonicalSuccesses": 119,
+        "extraSuccesses": 3,
+        "errors": 3
+      }
+    },
+    "forbiddenPacketsRead": [],
+    "questionCount": {
+      "passed": true,
+      "observed": 860,
+      "expected": 860
+    },
+    "slotCount": {
+      "passed": true,
+      "observed": 1500,
+      "expected": 1500
+    },
+    "primaryQuestionCount": {
+      "passed": true,
+      "observed": 770,
+      "expected": 770
+    },
+    "primarySlotCount": {
+      "passed": true,
+      "observed": 1320,
+      "expected": 1320
+    },
+    "g2LockedReproduction": {
+      "passed": true,
+      "question": {
+        "total": 90,
+        "scorable": 90,
+        "ambiguous": 0,
+        "automatic": 66,
+        "automaticCoveragePct": 73.333,
+        "automaticScorable": 66,
+        "automaticCorrect": 66,
+        "automaticWrong": 0,
+        "automaticPrecisionPct": 100.0,
+        "reviewed": 24,
+        "reviewRatePct": 26.667,
+        "reviewedScorable": 24,
+        "reviewedSuggestionCorrect": 11,
+        "reviewedSuggestionCorrectPct": 45.833
+      },
+      "digitSlot": {
+        "total": 180,
+        "scorable": 180,
+        "ambiguous": 0,
+        "automatic": 151,
+        "automaticCoveragePct": 83.889,
+        "automaticScorable": 151,
+        "automaticCorrect": 151,
+        "automaticWrong": 0,
+        "automaticPrecisionPct": 100.0,
+        "reviewed": 29,
+        "reviewRatePct": 16.111,
+        "reviewedScorable": 29,
+        "reviewedSuggestionCorrect": 15,
+        "reviewedSuggestionCorrectPct": 51.724
+      }
+    },
+    "reviewQuestionClassificationComplete": {
+      "passed": true,
+      "classified": 275,
+      "expected": 275
+    },
+    "reviewSlotClassificationComplete": {
+      "passed": true,
+      "classified": 367,
+      "expected": 367
+    },
+    "automaticErrorEnumerationComplete": {
+      "passed": true,
+      "questionErrors": 4,
+      "slotErrors": 6
+    }
+  },
+  "truthAmbiguity": {
+    "questionCount": 5,
+    "slotCount": 10,
+    "questionIds": [
+      "P02|sg-g1-lw-08-number-bonds|4",
+      "P02|sg-g1-lw-10-place-value-50|3",
+      "P03|sg-g1-lw-06-ten-frames|4",
+      "P03|sg-g1-lw-08-number-bonds|2",
+      "P03|sg-g1-lw-10-place-value-50|3"
+    ]
+  },
+  "priorTruthConsistency": {
+    "referencePath": "private-evidence/reports/browser-local-trocr60-all-uniform-layout-affine-webkit-20260723.json",
+    "comparedRows": 345,
+    "matchingRows": 343,
+    "differences": [
+      {
+        "packetId": "P09",
+        "layoutId": "sg-g1-lw-05-mixed-20",
+        "questionNum": 1,
+        "currentTruth": "17",
+        "priorTruth": "12"
+      },
+      {
+        "packetId": "P09",
+        "layoutId": "sg-g1-lw-05-mixed-20",
+        "questionNum": 2,
+        "currentTruth": "7",
+        "priorTruth": "9"
+      }
+    ],
+    "interpretation": "Differences are retained when the August visible inscription controls; prior truth is not silently substituted."
+  },
+  "secondPassMethod": [
+    "Every current Grade 1 question was read on prediction-blind raw-crop contact sheets.",
+    "All prior-packet disagreements, blanks, overwritten labels, single-digit/two-slot placements, and every current automatic mismatch were checked against the current warped page/raw crops.",
+    "Deterministic checks enforce corpus, page/question/slot cardinality, placement completeness, G2 locked-result reproduction, review taxonomy completeness, and automatic-error enumeration completeness."
+  ]
+}
