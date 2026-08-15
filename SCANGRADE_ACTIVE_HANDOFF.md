@@ -31,6 +31,19 @@
   repository suite passes 513/513; the deploy-pruned 254-file static build and
   `git diff --check` pass. Build label:
   `2026.08.15-keypad-continuity-beta-15-107`.
+- Source commit `c87ae58` is pushed. Static-only preview:
+  `https://7b2cd050.scangrade.pages.dev/`; production immutable:
+  `https://9a1a5633.scangrade.pages.dev/`; public:
+  `https://scangrade.io/`. Public and preview HTML, JavaScript, and CSS are
+  byte-identical. SHA-256: HTML
+  `5f0f198b828899f6d749c2a7bfbdc9933059be1bef456370756f00201d63c382`,
+  JavaScript `assets/index-CrPbsF8g.js`
+  `7146dfb4af175bc9e766ed459eda8896f3294fe8983ec465f99babedf341f93a`,
+  CSS `assets/index-DALNgI0c.css`
+  `61e6184cf1cd0d324f342f07aba75edd692e3593ca41020fe5b8ba47dd92103a`.
+  `/api/submissions` is byte-identical to the app shell, confirming no Pages
+  Function. The same physical-capture WebKit continuity test passes against the
+  live custom domain.
 
 ## 2026-08-15 expiring private Safari gateway and automatic evidence upload
 
