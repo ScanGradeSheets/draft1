@@ -1,5 +1,36 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 landing alignment and final-score sequencing
+
+- Tony asked to move the modern public landing group up very slightly and
+  reported a possible numeric-score flash while finishing the final manual
+  correction. Beta 15.111 increases only the modern landing container's bottom
+  centering allowance by 16px, moving the complete logo/build/buttons group up
+  about 8px. The original-iPad landing override is unchanged.
+- Score eligibility is now explicit at both live-ink and flattened-image
+  layers. A score-bearing raster cannot be selected during grading/manual
+  review; each raster retains the score provenance of the answer state from
+  which it was rendered. After the final yellow resolves, the replacement
+  check/X must finish, followed by a clean 120ms boundary, before numeric score
+  ink begins. The keypad remains mounted through queued yellows, `Grading`
+  remains continuous, and completion controls still replace it only after the
+  stamped final sheet is installed. OCR/model/capture decisions are unchanged.
+  Build: `2026.08.15-final-score-sequence-beta-15-111`.
+- The captured multi-yellow mobile-WebKit replay passes locally, on preview,
+  and on public production: zero score frames before all reviews resolve, zero
+  before the final question mark settles, zero score/keypad overlap, and zero
+  premature score-bearing raster frames. All 518 repository tests pass; the
+  deploy-pruned build has 254 files.
+- Source commit `53374f1` is pushed. Preview:
+  `https://94bb1e68.scangrade.pages.dev/`; production immutable:
+  `https://dec9af11.scangrade.pages.dev/`; public: `https://scangrade.io/`.
+  Public/local SHA-256 matches exactly: HTML
+  `23461b460bb0563a4f7e1eb73db62a9f99ab9a433f265caf3b4b3b4d7ce2ba4b`,
+  JavaScript `assets/index-BA5tlBMR.js`
+  `cacd1255f4560ec44d027cb1d98c572e7a67b06aec998b8f9e4e0e0d9cd37386`,
+  CSS `assets/index-BicgvSNA.css`
+  `dbc280830462499c9fd243e2988f53d1887958e9d63a8987d75a0f5c5922ed9c`.
+
 ## 2026-08-15 continuous Grading status through manual review
 
 - Tony correctly reported that the blue result chevron could briefly replace
