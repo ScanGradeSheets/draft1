@@ -226,10 +226,10 @@
     </div>
 
     <div
-      v-if="studentMode && activeCorrectionQuestion"
+      v-if="showCorrectionKeypad"
       class="correction-keypad"
       role="group"
-      :aria-label="activeCorrectionInputLabel"
+      :aria-label="activeCorrectionQuestion ? activeCorrectionInputLabel : 'Preparing next answer correction'"
       @click.stop
     >
       <button
@@ -242,7 +242,7 @@
           'correction-keypad-key--backspace': key === 'backspace'
         }"
         :aria-label="key === '_' ? 'Blank' : key === 'backspace' ? 'Delete' : `Enter ${key}`"
-        :disabled="correctionKeypadSubmitting"
+        :disabled="correctionKeypadSubmitting || !activeCorrectionQuestion"
         @click="pressCorrectionKey(key)"
       >
         <span v-if="key === 'backspace'" aria-hidden="true">⌫</span>
@@ -654,6 +654,7 @@ import {
   correctionKeypadEntry,
   correctionKeypadEntryComplete,
   correctionPendingSlotIndex,
+  correctionKeypadShouldStayMounted,
   correctionPreviewCells,
 } from '../v3/correction-keypad.js'
 import {
@@ -1458,6 +1459,7 @@ const modelSanityResults = ref(null)
 const capturedImageWrapRef = ref(null)
 const displayedResultImageRef = ref(null)
 const activeCorrectionQuestion = ref(null)
+const correctionQueueTransitionActive = ref(false)
 const manualCorrectionText = ref('')
 const manualCorrectionClearedForSession = ref(false)
 const correctionKeypadSubmitting = ref(false)
@@ -1483,6 +1485,12 @@ let stableSince = null
 let previousFrameGray = null
 let consecutiveFailures = 0
 let pendingHybridBurstFrames = []
+
+const showCorrectionKeypad = computed(() => correctionKeypadShouldStayMounted({
+  studentMode: props.studentMode,
+  activeQuestion: Boolean(activeCorrectionQuestion.value),
+  queueTransitionActive: correctionQueueTransitionActive.value,
+}))
 const studentAutoStatus = ref('Put worksheet in frame')
 const captureAttemptActive = ref(false)
 const legacyCapturePreviewStyle = ref({})
@@ -2278,6 +2286,7 @@ function openCorrection(region) {
       fallbackSlotIndex: preferredCorrectionSlotIndex(group, region),
     }),
   }
+  correctionQueueTransitionActive.value = false
   manualCorrectionText.value = ''
   manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
@@ -2311,6 +2320,7 @@ function openCorrectionByGroupSlot(group, slotIndex = null) {
     correct: group.correct
   }
   activeCorrectionQuestion.value = { ...region, slotIndex: selectedSlotIndex, openedAtMs: performance.now() }
+  correctionQueueTransitionActive.value = false
   manualCorrectionText.value = ''
   manualCorrectionClearedForSession.value = false
   normalizeManualCorrectionInput()
@@ -2325,12 +2335,13 @@ function handleCorrectionOutsideClick(event) {
   cancelCorrection()
 }
 
-function cancelCorrection() {
+function cancelCorrection({ preserveQueueTransition = false } = {}) {
   if (manualCorrectionAutoApplyTimer != null) {
     window.clearTimeout(manualCorrectionAutoApplyTimer)
     manualCorrectionAutoApplyTimer = null
   }
   activeCorrectionQuestion.value = null
+  if (!preserveQueueTransition) correctionQueueTransitionActive.value = false
   manualCorrectionText.value = ''
   manualCorrectionClearedForSession.value = false
   correctionKeypadSubmitting.value = false
@@ -2655,6 +2666,8 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     ...settledCorrectionState,
     annotatedImageUrl,
   }
+  const nextReviewGroup = nextYellowReviewGroup(answerGroups, questionReview, correctedQuestionNum)
+  correctionQueueTransitionActive.value = Boolean(nextReviewGroup)
   if (v3LocalFirstReviewEnabled() && localFirstStrongContext.value) {
     localFirstStrongContext.value = {
       ...localFirstStrongContext.value,
@@ -2682,9 +2695,8 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     progressiveMarkingComplete.value = true
     progressiveBaseImageOverride.value = correctionAnimationBaseUrl
     ocrResult.value = nextResult
-    cancelCorrection()
+    cancelCorrection({ preserveQueueTransition: Boolean(nextReviewGroup) })
     await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)
-    const nextReviewGroup = nextYellowReviewGroup(answerGroups, questionReview, correctedQuestionNum)
     if (nextReviewGroup) {
       openCorrectionByGroupSlot(nextReviewGroup)
     } else if (annotatedImageUrl) {
@@ -2700,7 +2712,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     // Keep the live black correction mounted until its predecoded replacement
     // has actually painted. Dismissing it earlier exposes the old flattened
     // worksheet for one frame on mobile Safari.
-    cancelCorrection()
+    cancelCorrection({ preserveQueueTransition: Boolean(nextReviewGroup) })
   }
   if (lastLiveOcrDebug.value) {
     lastLiveOcrDebug.value = {
@@ -3958,6 +3970,8 @@ function advanceProgressiveMarking() {
           )
           if (pendingReviewGroup && !activeCorrectionQuestion.value) {
             openCorrectionByGroupSlot(pendingReviewGroup)
+          } else if (!pendingReviewGroup) {
+            correctionQueueTransitionActive.value = false
           }
         },
       })
@@ -12034,14 +12048,30 @@ onUnmounted(() => {
   background: #e9eef6;
 }
 
+.correction-keypad-key:disabled {
+  opacity: 1;
+  color: #1d1d1f;
+  -webkit-text-fill-color: #1d1d1f;
+}
+
 .correction-keypad-key--blank {
   color: #245aa4;
   font-weight: 800;
 }
 
+.correction-keypad-key--blank:disabled {
+  color: #245aa4;
+  -webkit-text-fill-color: #245aa4;
+}
+
 .correction-keypad-key--backspace {
   color: #55565a;
   font-size: 20px;
+}
+
+.correction-keypad-key--backspace:disabled {
+  color: #55565a;
+  -webkit-text-fill-color: #55565a;
 }
 
 .correction-keypad-error {

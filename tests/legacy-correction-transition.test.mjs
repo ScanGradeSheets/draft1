@@ -20,13 +20,16 @@ test('only iOS 12 WebKit uses the static correction transition', () => {
 
 test('iOS 12 keeps the live correction mounted until one predecoded settled frame is ready', () => {
   assert.match(cameraSource, /const legacyStaticCorrection = needsLegacyStaticCorrectionTransition/)
-  assert.match(cameraSource, /if \(!legacyStaticCorrection\) \{[\s\S]*?ocrResult\.value = settledCorrectionState[\s\S]*?cancelCorrection\(\)/)
+  assert.match(cameraSource, /if \(!legacyStaticCorrection\) \{[\s\S]*?ocrResult\.value = settledCorrectionState[\s\S]*?cancelCorrection\(\{ preserveQueueTransition: Boolean\(nextReviewGroup\) \}\)/)
   assert.match(cameraSource, /includeCompletedQuestionMark:\s*legacyStaticCorrection/)
   const preload = cameraSource.indexOf('await preloadCorrectionAnimationBase(correctionAnimationBaseUrl)')
   const legacyBranch = cameraSource.indexOf('if (legacyStaticCorrection)', preload)
   const installBase = cameraSource.indexOf('progressiveBaseImageOverride.value = correctionAnimationBaseUrl', legacyBranch)
   const installResult = cameraSource.indexOf('ocrResult.value = nextResult', legacyBranch)
-  const closeEditor = cameraSource.indexOf('cancelCorrection()', installResult)
+  const closeEditor = cameraSource.indexOf(
+    'cancelCorrection({ preserveQueueTransition: Boolean(nextReviewGroup) })',
+    installResult,
+  )
   assert.ok(preload >= 0 && legacyBranch > preload)
   assert.ok(installBase > legacyBranch)
   assert.ok(installResult > installBase)

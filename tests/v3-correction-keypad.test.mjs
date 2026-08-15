@@ -6,6 +6,7 @@ import {
   correctionKeypadEntry,
   correctionKeypadEntryComplete,
   correctionPendingSlotIndex,
+  correctionKeypadShouldStayMounted,
   correctionPreviewCells,
 } from '../src/v3/correction-keypad.js'
 
@@ -52,4 +53,19 @@ test('the correction preview preserves physical left-to-right slot placement', (
   assert.deepEqual(correctionPreviewCells('_9', 2), ['', '9'])
   assert.deepEqual(correctionPreviewCells('9_', 2), ['9', ''])
   assert.deepEqual(correctionPreviewCells('7', 1), ['7'])
+})
+
+test('the keypad stays mounted between queued yellows and leaves after the final correction', () => {
+  const sequence = [
+    { studentMode: true, activeQuestion: true, queueTransitionActive: false },
+    { studentMode: true, activeQuestion: false, queueTransitionActive: true },
+    { studentMode: true, activeQuestion: true, queueTransitionActive: false },
+    { studentMode: true, activeQuestion: false, queueTransitionActive: false },
+  ]
+  assert.deepEqual(sequence.map(correctionKeypadShouldStayMounted), [true, true, true, false])
+  assert.equal(correctionKeypadShouldStayMounted({
+    studentMode: false,
+    activeQuestion: true,
+    queueTransitionActive: true,
+  }), false)
 })

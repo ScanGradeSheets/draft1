@@ -14,10 +14,13 @@ test('correction entry is drawn on the sheet and uses a number-only custom keypa
   assert.ok(keypadStart > focusStart)
   assert.ok(template.includes('correctionKeypadKeys'))
   assert.ok(template.includes('pressCorrectionKey(key)'))
+  assert.match(template, /v-if="showCorrectionKeypad"/)
+  assert.match(template, /:disabled="correctionKeypadSubmitting \|\| !activeCorrectionQuestion"/)
   assert.equal(template.includes('manualCorrectionInputRef'), false)
   assert.equal(template.includes('student-correction-panel--image'), false)
   assert.equal(template.includes('on-sheet-correction-label'), false)
   assert.match(source, /\.correction-keypad\s*\{[^}]*font-family:\s*'Lexend'/s)
+  assert.match(source, /\.correction-keypad-key:disabled\s*\{[^}]*opacity:\s*1[^}]*-webkit-text-fill-color:\s*#1d1d1f/s)
   assert.match(source, /const activeCorrectionFocusStyle = computed\(\(\) => \{[\s\S]*focusLeftPct[\s\S]*focusTopPct[\s\S]*focusWidthPct[\s\S]*focusHeightPct[\s\S]*\}\)/)
   assert.match(source, /\.on-sheet-correction-focus\s*\{[^}]*background:\s*transparent/s)
   assert.match(source, /\.on-sheet-correction-focus\s*\{[^}]*border:\s*2px solid rgba\(36,\s*90,\s*164,\s*0\.72\)/s)
@@ -50,10 +53,14 @@ test('a completed correction waits for its replacement mark before exposing the 
   const correctionAnimation = apply.indexOf('startManualCorrectionAnimation(correctedQuestionNum, correctionAnimationBaseUrl)')
   const updateResult = apply.indexOf('ocrResult.value = nextResult', correctionAnimation)
   const awaitPaint = apply.indexOf('await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)', correctionAnimation)
-  const cancelCurrent = apply.indexOf('cancelCorrection()', correctionAnimation)
+  const cancelCurrent = apply.indexOf(
+    'cancelCorrection({ preserveQueueTransition: Boolean(nextReviewGroup) })',
+    correctionAnimation,
+  )
   const legacyBranch = apply.indexOf('if (legacyStaticCorrection)', preloadAnimation)
   const legacyPaint = apply.indexOf('await waitForDisplayedCorrectionBase(correctionAnimationBaseUrl)', legacyBranch)
   const legacyOpenNext = apply.indexOf('openCorrectionByGroupSlot(nextReviewGroup)', legacyBranch)
+  const preserveKeypad = apply.indexOf('correctionQueueTransitionActive.value = Boolean(nextReviewGroup)')
 
   assert.ok(prepareAnimation >= 0)
   assert.ok(settleResult >= 0)
@@ -69,4 +76,6 @@ test('a completed correction waits for its replacement mark before exposing the 
   // replacement mark for this correction.
   assert.ok(cancelCurrent > awaitPaint)
   assert.ok(legacyOpenNext > legacyPaint, 'iOS 12 may expose the next yellow only after the static replacement is painted')
+  assert.ok(preserveKeypad >= 0, 'the keypad must remain mounted while the correction queue advances')
+  assert.match(apply, /cancelCorrection\(\{ preserveQueueTransition: Boolean\(nextReviewGroup\) \}\)/)
 })

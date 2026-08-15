@@ -30,6 +30,6 @@ test('manual review settles before image work but keeps the live correction unti
   assert.ok(settle >= 0)
   assert.ok(compose > settle, 'settled review state must precede image composition')
   assert.ok(animation > compose, 'animation preparation must use the composed correction')
-  assert.match(body, /else \{[\s\S]*?startManualCorrectionAnimation\(correctedQuestionNum, correctionAnimationBaseUrl\)[\s\S]*?ocrResult\.value = nextResult[\s\S]*?await waitForDisplayedCorrectionBase\(correctionAnimationBaseUrl\)[\s\S]*?cancelCorrection\(\)/)
+  assert.match(body, /else \{[\s\S]*?startManualCorrectionAnimation\(correctedQuestionNum, correctionAnimationBaseUrl\)[\s\S]*?ocrResult\.value = nextResult[\s\S]*?await waitForDisplayedCorrectionBase\(correctionAnimationBaseUrl\)[\s\S]*?cancelCorrection\(\{ preserveQueueTransition: Boolean\(nextReviewGroup\) \}\)/)
   assert.match(source, /function advanceProgressiveMarking\(\)[\s\S]*?const nextReviewGroup = nextYellowReviewGroup[\s\S]*?openCorrectionByGroupSlot\(nextReviewGroup\)/)
 })

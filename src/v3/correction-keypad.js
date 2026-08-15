@@ -39,3 +39,11 @@ export function correctionPendingSlotIndex(text, maxLength = 1) {
     .length
   return enteredLength > 0 && enteredLength < limit ? enteredLength : null
 }
+
+export function correctionKeypadShouldStayMounted({
+  studentMode = false,
+  activeQuestion = false,
+  queueTransitionActive = false,
+} = {}) {
+  return Boolean(studentMode && (activeQuestion || queueTransitionActive))
+}

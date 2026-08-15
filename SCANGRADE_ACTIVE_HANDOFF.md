@@ -1,5 +1,37 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 physical add2 gateway run and public keypad-continuity repair
+
+- The authenticated Safari gateway worked and automatically delivered Tony's
+  physical iPhone run. The base evidence is
+  `private-evidence/debug-scans/2026-08-15/2026-08-15_15-09-43-123-sg-g1-lw-02-add-2digit-286ee608/debug.json`.
+  Browser OCR reached `result ready` at 8.347 seconds, before debug upload, and
+  exposed five yellow digits across B/C/D/H. Tony observed marking at about 15
+  seconds, consistent with the subsequent pen animation rather than upload
+  blocking recognition.
+- The private candidate did not produce an accepted physical completion. Every
+  subsequent manual-correction upload still recorded the candidate as
+  `pending`, while correction had already started. Tony saw extensive
+  annotation disappearance/reappearance. Treat this as a rejected private-path
+  lifecycle result; do not attribute it to public Beta 15.103 and do not deploy
+  the add2 candidate.
+- Tony also correctly identified an independent public review distraction:
+  after each manual yellow correction, `cancelCorrection()` removed the keypad
+  before the progressive mark animation opened the next yellow. The keypad was
+  therefore destroyed and remounted between answers.
+- Beta 15.107 keeps the same keypad DOM node mounted and visually stable while
+  the replacement mark is drawn, disables input during the handoff, switches
+  directly to the next yellow, and removes the keypad only after the final
+  correction. OCR, capture, geometry, recognition, confidence, grading,
+  annotation content, correction values, and queue order are unchanged.
+- A dedicated mobile-WebKit replay uses the new physical iPhone capture and
+  verifies multiple queued corrections. It observed zero intermediate keypad
+  removals, zero replacements, the same DOM node throughout the queue, and one
+  removal after the final correction. Focused review tests pass 47/47; complete
+  repository suite passes 513/513; the deploy-pruned 254-file static build and
+  `git diff --check` pass. Build label:
+  `2026.08.15-keypad-continuity-beta-15-107`.
+
 ## 2026-08-15 expiring private Safari gateway and automatic evidence upload
 
 - Tony requested the earlier simple collection workflow: one Safari link that
