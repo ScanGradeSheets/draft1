@@ -1,5 +1,37 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 public grading/completion-bar sequencing repair
+
+- Tony physically observed `Grading`, the centered blue result chevron, and
+  `New Scan` simultaneously before the completion stamp had fully settled.
+  Source inspection confirmed the completion-controls template excluded only
+  the special during-stage debug export, not `studentScanStage` itself.
+- Beta 15.108 gives the active stage exclusive ownership of the bottom bar:
+  `Grading` remains visible through progressive marks, score, date stamp, and
+  final flattened-image installation. The result chevron and `New Scan` remain
+  unmounted until the stage clears, then replace `Grading` together. The
+  emergency debug export remains available during a stuck debug stage. OCR,
+  capture, recognition, grading, annotation content, stamp timing, and result
+  timing are unchanged. Build label:
+  `2026.08.15-completion-bar-sequence-beta-15-108`.
+- The mobile-WebKit physical-capture replay sampled 233 grading frames on both
+  preview and live production, with zero grading/completion-control conflicts.
+  After completion it found no grading indicator and found both the chevron and
+  `New Scan`. Keypad continuity also remained intact. Focused tests pass 14/14;
+  the complete suite passes 514/514; the deploy-pruned static build contains
+  254 files and no Worker, route manifest, or Functions directory.
+- Source commit `5b5d7b7` is pushed. Static-only preview:
+  `https://515a8ea2.scangrade.pages.dev/`; production immutable:
+  `https://2b32ea6c.scangrade.pages.dev/`; public: `https://scangrade.io/`.
+  Live public and local release hashes match exactly: HTML
+  `319ea68845f3fd6c245085a903c19d2ef43b680ace1f6a3c14a99c02228bcb19`,
+  JavaScript `assets/index-BNMZZFJJ.js`
+  `a477ff15275045ca27fa563b4b2cc2dc7d8c7ca3333adf8ce6d1554315236899`,
+  and CSS `assets/index-DXK2LNxe.css`
+  `42f0c82f1f205e36583c70a909039537bd6a1078d841e6ee5986151dae7dfbc9`.
+  `/api/submissions` is byte-identical to the app shell, confirming no Pages
+  Function.
+
 ## 2026-08-15 physical add2 gateway run and public keypad-continuity repair
 
 - The authenticated Safari gateway worked and automatically delivered Tony's
