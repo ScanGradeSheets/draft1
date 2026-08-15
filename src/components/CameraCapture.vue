@@ -1468,6 +1468,7 @@ const localFirstStrongStatusByQuestion = ref({})
 const localFirstStrongContext = ref(null)
 const progressiveRevealedQuestionNums = ref([])
 const progressiveScoreRevealed = ref(false)
+const progressiveQuestionMarksSettled = ref(false)
 const progressiveDateStampRevealed = ref(false)
 const progressiveMarkingComplete = ref(false)
 const progressiveMarkingSessionKey = ref('')
@@ -1625,6 +1626,7 @@ const progressiveGradingSessionActive = computed(() => (
   && !ocrResult.value?.error
   && (
     progressiveMarkingActive.value
+    || showCorrectionKeypad.value
     || !!activeCorrectionQuestion.value
     || correctionQueueTransitionActive.value
     || progressiveCorrectionQuestionNum.value != null
@@ -1667,12 +1669,29 @@ const completionStampEffectActive = computed(() => (
   !!scanningDateStampSpec.value
 ))
 
+function annotatedResultIncludesFinalScore(result) {
+  if (typeof result?.annotatedImageIncludesFinalScore === 'boolean') {
+    return result.annotatedImageIncludesFinalScore
+  }
+  const questionCorrect = result?.questionCorrect
+  const groups = Array.isArray(result?.layoutSnapshot?.question_groups)
+    ? result.layoutSnapshot.question_groups
+    : []
+  const predictions = Array.isArray(result?.predictions) ? result.predictions : []
+  const predictionById = new Map(predictions.map((prediction, index) => [prediction?.id ?? index, prediction]))
+  if (!Array.isArray(questionCorrect) || questionCorrect.length === 0) return false
+  return !groups.some((group) => {
+    const ids = Array.isArray(group?.digit_box_ids) ? group.digit_box_ids : []
+    return ids.some((id) => predictionById.get(id)?.reviewNeeded === true)
+  })
+}
+
 const displayedResultImage = computed(() =>
   processing.value && scanningAnnotationPreview.value?.imageUrl
     ? scanningAnnotationPreview.value.imageUrl
     : progressiveBaseImageOverride.value
     ? progressiveBaseImageOverride.value
-    : progressiveMarkingActive.value
+    : progressiveMarkingActive.value || progressiveGradingSessionActive.value
     ? (ocrResult.value?.annotationBaseUrl || capturedImage.value)
     : showAnnotatedResultImage.value && ocrResult.value?.annotatedImageUrl
     ? ocrResult.value.annotatedImageUrl
@@ -2641,7 +2660,13 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     // Modern engines can commit immediately and animate the replacement mark.
     // iOS 12 keeps the live correction mounted until its static replacement is
     // decoded, avoiding the physical mark disappearance seen on that WebKit.
-    ocrResult.value = settledCorrectionState
+    ocrResult.value = {
+      ...settledCorrectionState,
+      // The annotation URL is still the previous raster until composition
+      // below finishes. Preserve its score provenance instead of inferring it
+      // from the newly settled answer data.
+      annotatedImageIncludesFinalScore: annotatedResultIncludesFinalScore(result),
+    }
   }
 
   let annotatedImageUrl = result.annotatedImageUrl
@@ -2677,6 +2702,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   const nextResult = {
     ...settledCorrectionState,
     annotatedImageUrl,
+    annotatedImageIncludesFinalScore: annotatedResultIncludesFinalScore(settledCorrectionState),
   }
   const nextReviewGroup = nextYellowReviewGroup(answerGroups, questionReview, correctedQuestionNum)
   correctionQueueTransitionActive.value = Boolean(nextReviewGroup)
@@ -3844,6 +3870,27 @@ onMounted(() => {
       slotIndex: Number.isInteger(activeCorrectionQuestion.value?.slotIndex)
         ? activeCorrectionQuestion.value.slotIndex
         : null,
+      reviewRemaining: studentAnswerGroups.value.filter((group) => group?.reviewNeeded === true).length,
+      questionMarksSettled: progressiveQuestionMarksSettled.value,
+      scoreRevealed: progressiveScoreRevealed.value,
+      scoreBearingAnnotatedImageDisplayed: Boolean(
+        progressiveScoreStep.value &&
+        annotatedResultIncludesFinalScore(ocrResult.value) &&
+        ocrResult.value?.annotatedImageUrl &&
+        displayedResultImage.value === ocrResult.value.annotatedImageUrl
+      ),
+      gradingSessionActive: progressiveGradingSessionActive.value,
+      showCorrectionKeypad: showCorrectionKeypad.value,
+      progressiveMarkingActive: progressiveMarkingActive.value,
+      progressiveCorrectionQuestionNum: progressiveCorrectionQuestionNum.value,
+      displayedMatchesOverride: Boolean(
+        progressiveBaseImageOverride.value &&
+        displayedResultImage.value === progressiveBaseImageOverride.value
+      ),
+      overrideMatchesAnnotated: Boolean(
+        progressiveBaseImageOverride.value &&
+        progressiveBaseImageOverride.value === ocrResult.value?.annotatedImageUrl
+      ),
     })
     window.__SCANGRADE_LOCAL_FIRST_CONTEXT_SUMMARY = () => ({
       items: (localFirstStrongContext.value?.sequenceItems || []).map((item) => ({
@@ -3944,6 +3991,7 @@ function advanceProgressiveMarking() {
   const revealed = new Set(progressiveRevealedQuestionNums.value.map(Number))
   const next = progressiveMarkingStepList.value.find((step) => !revealed.has(Number(step.questionNum)))
   if (next) {
+    progressiveQuestionMarksSettled.value = false
     progressiveRevealedQuestionNums.value = [
       ...progressiveRevealedQuestionNums.value,
       Number(next.questionNum),
@@ -3995,6 +4043,16 @@ function advanceProgressiveMarking() {
     }
     return
   }
+  if (progressiveScoreStep.value && !progressiveQuestionMarksSettled.value) {
+    // Keep a clean visual boundary between the last question mark and the
+    // final numeric score. This also makes the score gate explicit: every
+    // yellow is resolved and every check/X has completed before score ink can
+    // begin.
+    progressiveQuestionMarksSettled.value = true
+    clearProgressiveMarkingTimer()
+    progressiveMarkingTimer = window.setTimeout(advanceProgressiveMarking, 120)
+    return
+  }
   if (progressiveScoreStep.value && !progressiveScoreRevealed.value) {
     progressiveScoreRevealed.value = true
     clearProgressiveMarkingTimer()
@@ -4017,6 +4075,7 @@ function resetProgressiveMarking() {
   clearProgressiveMarkingTimer()
   progressiveRevealedQuestionNums.value = []
   progressiveScoreRevealed.value = false
+  progressiveQuestionMarksSettled.value = false
   progressiveDateStampRevealed.value = false
   progressiveMarkingComplete.value = false
   progressiveMarkingSessionKey.value = ''
@@ -4306,6 +4365,7 @@ function startManualCorrectionAnimation(questionNum, correctionAnimationBaseUrl)
   progressiveBaseImageOverride.value = correctionAnimationBaseUrl || ''
   progressiveRevealedQuestionNums.value = []
   progressiveScoreRevealed.value = false
+  progressiveQuestionMarksSettled.value = false
   progressiveDateStampRevealed.value = false
   progressiveMarkingComplete.value = false
   progressiveMarkingEarliestFinish = Date.now() + 900

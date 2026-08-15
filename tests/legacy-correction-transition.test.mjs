@@ -20,7 +20,7 @@ test('only iOS 12 WebKit uses the static correction transition', () => {
 
 test('iOS 12 keeps the live correction mounted until one predecoded settled frame is ready', () => {
   assert.match(cameraSource, /const legacyStaticCorrection = needsLegacyStaticCorrectionTransition/)
-  assert.match(cameraSource, /if \(!legacyStaticCorrection\) \{[\s\S]*?ocrResult\.value = settledCorrectionState[\s\S]*?cancelCorrection\(\{ preserveQueueTransition: Boolean\(nextReviewGroup\) \}\)/)
+  assert.match(cameraSource, /if \(!legacyStaticCorrection\) \{[\s\S]*?ocrResult\.value = \{[\s\S]*?\.\.\.settledCorrectionState[\s\S]*?annotatedImageIncludesFinalScore:[\s\S]*?cancelCorrection\(\{ preserveQueueTransition: Boolean\(nextReviewGroup\) \}\)/)
   assert.match(cameraSource, /includeCompletedQuestionMark:\s*legacyStaticCorrection/)
   const preload = cameraSource.indexOf('await preloadCorrectionAnimationBase(correctionAnimationBaseUrl)')
   const legacyBranch = cameraSource.indexOf('if (legacyStaticCorrection)', preload)

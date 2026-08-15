@@ -48,7 +48,7 @@ test('a completed correction waits for its replacement mark before exposing the 
   const apply = source.slice(applyStart, applyEnd)
   const prepareAnimation = apply.indexOf('const correctionAnimationBaseUrl = await manualCorrectionAnimationBase')
   const preloadAnimation = apply.indexOf('await preloadCorrectionAnimationBase(correctionAnimationBaseUrl)')
-  const settleResult = apply.indexOf('ocrResult.value = settledCorrectionState')
+  const settleResult = apply.indexOf('ocrResult.value = {\n      ...settledCorrectionState')
   const renderCorrection = apply.indexOf('annotatedImageUrl = await composeStudentAnnotatedImage')
   const correctionAnimation = apply.indexOf('startManualCorrectionAnimation(correctedQuestionNum, correctionAnimationBaseUrl)')
   const updateResult = apply.indexOf('ocrResult.value = nextResult', correctionAnimation)

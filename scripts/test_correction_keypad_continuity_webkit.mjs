@@ -62,6 +62,13 @@ try {
       gradingCompletionControlConflicts: 0,
       gradingMissingWhileKeypadMounted: 0,
       completionControlsWhileKeypadMounted: 0,
+      scoreObservedFrames: 0,
+      scoreBeforeAllReviewsResolved: 0,
+      scoreBeforeQuestionMarksSettled: 0,
+      scoreWhileKeypadMounted: 0,
+      finalImageBeforeScoreEligible: 0,
+      finalImageEarlySnapshots: [],
+      sampledFrames: 0,
       running: true,
     }
     const containsKeypad = (candidate) => candidate?.nodeType === 1 && (
@@ -79,6 +86,7 @@ try {
     state.observer.observe(document.documentElement, { childList: true, subtree: true })
     const sample = () => {
       if (!state.running) return
+      state.sampledFrames += 1
       if (!document.querySelector('.correction-keypad')) state.frameAbsent += 1
       const grading = document.querySelector('.student-scan-grading')
       if (grading) {
@@ -94,6 +102,35 @@ try {
           document.querySelector('.student-recognition-toggle') ||
           document.querySelector('.student-scan-reset')
         ) state.completionControlsWhileKeypadMounted += 1
+      }
+      const correction = window.__SCANGRADE_REPLAY_CORRECTION_STATE?.()
+      if (document.querySelector('.progressive-score-ink')) {
+        state.scoreObservedFrames += 1
+        if (Number(correction?.reviewRemaining) > 0) state.scoreBeforeAllReviewsResolved += 1
+        if (correction?.questionMarksSettled !== true) state.scoreBeforeQuestionMarksSettled += 1
+        if (document.querySelector('.correction-keypad')) state.scoreWhileKeypadMounted += 1
+      }
+      if (
+        correction?.scoreBearingAnnotatedImageDisplayed === true &&
+        (Number(correction?.reviewRemaining) > 0 || correction?.questionMarksSettled !== true)
+      ) {
+        state.finalImageBeforeScoreEligible += 1
+        if (state.finalImageEarlySnapshots.length < 12) {
+          state.finalImageEarlySnapshots.push({
+            frame: state.sampledFrames,
+            reviewRemaining: Number(correction?.reviewRemaining),
+            questionMarksSettled: correction?.questionMarksSettled,
+            scoreRevealed: correction?.scoreRevealed,
+            keypadMounted: Boolean(document.querySelector('.correction-keypad')),
+            gradingVisible: Boolean(grading),
+            gradingSessionActive: correction?.gradingSessionActive,
+            showCorrectionKeypad: correction?.showCorrectionKeypad,
+            progressiveMarkingActive: correction?.progressiveMarkingActive,
+            progressiveCorrectionQuestionNum: correction?.progressiveCorrectionQuestionNum,
+            displayedMatchesOverride: correction?.displayedMatchesOverride,
+            overrideMatchesAnnotated: correction?.overrideMatchesAnnotated,
+          })
+        }
       }
       requestAnimationFrame(sample)
     }
@@ -143,6 +180,12 @@ try {
       gradingCompletionControlConflicts: state.gradingCompletionControlConflicts,
       gradingMissingWhileKeypadMounted: state.gradingMissingWhileKeypadMounted,
       completionControlsWhileKeypadMounted: state.completionControlsWhileKeypadMounted,
+      scoreObservedFrames: state.scoreObservedFrames,
+      scoreBeforeAllReviewsResolved: state.scoreBeforeAllReviewsResolved,
+      scoreBeforeQuestionMarksSettled: state.scoreBeforeQuestionMarksSettled,
+      scoreWhileKeypadMounted: state.scoreWhileKeypadMounted,
+      finalImageBeforeScoreEligible: state.finalImageBeforeScoreEligible,
+      finalImageEarlySnapshots: state.finalImageEarlySnapshots,
       finalMounted: Boolean(document.querySelector('.correction-keypad')),
       finalGradingVisible: Boolean(document.querySelector('.student-scan-grading')),
       finalRecognitionArrowVisible: Boolean(document.querySelector('.student-recognition-toggle')),
@@ -183,6 +226,11 @@ try {
       noCompletionControlsDuringGrading: continuity.gradingCompletionControlConflicts === 0,
       gradingContinuousThroughCorrections: continuity.gradingMissingWhileKeypadMounted === 0,
       noCompletionControlsBetweenCorrections: continuity.completionControlsWhileKeypadMounted === 0,
+      scoreAppearsOnlyAfterReviewsResolve: continuity.scoreObservedFrames > 0 &&
+        continuity.scoreBeforeAllReviewsResolved === 0,
+      scoreWaitsForQuestionMarks: continuity.scoreBeforeQuestionMarksSettled === 0,
+      scoreNeverOverlapsKeypad: continuity.scoreWhileKeypadMounted === 0,
+      finalScoreImageNeverLeaksEarly: continuity.finalImageBeforeScoreEligible === 0,
       completionControlsReplaceGrading: continuity.finalGradingVisible === false &&
         continuity.finalRecognitionArrowVisible === true &&
         continuity.finalNewScanVisible === true,

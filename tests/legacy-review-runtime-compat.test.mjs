@@ -24,7 +24,7 @@ test('manual review settles before image work but keeps the live correction unti
   const end = source.indexOf('\nfunction clearAutoCaptureInterval', start)
   assert.ok(start >= 0 && end > start)
   const body = source.slice(start, end)
-  const settle = body.indexOf('ocrResult.value = settledCorrectionState')
+  const settle = body.indexOf('ocrResult.value = {\n      ...settledCorrectionState')
   const compose = body.indexOf('await composeStudentAnnotatedImage')
   const animation = body.indexOf('await manualCorrectionAnimationBase')
   assert.ok(settle >= 0)

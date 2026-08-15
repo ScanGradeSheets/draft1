@@ -426,7 +426,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.15-continuous-grading-status-beta-15-110'
+const APP_BUILD_LABEL = '2026.08.15-final-score-sequence-beta-15-111'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 const debugRouteEnabled = typeof window !== 'undefined' && isDebugRoutePathname(window.location.pathname)
 
@@ -1405,7 +1405,7 @@ onUnmounted(() => {
 
 .scan-grade--student.scan-grade--landing {
   justify-content: center;
-  padding-bottom: max(11dvh, 72px);
+  padding-bottom: calc(max(11dvh, 72px) + 16px);
 }
 
 .scan-grade--student.scan-grade--landing .header {

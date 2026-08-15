@@ -42,6 +42,30 @@ test('the date stamp is withheld until the score is complete, then lands as the 
   assert.doesNotMatch(cameraSource, /scanningDateEarliestFinish/)
 })
 
+test('the numeric score waits until every review and question mark has visibly settled', () => {
+  const advanceStart = cameraSource.indexOf('function advanceProgressiveMarking()')
+  const advanceEnd = cameraSource.indexOf('function resetProgressiveMarking()', advanceStart)
+  const advance = cameraSource.slice(advanceStart, advanceEnd)
+  const reviewGate = advance.indexOf('if (nextReviewGroup)')
+  const markSettleGate = advance.indexOf('if (progressiveScoreStep.value && !progressiveQuestionMarksSettled.value)')
+  const scoreReveal = advance.indexOf('progressiveScoreRevealed.value = true')
+
+  assert.ok(reviewGate >= 0)
+  assert.ok(markSettleGate > reviewGate)
+  assert.ok(scoreReveal > markSettleGate)
+  assert.match(advance, /progressiveQuestionMarksSettled\.value = true[\s\S]*window\.setTimeout\(advanceProgressiveMarking, 120\)[\s\S]*return/)
+})
+
+test('the flattened score image cannot display while grading or manual review is active', () => {
+  const displayStart = cameraSource.indexOf('const displayedResultImage = computed')
+  const displayEnd = cameraSource.indexOf('function uiLifecycleSnapshot', displayStart)
+  const display = cameraSource.slice(displayStart, displayEnd)
+
+  assert.match(display, /progressiveBaseImageOverride\.value[\s\S]*progressiveMarkingActive\.value \|\| progressiveGradingSessionActive\.value[\s\S]*annotationBaseUrl[\s\S]*showAnnotatedResultImage\.value/)
+  assert.match(cameraSource, /const progressiveGradingSessionActive = computed\(\(\) => \([\s\S]*progressiveMarkingActive\.value[\s\S]*\|\| showCorrectionKeypad\.value/)
+  assert.match(cameraSource, /function annotatedResultIncludesFinalScore\(result\)[\s\S]*reviewNeeded === true/)
+})
+
 test('the first yellow opens automatically after automatic marks settle without moving the worksheet', () => {
   const advanceStart = cameraSource.indexOf('function advanceProgressiveMarking()')
   const advanceEnd = cameraSource.indexOf('function resetProgressiveMarking()', advanceStart)

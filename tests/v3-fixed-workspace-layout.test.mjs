@@ -44,6 +44,7 @@ test('landing has a centered hero header while capture keeps the compact fixed h
   assert.match(appSource, /\.scan-grade--student\.scan-grade--landing\s*\{[^}]*justify-content:\s*center/s)
   assert.match(appSource, /\.scan-grade--student\.scan-grade--landing \.brand-logo\s*\{[^}]*width:\s*68px;[^}]*height:\s*68px/s)
   assert.match(appSource, /\.scan-grade--student\.scan-grade--landing \.header h1\s*\{[^}]*font-size:\s*30px/s)
+  assert.match(appSource, /\.scan-grade--student\.scan-grade--landing\s*\{[^}]*padding-bottom:\s*calc\(max\(11dvh, 72px\) \+ 16px\);/s)
 })
 
 test('modern capture spacing moves the brand and bottom bar inward without changing the legacy viewport', () => {
