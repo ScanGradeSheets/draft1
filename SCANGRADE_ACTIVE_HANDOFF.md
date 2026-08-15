@@ -1,5 +1,28 @@
 # ScanGrade Active Handoff
 
+## 2026-08-15 public Debug Scan batch auto-save restored
+
+- Tony correctly distinguished the repeated disappearing-mark / stuck-Scanning
+  regression from the verified public application: it occurred only in the
+  temporary private strong-model variation. Do not attribute that regression
+  to public Beta 15.103.
+- The temporary public strong-model Funnel had reused the public debug-upload
+  port and displaced its root mapping. Port 8443 is restored to the restricted
+  `127.0.0.1:8793` upload proxy, and the temporary public
+  `/local-model-probe` mapping is removed. The private model test is closed.
+- `https://scangrade.io/debug` still serves the proven public build
+  `2026.08.14-black-ipad-correction-transition-beta-15-103`; no public source,
+  OCR, capture, grading, or deployment change was required.
+- Exact-origin preflight returned HTTP 204. An authenticated non-student smoke
+  POST returned HTTP 201 and was saved locally as
+  `private-evidence/debug-scans/2026-08-15/2026-08-15_12-54-03-800-receiver-smoke-a7fd5499/`.
+- A fresh private `https://scangrade.io/debug#...` activation link was copied
+  to the Mac clipboard without printing or committing its key. After activation
+  in the phone's Safari storage context, each completed Debug Scan should save
+  automatically; `Debug saved: <id>` is the acceptance signal. Use New Scan to
+  continue the batch without manually exporting. Disable the upload Funnel
+  after Tony finishes the collection batch.
+
 ## 2026-08-14 private iPhone correction-lifecycle diagnostic
 
 - Physical iPhone build 15.105 again reached marking in about eleven seconds,
