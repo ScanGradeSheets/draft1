@@ -1,5 +1,26 @@
 # ScanGrade Active Handoff
 
+## 2026-08-14 private iPhone correction-lifecycle diagnostic
+
+- Physical iPhone build 15.105 again reached marking in about eleven seconds,
+  but marks still disappeared during manual correction and the result again
+  ended in a persistent `Scanning` state. This disproves the 15.105 ordering
+  hypothesis as a complete fix; do not count either 15.104 or 15.105 as an
+  accepted UX result.
+- Added a deterministic mobile-WebKit reproduction that replays the retained
+  physical capture and its three actual frames through the exact private
+  Hybrid V2-only pipeline, then completes two manual corrections. It completed
+  in 15.6 seconds with no page exception, no stuck stage, and a settled final
+  annotated image. The failure is therefore physical-iPhone-specific (likely a
+  resource/lifecycle exception) rather than reproduced by desktop WebKit.
+- Debug-only replay hooks are gated behind `v3BurstReplay`; ordinary and public
+  scans cannot invoke them. Debug Export now includes a bounded lifecycle trace
+  and current UI snapshot. If a physical debug result is stuck in `Scanning`,
+  an emergency Export button remains visible so the exact state can be saved.
+  Build label is `2026.08.14-private-lifecycle-diagnostic-beta-15-106`.
+  This build is diagnostic and must not be treated as a fix. Complete suite
+  **506/506**, production build, and `git diff --check` pass.
+
 ## 2026-08-14 private iPhone pre-acceptance presentation ordering fix
 
 - Physical iPhone run on private build 15.104 reached visible marking in about

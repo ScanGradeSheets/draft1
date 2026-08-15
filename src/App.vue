@@ -162,6 +162,15 @@
               :class="{ 'student-scan-grading-word--steady': studentScanStage === 'grading' }"
             >{{ studentScanStage === 'grading' ? 'Grading' : 'Scanning' }}</span>
           </div>
+          <button
+            v-if="studentScanStage && ocrResult && studentDebugMode"
+            type="button"
+            class="student-scan-link student-debug-export student-debug-export--during-stage"
+            :disabled="studentDebugExportBusy || cameraRef?.debugComparisonPending"
+            @click="exportStudentDebug"
+          >
+            {{ studentDebugExportLabel }}
+          </button>
           <template v-else>
             <button
               v-if="ocrResult && !ocrResult.error"
@@ -417,7 +426,7 @@ import {
   updateSubmissionStatus
 } from './services/studentReviewStore.js'
 
-const APP_BUILD_LABEL = '2026.08.14-private-yellow-atomic-beta-15-105'
+const APP_BUILD_LABEL = '2026.08.14-private-lifecycle-diagnostic-beta-15-106'
 const DEBUG_QUERY_FLAGS = ['ocrdebug', 'liveOcrDebug', 'sgdebug', 'debug']
 const debugRouteEnabled = typeof window !== 'undefined' && isDebugRoutePathname(window.location.pathname)
 
@@ -2041,6 +2050,15 @@ button.student-home-scan-btn:focus-visible {
   padding: 8px 5px;
   color: #225d91;
   font-size: 13px;
+}
+
+.student-debug-export--during-stage {
+  position: absolute;
+  z-index: 4;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: auto;
 }
 
 .student-scan-bar--grading {

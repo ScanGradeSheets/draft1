@@ -26,3 +26,9 @@ test('debug Export control stays left of the centered recognition arrow', () => 
   assert.match(rule, /justify-self: start/)
   assert.match(appSource, /\.student-scan-bar--debug-result[^}]*\.student-scan-actions[\s\S]*grid-column: 4/)
 })
+
+test('a stuck debug result keeps an emergency state export available', () => {
+  assert.match(appSource, /v-if="studentScanStage && ocrResult && studentDebugMode"/)
+  assert.match(appSource, /student-debug-export--during-stage/)
+  assert.match(appSource, /\.student-debug-export--during-stage\s*\{[^}]*position:\s*absolute[^}]*z-index:\s*4/s)
+})

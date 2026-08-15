@@ -1471,6 +1471,7 @@ const scanningAnnotationPreview = ref(null)
 let progressiveMarkingTimer = null
 let manualCorrectionAutoApplyTimer = null
 let progressiveMarkingEarliestFinish = 0
+let uiLifecycleTrace = []
 let activeScanSessionId = null
 let captureGateTelemetry = newCaptureGateTelemetry()
 let autoCaptureIntervalId = null
@@ -1653,6 +1654,39 @@ const displayedResultImage = computed(() =>
     ? ocrResult.value.annotatedImageUrl
     : (ocrResult.value?.annotationBaseUrl || capturedImage.value)
 )
+
+function uiLifecycleSnapshot(event = 'snapshot') {
+  return {
+    event,
+    atMs: typeof performance !== 'undefined' ? Math.round(performance.now()) : null,
+    processing: processing.value,
+    resultReady: !!ocrResult.value,
+    progressiveActive: progressiveMarkingActive.value,
+    progressiveComplete: progressiveMarkingComplete.value,
+    progressiveSessionKey: progressiveMarkingSessionKey.value,
+    progressiveCorrectionQuestionNum: progressiveCorrectionQuestionNum.value,
+    progressiveRevealedQuestionNums: [...progressiveRevealedQuestionNums.value],
+    progressiveTimerPending: progressiveMarkingTimer != null,
+    activeCorrectionQuestionNum: Number(activeCorrectionQuestion.value?.questionNum) || null,
+    correctionSubmitting: correctionKeypadSubmitting.value,
+    displayedImageKind: processing.value && scanningAnnotationPreview.value?.imageUrl
+      ? 'scanning-preview'
+      : progressiveBaseImageOverride.value
+        ? 'progressive-base-override'
+        : progressiveMarkingActive.value
+          ? 'annotation-base'
+          : ocrResult.value?.annotatedImageUrl
+            ? 'annotated-result'
+            : 'capture',
+    strongStatus: ocrResult.value?.v3BrowserLocalStrongShadow?.status ||
+      lastLiveOcrDebug.value?.v3BrowserLocalStrongShadow?.status || null,
+  }
+}
+
+function recordUiLifecycle(event) {
+  uiLifecycleTrace.push(uiLifecycleSnapshot(event))
+  if (uiLifecycleTrace.length > 160) uiLifecycleTrace = uiLifecycleTrace.slice(-160)
+}
 
 const studentAnswerGroups = computed(() => {
   const result = ocrResult.value
@@ -2405,6 +2439,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   const questionGroups = Array.isArray(layoutSnapshot?.question_groups) ? layoutSnapshot.question_groups : []
   const annotationGeometry = result?.annotationGeometry
   if (!result || !group || !annotationGeometry || !Array.isArray(result.predictions)) return
+  recordUiLifecycle('correction-start')
   const previousAnnotatedImageUrl = result.annotatedImageUrl || result.annotationBaseUrl || capturedImage.value
   const legacyStaticCorrection = needsLegacyStaticCorrectionTransition(
     typeof navigator !== 'undefined' ? navigator : null
@@ -2598,6 +2633,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
   } catch (e) {
     console.warn('[ScanGrade] correction annotation render failed:', e)
   }
+  recordUiLifecycle('correction-annotation-composed')
 
   const overlayDebug = buildOverlayDebugSnapshot({
     questionGroups,
@@ -2632,6 +2668,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     { includeCompletedQuestionMark: legacyStaticCorrection },
   )
   await preloadCorrectionAnimationBase(correctionAnimationBaseUrl)
+  recordUiLifecycle('correction-animation-base-ready')
   if (legacyStaticCorrection) {
     clearProgressiveMarkingTimer()
     progressiveCorrectionQuestionNum.value = null
@@ -2691,6 +2728,7 @@ async function applyManualCorrectionCells(cells, { slotIndex = null, correctionS
     uploadLiveOcrDebug(correctionTelemetry, 'manual-correction')
   }
   emit('ocr-complete', nextResult)
+  recordUiLifecycle('correction-complete')
 }
 
 function clearAutoCaptureInterval() {
@@ -3727,7 +3765,7 @@ onMounted(() => {
     window.setTimeout(updateLegacyCapturePreviewStyle, 0)
     window.setTimeout(updateLegacyCapturePreviewStyle, 250)
   }
-  if (hybridV3Enabled() && hasDebugQueryFlag('v3BurstReplay')) {
+  if (hasDebugQueryFlag('v3BurstReplay')) {
     window.__SCANGRADE_SET_V3_BURST_FRAMES = (frames) => {
       const accepted = (Array.isArray(frames) ? frames : [])
         .slice(0, HYBRID_BURST_EVIDENCE_FRAMES)
@@ -3748,6 +3786,17 @@ onMounted(() => {
       pendingHybridBurstFrames = accepted
       return accepted.length
     }
+    window.__SCANGRADE_REPLAY_CAPTURE_DATA_URL = (imageDataUrl) => {
+      const value = String(imageDataUrl || '')
+      if (!/^data:image\/(?:png|jpeg);base64,/.test(value) || processing.value) return false
+      clearAutoCaptureInterval()
+      stopStream()
+      streamActive.value = false
+      capturedImage.value = value
+      emit('image-captured', value)
+      void runRealOCR()
+      return true
+    }
     window.__SCANGRADE_OPEN_REVIEW_QUESTION = (questionNum) => {
       const target = Number(questionNum)
       const group = studentAnswerGroups.value.find((item) => Number(item?.questionNum) === target)
@@ -3755,6 +3804,19 @@ onMounted(() => {
       openCorrectionByGroupSlot(group)
       return true
     }
+    window.__SCANGRADE_REPLAY_OPEN_CORRECTION = (questionNum) => {
+      const target = Number(questionNum)
+      const group = studentAnswerGroups.value.find((item) => Number(item?.questionNum) === target)
+      if (!group) return false
+      openCorrectionByGroupSlot(group)
+      return true
+    }
+    window.__SCANGRADE_REPLAY_CORRECTION_STATE = () => ({
+      questionNum: Number(activeCorrectionQuestion.value?.questionNum),
+      slotIndex: Number.isInteger(activeCorrectionQuestion.value?.slotIndex)
+        ? activeCorrectionQuestion.value.slotIndex
+        : null,
+    })
     window.__SCANGRADE_LOCAL_FIRST_CONTEXT_SUMMARY = () => ({
       items: (localFirstStrongContext.value?.sequenceItems || []).map((item) => ({
         id: item?.id || null,
@@ -3797,6 +3859,18 @@ watch(
     emit('student-stage-change', stage)
   },
   { immediate: true }
+)
+
+watch(
+  () => [
+    processing.value,
+    progressiveMarkingActive.value,
+    progressiveMarkingComplete.value,
+    progressiveCorrectionQuestionNum.value,
+    Number(activeCorrectionQuestion.value?.questionNum) || null,
+  ],
+  () => recordUiLifecycle('state-change'),
+  { immediate: true, flush: 'sync' },
 )
 
 function clearProgressiveMarkingTimer() {
@@ -8327,6 +8401,8 @@ async function withDigitEngineTimeout(promise, label, timeoutMs = DIGIT_ENGINE_O
 
 const runRealOCR = async () => {
   processing.value = true
+  uiLifecycleTrace = []
+  recordUiLifecycle('ocr-start')
   scanningAnnotationPreview.value = null
   ocrResult.value = null
   activeCorrectionQuestion.value = null
@@ -11443,7 +11519,11 @@ async function exportLiveOcrDebugJson() {
   debugExportBusy.value = true
   debugExportStatus.value = ''
   try {
-    const result = await exportDebugJson(data)
+    const result = await exportDebugJson({
+      ...data,
+      uiLifecycleSnapshot: uiLifecycleSnapshot('export'),
+      uiLifecycleTrace: [...uiLifecycleTrace],
+    })
     debugExportStatus.value = result.method === 'share'
       ? 'Share sheet opened. Save or attach the JSON file.'
       : result.method === 'share-text'
@@ -11523,7 +11603,10 @@ onUnmounted(() => {
     window.removeEventListener('resize', updateLegacyCapturePreviewStyle)
     window.removeEventListener('orientationchange', updateLegacyCapturePreviewStyle)
     delete window.__SCANGRADE_SET_V3_BURST_FRAMES
+    delete window.__SCANGRADE_REPLAY_CAPTURE_DATA_URL
     delete window.__SCANGRADE_OPEN_REVIEW_QUESTION
+    delete window.__SCANGRADE_REPLAY_OPEN_CORRECTION
+    delete window.__SCANGRADE_REPLAY_CORRECTION_STATE
     delete window.__SCANGRADE_LOCAL_FIRST_CONTEXT_SUMMARY
   }
 })

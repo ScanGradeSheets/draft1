@@ -80,3 +80,21 @@ test('candidate failure remains a Beta 15.3 fail-open result before completion',
   assert.ok(processingComplete > completionAwait)
   assert.ok(resultAssignment > processingComplete)
 })
+
+test('retained-frame WebKit reproduction can inject a capture only behind the replay flag', () => {
+  assert.match(source, /if \(hasDebugQueryFlag\('v3BurstReplay'\)\)/)
+  assert.match(source, /window\.__SCANGRADE_REPLAY_CAPTURE_DATA_URL = \(imageDataUrl\) =>/)
+  assert.match(source, /delete window\.__SCANGRADE_REPLAY_CAPTURE_DATA_URL/)
+  assert.match(source, /window\.__SCANGRADE_REPLAY_OPEN_CORRECTION = \(questionNum\) =>/)
+  assert.match(source, /delete window\.__SCANGRADE_REPLAY_OPEN_CORRECTION/)
+  assert.match(source, /window\.__SCANGRADE_REPLAY_CORRECTION_STATE = \(\) =>/)
+  assert.match(source, /delete window\.__SCANGRADE_REPLAY_CORRECTION_STATE/)
+})
+
+test('debug export records the physical correction lifecycle at export time', () => {
+  assert.match(source, /function uiLifecycleSnapshot\(event = 'snapshot'\)/)
+  assert.match(source, /uiLifecycleSnapshot:\s*uiLifecycleSnapshot\('export'\)/)
+  assert.match(source, /uiLifecycleTrace:\s*\[\.\.\.uiLifecycleTrace\]/)
+  assert.match(source, /recordUiLifecycle\('correction-start'\)/)
+  assert.match(source, /recordUiLifecycle\('correction-complete'\)/)
+})
